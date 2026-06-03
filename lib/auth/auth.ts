@@ -112,8 +112,17 @@ export const authService = {
 
   // Obter Usuário da Sessão Atual
   getCurrentUser: async (): Promise<SessionData | null> => {
+    let cookieStore;
     try {
-      const cookieStore = await cookies();
+      cookieStore = await cookies();
+    } catch (e: any) {
+      if (e.message && e.message.includes('Dynamic server usage')) {
+        throw e;
+      }
+      return null;
+    }
+
+    try {
       const cookie = cookieStore.get(SESSION_COOKIE_NAME);
       if (!cookie || !cookie.value) {
         // Se estiver com Supabase configurado, podemos ler a sessão dele caso não haja cookie
@@ -140,7 +149,10 @@ export const authService = {
       const decoded = Buffer.from(cookie.value, 'base64').toString('utf8');
       const sessionData = JSON.parse(decoded) as SessionData;
       return sessionData;
-    } catch (e) {
+    } catch (e: any) {
+      if (e.digest === 'DYNAMIC_SERVER_USAGE' || (e.message && e.message.includes('Dynamic server usage'))) {
+        throw e;
+      }
       console.error('Falha ao decodificar sessão:', e);
       return null;
     }
