@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+
+@theme {
+  --color-forest: #500b18;
+  --color-forest-hover: #380a11;
+  --color-lima: #e3bc8f;
+  --color-lima-hover: #d5ab79;
+  --color-cream: #FAF9F6;
+  --color-gray-150: #eceeec;
+  --color-gray-450: #888e8b;
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+
+/* Custom Base Styles */
+body {
+  background-color: var(--color-cream);
+  color: #1e2825;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4dad6;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-450);
+}
+
+/* Micro-animations and hover effects */
+.transition-all-custom {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom glassmorphism classes */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-dark {
+  background: rgba(80, 11, 24, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
