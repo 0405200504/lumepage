@@ -14,14 +14,15 @@ export default async function DashboardClientsPage() {
   const professionalId = session.professional_id!;
 
   const clients = await dbService.getClientsByProfessional(professionalId);
+  const appointments = await dbService.getAppointmentsByProfessional(professionalId);
 
   return (
-    <LayoutDashboard 
-      session={session} 
-      title="Carteira de Clientes" 
-      subtitle="Gerencie sua ficha de clientes frequentes e acesse o histórico de atendimento acumulado."
+    <LayoutDashboard
+      session={session}
+      title="Carteira de Clientes"
+      subtitle="Acompanhe histórico, reative clientes sumidas e monitore faltas para fidelizar mais."
     >
-      <ClientsList initialClients={clients} />
+      <ClientsList professionalId={professionalId} initialClients={clients} appointments={appointments} />
     </LayoutDashboard>
   );
 }

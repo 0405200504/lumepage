@@ -35,7 +35,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
 
   // Paleta de Cores
   const [primaryColor, setPrimaryColor] = useState(professional.primary_color || '#500b18');
-  const [secondaryColor, setSecondaryColor] = useState(professional.secondary_color || '#e3bc8f');
+  const [secondaryColor, setSecondaryColor] = useState(professional.secondary_color || '#eccbd2');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +84,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
         <span>Voltar para listagem</span>
       </Link>
 
-      <form onSubmit={handleSubmit} className="bg-white border border-[#e4e9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
         <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3">
           Editar Informações Principais
         </h3>

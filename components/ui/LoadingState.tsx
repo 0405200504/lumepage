@@ -10,7 +10,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   fullscreen = false
 }) => {
   const containerClasses = fullscreen
-    ? 'fixed inset-0 z-50 bg-[#faf9f6]/80 backdrop-blur-xs flex flex-col items-center justify-center'
+    ? 'fixed inset-0 z-50 bg-[#f7f3ee]/80 backdrop-blur-xs flex flex-col items-center justify-center'
     : 'flex flex-col items-center justify-center p-12 w-full';
 
   return (

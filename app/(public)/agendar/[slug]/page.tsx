@@ -32,8 +32,8 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   if (!res.success || !res.professional || !res.services) {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-4 select-none">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#e4e9e6] shadow-xl text-center flex flex-col items-center">
-          <div className="p-4 bg-red-50 text-red-650 rounded-2xl mb-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#efe9e6] shadow-xl text-center flex flex-col items-center">
+          <div className="p-4 bg-red-50 text-red-600 rounded-2xl mb-4">
             <AlertCircle className="h-8 w-8" />
           </div>
           <h2 className="text-lg font-black text-gray-900 tracking-tight">Página não encontrada</h2>
@@ -65,9 +65,9 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center select-none py-6 sm:py-12 px-4">
+    <div className="min-h-screen bg-[#f7f3ee] flex flex-col items-center select-none py-6 sm:py-12 px-4">
       {/* Container Principal */}
-      <div className="max-w-2xl w-full bg-white rounded-4xl border border-[#e4e9e6] shadow-xl overflow-hidden flex flex-col">
+      <div className="max-w-2xl w-full bg-white rounded-4xl border border-[#efe9e6] shadow-xl overflow-hidden flex flex-col">
         <BookingFlow
           professional={res.professional}
           services={res.services}

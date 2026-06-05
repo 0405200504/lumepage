@@ -1,64 +1,143 @@
 @import "tailwindcss";
 
+/* =========================================================
+   LUME · DESIGN SYSTEM
+   Paleta: BORDÔ + OFF-WHITE (clean · minimalista · futurista)
+   Acentos de status discretos apenas em selos.
+   ========================================================= */
 
 @theme {
-  --color-forest: #500b18;
-  --color-forest-hover: #380a11;
-  --color-lima: #e3bc8f;
-  --color-lima-hover: #d5ab79;
-  --color-cream: #FAF9F6;
-  --color-gray-150: #eceeec;
-  --color-gray-450: #888e8b;
-  
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Outfit', sans-serif;
-  
+  /* — Bordô (escala) — */
+  --color-wine-50:  #fbf2f4;
+  --color-wine-100: #f6e1e6;
+  --color-wine-200: #ecc3cc;
+  --color-wine-300: #db97a6;
+  --color-wine-400: #bc5d70;
+  --color-wine-500: #8c2438;
+  --color-wine-600: #6b1525;
+  --color-wine-700: #500b18; /* bordô brand */
+  --color-wine-800: #3a0811;
+  --color-wine-900: #26040a;
+
+  /* — Off-white / superfícies — */
+  --color-cream: #f7f3ee;   /* fundo da página (off-white) */
+  --color-paper: #ffffff;   /* cartões */
+  --color-sand:  #f1ebe4;   /* superfície neutra suave */
+
+  /* — Tons funcionais herdados (compatibilidade) — */
+  --color-forest: #500b18;        /* = bordô primário */
+  --color-forest-hover: #3a0811;
+  --color-lima: #eccbd2;          /* acento claro em fundo bordô (tint de vinho) */
+  --color-lima-hover: #e0b4be;
+
+  /* — Neutros quentes (texto / linhas) — */
+  --color-ink: #211a1c;
+  --color-gray-150: #efe9e6;
+  --color-gray-250: #e6ddda;
+  --color-gray-450: #8a7e80;
+
+  /* — Acentos de status (discretos) — */
+  --color-ok: #2e7d5b;
+  --color-warn: #b07a23;
+  --color-bad: #b23a48;
+
+  /* — Tipografia — */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit', 'Inter', sans-serif;
+
+  /* — Raios — */
   --radius-3xl: 1.5rem;
   --radius-4xl: 2rem;
+  --radius-5xl: 2.5rem;
+
+  /* — Sombras suaves (futuristas) — */
+  --shadow-soft: 0 1px 2px rgba(38, 4, 10, 0.04), 0 8px 24px -12px rgba(38, 4, 10, 0.10);
+  --shadow-glow: 0 20px 60px -24px rgba(80, 11, 24, 0.45);
 }
 
-/* Custom Base Styles */
+/* — Base — */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--color-cream);
-  color: #1e2825;
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
-/* Scrollbar Customization */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d4dad6;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-450);
-}
+/* — Scrollbar — */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e0d4d3; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gray-450); }
+::selection { background: rgba(80, 11, 24, 0.12); color: var(--color-wine-800); }
 
-/* Micro-animations and hover effects */
-.transition-all-custom {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* — Utilitários — */
+.transition-all-custom { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
 
-/* Custom glassmorphism classes */
+/* Vidro / glassmorphism sutil */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+.glass-dark {
+  background: rgba(80, 11, 24, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
-.glass-dark {
-  background: rgba(80, 11, 24, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Superfície bordô com profundidade (futurista) */
+.surface-wine {
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(140, 36, 56, 0.55) 0%, transparent 55%),
+    linear-gradient(160deg, #500b18 0%, #3a0811 100%);
 }
+
+/* Borda luminosa fina */
+.ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+
+/* Cartão padrão */
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-gray-150);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-soft);
+}
+
+/* — Animações — */
+@keyframes slide-right {
+  from { transform: translateX(-100%); opacity: 0.4; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-right { animation: slide-right 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Safe-area (PWA / notch) */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pt-safe { padding-top: env(safe-area-inset-top); }

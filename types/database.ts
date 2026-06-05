@@ -89,6 +89,8 @@ export interface Setting {
   whatsapp_confirmation_message: string;
   whatsapp_cancel_message: string;
   show_price_public: boolean;
+  requires_deposit?: boolean; // exige sinal/antecipação (opcional — requer migração v2)
+  deposit_instructions?: string | null; // instruções de sinal exibidas no agendamento
   created_at: string;
   updated_at: string;
 }
@@ -99,10 +101,41 @@ export interface Client {
   name: string;
   whatsapp: string;
   email: string | null;
+  birthday?: string | null; // "YYYY-MM-DD" (opcional — requer migração v2)
   total_appointments: number;
   last_appointment_at: string | null;
   created_at: string;
   updated_at?: string;
+}
+
+export type TransactionType = 'income' | 'expense';
+
+export interface Transaction {
+  id: string;
+  professional_id: string;
+  type: TransactionType;
+  amount_cents: number;
+  category: string;
+  description: string | null;
+  date: string; // "YYYY-MM-DD"
+  created_at: string;
+}
+
+export interface Task {
+  id: string;
+  professional_id: string;
+  content: string;
+  done: boolean;
+  created_at: string;
+}
+
+export interface FixedExpense {
+  id: string;
+  professional_id: string;
+  name: string;
+  amount_cents: number;
+  active: boolean;
+  created_at: string;
 }
 
 export interface Appointment {

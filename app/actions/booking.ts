@@ -56,6 +56,7 @@ interface CreateAppointmentInput {
   date: string;
   startTime: string; // "HH:MM"
   notes?: string;
+  clientBirthday?: string;
 }
 
 /**
@@ -65,7 +66,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
   try {
     const {
       professionalId, serviceId, clientName, clientWhatsapp,
-      clientEmail, date, startTime, notes
+      clientEmail, date, startTime, notes, clientBirthday
     } = input;
 
     // 1. Validar inputs básicos
@@ -118,9 +119,14 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       cancellation_reason: null
     });
 
-    return { 
-      success: true, 
-      appointmentId: appointment.id 
+    // Best-effort: registrar aniversário da cliente (requer migração v2 — não bloqueia o agendamento)
+    if (clientBirthday) {
+      await dbService.setClientBirthday(professionalId, clientWhatsapp.replace(/\D/g, ''), clientBirthday);
+    }
+
+    return {
+      success: true,
+      appointmentId: appointment.id
     };
   } catch (e: any) {
     console.error('Erro ao agendar:', e);

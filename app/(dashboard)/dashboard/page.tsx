@@ -3,6 +3,7 @@ import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
+import { TasksWidget } from '@/components/dashboard/TasksWidget';
 
 export const metadata = {
   title: 'Visão Geral | Lume Agenda Dashboard',
@@ -19,20 +20,24 @@ export default async function DashboardPage() {
   const professional = await dbService.getProfessionalById(professionalId);
   const appointments = await dbService.getAppointmentsByProfessional(professionalId);
   const services = await dbService.getServicesByProfessional(professionalId);
+  const tasks = await dbService.getTasksByProfessional(professionalId);
 
   return (
-    <LayoutDashboard 
-      session={session} 
-      title="Início" 
+    <LayoutDashboard
+      session={session}
+      title="Início"
       subtitle="Acompanhe suas estatísticas operacionais de hoje e os próximos atendimentos marcados."
     >
-      <DashboardOverview
-        professionalName={session.name}
-        brandName={professional?.brand_name || session.name}
-        slug={professional?.slug || ''}
-        appointments={appointments}
-        services={services}
-      />
+      <div className="space-y-6">
+        <TasksWidget professionalId={professionalId} initialTasks={tasks} />
+        <DashboardOverview
+          professionalName={session.name}
+          brandName={professional?.brand_name || session.name}
+          slug={professional?.slug || ''}
+          appointments={appointments}
+          services={services}
+        />
+      </div>
     </LayoutDashboard>
   );
 }

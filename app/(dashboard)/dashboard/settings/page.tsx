@@ -19,7 +19,7 @@ export default async function DashboardSettingsPage() {
   if (!professional) {
     return (
       <LayoutDashboard session={session} title="Configurações">
-        <div className="bg-white border border-[#e4e9e6] rounded-3xl p-8 text-center max-w-md mx-auto my-12">
+        <div className="bg-white border border-[#efe9e6] rounded-3xl p-8 text-center max-w-md mx-auto my-12">
           <p className="text-xs text-gray-500">Erro ao carregar dados do profissional.</p>
         </div>
       </LayoutDashboard>

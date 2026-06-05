@@ -37,7 +37,7 @@ export default async function AdminDashboardPage() {
           </div>
           <Link
             href="/admin/professionals/new"
-            className="px-5 py-3 bg-[#e3bc8f] hover:bg-[#d5ab79] text-[#500b18] text-xs font-bold rounded-2xl shadow-md transition-colors cursor-pointer shrink-0 z-10"
+            className="px-5 py-3 bg-[#eccbd2] hover:bg-[#e0b4be] text-[#500b18] text-xs font-bold rounded-2xl shadow-md transition-colors cursor-pointer shrink-0 z-10"
           >
             Cadastrar Profissional
           </Link>
@@ -47,22 +47,22 @@ export default async function AdminDashboardPage() {
         {/* Cards de Métricas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Faturamento */}
-          <div className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
+          <div className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Faturamento Gerado</span>
               <p className="text-xl font-black text-gray-900 leading-none">{formatPrice(stats.totalRevenueCents)}</p>
-              <div className="flex items-center gap-1 text-[10px] text-emerald-650 font-bold">
+              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
                 <TrendingUp className="h-3 w-3" />
                 <span>+ 12.4% este mês</span>
               </div>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-650 rounded-2xl shrink-0">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
               <DollarSign className="h-5 w-5" />
             </div>
           </div>
 
           {/* Card 2: Agendamentos */}
-          <div className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
+          <div className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Total Agendamentos</span>
               <p className="text-xl font-black text-gray-900 leading-none">{stats.totalAppointments}</p>
@@ -76,7 +76,7 @@ export default async function AdminDashboardPage() {
           </div>
 
           {/* Card 3: Profissionais */}
-          <div className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
+          <div className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Profissionais</span>
               <p className="text-xl font-black text-gray-900 leading-none">{stats.totalProfessionals}</p>
@@ -90,16 +90,16 @@ export default async function AdminDashboardPage() {
           </div>
 
           {/* Card 4: Ativos */}
-          <div className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
+          <div className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex justify-between items-start">
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Ativas Agora</span>
               <p className="text-xl font-black text-gray-900 leading-none">{stats.activeProfessionals}</p>
-              <div className="flex items-center gap-1 text-[10px] text-emerald-650 font-bold">
+              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
                 <Activity className="h-3 w-3" />
                 <span>Em operação regular</span>
               </div>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-650 rounded-2xl shrink-0">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
               <Activity className="h-5 w-5" />
             </div>
           </div>

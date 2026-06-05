@@ -66,7 +66,7 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
   return (
     <div className="space-y-6 select-none">
       {/* Busca e Filtro */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-[#e4e9e6] shadow-xs">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-[#efe9e6] shadow-xs">
         <div className="relative w-full sm:max-w-xs rounded-xl shadow-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
@@ -96,10 +96,10 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
       </div>
 
       {/* Tabela de Profissionais */}
-      <div className="bg-white border border-[#e4e9e6] rounded-3xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#e4e9e6] text-left">
-            <thead className="bg-[#f4f6f5]/40 text-xs font-bold text-gray-400 uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-[#efe9e6] text-left">
+            <thead className="bg-[#f4f1ec]/40 text-xs font-bold text-gray-400 uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Profissional</th>
                 <th className="px-6 py-4">Slug / Link Público</th>
@@ -108,7 +108,7 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e4e9e6] text-sm text-gray-700">
+            <tbody className="divide-y divide-[#efe9e6] text-sm text-gray-700">
               {filteredProfs.length > 0 ? (
                 filteredProfs.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50/20 transition-colors">

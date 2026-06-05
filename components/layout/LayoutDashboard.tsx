@@ -18,12 +18,14 @@ export const LayoutDashboard: React.FC<LayoutDashboardProps> = async ({
   subtitle
 }) => {
   let brandName = '';
-  
+  let slug = '';
+
   if (session.professional_id) {
     try {
       const prof = await dbService.getProfessionalById(session.professional_id);
       if (prof) {
         brandName = prof.brand_name;
+        slug = prof.slug;
       }
     } catch (e) {
       console.error('Erro ao buscar profissional no layout:', e);
@@ -31,11 +33,12 @@ export const LayoutDashboard: React.FC<LayoutDashboardProps> = async ({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#faf9f6]">
-      <Sidebar 
-        role="professional" 
-        name={session.name} 
-        brandName={brandName || session.name} 
+    <div className="flex min-h-screen bg-[#f7f3ee]">
+      <Sidebar
+        role="professional"
+        name={session.name}
+        brandName={brandName || session.name}
+        slug={slug}
       />
       
       <div className="flex-1 flex flex-col min-w-0">
@@ -47,7 +50,7 @@ export const LayoutDashboard: React.FC<LayoutDashboardProps> = async ({
           role="professional" 
         />
         
-        <main className="flex-1 p-6 overflow-y-auto max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 pb-28 lg:pb-6 overflow-y-auto max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>

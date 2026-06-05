@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { authService } from '@/lib/auth/auth';
 import { Calendar, Scissors, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { LumeLogo } from '@/components/ui/LumeLogo';
 
 export default async function HomePage() {
   const session = await authService.getCurrentUser();
@@ -20,12 +21,7 @@ export default async function HomePage() {
     <div className="flex flex-col min-h-screen bg-cream selection:bg-lima selection:text-forest">
       {/* Navbar */}
       <header className="max-w-7xl w-full mx-auto px-6 py-6 flex justify-between items-center z-10">
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-9 bg-forest text-lima flex items-center justify-center font-black rounded-xl text-lg shadow-sm">
-            L
-          </div>
-          <span className="font-display font-extrabold text-lg text-forest tracking-tight">Lume Agenda</span>
-        </div>
+        <LumeLogo variant="wine" className="h-7 text-wine-700" />
         <Link 
           href="/login"
           className="px-5 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-md transition-all duration-200"
@@ -66,7 +62,7 @@ export default async function HomePage() {
         </div>
 
         {/* Mockup da interface de agendamento */}
-        <div className="mt-16 md:mt-24 bg-white rounded-3xl p-4 border border-[#e4e9e6] shadow-2xl relative overflow-hidden max-w-3xl mx-auto">
+        <div className="mt-16 md:mt-24 bg-white rounded-3xl p-4 border border-[#efe9e6] shadow-2xl relative overflow-hidden max-w-3xl mx-auto">
           <div className="flex items-center gap-1.5 border-b border-gray-100 pb-3 mb-4">
             <div className="h-3 w-3 bg-red-400 rounded-full" />
             <div className="h-3 w-3 bg-amber-400 rounded-full" />
@@ -74,7 +70,7 @@ export default async function HomePage() {
             <span className="text-[10px] text-gray-400 ml-2 font-mono">lumeagenda.com/amanda-costa</span>
           </div>
           
-          <div className="bg-[#faf9f6] rounded-2xl p-6 text-left border border-gray-100">
+          <div className="bg-[#f7f3ee] rounded-2xl p-6 text-left border border-gray-100">
             <div className="flex gap-4 items-center mb-6">
               <div className="h-12 w-12 bg-forest text-lima flex items-center justify-center font-bold rounded-2xl text-xl shrink-0">
                 AC
@@ -106,7 +102,7 @@ export default async function HomePage() {
       </main>
 
       {/* Features Grid */}
-      <section id="features" className="bg-white border-t border-[#e4e9e6] py-16 md:py-24">
+      <section id="features" className="bg-white border-t border-[#efe9e6] py-16 md:py-24">
         <div className="max-w-6xl w-full mx-auto px-6">
           <h2 className="font-display text-2xl md:text-3xl font-black text-center text-forest tracking-tight">
             Criado para valorizar o seu negócio
@@ -116,7 +112,7 @@ export default async function HomePage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 md:mt-16">
-            <div className="p-6 rounded-3xl bg-cream border border-[#e4e9e6] shadow-xs">
+            <div className="p-6 rounded-3xl bg-cream border border-[#efe9e6] shadow-xs">
               <div className="p-3 bg-forest text-lima rounded-2xl w-fit">
                 <Calendar className="h-6 w-6" />
               </div>
@@ -126,7 +122,7 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-cream border border-[#e4e9e6] shadow-xs">
+            <div className="p-6 rounded-3xl bg-cream border border-[#efe9e6] shadow-xs">
               <div className="p-3 bg-forest text-lima rounded-2xl w-fit">
                 <Scissors className="h-6 w-6" />
               </div>
@@ -136,7 +132,7 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-cream border border-[#e4e9e6] shadow-xs">
+            <div className="p-6 rounded-3xl bg-cream border border-[#efe9e6] shadow-xs">
               <div className="p-3 bg-forest text-lima rounded-2xl w-fit">
                 <ShieldCheck className="h-6 w-6" />
               </div>
@@ -150,7 +146,7 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-forest text-white/50 border-t border-[#1a443a] py-8 text-center text-xs">
+      <footer className="bg-forest text-white/50 border-t border-[#500b18] py-8 text-center text-xs">
         <p>&copy; {new Date().getFullYear()} Lume Agenda. Desenvolvido com amor para profissionais de beleza.</p>
       </footer>
     </div>

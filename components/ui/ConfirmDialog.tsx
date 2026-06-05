@@ -37,7 +37,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         };
       case 'warning':
         return {
-          iconBg: 'bg-amber-50 text-amber-650',
+          iconBg: 'bg-amber-50 text-amber-600',
           btnBg: 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-200'
         };
       default:
@@ -54,12 +54,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Background overlay */}
       <div 
-        className="absolute inset-0 bg-[#0c1512]/30 backdrop-blur-xs transition-opacity" 
+        className="absolute inset-0 bg-[#1a0e12]/30 backdrop-blur-xs transition-opacity" 
         onClick={isLoading ? undefined : onCancel}
       />
 
       {/* Modal Box */}
-      <div className="relative bg-white rounded-3xl p-6 shadow-xl max-w-sm w-full mx-4 border border-[#e4e9e6] z-10 transform transition-all">
+      <div className="relative bg-white rounded-3xl p-6 shadow-xl max-w-sm w-full mx-4 border border-[#efe9e6] z-10 transform transition-all">
         <div className="flex gap-4 items-start">
           <div className={`p-3 rounded-2xl ${theme.iconBg} shrink-0`}>
             <AlertCircle className="h-6 w-6" />

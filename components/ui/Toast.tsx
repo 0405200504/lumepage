@@ -50,14 +50,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 w-full bg-white border border-[#e4e9e6] rounded-2xl p-4 shadow-lg animate-slide-in transition-all"
+            className="pointer-events-auto flex items-start gap-3 w-full bg-white border border-[#efe9e6] rounded-2xl p-4 shadow-lg animate-slide-in transition-all"
             style={{
               animation: 'toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
             }}
           >
             {/* Ícones */}
             {toast.type === 'success' && <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertTriangle className="h-5 w-5 text-red-650 shrink-0 mt-0.5" />}
+            {toast.type === 'error' && <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />}
             {toast.type === 'info' && <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />}
 
             {/* Conteúdo */}
@@ -69,7 +69,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             {/* Fechar */}
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-gray-450 hover:text-gray-650 p-0.5 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
+              className="text-gray-450 hover:text-gray-600 p-0.5 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
             >
               <X className="h-4 w-4" />
             </button>

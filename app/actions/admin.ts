@@ -72,7 +72,7 @@ export async function createProfessionalAction(input: CreateProfessionalInput) {
       logo_url: null,
       profile_image_url: null,
       primary_color: '#500b18', // Bordô Lume default
-      secondary_color: '#e3bc8f',
+      secondary_color: '#eccbd2',
       address: address || null,
       city: city || null,
       state: state || null,

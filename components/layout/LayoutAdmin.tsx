@@ -17,7 +17,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   subtitle
 }) => {
   return (
-    <div className="flex min-h-screen bg-[#faf9f6]">
+    <div className="flex min-h-screen bg-[#f7f3ee]">
       <Sidebar role="super_admin" name={session.name} />
       
       <div className="flex-1 flex flex-col min-w-0">

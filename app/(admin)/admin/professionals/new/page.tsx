@@ -116,9 +116,9 @@ export default function NewProfessionalPage() {
         {createdCredentials && (
           <div className="bg-[#500b18] text-white rounded-3xl p-6 md:p-8 border border-[#681624] space-y-4 animate-scale-up">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-8 w-8 text-[#e3bc8f]" />
+              <CheckCircle2 className="h-8 w-8 text-[#eccbd2]" />
               <div>
-                <h3 className="text-base font-black tracking-tight text-[#e3bc8f]">Acesso Inicial Gerado!</h3>
+                <h3 className="text-base font-black tracking-tight text-[#eccbd2]">Acesso Inicial Gerado!</h3>
                 <p className="text-xs text-white/70">Passe as credenciais abaixo para a profissional fazer o primeiro login.</p>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function NewProfessionalPage() {
               <div className="flex justify-between items-center gap-4 border-t border-[#801c2e] pt-3">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-sans font-bold">E-MAIL DE LOGIN</span>
-                  <span className="text-[#e3bc8f]">{createdCredentials.email}</span>
+                  <span className="text-[#eccbd2]">{createdCredentials.email}</span>
                 </div>
                 <button 
                   onClick={() => copyToClipboard(createdCredentials.email)}
@@ -151,7 +151,7 @@ export default function NewProfessionalPage() {
               <div className="flex justify-between items-center gap-4 border-t border-[#801c2e] pt-3">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-sans font-bold">SENHA TEMPORÁRIA</span>
-                  <span className="text-[#e3bc8f]">{createdCredentials.tempPass}</span>
+                  <span className="text-[#eccbd2]">{createdCredentials.tempPass}</span>
                 </div>
                 <button 
                   onClick={() => copyToClipboard(createdCredentials.tempPass)}
@@ -164,7 +164,7 @@ export default function NewProfessionalPage() {
 
             <button
               onClick={() => router.push('/admin/professionals')}
-              className="px-5 py-2.5 bg-[#e3bc8f] hover:bg-[#d5ab79] text-[#500b18] text-xs font-bold rounded-xl shadow-xs transition-colors w-full cursor-pointer"
+              className="px-5 py-2.5 bg-[#eccbd2] hover:bg-[#e0b4be] text-[#500b18] text-xs font-bold rounded-xl shadow-xs transition-colors w-full cursor-pointer"
             >
               Concluir e Voltar
             </button>
@@ -173,7 +173,7 @@ export default function NewProfessionalPage() {
 
         {/* Formulário Principal */}
         {!createdCredentials && (
-          <form onSubmit={handleSubmit} className="bg-white border border-[#e4e9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
             <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3">
               Informações Cadastrais
             </h3>

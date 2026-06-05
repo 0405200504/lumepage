@@ -115,7 +115,7 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
   return (
     <form onSubmit={handleSave} className="space-y-6 select-none max-w-4xl">
       {/* Aviso */}
-      <div className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex gap-3.5 items-start">
+      <div className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex gap-3.5 items-start">
         <div className="p-2.5 bg-[#500b18]/5 text-forest rounded-xl shrink-0">
           <AlertCircle className="h-5 w-5" />
         </div>
@@ -129,7 +129,7 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
       </div>
 
       {/* Lista de Dias */}
-      <div className="bg-white border border-[#e4e9e6] rounded-3xl shadow-xs divide-y divide-gray-150">
+      <div className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs divide-y divide-gray-150">
         {WEEKDAYS.map((day) => {
           const state = rulesState[day.value];
           return (

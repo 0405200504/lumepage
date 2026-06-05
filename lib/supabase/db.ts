@@ -1,15 +1,36 @@
 import { isSupabaseConfigured, supabase, supabaseAdmin, getSupabaseAdmin } from './client';
 import { mockDb } from './mockDb';
-import { 
-  Professional, Profile, Service, AvailabilityRule, 
-  TimeBlock, Setting, Client, Appointment, AppointmentStatus
+import {
+  Professional, Profile, Service, AvailabilityRule,
+  TimeBlock, Setting, Client, Appointment, AppointmentStatus,
+  Transaction, Task, FixedExpense
 } from '@/types/database';
+
+/**
+ * Cliente de banco para uso EXCLUSIVO no servidor.
+ * O app autentica via cookie próprio (não usa a sessão RLS do Supabase),
+ * portanto as leituras/escritas server-side usam o service-role e a
+ * autorização é feita na camada de actions/sessão.
+ */
+const getDb = () => getSupabaseAdmin() || supabase;
+
+/** Detecta erro de "tabela não existe" (PostgREST 42P01 / PGRST205). */
+function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '42P01'
+    || error.code === 'PGRST205'
+    || /does not exist|could not find the table|schema cache/i.test(error.message || '');
+}
+
+function warnMigration(table: string) {
+  console.warn(`[${table}] Tabela ausente — rode supabase/migration_v3.sql no Supabase para ativar o módulo.`);
+}
 
 export const dbService = {
   // Professionals
   getProfessionals: async (): Promise<Professional[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('professionals')
         .select('*')
         .order('name');
@@ -21,7 +42,7 @@ export const dbService = {
 
   getProfessionalBySlug: async (slug: string): Promise<Professional | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('professionals')
         .select('*')
         .eq('slug', slug)
@@ -34,7 +55,7 @@ export const dbService = {
 
   getProfessionalById: async (id: string): Promise<Professional | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('professionals')
         .select('*')
         .eq('id', id)
@@ -47,7 +68,7 @@ export const dbService = {
 
   upsertProfessional: async (data: Partial<Professional> & { id: string }): Promise<Professional> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await getDb()
         .from('professionals')
         .upsert({ ...data, updated_at: new Date().toISOString() })
         .select()
@@ -114,7 +135,7 @@ export const dbService = {
   // Profiles
   getProfiles: async (): Promise<Profile[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('profiles')
         .select('*');
       if (error) throw error;
@@ -125,7 +146,7 @@ export const dbService = {
 
   getProfileByEmail: async (email: string): Promise<Profile | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('profiles')
         .select('*')
         .eq('email', email.toLowerCase())
@@ -138,7 +159,7 @@ export const dbService = {
 
   getProfileByAuthUserId: async (uid: string): Promise<Profile | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('profiles')
         .select('*')
         .eq('auth_user_id', uid)
@@ -166,7 +187,7 @@ export const dbService = {
   // Services
   getServices: async (): Promise<Service[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('services')
         .select('*')
         .order('name');
@@ -178,7 +199,7 @@ export const dbService = {
 
   getServicesByProfessional: async (profId: string): Promise<Service[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('services')
         .select('*')
         .eq('professional_id', profId)
@@ -191,7 +212,7 @@ export const dbService = {
 
   getServiceById: async (id: string): Promise<Service | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('services')
         .select('*')
         .eq('id', id)
@@ -204,7 +225,7 @@ export const dbService = {
 
   upsertService: async (data: Partial<Service> & { id: string; professional_id: string }): Promise<Service> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await getDb()
         .from('services')
         .upsert({ ...data, updated_at: new Date().toISOString() })
         .select()
@@ -217,7 +238,7 @@ export const dbService = {
 
   deleteService: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await supabase
+      const { error } = await getDb()
         .from('services')
         .delete()
         .eq('id', id);
@@ -230,7 +251,7 @@ export const dbService = {
   // AvailabilityRules
   getAvailabilityRulesByProfessional: async (profId: string): Promise<AvailabilityRule[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('availability_rules')
         .select('*')
         .eq('professional_id', profId)
@@ -243,7 +264,7 @@ export const dbService = {
 
   upsertAvailabilityRule: async (data: Partial<AvailabilityRule> & { professional_id: string; weekday: number }): Promise<AvailabilityRule> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await getDb()
         .from('availability_rules')
         .upsert(data, { onConflict: 'professional_id,weekday' })
         .select()
@@ -257,7 +278,7 @@ export const dbService = {
   // TimeBlocks
   getTimeBlocksByProfessional: async (profId: string): Promise<TimeBlock[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('time_blocks')
         .select('*')
         .eq('professional_id', profId)
@@ -270,7 +291,7 @@ export const dbService = {
 
   createTimeBlock: async (data: Omit<TimeBlock, 'id' | 'created_at'>): Promise<TimeBlock> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await getDb()
         .from('time_blocks')
         .insert(data)
         .select()
@@ -283,7 +304,7 @@ export const dbService = {
 
   deleteTimeBlock: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await supabase
+      const { error } = await getDb()
         .from('time_blocks')
         .delete()
         .eq('id', id);
@@ -296,7 +317,7 @@ export const dbService = {
   // Settings
   getSettingsByProfessional: async (profId: string): Promise<Setting | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('settings')
         .select('*')
         .eq('professional_id', profId)
@@ -309,12 +330,29 @@ export const dbService = {
 
   upsertSettings: async (data: Partial<Setting> & { professional_id: string }): Promise<Setting> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      // Campos opcionais que dependem da migração v2 — gravados em separado (best-effort)
+      const { requires_deposit, deposit_instructions, ...core } = data as Partial<Setting> & { professional_id: string };
+      const { data: result, error } = await getDb()
         .from('settings')
-        .upsert(data, { onConflict: 'professional_id' })
+        .upsert(core, { onConflict: 'professional_id' })
         .select()
         .single();
       if (error) throw error;
+
+      if (requires_deposit !== undefined || deposit_instructions !== undefined) {
+        const extras: Record<string, unknown> = {};
+        if (requires_deposit !== undefined) extras.requires_deposit = requires_deposit;
+        if (deposit_instructions !== undefined) extras.deposit_instructions = deposit_instructions;
+        const { error: extraErr } = await getDb()
+          .from('settings')
+          .update(extras)
+          .eq('professional_id', data.professional_id);
+        if (extraErr) {
+          console.warn('[settings] Colunas de sinal ausentes — rode supabase/migration_v2.sql:', extraErr.message);
+        } else {
+          Object.assign(result as object, extras);
+        }
+      }
       return result;
     }
     return mockDb.upsertSettings(data);
@@ -323,7 +361,7 @@ export const dbService = {
   // Clients
   getClientsByProfessional: async (profId: string): Promise<Client[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('clients')
         .select('*')
         .eq('professional_id', profId)
@@ -336,7 +374,7 @@ export const dbService = {
 
   getClientById: async (id: string): Promise<Client | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('clients')
         .select('*')
         .eq('id', id)
@@ -347,9 +385,26 @@ export const dbService = {
     return mockDb.getClientById(id);
   },
 
+  // Best-effort: grava aniversário da cliente (requer migração v2). Erros de coluna ausente são ignorados.
+  setClientBirthday: async (professionalId: string, whatsapp: string, birthday: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      return mockDb.setClientBirthday?.(professionalId, whatsapp, birthday);
+    }
+    try {
+      const { error } = await getDb()
+        .from('clients')
+        .update({ birthday })
+        .eq('professional_id', professionalId)
+        .eq('whatsapp', whatsapp);
+      if (error) console.warn('[clients] Coluna birthday ausente — rode supabase/migration_v2.sql:', error.message);
+    } catch (e) {
+      console.warn('[clients] Falha ao gravar aniversário:', e instanceof Error ? e.message : e);
+    }
+  },
+
   createClient: async (data: Omit<Client, 'id' | 'total_appointments' | 'last_appointment_at' | 'created_at'>): Promise<Client> => {
     if (isSupabaseConfigured) {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await getDb()
         .from('clients')
         .insert(data)
         .select()
@@ -363,7 +418,7 @@ export const dbService = {
   // Appointments
   getAppointmentsByProfessional: async (profId: string): Promise<Appointment[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('appointments')
         .select('*, service:services(*)')
         .eq('professional_id', profId)
@@ -377,7 +432,7 @@ export const dbService = {
 
   getAppointmentsByClient: async (clientId: string): Promise<Appointment[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('appointments')
         .select('*, service:services(*)')
         .eq('client_id', clientId)
@@ -390,7 +445,7 @@ export const dbService = {
 
   getAppointmentById: async (id: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('appointments')
         .select('*, service:services(*), professional:professionals(*)')
         .eq('id', id)
@@ -474,7 +529,7 @@ export const dbService = {
 
   updateAppointmentStatus: async (id: string, status: AppointmentStatus, cancellationReason?: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { data, error } = await getDb()
         .from('appointments')
         .update({ 
           status, 
@@ -488,6 +543,141 @@ export const dbService = {
       return data;
     }
     return mockDb.updateAppointmentStatus(id, status, cancellationReason);
+  },
+
+  // ===================== TRANSACTIONS (FINANCEIRO) =====================
+  getTransactionsByProfessional: async (profId: string): Promise<Transaction[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('transactions')
+        .select('*')
+        .eq('professional_id', profId)
+        .order('date', { ascending: false });
+      if (error) {
+        if (isMissingTable(error)) { warnMigration('transactions'); return []; }
+        throw error;
+      }
+      return data || [];
+    }
+    return mockDb.getTransactionsByProfessional(profId);
+  },
+
+  createTransaction: async (data: Omit<Transaction, 'id' | 'created_at'>): Promise<Transaction> => {
+    if (isSupabaseConfigured) {
+      const { data: result, error } = await getDb()
+        .from('transactions')
+        .insert(data)
+        .select()
+        .single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Módulo financeiro não ativado. Rode supabase/migration_v3.sql no Supabase.');
+        throw error;
+      }
+      return result;
+    }
+    return mockDb.createTransaction(data);
+  },
+
+  deleteTransaction: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('transactions').delete().eq('id', id);
+      if (error && !isMissingTable(error)) throw error;
+      return true;
+    }
+    return mockDb.deleteTransaction(id);
+  },
+
+  // ===================== TASKS (NOTAS / TAREFAS) =====================
+  getTasksByProfessional: async (profId: string): Promise<Task[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('tasks')
+        .select('*')
+        .eq('professional_id', profId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingTable(error)) { warnMigration('tasks'); return []; }
+        throw error;
+      }
+      return data || [];
+    }
+    return mockDb.getTasksByProfessional(profId);
+  },
+
+  createTask: async (data: Omit<Task, 'id' | 'done' | 'created_at'>): Promise<Task> => {
+    if (isSupabaseConfigured) {
+      const { data: result, error } = await getDb()
+        .from('tasks')
+        .insert({ ...data, done: false })
+        .select()
+        .single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Lista de tarefas não ativada. Rode supabase/migration_v3.sql no Supabase.');
+        throw error;
+      }
+      return result;
+    }
+    return mockDb.createTask(data);
+  },
+
+  toggleTask: async (id: string, done: boolean): Promise<Task | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('tasks').update({ done }).eq('id', id).select().single();
+      if (error) { if (isMissingTable(error)) return null; throw error; }
+      return data;
+    }
+    return mockDb.toggleTask(id, done);
+  },
+
+  deleteTask: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('tasks').delete().eq('id', id);
+      if (error && !isMissingTable(error)) throw error;
+      return true;
+    }
+    return mockDb.deleteTask(id);
+  },
+
+  // ===================== FIXED EXPENSES (CONTAS FIXAS) =====================
+  getFixedExpensesByProfessional: async (profId: string): Promise<FixedExpense[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('fixed_expenses')
+        .select('*')
+        .eq('professional_id', profId)
+        .order('name', { ascending: true });
+      if (error) {
+        if (isMissingTable(error)) { warnMigration('fixed_expenses'); return []; }
+        throw error;
+      }
+      return data || [];
+    }
+    return mockDb.getFixedExpensesByProfessional(profId);
+  },
+
+  createFixedExpense: async (data: Omit<FixedExpense, 'id' | 'active' | 'created_at'>): Promise<FixedExpense> => {
+    if (isSupabaseConfigured) {
+      const { data: result, error } = await getDb()
+        .from('fixed_expenses')
+        .insert({ ...data, active: true })
+        .select()
+        .single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Contas fixas não ativadas. Rode supabase/migration_v3.sql no Supabase.');
+        throw error;
+      }
+      return result;
+    }
+    return mockDb.createFixedExpense(data);
+  },
+
+  deleteFixedExpense: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('fixed_expenses').delete().eq('id', id);
+      if (error && !isMissingTable(error)) throw error;
+      return true;
+    }
+    return mockDb.deleteFixedExpense(id);
   }
 };
 export default dbService;

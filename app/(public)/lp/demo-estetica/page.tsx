@@ -13,10 +13,10 @@ export default function DemoEsteticaPage() {
   const professionalSlug = 'amanda-costa';
 
   return (
-    <div className="bg-[#faf9f6] min-h-screen text-gray-800 font-sans selection:bg-lima selection:text-forest select-none">
+    <div className="bg-[#f7f3ee] min-h-screen text-gray-800 font-sans selection:bg-lima selection:text-forest select-none">
       
       {/* Barra de Navegação */}
-      <header className="sticky top-0 z-40 bg-[#faf9f6]/80 backdrop-blur-md border-b border-gray-150/50 px-6 py-4">
+      <header className="sticky top-0 z-40 bg-[#f7f3ee]/80 backdrop-blur-md border-b border-gray-150/50 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 bg-forest text-lima flex items-center justify-center font-black rounded-xl text-lg shadow-sm">
@@ -38,7 +38,7 @@ export default function DemoEsteticaPage() {
       </header>
 
       {/* 1. SEÇÃO HERO (Apresentação Principal) */}
-      <section className="relative overflow-hidden py-16 sm:py-24 px-6 border-b border-gray-100 bg-gradient-to-b from-[#f2f4f2] to-[#faf9f6]">
+      <section className="relative overflow-hidden py-16 sm:py-24 px-6 border-b border-gray-100 bg-gradient-to-b from-[#f4f1ec] to-[#f7f3ee]">
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-forest/5 text-forest border border-forest/10 rounded-full text-xs font-bold animate-pulse">
             <Sparkles className="h-3.5 w-3.5 text-forest" />
@@ -227,7 +227,7 @@ export default function DemoEsteticaPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           
           <div className="bg-white border border-gray-150 p-6 rounded-3xl space-y-4 relative">
-            <div className="flex text-amber-450 gap-0.5">
+            <div className="flex text-amber-500 gap-0.5">
               {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
             </div>
             <p className="text-xs text-gray-600 leading-relaxed italic">
@@ -240,7 +240,7 @@ export default function DemoEsteticaPage() {
           </div>
 
           <div className="bg-white border border-gray-150 p-6 rounded-3xl space-y-4 relative">
-            <div className="flex text-amber-450 gap-0.5">
+            <div className="flex text-amber-500 gap-0.5">
               {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
             </div>
             <p className="text-xs text-gray-600 leading-relaxed italic">
@@ -256,7 +256,7 @@ export default function DemoEsteticaPage() {
       </section>
 
       {/* 5. CTA INFERIOR */}
-      <section className="bg-gradient-to-t from-[#f2f4f2] to-[#faf9f6] py-16 sm:py-20 px-6 text-center border-t border-gray-100">
+      <section className="bg-gradient-to-t from-[#f4f1ec] to-[#f7f3ee] py-16 sm:py-20 px-6 text-center border-t border-gray-100">
         <div className="max-w-xl mx-auto space-y-6">
           <h2 className="text-2xl sm:text-3xl font-black text-forest tracking-tight">Pronta para viver essa experiência?</h2>
           <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">

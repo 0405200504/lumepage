@@ -17,8 +17,8 @@ export default async function BookingSuccessPage({ params, searchParams }: Succe
   if (!appointment) {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#e4e9e6] shadow-xl text-center flex flex-col items-center">
-          <CheckCircle2 className="h-10 w-10 text-emerald-650 mb-4" />
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#efe9e6] shadow-xl text-center flex flex-col items-center">
+          <CheckCircle2 className="h-10 w-10 text-emerald-600 mb-4" />
           <h2 className="text-lg font-black text-gray-900 tracking-tight">Agendamento Realizado!</h2>
           <p className="mt-2 text-xs text-gray-500 leading-relaxed">
             Seu agendamento foi efetuado. Contudo, as informações detalhadas não puderam ser exibidas na tela no momento.
@@ -50,7 +50,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Succe
 
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center py-6 sm:py-12 px-4 select-none">
-      <div className="max-w-md w-full bg-white rounded-4xl border border-[#e4e9e6] shadow-2xl p-6 md:p-8 flex flex-col items-center text-center">
+      <div className="max-w-md w-full bg-white rounded-4xl border border-[#efe9e6] shadow-2xl p-6 md:p-8 flex flex-col items-center text-center">
         
         {/* Ícone de Sucesso */}
         <div className="h-14 w-14 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-5 border border-emerald-100">
@@ -63,7 +63,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Succe
         </p>
 
         {/* Informações Resumidas do Agendamento */}
-        <div className="w-full bg-[#faf9f6] border border-gray-200 rounded-3xl p-5 my-6 text-left space-y-4 text-xs">
+        <div className="w-full bg-[#f7f3ee] border border-gray-200 rounded-3xl p-5 my-6 text-left space-y-4 text-xs">
           <div>
             <span className="text-[10px] text-gray-400 block font-bold">PROFISSIONAL</span>
             <span className="font-bold text-gray-800 text-sm">{professional?.brand_name}</span>

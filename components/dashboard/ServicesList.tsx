@@ -149,7 +149,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
   return (
     <div className="space-y-6 select-none">
       {/* Topo com Botão */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-[#e4e9e6] shadow-xs">
+      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-[#efe9e6] shadow-xs">
         <div className="flex items-center gap-2 text-forest">
           <Sparkles className="h-5 w-5" />
           <span className="text-xs font-bold">{initialServices.length} serviços cadastrados</span>
@@ -169,7 +169,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           initialServices.map((service) => (
             <div 
               key={service.id} 
-              className="bg-white border border-[#e4e9e6] rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-4 hover:border-forest/45 transition-all duration-200"
+              className="bg-white border border-[#efe9e6] rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-4 hover:border-forest/45 transition-all duration-200"
             >
               <div className="space-y-2">
                 <div className="flex justify-between items-start gap-4">
@@ -218,7 +218,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
                     setIsDeleteOpen(true);
                   }}
                   title="Excluir serviço"
-                  className="p-2 hover:bg-red-50 text-red-650 rounded-xl transition-colors border border-red-100/50"
+                  className="p-2 hover:bg-red-50 text-red-600 rounded-xl transition-colors border border-red-100/50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -235,11 +235,11 @@ export const ServicesList: React.FC<ServicesListProps> = ({
       {/* Modal de Criação / Edição */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-[#0c1512]/30 backdrop-blur-xs" onClick={() => !isSubmitting && setIsEditModalOpen(false)} />
+          <div className="absolute inset-0 bg-[#1a0e12]/30 backdrop-blur-xs" onClick={() => !isSubmitting && setIsEditModalOpen(false)} />
           
           <form 
             onSubmit={handleSave}
-            className="relative bg-white rounded-3xl p-6 shadow-xl max-w-md w-full mx-4 border border-[#e4e9e6] z-10 space-y-4"
+            className="relative bg-white rounded-3xl p-6 shadow-xl max-w-md w-full mx-4 border border-[#efe9e6] z-10 space-y-4"
           >
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
               <h3 className="text-base font-black text-gray-900 tracking-tight">

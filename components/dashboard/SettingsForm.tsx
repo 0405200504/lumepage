@@ -39,6 +39,13 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   const [maxDaysAhead, setMaxDaysAhead] = useState(settings?.max_days_ahead || 30);
   const [showPricePublic, setShowPricePublic] = useState(settings?.show_price_public ?? true);
 
+  // Sinal / Antecipação (anti no-show)
+  const [requiresDeposit, setRequiresDeposit] = useState(settings?.requires_deposit ?? false);
+  const [depositInstructions, setDepositInstructions] = useState(
+    settings?.deposit_instructions ||
+    'Para confirmar seu horário, é necessário um sinal de 50% via Pix. Envie o comprovante pelo WhatsApp após agendar. 💛'
+  );
+
   // Estados de Mensagens do WhatsApp
   const [whatsappConfirmation, setWhatsappConfirmation] = useState(
     settings?.whatsapp_confirmation_message || 
@@ -51,7 +58,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
   // Estados de Branding
   const [primaryColor, setPrimaryColor] = useState(professional.primary_color || '#500b18');
-  const [secondaryColor, setSecondaryColor] = useState(professional.secondary_color || '#e3bc8f');
+  const [secondaryColor, setSecondaryColor] = useState(professional.secondary_color || '#eccbd2');
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +88,9 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         max_days_ahead: maxDaysAhead,
         show_price_public: showPricePublic,
         whatsapp_confirmation_message: whatsappConfirmation,
-        whatsapp_cancel_message: whatsappCancel
+        whatsapp_cancel_message: whatsappCancel,
+        requires_deposit: requiresDeposit,
+        deposit_instructions: depositInstructions
       });
 
       if (pRes.success && sRes.success) {
@@ -100,7 +109,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   return (
     <div className="flex flex-col lg:flex-row gap-6 select-none max-w-5xl">
       {/* Abas Laterais */}
-      <div className="w-full lg:w-60 shrink-0 bg-white border border-[#e4e9e6] rounded-3xl p-4 shadow-xs self-start flex flex-row lg:flex-col gap-1.5 overflow-x-auto scrollbar-none">
+      <div className="w-full lg:w-60 shrink-0 bg-white border border-[#efe9e6] rounded-3xl p-4 shadow-xs self-start flex flex-row lg:flex-col gap-1.5 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
@@ -155,7 +164,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       </div>
 
       {/* Formulário Principal */}
-      <form onSubmit={handleSave} className="flex-1 bg-white border border-[#e4e9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
+      <form onSubmit={handleSave} className="flex-1 bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
         
         {/* ABA: Perfil */}
         {activeTab === 'profile' && (
@@ -367,6 +376,37 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   Exibir preços dos serviços na página pública
                 </label>
               </div>
+            </div>
+
+            {/* Sinal / Antecipação (anti no-show) */}
+            <div className="border-t border-gray-150 pt-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="requiresDeposit"
+                  checked={requiresDeposit}
+                  onChange={(e) => setRequiresDeposit(e.target.checked)}
+                  className="h-4.5 w-4.5 mt-0.5 rounded-sm border-gray-200 text-forest focus:ring-forest/20 cursor-pointer"
+                />
+                <label htmlFor="requiresDeposit" className="cursor-pointer">
+                  <span className="text-xs font-bold text-gray-700 block">Exigir sinal / antecipação para reservar</span>
+                  <span className="text-[10px] text-gray-450">Reduz faltas: a cliente vê o aviso de sinal ao agendar.</span>
+                </label>
+              </div>
+
+              {requiresDeposit && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                    Instruções de Sinal (exibidas na página de agendamento)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={depositInstructions}
+                    onChange={(e) => setDepositInstructions(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

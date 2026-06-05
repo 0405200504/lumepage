@@ -24,7 +24,7 @@ export default async function AdminEditProfessionalPage({ params }: PageProps) {
   if (!professional) {
     return (
       <LayoutAdmin session={session} title="Profissional Não Encontrada">
-        <div className="bg-white border border-[#e4e9e6] rounded-3xl p-8 text-center flex flex-col items-center max-w-md mx-auto my-12">
+        <div className="bg-white border border-[#efe9e6] rounded-3xl p-8 text-center flex flex-col items-center max-w-md mx-auto my-12">
           <div className="p-4 bg-red-50 text-red-600 rounded-2xl mb-4">
             <AlertCircle className="h-8 w-8" />
           </div>

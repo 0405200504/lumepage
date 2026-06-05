@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Professional, Service, Setting } from '@/types/database';
 import { 
-  Calendar as CalendarIcon, Clock, User, MessageSquare, 
-  ChevronRight, ArrowLeft, Scissors, Check, MessageCircle, CheckCircle2, AlertTriangle
+  Calendar as CalendarIcon, Clock, User, MessageSquare,
+  ChevronRight, ArrowLeft, Scissors, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
 } from 'lucide-react';
 import { getSlotsAction, createAppointmentAction } from '@/app/actions/booking';
 import { useToast } from '../ui/Toast';
@@ -40,6 +40,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [clientName, setClientName] = useState('');
   const [clientWhatsapp, setClientWhatsapp] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  const [clientBirthday, setClientBirthday] = useState('');
   const [notes, setNotes] = useState('');
   
   // Estado de Slots e Carregamento
@@ -51,7 +52,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   // Cores personalizadas do profissional
   const primaryColor = professional.primary_color || '#500b18';
-  const secondaryColor = professional.secondary_color || '#e3bc8f';
+  const secondaryColor = professional.secondary_color || '#eccbd2';
 
   // Gerar os próximos 15 dias para seleção
   const [availableDays, setAvailableDays] = useState<{ dateStr: string; label: string; weekdayLabel: string }[]>([]);
@@ -170,6 +171,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         clientName,
         clientWhatsapp,
         clientEmail: clientEmail || undefined,
+        clientBirthday: clientBirthday || undefined,
         date: selectedDate,
         startTime: selectedTime,
         notes: notes || undefined
@@ -467,17 +469,30 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
-                  Seu E-mail (Opcional)
-                </label>
-                <input
-                  type="email"
-                  placeholder="Ex: juliana@email.com"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                    Seu E-mail (Opcional)
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Ex: juliana@email.com"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                    Aniversário (Opcional)
+                  </label>
+                  <input
+                    type="date"
+                    value={clientBirthday}
+                    onChange={(e) => setClientBirthday(e.target.value)}
+                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  />
+                </div>
               </div>
 
               <div>
@@ -524,7 +539,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               <p className="text-xs text-gray-450 mt-1">Certifique-se de que tudo está correto antes de confirmar.</p>
             </div>
 
-            <div className="bg-gray-55/60 border border-gray-200 rounded-2xl p-5 space-y-4 text-xs">
+            <div className="bg-gray-50/60 border border-gray-200 rounded-2xl p-5 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-[10px] text-gray-450 block font-bold">PROFISSIONAL</span>
@@ -562,8 +577,20 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               )}
             </div>
 
+            {settings?.requires_deposit && (
+              <div className="bg-[#f7f3ee] border border-forest/20 rounded-2xl p-4 flex gap-3 text-xs">
+                <Wallet className="h-5 w-5 shrink-0 text-forest" />
+                <div>
+                  <p className="font-bold text-forest">Este atendimento exige sinal</p>
+                  <p className="text-[11px] mt-0.5 text-gray-600 leading-relaxed whitespace-pre-line">
+                    {settings.deposit_instructions || 'Um sinal é necessário para confirmar a reserva. A profissional enviará as instruções pelo WhatsApp.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {submitError && (
-              <div className="bg-red-50 text-red-650 border border-red-200 rounded-2xl p-4 flex gap-3 text-xs">
+              <div className="bg-red-50 text-red-600 border border-red-200 rounded-2xl p-4 flex gap-3 text-xs">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
                 <div>
                   <p className="font-bold">Horário indisponível</p>
@@ -608,7 +635,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               </p>
             </div>
 
-            <div className="w-full bg-[#faf9f6] border border-gray-200 rounded-2xl p-4 text-left text-xs space-y-3.5">
+            <div className="w-full bg-[#f7f3ee] border border-gray-200 rounded-2xl p-4 text-left text-xs space-y-3.5">
               <div>
                 <span className="text-[9px] text-gray-400 block font-bold">PROFISSIONAL</span>
                 <span className="font-bold text-gray-800">{professional.brand_name}</span>
@@ -630,6 +657,18 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 </div>
               </div>
             </div>
+
+            {settings?.requires_deposit && (
+              <div className="w-full bg-[#f7f3ee] border border-forest/20 rounded-2xl p-4 flex gap-3 text-xs text-left">
+                <Wallet className="h-5 w-5 shrink-0 text-forest" />
+                <div>
+                  <p className="font-bold text-forest">Garanta sua reserva com o sinal</p>
+                  <p className="text-[11px] mt-0.5 text-gray-600 leading-relaxed whitespace-pre-line">
+                    {settings.deposit_instructions || 'Envie o sinal e o comprovante pelo WhatsApp para confirmar seu horário.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="w-full space-y-2.5 pt-3">
               <a

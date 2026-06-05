@@ -1,0 +1,169 @@
+'use server';
+
+import { dbService } from '@/lib/supabase/db';
+import { authService } from '@/lib/auth/auth';
+import { TransactionType } from '@/types/database';
+
+const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
+
+async function authorize(professionalId: string): Promise<boolean> {
+  const session = await authService.getCurrentUser();
+  if (!session) return false;
+  if (session.role === 'super_admin') return true;
+  return session.professional_id === professionalId;
+}
+
+// ===================== FINANCEIRO =====================
+export async function createTransactionAction(professionalId: string, input: {
+  type: TransactionType;
+  amountCents: number;
+  category: string;
+  description?: string;
+  date: string;
+}) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!input.amountCents || input.amountCents <= 0) return { success: false, error: 'Informe um valor válido.' };
+
+    const tx = await dbService.createTransaction({
+      professional_id: professionalId,
+      type: input.type,
+      amount_cents: Math.round(input.amountCents),
+      category: input.category || 'Geral',
+      description: input.description || null,
+      date: input.date,
+    });
+    return { success: true, transaction: tx };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar lançamento.' };
+  }
+}
+
+export async function deleteTransactionAction(professionalId: string, id: string) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.deleteTransaction(id);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir lançamento.' };
+  }
+}
+
+// ===================== TAREFAS =====================
+export async function createTaskAction(professionalId: string, content: string) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!content.trim()) return { success: false, error: 'Escreva algo na tarefa.' };
+    const task = await dbService.createTask({ professional_id: professionalId, content: content.trim() });
+    return { success: true, task };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao criar tarefa.' };
+  }
+}
+
+export async function toggleTaskAction(professionalId: string, id: string, done: boolean) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.toggleTask(id, done);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar tarefa.' };
+  }
+}
+
+export async function deleteTaskAction(professionalId: string, id: string) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.deleteTask(id);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir tarefa.' };
+  }
+}
+
+// ===================== CONTAS FIXAS =====================
+export async function createFixedExpenseAction(professionalId: string, name: string, amountCents: number) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!name.trim()) return { success: false, error: 'Dê um nome para a conta fixa.' };
+    if (!amountCents || amountCents <= 0) return { success: false, error: 'Informe um valor válido.' };
+    const fx = await dbService.createFixedExpense({ professional_id: professionalId, name: name.trim(), amount_cents: Math.round(amountCents) });
+    return { success: true, fixedExpense: fx };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar conta fixa.' };
+  }
+}
+
+export async function deleteFixedExpenseAction(professionalId: string, id: string) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.deleteFixedExpense(id);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir conta fixa.' };
+  }
+}
+
+// ===================== CLIENTES =====================
+export async function createClientAction(professionalId: string, input: {
+  name: string; whatsapp: string; email?: string; birthday?: string;
+}) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    const name = input.name.trim();
+    const whatsapp = onlyDigits(input.whatsapp);
+    if (!name) return { success: false, error: 'Informe o nome da cliente.' };
+    if (whatsapp.length < 10) return { success: false, error: 'Informe um WhatsApp válido com DDD.' };
+
+    const existing = await dbService.getClientsByProfessional(professionalId);
+    if (existing.some(c => onlyDigits(c.whatsapp) === whatsapp)) {
+      return { success: false, error: 'Já existe uma cliente com esse WhatsApp.' };
+    }
+
+    const client = await dbService.createClient({
+      professional_id: professionalId,
+      name,
+      whatsapp,
+      email: input.email?.trim() || null,
+    });
+    if (input.birthday) {
+      await dbService.setClientBirthday(professionalId, whatsapp, input.birthday);
+    }
+    return { success: true, client };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao cadastrar cliente.' };
+  }
+}
+
+interface ImportRow { name: string; whatsapp: string; email?: string; birthday?: string; }
+
+export async function importClientsAction(professionalId: string, rows: ImportRow[]) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!Array.isArray(rows) || rows.length === 0) return { success: false, error: 'Nenhuma linha válida encontrada no arquivo.' };
+
+    const existing = await dbService.getClientsByProfessional(professionalId);
+    const seen = new Set(existing.map(c => onlyDigits(c.whatsapp)));
+
+    let imported = 0, skipped = 0;
+    for (const r of rows) {
+      const name = (r.name || '').trim();
+      const whatsapp = onlyDigits(r.whatsapp || '');
+      if (!name || whatsapp.length < 10 || seen.has(whatsapp)) { skipped++; continue; }
+      seen.add(whatsapp);
+      try {
+        await dbService.createClient({
+          professional_id: professionalId,
+          name,
+          whatsapp,
+          email: (r.email || '').trim() || null,
+        });
+        if (r.birthday) await dbService.setClientBirthday(professionalId, whatsapp, r.birthday);
+        imported++;
+      } catch { skipped++; }
+    }
+    return { success: true, imported, skipped };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao importar lista.' };
+  }
+}

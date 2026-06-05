@@ -1,6 +1,7 @@
-import { 
-  Professional, Profile, Service, AvailabilityRule, 
-  TimeBlock, Setting, Client, Appointment, AppointmentStatus, BlockType
+import {
+  Professional, Profile, Service, AvailabilityRule,
+  TimeBlock, Setting, Client, Appointment, AppointmentStatus, BlockType,
+  Transaction, Task, FixedExpense
 } from '@/types/database';
 
 // Declarar tipo global para persistência em memória durante o dev server
@@ -14,6 +15,9 @@ declare global {
     settings: Setting[];
     clients: Client[];
     appointments: Appointment[];
+    transactions: Transaction[];
+    tasks: Task[];
+    fixedExpenses: FixedExpense[];
   } | undefined;
 }
 
@@ -159,7 +163,10 @@ if (!globalThis.__mockDb) {
         created_at: nowStr
       }
     ],
-    appointments: []
+    appointments: [],
+    transactions: [],
+    tasks: [],
+    fixedExpenses: []
   };
 
   // Agendamentos simulados iniciais para hoje e amanhã
@@ -426,6 +433,10 @@ export const mockDb = {
   getClientsByProfessional: (profId: string) => mockData.clients.filter(c => c.professional_id === profId),
   getClientById: (id: string) => mockData.clients.find(c => c.id === id) || null,
   getClientByWhatsapp: (profId: string, whatsapp: string) => mockData.clients.find(c => c.professional_id === profId && c.whatsapp === whatsapp) || null,
+  setClientBirthday: (profId: string, whatsapp: string, birthday: string) => {
+    const c = mockData.clients.find(cl => cl.professional_id === profId && cl.whatsapp === whatsapp);
+    if (c) c.birthday = birthday;
+  },
   createClient: (data: Omit<Client, 'id' | 'total_appointments' | 'last_appointment_at' | 'created_at'>) => {
     const newClient: Client = {
       id: 'client_' + Math.random().toString(36).substr(2, 9),
@@ -514,6 +525,53 @@ export const mockDb = {
       return mockData.appointments[idx];
     }
     return null;
+  },
+
+  // Transactions (financeiro)
+  getTransactionsByProfessional: (profId: string) =>
+    mockData.transactions.filter(t => t.professional_id === profId).sort((a, b) => b.date.localeCompare(a.date)),
+  createTransaction: (data: Omit<Transaction, 'id' | 'created_at'>) => {
+    const t: Transaction = { id: 'tx_' + Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString(), ...data };
+    mockData.transactions.push(t);
+    return t;
+  },
+  deleteTransaction: (id: string) => {
+    const i = mockData.transactions.findIndex(t => t.id === id);
+    if (i >= 0) mockData.transactions.splice(i, 1);
+    return true;
+  },
+
+  // Tasks (notas / tarefas)
+  getTasksByProfessional: (profId: string) =>
+    mockData.tasks.filter(t => t.professional_id === profId).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+  createTask: (data: Omit<Task, 'id' | 'done' | 'created_at'>) => {
+    const t: Task = { id: 'task_' + Math.random().toString(36).substr(2, 9), done: false, created_at: new Date().toISOString(), ...data };
+    mockData.tasks.push(t);
+    return t;
+  },
+  toggleTask: (id: string, done: boolean) => {
+    const t = mockData.tasks.find(x => x.id === id);
+    if (t) t.done = done;
+    return t || null;
+  },
+  deleteTask: (id: string) => {
+    const i = mockData.tasks.findIndex(t => t.id === id);
+    if (i >= 0) mockData.tasks.splice(i, 1);
+    return true;
+  },
+
+  // Fixed expenses (contas fixas mensais)
+  getFixedExpensesByProfessional: (profId: string) =>
+    mockData.fixedExpenses.filter(f => f.professional_id === profId).sort((a, b) => a.name.localeCompare(b.name)),
+  createFixedExpense: (data: Omit<FixedExpense, 'id' | 'active' | 'created_at'>) => {
+    const f: FixedExpense = { id: 'fx_' + Math.random().toString(36).slice(2, 11), active: true, created_at: new Date().toISOString(), ...data };
+    mockData.fixedExpenses.push(f);
+    return f;
+  },
+  deleteFixedExpense: (id: string) => {
+    const i = mockData.fixedExpenses.findIndex(f => f.id === id);
+    if (i >= 0) mockData.fixedExpenses.splice(i, 1);
+    return true;
   }
 };
 export default mockDb;
