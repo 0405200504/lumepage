@@ -572,6 +572,13 @@ export const mockDb = {
     const i = mockData.fixedExpenses.findIndex(f => f.id === id);
     if (i >= 0) mockData.fixedExpenses.splice(i, 1);
     return true;
-  }
+  },
+
+  // Admin — leituras globais
+  getAllAppointments: () => mockData.appointments
+    .map(a => ({ ...a, service: mockData.services.find(s => s.id === a.service_id) }))
+    .sort((a, b) => `${b.date}${b.start_time}`.localeCompare(`${a.date}${a.start_time}`)),
+  getAllClients: () => [...mockData.clients].sort((a, b) => a.name.localeCompare(b.name)),
+  getAllTransactions: () => [...mockData.transactions].sort((a, b) => b.date.localeCompare(a.date))
 };
 export default mockDb;

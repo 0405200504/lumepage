@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -43,6 +43,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
       return [
         { href: '/admin', label: 'Visão Geral', icon: LayoutDashboard },
         { href: '/admin/professionals', label: 'Profissionais', icon: Users },
+        { href: '/admin/appointments', label: 'Agendamentos', icon: CalendarDays },
+        { href: '/admin/clients', label: 'Clientes', icon: UserCircle },
+        { href: '/admin/finance', label: 'Financeiro', icon: Wallet },
+        { href: '/admin/reports', label: 'Relatórios', icon: BarChart3 },
       ];
     }
 

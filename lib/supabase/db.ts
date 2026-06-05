@@ -678,6 +678,38 @@ export const dbService = {
       return true;
     }
     return mockDb.deleteFixedExpense(id);
+  },
+
+  // ===================== ADMIN (LEITURAS GLOBAIS DA PLATAFORMA) =====================
+  getAllAppointments: async (): Promise<Appointment[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .select('*, service:services(*)')
+        .order('date', { ascending: false })
+        .order('start_time', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+    return mockDb.getAllAppointments();
+  },
+
+  getAllClients: async (): Promise<Client[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('clients').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    }
+    return mockDb.getAllClients();
+  },
+
+  getAllTransactions: async (): Promise<Transaction[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('transactions').select('*').order('date', { ascending: false });
+      if (error) { if (isMissingTable(error)) { warnMigration('transactions'); return []; } throw error; }
+      return data || [];
+    }
+    return mockDb.getAllTransactions();
   }
 };
 export default dbService;
