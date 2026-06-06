@@ -223,19 +223,20 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col h-full select-none">
+    <div
+      className="w-full flex flex-col h-full select-none"
+      style={{ ['--brand' as string]: primaryColor, ['--brand-2' as string]: secondaryColor } as React.CSSProperties}
+    >
       {/* Cabeçalho Público da Profissional (compacto quando embutido no popup) */}
       {step !== 6 && (
         <div
-          className={`text-white flex flex-col items-center text-center relative overflow-hidden ${isEmbed ? 'p-4' : 'p-6'}`}
-          style={{ backgroundColor: primaryColor }}
+          className={`text-white flex flex-col items-center text-center relative overflow-hidden bg-[var(--brand)] ${isEmbed ? 'p-4' : 'p-6'}`}
         >
           {/* Elementos decorativos delicados (tema escolhido pela profissional) */}
           <BookingDecor theme={settings?.booking_theme} color={secondaryColor} />
 
           <div
-            className={`bg-white/10 rounded-3xl flex items-center justify-center font-black border border-white/15 z-10 ${isEmbed ? 'h-11 w-11 text-lg mb-2' : 'h-16 w-16 text-2xl mb-4'}`}
-            style={{ color: secondaryColor }}
+            className={`bg-white/10 rounded-3xl flex items-center justify-center font-black border border-white/15 z-10 text-[var(--brand-2)] ${isEmbed ? 'h-11 w-11 text-lg mb-2' : 'h-16 w-16 text-2xl mb-4'}`}
           >
             {professional.brand_name.substring(0, 2).toUpperCase()}
           </div>
@@ -258,19 +259,19 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       {/* Indicador de Etapas */}
       {step !== 6 && (
         <div className="flex border-b border-gray-150 bg-gray-50/50 text-[9px] font-bold uppercase tracking-wider text-center text-gray-400">
-          <div className={`flex-1 py-3 ${step === 1 ? 'text-forest border-b-2 border-forest bg-white' : step > 1 ? 'text-forest' : ''}`}>
+          <div className={`flex-1 py-3 ${step === 1 ? 'text-[var(--brand)] border-b-2 border-[var(--brand)] bg-white' : step > 1 ? 'text-[var(--brand)]' : ''}`}>
             1. Serviço
           </div>
-          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 2 ? 'text-forest border-b-2 border-forest bg-white' : step > 2 ? 'text-forest' : ''}`}>
+          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 2 ? 'text-[var(--brand)] border-b-2 border-[var(--brand)] bg-white' : step > 2 ? 'text-[var(--brand)]' : ''}`}>
             2. Dia
           </div>
-          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 3 ? 'text-forest border-b-2 border-forest bg-white' : step > 3 ? 'text-forest' : ''}`}>
+          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 3 ? 'text-[var(--brand)] border-b-2 border-[var(--brand)] bg-white' : step > 3 ? 'text-[var(--brand)]' : ''}`}>
             3. Hora
           </div>
-          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 4 ? 'text-forest border-b-2 border-forest bg-white' : step > 4 ? 'text-forest' : ''}`}>
+          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 4 ? 'text-[var(--brand)] border-b-2 border-[var(--brand)] bg-white' : step > 4 ? 'text-[var(--brand)]' : ''}`}>
             4. Dados
           </div>
-          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 5 ? 'text-forest border-b-2 border-forest bg-white' : ''}`}>
+          <div className={`flex-1 py-3 border-l border-gray-150 ${step === 5 ? 'text-[var(--brand)] border-b-2 border-[var(--brand)] bg-white' : ''}`}>
             5. Revisão
           </div>
         </div>
@@ -293,10 +294,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <button
                     key={service.id}
                     onClick={() => handleSelectService(service)}
-                    className="w-full text-left bg-white border border-gray-200 hover:border-forest p-4 rounded-2xl transition-all flex justify-between items-center gap-4 group cursor-pointer hover:shadow-xs"
+                    className="w-full text-left bg-white border border-gray-200 hover:border-[var(--brand)] p-4 rounded-2xl transition-all flex justify-between items-center gap-4 group cursor-pointer hover:shadow-xs"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-800 group-hover:text-forest transition-colors">
+                      <p className="text-sm font-bold text-gray-800 group-hover:text-[var(--brand)] transition-colors">
                         {service.name}
                       </p>
                       {service.description && (
@@ -312,7 +313,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       {settings?.show_price_public && (
                         <span className="text-sm font-black text-gray-900">{formatPrice(service.price_cents)}</span>
                       )}
-                      <div className="h-8 w-8 bg-gray-50 group-hover:bg-forest group-hover:text-lima rounded-xl flex items-center justify-center text-gray-450 transition-colors">
+                      <div className="h-8 w-8 bg-gray-50 group-hover:bg-[var(--brand)] group-hover:text-[var(--brand-2)] rounded-xl flex items-center justify-center text-gray-450 transition-colors">
                         <ChevronRight className="h-4 w-4" />
                       </div>
                     </div>
@@ -330,7 +331,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           <div className="space-y-6">
             <button 
               onClick={() => setStep(1)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-forest transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[var(--brand)] transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Voltar para serviços</span>
@@ -338,7 +339,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
             <div>
               <h2 className="text-base font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                <Scissors className="h-4.5 w-4.5 text-forest" />
+                <Scissors className="h-4.5 w-4.5 text-[var(--brand)]" />
                 <span>{selectedService.name}</span>
               </h2>
               <p className="text-xs text-gray-450 mt-1">Selecione o dia em que deseja realizar seu atendimento:</p>
@@ -351,10 +352,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <button
                     key={day.dateStr}
                     onClick={() => handleSelectDate(day.dateStr)}
-                    style={isSelected ? { backgroundColor: primaryColor, borderColor: primaryColor } : undefined}
                     className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border cursor-pointer ${
                       isSelected
-                        ? 'text-white shadow-md'
+                        ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-md'
                         : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
                     }`}
                   >
@@ -374,7 +374,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           <div className="space-y-6">
             <button 
               onClick={() => setStep(2)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-forest transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[var(--brand)] transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Voltar para dias</span>
@@ -391,7 +391,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
             {isLoadingSlots ? (
               <div className="py-12 flex flex-col items-center justify-center gap-3">
-                <div className="w-8 h-8 border-4 border-forest border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-[var(--brand)] border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-xs text-gray-450">Buscando horários livres...</p>
               </div>
             ) : slots.length > 0 ? (
@@ -403,13 +403,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       key={slot.time}
                       disabled={!slot.isAvailable}
                       onClick={() => slot.isAvailable && handleSelectTime(slot.time)}
-                      style={slot.isAvailable && isSelected ? { backgroundColor: secondaryColor, borderColor: secondaryColor, color: primaryColor } : undefined}
                       className={`py-3 px-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border ${
                         !slot.isAvailable
                           ? 'bg-gray-50 text-gray-300 border-gray-150 line-through cursor-not-allowed'
                           : isSelected
-                            ? 'shadow-sm font-black'
-                            : 'bg-white hover:border-forest text-gray-700 border-gray-200'
+                            ? 'bg-[var(--brand-2)] border-[var(--brand-2)] text-[var(--brand)] shadow-sm font-black'
+                            : 'bg-white hover:border-[var(--brand)] text-gray-700 border-gray-200'
                       }`}
                     >
                       {slot.time.substring(0, 5)}
@@ -431,7 +430,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           <div className="space-y-6">
             <button 
               onClick={() => setStep(3)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-forest transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[var(--brand)] transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Voltar para horários</span>
@@ -457,7 +456,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     placeholder="Ex: Juliana Silva"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   />
                 </div>
               </div>
@@ -477,7 +476,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     placeholder="Ex: 11999999999"
                     value={clientWhatsapp}
                     onChange={(e) => setClientWhatsapp(e.target.value)}
-                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   />
                 </div>
               </div>
@@ -492,7 +491,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     placeholder="Ex: juliana@email.com"
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
-                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   />
                 </div>
                 <div>
@@ -503,7 +502,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     type="date"
                     value={clientBirthday}
                     onChange={(e) => setClientBirthday(e.target.value)}
-                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    className="block w-full px-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   />
                 </div>
               </div>
@@ -521,15 +520,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     placeholder="Ex: Alergias, pele sensível, etc..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    className="block w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-[var(--brand)]"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                style={{ backgroundColor: primaryColor }}
-                className="w-full py-4 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer mt-4"
+                className="w-full py-4 bg-[var(--brand)] hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer mt-4"
               >
                 Avançar para Revisão
               </button>
@@ -542,7 +540,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           <div className="space-y-6">
             <button 
               onClick={() => setStep(4)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-forest transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[var(--brand)] transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Voltar para dados</span>
@@ -592,10 +590,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             </div>
 
             {settings?.requires_deposit && (
-              <div className="bg-[#f7f3ee] border border-forest/20 rounded-2xl p-4 flex gap-3 text-xs">
-                <Wallet className="h-5 w-5 shrink-0 text-forest" />
+              <div className="bg-[#f7f3ee] border border-[var(--brand)]/20 rounded-2xl p-4 flex gap-3 text-xs">
+                <Wallet className="h-5 w-5 shrink-0 text-[var(--brand)]" />
                 <div>
-                  <p className="font-bold text-forest">Este atendimento exige sinal</p>
+                  <p className="font-bold text-[var(--brand)]">Este atendimento exige sinal</p>
                   <p className="text-[11px] mt-0.5 text-gray-600 leading-relaxed whitespace-pre-line">
                     {settings.deposit_instructions || 'Um sinal é necessário para confirmar a reserva. A profissional enviará as instruções pelo WhatsApp.'}
                   </p>
@@ -616,8 +614,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             <button
               onClick={handleConfirmBooking}
               disabled={isSubmitting}
-              style={{ backgroundColor: primaryColor }}
-              className="w-full py-4 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full py-4 bg-[var(--brand)] hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
@@ -637,12 +634,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         {/* ETAPA 6: Sucesso */}
         {step === 6 && selectedService && (
           <div className="flex flex-col items-center text-center py-6 space-y-5 select-none">
-            <div className="h-16 w-16 flex items-center justify-center rounded-3xl mb-2" style={{ backgroundColor: `${secondaryColor}33`, color: primaryColor }}>
-              <CheckCircle2 className="h-10 w-10" style={{ color: primaryColor }} />
+            <div className="h-16 w-16 flex items-center justify-center rounded-3xl mb-2 bg-[var(--brand-2)]/25 text-[var(--brand)]">
+              <CheckCircle2 className="h-10 w-10 text-[var(--brand)]" />
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg font-black tracking-tight" style={{ color: primaryColor }}>Agendamento Realizado!</h2>
+              <h2 className="text-lg font-black tracking-tight text-[var(--brand)]">Agendamento Realizado!</h2>
               <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
                 {settings?.confirmation_mode === 'manual' 
                   ? 'Seu agendamento foi solicitado com sucesso. A profissional recebeu suas informações e poderá confirmar pelo WhatsApp.'
@@ -674,10 +671,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             </div>
 
             {settings?.requires_deposit && (
-              <div className="w-full bg-[#f7f3ee] border border-forest/20 rounded-2xl p-4 flex gap-3 text-xs text-left">
-                <Wallet className="h-5 w-5 shrink-0 text-forest" />
+              <div className="w-full bg-[#f7f3ee] border border-[var(--brand)]/20 rounded-2xl p-4 flex gap-3 text-xs text-left">
+                <Wallet className="h-5 w-5 shrink-0 text-[var(--brand)]" />
                 <div>
-                  <p className="font-bold text-forest">Garanta sua reserva com o sinal</p>
+                  <p className="font-bold text-[var(--brand)]">Garanta sua reserva com o sinal</p>
                   <p className="text-[11px] mt-0.5 text-gray-600 leading-relaxed whitespace-pre-line">
                     {settings.deposit_instructions || 'Envie o sinal e o comprovante pelo WhatsApp para confirmar seu horário.'}
                   </p>
