@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Professional, ProfessionalStatus } from '@/types/database';
-import { Search, Edit, ExternalLink, RefreshCw, Power } from 'lucide-react';
+import { Search, Edit, ExternalLink, RefreshCw, Power, Trash2, X, AlertTriangle } from 'lucide-react';
 import { useToast } from '../ui/Toast';
-import { updateProfessionalStatusAction } from '@/app/actions/admin';
+import { updateProfessionalStatusAction, deleteProfessionalAction } from '@/app/actions/admin';
 import Link from 'next/link';
 
 interface ProfessionalsTableProps {
@@ -20,6 +20,31 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Exclusão
+  const [deleteTarget, setDeleteTarget] = useState<Professional | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await deleteProfessionalAction(deleteTarget.id);
+      if (res.success) {
+        success('Excluída', `${deleteTarget.brand_name} e todos os dados foram removidos.`);
+        setDeleteTarget(null);
+        setConfirmText('');
+        router.refresh();
+      } else {
+        error('Falha', res.error || 'Não foi possível excluir.');
+      }
+    } catch (e) {
+      error('Erro', 'Ocorreu um erro ao excluir.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Filtragem
   const filteredProfs = initialProfessionals.filter(p => {
@@ -176,6 +201,15 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
                         >
                           <Edit className="h-4 w-4" />
                         </Link>
+
+                        {/* Excluir */}
+                        <button
+                          onClick={() => { setDeleteTarget(p); setConfirmText(''); }}
+                          title="Excluir profissional"
+                          className="p-2 hover:bg-[#b23a48]/10 text-[#b23a48] rounded-xl transition-all border border-[#b23a48]/20"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -191,6 +225,51 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Modal de exclusão */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => !deleting && setDeleteTarget(null)} />
+          <div className="relative bg-white rounded-3xl p-6 max-w-md w-full z-10 border border-[#efe9e6] shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-[#b23a48]/10 text-[#b23a48]"><AlertTriangle className="h-5 w-5" /></div>
+                <h3 className="text-lg font-black text-gray-900 tracking-tight">Excluir profissional</h3>
+              </div>
+              <button onClick={() => !deleting && setDeleteTarget(null)} className="p-2 rounded-xl hover:bg-gray-50 text-gray-400"><X className="h-5 w-5" /></button>
+            </div>
+
+            <p className="mt-4 text-xs text-gray-500 leading-relaxed">
+              Isso remove <strong className="text-gray-800">{deleteTarget.brand_name}</strong> e <strong className="text-[#b23a48]">tudo</strong> vinculado:
+              login, agendamentos, clientes, serviços e financeiro. <strong>Esta ação é irreversível.</strong>
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                Para confirmar, digite o nome: <span className="text-gray-800">{deleteTarget.name}</span>
+              </label>
+              <input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={deleteTarget.name}
+                className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#b23a48]/20 focus:border-[#b23a48]"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || confirmText.trim() !== deleteTarget.name}
+                className="px-4 py-2 bg-[#b23a48] hover:opacity-95 text-white text-xs font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                {deleting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deleting ? 'Excluindo...' : 'Excluir definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

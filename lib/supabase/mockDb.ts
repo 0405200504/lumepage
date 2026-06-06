@@ -590,6 +590,21 @@ export const mockDb = {
     .map(a => ({ ...a, service: mockData.services.find(s => s.id === a.service_id) }))
     .sort((a, b) => `${b.date}${b.start_time}`.localeCompare(`${a.date}${a.start_time}`)),
   getAllClients: () => [...mockData.clients].sort((a, b) => a.name.localeCompare(b.name)),
-  getAllTransactions: () => [...mockData.transactions].sort((a, b) => b.date.localeCompare(a.date))
+  getAllTransactions: () => [...mockData.transactions].sort((a, b) => b.date.localeCompare(a.date)),
+
+  deleteProfessional: (id: string) => {
+    mockData.professionals = mockData.professionals.filter(p => p.id !== id);
+    mockData.profiles = mockData.profiles.filter(p => p.professional_id !== id);
+    mockData.services = mockData.services.filter(s => s.professional_id !== id);
+    mockData.availabilityRules = mockData.availabilityRules.filter(r => r.professional_id !== id);
+    mockData.timeBlocks = mockData.timeBlocks.filter(b => b.professional_id !== id);
+    mockData.settings = mockData.settings.filter(s => s.professional_id !== id);
+    mockData.clients = mockData.clients.filter(c => c.professional_id !== id);
+    mockData.appointments = mockData.appointments.filter(a => a.professional_id !== id);
+    mockData.transactions = mockData.transactions.filter(t => t.professional_id !== id);
+    mockData.tasks = mockData.tasks.filter(t => t.professional_id !== id);
+    mockData.fixedExpenses = mockData.fixedExpenses.filter(f => f.professional_id !== id);
+    return true;
+  }
 };
 export default mockDb;

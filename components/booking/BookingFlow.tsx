@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getSlotsAction, createAppointmentAction } from '@/app/actions/booking';
 import { useToast } from '../ui/Toast';
+import { BookingDecor } from './BookingDecor';
 
 interface BookingFlowProps {
   professional: Professional;
@@ -223,27 +224,30 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   return (
     <div className="w-full flex flex-col h-full select-none">
-      {/* Cabeçalho Público da Profissional (Escondido se isEmbed for true) */}
-      {!isEmbed && step !== 6 && (
-        <div 
-          className="p-6 text-white flex flex-col items-center text-center relative"
+      {/* Cabeçalho Público da Profissional (compacto quando embutido no popup) */}
+      {step !== 6 && (
+        <div
+          className={`text-white flex flex-col items-center text-center relative overflow-hidden ${isEmbed ? 'p-4' : 'p-6'}`}
           style={{ backgroundColor: primaryColor }}
         >
-          <div 
-            className="h-16 w-16 bg-white/10 rounded-3xl flex items-center justify-center font-black text-2xl mb-4 border border-white/15"
+          {/* Elementos decorativos delicados (tema escolhido pela profissional) */}
+          <BookingDecor theme={settings?.booking_theme} color={secondaryColor} />
+
+          <div
+            className={`bg-white/10 rounded-3xl flex items-center justify-center font-black border border-white/15 z-10 ${isEmbed ? 'h-11 w-11 text-lg mb-2' : 'h-16 w-16 text-2xl mb-4'}`}
             style={{ color: secondaryColor }}
           >
             {professional.brand_name.substring(0, 2).toUpperCase()}
           </div>
-          
-          <h1 className="text-xl font-black tracking-tight">{professional.brand_name}</h1>
-          <p className="text-xs text-white/70 max-w-sm mt-1">{professional.public_bio || professional.description}</p>
-          
+
+          <h1 className={`font-black tracking-tight z-10 ${isEmbed ? 'text-base' : 'text-xl'}`}>{professional.brand_name}</h1>
+          {!isEmbed && <p className="text-xs text-white/70 max-w-sm mt-1 z-10">{professional.public_bio || professional.description}</p>}
+
           {professional.instagram && (
-            <a 
+            <a
               href={`https://instagram.com/${professional.instagram.replace('@', '')}`}
               target="_blank"
-              className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 bg-white/10 hover:bg-white/15 rounded-full transition-colors"
+              className={`z-10 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 bg-white/10 hover:bg-white/15 rounded-full transition-colors ${isEmbed ? 'mt-1.5' : 'mt-3'}`}
             >
               <span>{professional.instagram}</span>
             </a>
@@ -347,9 +351,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <button
                     key={day.dateStr}
                     onClick={() => handleSelectDate(day.dateStr)}
+                    style={isSelected ? { backgroundColor: primaryColor, borderColor: primaryColor } : undefined}
                     className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border cursor-pointer ${
                       isSelected
-                        ? 'bg-forest text-white border-forest shadow-md'
+                        ? 'text-white shadow-md'
                         : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
                     }`}
                   >
@@ -398,12 +403,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       key={slot.time}
                       disabled={!slot.isAvailable}
                       onClick={() => slot.isAvailable && handleSelectTime(slot.time)}
-                      className={`py-3 px-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                      style={slot.isAvailable && isSelected ? { backgroundColor: secondaryColor, borderColor: secondaryColor, color: primaryColor } : undefined}
+                      className={`py-3 px-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border ${
                         !slot.isAvailable
-                          ? 'bg-gray-50 text-gray-300 border border-gray-150 line-through cursor-not-allowed'
+                          ? 'bg-gray-50 text-gray-300 border-gray-150 line-through cursor-not-allowed'
                           : isSelected
-                            ? 'bg-lima text-forest border-lima shadow-sm font-black'
-                            : 'bg-white hover:border-forest text-gray-700 border border-gray-200'
+                            ? 'shadow-sm font-black'
+                            : 'bg-white hover:border-forest text-gray-700 border-gray-200'
                       }`}
                     >
                       {slot.time.substring(0, 5)}
@@ -522,7 +528,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-4 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer mt-4"
+                style={{ backgroundColor: primaryColor }}
+                className="w-full py-4 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer mt-4"
               >
                 Avançar para Revisão
               </button>
@@ -609,7 +616,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             <button
               onClick={handleConfirmBooking}
               disabled={isSubmitting}
-              className="w-full py-4 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              style={{ backgroundColor: primaryColor }}
+              className="w-full py-4 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
@@ -629,12 +637,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         {/* ETAPA 6: Sucesso */}
         {step === 6 && selectedService && (
           <div className="flex flex-col items-center text-center py-6 space-y-5 select-none">
-            <div className="h-16 w-16 bg-lima/20 text-forest flex items-center justify-center rounded-3xl border border-lima/30 mb-2">
-              <CheckCircle2 className="h-10 w-10 text-forest" />
+            <div className="h-16 w-16 flex items-center justify-center rounded-3xl mb-2" style={{ backgroundColor: `${secondaryColor}33`, color: primaryColor }}>
+              <CheckCircle2 className="h-10 w-10" style={{ color: primaryColor }} />
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg font-black text-forest tracking-tight">Agendamento Realizado!</h2>
+              <h2 className="text-lg font-black tracking-tight" style={{ color: primaryColor }}>Agendamento Realizado!</h2>
               <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
                 {settings?.confirmation_mode === 'manual' 
                   ? 'Seu agendamento foi solicitado com sucesso. A profissional recebeu suas informações e poderá confirmar pelo WhatsApp.'

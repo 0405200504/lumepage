@@ -174,6 +174,41 @@ export async function updateProfessionalStatusAction(professionalId: string, sta
 }
 
 /**
+ * Exclui DEFINITIVAMENTE uma profissional: remove o usuário do Auth, os perfis de
+ * login e todos os dados vinculados (cascade). Ação irreversível — apenas Super Admin.
+ */
+export async function deleteProfessionalAction(professionalId: string) {
+  try {
+    if (!await authorizeAdmin()) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+
+    if (isSupabaseConfigured) {
+      const clientAdmin = getSupabaseAdmin();
+      if (clientAdmin) {
+        const uids = new Set<string>();
+        const { data: linkedProfiles } = await clientAdmin
+          .from('profiles').select('auth_user_id').eq('professional_id', professionalId);
+        (linkedProfiles || []).forEach((p: { auth_user_id: string | null }) => { if (p.auth_user_id) uids.add(p.auth_user_id); });
+        const prof = await dbService.getProfessionalById(professionalId);
+        if (prof?.owner_user_id) uids.add(prof.owner_user_id);
+
+        for (const uid of uids) {
+          const { error: delErr } = await clientAdmin.auth.admin.deleteUser(uid);
+          if (delErr) console.warn('[deleteProfessional] falha ao remover usuário do Auth:', delErr.message);
+        }
+      }
+    }
+
+    await dbService.deleteProfessional(professionalId);
+    return { success: true };
+  } catch (e: any) {
+    console.error('Erro ao excluir profissional:', e);
+    return { success: false, error: e.message || 'Erro ao excluir profissional.' };
+  }
+}
+
+/**
  * Coleta estatísticas consolidadas para o painel de administração da Lume.
  */
 export async function getDashboardStatsAction() {

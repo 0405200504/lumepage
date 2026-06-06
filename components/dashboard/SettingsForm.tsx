@@ -6,6 +6,8 @@ import { Professional, Setting, ConfirmationMode } from '@/types/database';
 import { Save, Sparkles, User, Settings, MessageSquare, Paintbrush, ExternalLink } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
+import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
+import { BookingDecor } from '@/components/booking/BookingDecor';
 
 interface SettingsFormProps {
   professional: Professional;
@@ -59,6 +61,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   // Estados de Branding
   const [primaryColor, setPrimaryColor] = useState(professional.primary_color || '#500b18');
   const [secondaryColor, setSecondaryColor] = useState(professional.secondary_color || '#eccbd2');
+  const [bookingTheme, setBookingTheme] = useState<string>(normalizeTheme(settings?.booking_theme));
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +93,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         whatsapp_confirmation_message: whatsappConfirmation,
         whatsapp_cancel_message: whatsappCancel,
         requires_deposit: requiresDeposit,
-        deposit_instructions: depositInstructions
+        deposit_instructions: depositInstructions,
+        booking_theme: bookingTheme
       });
 
       if (pRes.success && sRes.success) {
@@ -510,21 +514,46 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                 </div>
               </div>
 
-              {/* Preview das cores */}
+              {/* Elementos decorativos do popup */}
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">
+                  Elementos decorativos do agendamento
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {BOOKING_THEMES.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBookingTheme(t.id)}
+                      className={`flex flex-col items-center gap-1 py-3 rounded-2xl border text-xs font-bold transition-all ${
+                        bookingTheme === t.id ? 'border-forest bg-forest/5 text-forest shadow-xs' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-lg leading-none">{t.emoji}</span>
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5">Detalhes delicados que aparecem no topo do seu popup de agendamento.</p>
+              </div>
+
+              {/* Preview ao vivo do popup */}
               <div className="sm:col-span-2 border border-gray-200 rounded-3xl p-5 flex flex-col items-center justify-center gap-4 text-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pré-visualização de Branding</span>
-                <div 
-                  className="w-full max-w-xs p-5 rounded-2xl text-white text-xs border border-white/5"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  <p className="font-bold">Minha Clínica de Estética</p>
-                  <button 
-                    type="button"
-                    className="mt-4 px-4 py-2 font-bold rounded-xl text-xs text-center block w-full transition-all"
-                    style={{ backgroundColor: secondaryColor, color: primaryColor }}
-                  >
-                    14:00 (Selecionado)
-                  </button>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pré-visualização do popup</span>
+                <div className="w-full max-w-xs rounded-2xl overflow-hidden border border-gray-150 shadow-sm bg-white">
+                  {/* Cabeçalho com decoração */}
+                  <div className="relative p-5 text-white text-center overflow-hidden" style={{ backgroundColor: primaryColor }}>
+                    <BookingDecor theme={bookingTheme} color={secondaryColor} />
+                    <div className="h-11 w-11 mx-auto bg-white/10 rounded-2xl flex items-center justify-center font-black border border-white/15 z-10 relative" style={{ color: secondaryColor }}>
+                      {(brandName || 'LU').substring(0, 2).toUpperCase()}
+                    </div>
+                    <p className="font-black text-sm mt-2 z-10 relative">{brandName || 'Sua Marca'}</p>
+                  </div>
+                  {/* Corpo */}
+                  <div className="p-4 space-y-2">
+                    <button type="button" className="w-full py-2.5 font-bold rounded-xl text-xs text-white" style={{ backgroundColor: primaryColor }}>Avançar</button>
+                    <button type="button" className="w-full py-2.5 font-black rounded-xl text-xs" style={{ backgroundColor: secondaryColor, color: primaryColor }}>14:00 (selecionado)</button>
+                  </div>
                 </div>
               </div>
             </div>

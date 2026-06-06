@@ -352,8 +352,8 @@ export const dbService = {
 
   upsertSettings: async (data: Partial<Setting> & { professional_id: string }): Promise<Setting> => {
     if (isSupabaseConfigured) {
-      // Campos opcionais que dependem da migração v2 — gravados em separado (best-effort)
-      const { requires_deposit, deposit_instructions, ...core } = data as Partial<Setting> & { professional_id: string };
+      // Campos opcionais que dependem de migração — gravados em separado (best-effort)
+      const { requires_deposit, deposit_instructions, booking_theme, ...core } = data as Partial<Setting> & { professional_id: string };
       const { data: result, error } = await getDb()
         .from('settings')
         .upsert(core, { onConflict: 'professional_id' })
@@ -361,10 +361,11 @@ export const dbService = {
         .single();
       if (error) throw error;
 
-      if (requires_deposit !== undefined || deposit_instructions !== undefined) {
+      if (requires_deposit !== undefined || deposit_instructions !== undefined || booking_theme !== undefined) {
         const extras: Record<string, unknown> = {};
         if (requires_deposit !== undefined) extras.requires_deposit = requires_deposit;
         if (deposit_instructions !== undefined) extras.deposit_instructions = deposit_instructions;
+        if (booking_theme !== undefined) extras.booking_theme = booking_theme;
         const { error: extraErr } = await getDb()
           .from('settings')
           .update(extras)
@@ -732,6 +733,18 @@ export const dbService = {
       return data || [];
     }
     return mockDb.getAllTransactions();
+  },
+
+  // Exclui a profissional e TODOS os dados vinculados (cascade) + perfis de login
+  deleteProfessional: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      // profiles.professional_id é ON DELETE SET NULL — removemos os perfis manualmente
+      await getDb().from('profiles').delete().eq('professional_id', id);
+      const { error } = await getDb().from('professionals').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteProfessional(id);
   }
 };
 export default dbService;

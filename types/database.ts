@@ -91,6 +91,7 @@ export interface Setting {
   show_price_public: boolean;
   requires_deposit?: boolean; // exige sinal/antecipação (opcional — requer migração v2)
   deposit_instructions?: string | null; // instruções de sinal exibidas no agendamento
+  booking_theme?: string | null; // tema decorativo do popup (sparkles/stars/flowers/hearts/none)
   created_at: string;
   updated_at: string;
 }
