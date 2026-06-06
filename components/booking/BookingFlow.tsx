@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Professional, Service, Setting } from '@/types/database';
 import { 
   Calendar as CalendarIcon, Clock, User, MessageSquare,
-  ChevronRight, ArrowLeft, Scissors, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
+  ChevronRight, ArrowLeft, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
 } from 'lucide-react';
 import { getSlotsAction, createAppointmentAction } from '@/app/actions/booking';
 import { useToast } from '../ui/Toast';
@@ -338,9 +338,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             </button>
 
             <div>
-              <h2 className="text-base font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                <Scissors className="h-4.5 w-4.5 text-[var(--brand)]" />
-                <span>{selectedService.name}</span>
+              <h2 className="text-base font-bold text-gray-800 tracking-tight">
+                {selectedService.name}
               </h2>
               <p className="text-xs text-gray-450 mt-1">Selecione o dia em que deseja realizar seu atendimento:</p>
             </div>
