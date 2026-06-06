@@ -87,9 +87,9 @@ export async function createServiceAction(professionalId: string, data: Omit<Ser
       return { success: false, error: 'Não autorizado.' };
     }
 
-    const newService = await dbService.upsertService({
+    // IMPORTANTE: não passar id manual — services.id é UUID e o banco gera sozinho
+    const newService = await dbService.createService({
       ...data,
-      id: Math.random().toString(36).substring(2, 9), // ID temporário que será ignorado se for Supabase
       professional_id: professionalId
     });
 

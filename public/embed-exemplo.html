@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Exemplo · Widget de Agendamento Lume</title>
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f7f3ee; color:#211a1c; }
+    .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+    h1 { font-size:40px; color:#500b18; margin:0 0 8px; letter-spacing:-.02em; }
+    p { color:#8a7e80; max-width:420px; }
+    .btn { margin-top:24px; background:#500b18; color:#fff; border:none; padding:16px 32px; border-radius:16px;
+           font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 12px 30px -10px rgba(80,11,24,.5); }
+    .btn:hover { opacity:.95; }
+    .link { margin-top:14px; color:#500b18; font-weight:700; text-decoration:underline; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Sua Landing Page</h1>
+    <p>Este é um exemplo de como o botão abre o popup de agendamento. Clique abaixo:</p>
+
+    <!-- Qualquer elemento com data-lume-agendar abre o popup -->
+    <button class="btn" data-lume-agendar>Agendar meu horário</button>
+    <a class="link" data-lume-agendar>ou marcar uma avaliação</a>
+  </div>
+
+  <!-- Cole estas 2 linhas no seu site. Troque o slug pela profissional desejada. -->
+  <script src="/embed.js" data-lume-slug="amanda-costa" defer></script>
+
+  <!-- (Opcional) Reagir quando o agendamento for concluído -->
+  <script>
+    window.lumeOnBooked = function (info) {
+      console.log('Agendamento concluído!', info);
+      // Ex.: disparar pixel/conversão, redirecionar, etc.
+    };
+  </script>
+</body>
+</html>

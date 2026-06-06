@@ -26,6 +26,11 @@ function warnMigration(table: string) {
   console.warn(`[${table}] Tabela ausente — rode supabase/migration_v3.sql no Supabase para ativar o módulo.`);
 }
 
+/** Valida formato UUID (colunas id são UUID — nunca gravar id improvisado). */
+function isUuid(v: unknown): boolean {
+  return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
 export const dbService = {
   // Professionals
   getProfessionals: async (): Promise<Professional[]> => {
@@ -223,11 +228,28 @@ export const dbService = {
     return mockDb.getServiceById(id);
   },
 
-  upsertService: async (data: Partial<Service> & { id: string; professional_id: string }): Promise<Service> => {
+  // Cria um serviço deixando o banco gerar o UUID (NÃO passar id manual — services.id é UUID)
+  createService: async (data: Omit<Service, 'id' | 'created_at' | 'updated_at'>): Promise<Service> => {
     if (isSupabaseConfigured) {
       const { data: result, error } = await getDb()
         .from('services')
-        .upsert({ ...data, updated_at: new Date().toISOString() })
+        .insert(data)
+        .select()
+        .single();
+      if (error) throw error;
+      return result;
+    }
+    return mockDb.createService(data);
+  },
+
+  upsertService: async (data: Partial<Service> & { id: string; professional_id: string }): Promise<Service> => {
+    if (isSupabaseConfigured) {
+      // Proteção: se o id não for um UUID válido, remove para o banco gerar (evita erro 22P02)
+      const payload: Record<string, unknown> = { ...data, updated_at: new Date().toISOString() };
+      if (!isUuid(data.id)) delete payload.id;
+      const { data: result, error } = await getDb()
+        .from('services')
+        .upsert(payload)
         .select()
         .single();
       if (error) throw error;

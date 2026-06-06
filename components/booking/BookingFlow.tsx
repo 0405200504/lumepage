@@ -182,6 +182,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         if (onAnalyticsEvent) {
           onAnalyticsEvent('booking_completed', { appointment_id: res.appointmentId });
         }
+        // Avisa o site que incorporou o widget (iframe) que o agendamento foi concluído
+        if (typeof window !== 'undefined' && window.parent !== window) {
+          window.parent.postMessage(
+            { type: 'lume:booked', appointmentId: res.appointmentId, service: selectedService?.name, date: selectedDate, time: selectedTime },
+            '*'
+          );
+        }
         setStep(6);
       } else {
         setSubmitError(res.error || 'Este horário acabou de ser reservado por outra pessoa.');

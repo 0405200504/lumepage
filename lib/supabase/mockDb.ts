@@ -318,6 +318,17 @@ export const mockDb = {
   getServices: () => mockData.services,
   getServicesByProfessional: (profId: string) => mockData.services.filter(s => s.professional_id === profId),
   getServiceById: (id: string) => mockData.services.find(s => s.id === id) || null,
+  createService: (data: Omit<Service, 'id' | 'created_at' | 'updated_at'>) => {
+    const now = new Date().toISOString();
+    const newService = {
+      id: 'svc_' + Math.random().toString(36).slice(2, 11),
+      ...data,
+      created_at: now,
+      updated_at: now,
+    } as Service;
+    mockData.services.push(newService);
+    return newService;
+  },
   upsertService: (data: Partial<Service> & { id: string; professional_id: string }) => {
     const idx = mockData.services.findIndex(s => s.id === data.id);
     const now = new Date().toISOString();
