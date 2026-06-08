@@ -24,7 +24,7 @@ export const AdminSalons: React.FC<Props> = ({ salons, professionals }) => {
     setBusy(true);
     const res = await createSalonAction(newSalon.trim());
     setBusy(false);
-    if (res.success) { success('Salão criado!', newSalon); setNewSalon(''); router.refresh(); }
+    if (res.success) { success('Grupo criado!', newSalon); setNewSalon(''); router.refresh(); }
     else error('Falha', res.error || 'Erro.');
   };
 
@@ -46,20 +46,20 @@ export const AdminSalons: React.FC<Props> = ({ salons, professionals }) => {
 
   return (
     <div className="space-y-6 select-none animate-fade-up">
-      {/* Criar salão */}
+      {/* Criar grupo */}
       <form onSubmit={createSalon} className="card p-4 flex gap-2 items-center">
         <Store className="h-5 w-5 text-wine-600 shrink-0 ml-1" />
-        <input value={newSalon} onChange={(e) => setNewSalon(e.target.value)} placeholder="Nome do novo salão (ex: Studio Bella)"
+        <input value={newSalon} onChange={(e) => setNewSalon(e.target.value)} placeholder="Nome do novo grupo (ex: Studio Bella)"
           className="flex-1 min-w-0 px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
         <button type="submit" disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 disabled:opacity-60">
-          <Plus className="h-4 w-4" /> Criar salão
+          <Plus className="h-4 w-4" /> Criar grupo
         </button>
       </form>
 
       {salons.length === 0 ? (
         <div className="card p-10 text-center">
           <Store className="h-8 w-8 text-wine-200 mx-auto" />
-          <p className="text-sm text-gray-450 mt-3">Nenhum salão criado ainda.</p>
+          <p className="text-sm text-gray-450 mt-3">Nenhum grupo criado ainda.</p>
         </div>
       ) : salons.map((salon) => {
         const pros = professionals.filter(p => p.salon_id === salon.id);
@@ -88,7 +88,7 @@ export const AdminSalons: React.FC<Props> = ({ salons, professionals }) => {
                 <Users className="h-4 w-4 text-gray-450 shrink-0" />
                 <select onChange={(e) => { if (e.target.value) assign(e.target.value, salon.id); e.currentTarget.value = ''; }} defaultValue=""
                   className="flex-1 text-xs font-semibold text-ink bg-cream/60 border border-gray-150 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wine-700/15">
-                  <option value="">+ Vincular profissional sem salão...</option>
+                  <option value="">+ Vincular profissional sem grupo...</option>
                   {unassigned.map(p => <option key={p.id} value={p.id}>{p.brand} ({p.name})</option>)}
                 </select>
               </div>

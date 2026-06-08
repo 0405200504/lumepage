@@ -4,7 +4,7 @@ import { dbService } from '@/lib/supabase/db';
 import { professionalMetrics } from '@/lib/admin';
 import { SalonPanel } from '@/components/salon/SalonPanel';
 
-export const metadata = { title: 'Painel do Salão | Lume' };
+export const metadata = { title: 'Painel do Grupo | Lume' };
 
 export default async function SalonHomePage() {
   const session = await requireSalonManager();
@@ -20,7 +20,7 @@ export default async function SalonHomePage() {
   return (
     <SalonPanel
       managerName={session.name}
-      salonName={salon?.name || 'Seu Salão'}
+      salonName={salon?.name || 'Seu Grupo'}
       metrics={metrics}
     />
   );

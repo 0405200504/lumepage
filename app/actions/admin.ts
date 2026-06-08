@@ -177,11 +177,11 @@ export async function updateProfessionalStatusAction(professionalId: string, sta
 export async function createSalonAction(name: string) {
   try {
     if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
-    if (!name.trim()) return { success: false, error: 'Dê um nome ao salão.' };
+    if (!name.trim()) return { success: false, error: 'Dê um nome ao grupo.' };
     const salon = await dbService.createSalon(name.trim());
     return { success: true, salon };
   } catch (e: any) {
-    return { success: false, error: e.message || 'Erro ao criar salão.' };
+    return { success: false, error: e.message || 'Erro ao criar grupo.' };
   }
 }
 

@@ -20,7 +20,7 @@ export const ActingBanner: React.FC<{ brandName: string }> = ({ brandName }) => 
         <span className="truncate">Modo gerência · você está gerenciando <strong>{brandName}</strong></span>
       </span>
       <button onClick={back} disabled={busy} className="inline-flex items-center gap-1.5 shrink-0 bg-white/15 hover:bg-white/25 rounded-xl px-3 py-1.5 font-bold transition-colors disabled:opacity-60">
-        <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao salão
+        <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao grupo
       </button>
     </div>
   );

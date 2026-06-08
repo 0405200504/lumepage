@@ -817,7 +817,7 @@ export const dbService = {
     if (isSupabaseConfigured) {
       const { data, error } = await getDb().from('salons').insert({ name }).select().single();
       if (error) {
-        if (isMissingTable(error)) throw new Error('Salões não ativados. Rode supabase/migration_v6.sql no Supabase.');
+        if (isMissingTable(error)) throw new Error('Grupos não ativados. Rode supabase/migration_v6.sql no Supabase.');
         throw error;
       }
       return data;

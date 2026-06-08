@@ -102,7 +102,7 @@ export const SalonPanel: React.FC<SalonPanelProps> = ({ managerName, salonName, 
         </div>
 
         <div>
-          <h2 className="text-base font-black text-ink tracking-tight mb-3">Funcionárias do salão</h2>
+          <h2 className="text-base font-black text-ink tracking-tight mb-3">Funcionárias do grupo</h2>
           {metrics.length === 0 ? (
             <div className="card p-10 text-center">
               <Users className="h-8 w-8 text-wine-200 mx-auto" />

@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
       return [
         { href: '/admin', label: 'Visão Geral', icon: LayoutDashboard },
         { href: '/admin/professionals', label: 'Profissionais', icon: Users },
-        { href: '/admin/salons', label: 'Salões', icon: Store },
+        { href: '/admin/salons', label: 'Grupos', icon: Store },
         { href: '/admin/appointments', label: 'Agendamentos', icon: CalendarDays },
         { href: '/admin/clients', label: 'Clientes', icon: UserCircle },
         { href: '/admin/finance', label: 'Financeiro', icon: Wallet },
