@@ -12,7 +12,13 @@ async function authorizeAction(professionalId: string): Promise<boolean> {
   const session = await authService.getCurrentUser();
   if (!session) return false;
   if (session.role === 'super_admin') return true;
-  return session.professional_id === professionalId;
+  if (session.professional_id === professionalId) return true;
+  // Gerente de contas pode agir sobre as funcionárias do seu salão
+  if (session.is_salon_manager) {
+    const prof = await dbService.getProfessionalById(professionalId);
+    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
+  }
+  return false;
 }
 
 // 1. Atualizar Cadastro do Profissional
