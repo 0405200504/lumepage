@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction } from '@/app/actions/professional';
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'pro' | 'admin'>('pro');
+  const [mode, setMode] = useState<'pro' | 'manager' | 'admin'>('pro');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,33 +68,33 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="wine" className="h-12 text-wine-700 mb-5" />
           <h2 className="text-2xl font-black text-forest tracking-tight">
-            {mode === 'admin' ? 'Acesso do Administrador' : 'Bem-vinda de volta'}
+            {mode === 'admin' ? 'Acesso do Administrador' : mode === 'manager' ? 'Acesso do Gerente' : 'Bem-vinda de volta'}
           </h2>
           <p className="text-xs text-gray-450 mt-1.5">
-            {mode === 'admin' ? 'Painel de gestão da plataforma Lume' : 'Acesse seu painel de agenda profissional'}
+            {mode === 'admin' ? 'Painel de gestão da plataforma Lume'
+              : mode === 'manager' ? 'Gerencie as contas das suas funcionárias'
+              : 'Acesse seu painel de agenda profissional'}
           </p>
         </div>
 
         {/* Seletor de tipo de acesso */}
-        <div className="grid grid-cols-2 gap-1 bg-sand/70 border border-gray-150 rounded-2xl p-1 mb-5 max-w-xs mx-auto">
-          <button
-            type="button"
-            onClick={() => setMode('pro')}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
-              mode === 'pro' ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'
-            }`}
-          >
-            <User className="h-3.5 w-3.5" /> Profissional
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('admin')}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
-              mode === 'admin' ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'
-            }`}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" /> Administrador
-          </button>
+        <div className="grid grid-cols-3 gap-1 bg-sand/70 border border-gray-150 rounded-2xl p-1 mb-5 max-w-sm mx-auto">
+          {([
+            { k: 'pro', label: 'Profissional', icon: User },
+            { k: 'manager', label: 'Gerente', icon: Store },
+            { k: 'admin', label: 'Admin', icon: ShieldCheck },
+          ] as const).map(({ k, label, icon: Icon }) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setMode(k)}
+              className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
+                mode === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
         </div>
 
         {/* Card de Login */}
@@ -161,6 +161,8 @@ export default function LoginPage() {
               <p className="text-[11px] leading-relaxed">
                 {mode === 'admin'
                   ? 'Acesso restrito à administração da Lume. Entre com seu e-mail e senha de super admin.'
+                  : mode === 'manager'
+                  ? 'Acesso do gerente de contas. Entre com o e-mail e senha que a administração da Lume criou para você.'
                   : 'As contas são criadas exclusivamente pela administração da Lume. Não recebeu seu acesso? Fale com o administrador.'}
               </p>
             </div>
