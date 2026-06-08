@@ -29,7 +29,11 @@ export default async function DashboardPage() {
       subtitle="Acompanhe suas estatísticas operacionais de hoje e os próximos atendimentos marcados."
     >
       <div className="space-y-6">
-        <TasksWidget professionalId={professionalId} initialTasks={tasks} />
+        {/* No mobile, Tarefas/Notas tem aba própria (bottom nav → Tarefas).
+            No desktop, continua aqui na Início. */}
+        <div className="hidden lg:block">
+          <TasksWidget professionalId={professionalId} initialTasks={tasks} />
+        </div>
         <DashboardOverview
           professionalName={session.name}
           brandName={professional?.brand_name || session.name}

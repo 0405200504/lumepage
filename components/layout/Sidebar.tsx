@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -68,6 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
   const bottomLinks = [
     { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
     { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
+    { href: '/dashboard/tasks', label: 'Tarefas', icon: NotebookPen },
     { href: '/dashboard/finance', label: 'Contas', icon: Wallet },
     { href: '/dashboard/clients', label: 'Clientes', icon: Users },
   ];
@@ -78,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
   const publicSlug = slug || name.toLowerCase().trim().replace(/\s+/g, '-');
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full surface-wine text-white p-5 justify-between select-none">
+    <div className="flex flex-col h-full surface-wine text-white p-5 select-none overflow-y-auto scrollbar-none">
       <div className="space-y-7">
         {/* Logo / Header */}
         <div className="px-1">
@@ -122,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
       </div>
 
       {/* Footer / Logout */}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 mt-auto pt-6">
         {role === 'professional' && (
           <Link
             href={`/agendar/${publicSlug}`}
@@ -198,7 +199,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
 
       {/* Sidebar Mobile Overlay */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-35 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-[#1a0e12]/60 backdrop-blur-xs" onClick={() => setIsOpen(false)} />
           <aside className="relative w-64 h-full shadow-2xl animate-slide-right">
             <SidebarContent />
