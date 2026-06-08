@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
-import { loginAction } from '@/app/actions/professional';
+import { loginAction, loginDemoAction } from '@/app/actions/professional';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +16,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'pro' | 'manager' | 'admin'>('pro');
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      await loginDemoAction();
+      success('Conta teste', 'Entrando na conta de exemplo (Amanda Costa)...');
+      router.push('/dashboard');
+    } catch {
+      error('Erro', 'Não foi possível abrir a conta teste.');
+      setDemoLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +166,24 @@ export default function LoginPage() {
               <span>{isLoading ? 'Autenticando...' : 'Acessar Painel'}</span>
             </button>
           </form>
+
+          {/* Conta teste (demo Amanda Costa) */}
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-150" />
+            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">ou</span>
+            <div className="h-px flex-1 bg-gray-150" />
+          </div>
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={demoLoading}
+            className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 bg-cream border border-wine-700/20 text-wine-700 text-sm font-bold rounded-2xl hover:bg-wine-50 transition-all-custom cursor-pointer disabled:opacity-60"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>{demoLoading ? 'Abrindo...' : 'Conta teste (Amanda Costa)'}</span>
+          </button>
+          <p className="text-[10px] text-gray-450 text-center mt-2">Explore livremente — tudo volta ao normal ao atualizar a página.</p>
+
 
           {/* Aviso contextual */}
           <div className="mt-7 pt-6 border-t border-gray-150">

@@ -4,6 +4,7 @@ import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { AppointmentStatus, Service, AvailabilityRule, Professional, Setting, BlockType } from '@/types/database';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
+import { isDemo } from '@/lib/demo';
 
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
@@ -24,6 +25,7 @@ async function authorizeAction(professionalId: string): Promise<boolean> {
 // 1. Atualizar Cadastro do Profissional
 export async function updateProfessionalAction(professionalId: string, data: Partial<Professional>) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -42,6 +44,7 @@ export async function updateProfessionalAction(professionalId: string, data: Par
 // 2. Atualizar Configurações Comerciais
 export async function updateSettingsAction(professionalId: string, data: Partial<Setting>) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -60,6 +63,7 @@ export async function updateSettingsAction(professionalId: string, data: Partial
 // 3. Atualizar Regras de Disponibilidade Semanal
 export async function updateAvailabilityAction(professionalId: string, rules: Omit<AvailabilityRule, 'id' | 'created_at' | 'updated_at'>[]) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -89,6 +93,7 @@ export async function updateAvailabilityAction(professionalId: string, rules: Om
 // 4. Gerenciar Serviços
 export async function createServiceAction(professionalId: string, data: Omit<Service, 'id' | 'professional_id' | 'created_at' | 'updated_at'>) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -107,6 +112,7 @@ export async function createServiceAction(professionalId: string, data: Omit<Ser
 
 export async function updateServiceAction(professionalId: string, serviceId: string, data: Partial<Service>) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -125,6 +131,7 @@ export async function updateServiceAction(professionalId: string, serviceId: str
 
 export async function deleteServiceAction(professionalId: string, serviceId: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -139,6 +146,7 @@ export async function deleteServiceAction(professionalId: string, serviceId: str
 // 5. Gerenciar Bloqueios Manuais da Agenda
 export async function createTimeBlockAction(professionalId: string, data: { date: string; start_time?: string; end_time?: string; reason?: string; block_type: BlockType }) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -160,6 +168,7 @@ export async function createTimeBlockAction(professionalId: string, data: { date
 
 export async function deleteTimeBlockAction(professionalId: string, blockId: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -174,6 +183,7 @@ export async function deleteTimeBlockAction(professionalId: string, blockId: str
 // 6. Atualizar Status de Agendamento
 export async function updateAppointmentStatusAction(appointmentId: string, professionalId: string, status: AppointmentStatus, cancellationReason?: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -193,6 +203,12 @@ export async function updateAppointmentStatusAction(appointmentId: string, profe
 export async function logoutAction() {
   const res = await authService.logout();
   return { success: res };
+}
+
+// 7b. Login da CONTA TESTE (demo Amanda Costa) — sem senha
+export async function loginDemoAction() {
+  await authService.loginDemo();
+  return { success: true };
 }
 
 // 8. Login no sistema

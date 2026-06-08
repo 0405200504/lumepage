@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { dbService } from '../supabase/db';
 import { Profile } from '@/types/database';
+import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
 
 const SESSION_COOKIE_NAME = 'lume_session';
 
@@ -94,6 +95,29 @@ export const authService = {
     });
 
     return { success: true, profile };
+  },
+
+  // Login da CONTA TESTE (demo) — sem senha; sessão self-contained
+  loginDemo: async (): Promise<boolean> => {
+    const sessionData: SessionData = {
+      profile_id: DEMO_PROFILE_ID,
+      auth_user_id: null,
+      name: DEMO_NAME,
+      email: DEMO_EMAIL,
+      role: 'professional',
+      professional_id: DEMO_PROFESSIONAL_ID,
+      salon_id: null,
+      is_salon_manager: false,
+    };
+    const cookieStore = await cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+    return true;
   },
 
   // Logout

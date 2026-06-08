@@ -3,6 +3,7 @@
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { TransactionType } from '@/types/database';
+import { isDemo } from '@/lib/demo';
 
 const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
 
@@ -28,6 +29,7 @@ export async function createTransactionAction(professionalId: string, input: {
   date: string;
 }) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!input.amountCents || input.amountCents <= 0) return { success: false, error: 'Informe um valor válido.' };
 
@@ -47,6 +49,7 @@ export async function createTransactionAction(professionalId: string, input: {
 
 export async function deleteTransactionAction(professionalId: string, id: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     await dbService.deleteTransaction(id);
     return { success: true };
@@ -61,6 +64,7 @@ export async function createTaskAction(
   input: string | { content: string; dueDate?: string | null; dueTime?: string | null }
 ) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     const content = (typeof input === 'string' ? input : input.content || '').trim();
     if (!content) return { success: false, error: 'Escreva algo na tarefa.' };
@@ -81,6 +85,7 @@ export async function updateTaskAction(
   fields: { content?: string; done?: boolean; dueDate?: string | null; dueTime?: string | null }
 ) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     const payload: { content?: string; done?: boolean; due_date?: string | null; due_time?: string | null } = {};
     if (fields.content !== undefined) payload.content = fields.content.trim();
@@ -96,6 +101,7 @@ export async function updateTaskAction(
 
 export async function toggleTaskAction(professionalId: string, id: string, done: boolean) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     await dbService.toggleTask(id, done);
     return { success: true };
@@ -106,6 +112,7 @@ export async function toggleTaskAction(professionalId: string, id: string, done:
 
 export async function deleteTaskAction(professionalId: string, id: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     await dbService.deleteTask(id);
     return { success: true };
@@ -117,6 +124,7 @@ export async function deleteTaskAction(professionalId: string, id: string) {
 // ===================== CONTAS FIXAS =====================
 export async function createFixedExpenseAction(professionalId: string, name: string, amountCents: number) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!name.trim()) return { success: false, error: 'Dê um nome para a conta fixa.' };
     if (!amountCents || amountCents <= 0) return { success: false, error: 'Informe um valor válido.' };
@@ -129,6 +137,7 @@ export async function createFixedExpenseAction(professionalId: string, name: str
 
 export async function deleteFixedExpenseAction(professionalId: string, id: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     await dbService.deleteFixedExpense(id);
     return { success: true };
@@ -142,6 +151,7 @@ export async function createClientAction(professionalId: string, input: {
   name: string; whatsapp: string; email?: string; birthday?: string;
 }) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     const name = input.name.trim();
     const whatsapp = onlyDigits(input.whatsapp);
@@ -172,6 +182,7 @@ interface ImportRow { name: string; whatsapp: string; email?: string; birthday?:
 
 export async function importClientsAction(professionalId: string, rows: ImportRow[]) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!Array.isArray(rows) || rows.length === 0) return { success: false, error: 'Nenhuma linha válida encontrada no arquivo.' };
 
@@ -204,6 +215,7 @@ export async function importClientsAction(professionalId: string, rows: ImportRo
 // Exclusão em lote de clientes
 export async function deleteClientsAction(professionalId: string, ids: string[]) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
     await dbService.deleteClientsByIds(ids);
@@ -215,6 +227,7 @@ export async function deleteClientsAction(professionalId: string, ids: string[])
 
 export async function deleteAllClientsAction(professionalId: string) {
   try {
+    if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     await dbService.deleteAllClientsForProfessional(professionalId);
     return { success: true };

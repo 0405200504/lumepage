@@ -3,6 +3,7 @@
 import { dbService } from '@/lib/supabase/db';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { Appointment } from '@/types/database';
+import { isDemo } from '@/lib/demo';
 
 /**
  * Busca dados da profissional e serviços pelo slug para a página pública.
@@ -68,6 +69,11 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       professionalId, serviceId, clientName, clientWhatsapp,
       clientEmail, date, startTime, notes, clientBirthday
     } = input;
+
+    // Conta demo: não persiste agendamentos (reseta ao atualizar)
+    if (isDemo(professionalId)) {
+      return { success: true, appointmentId: 'demo' };
+    }
 
     // 1. Validar inputs básicos
     if (!professionalId || !serviceId || !clientName || !clientWhatsapp || !date || !startTime) {
