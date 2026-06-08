@@ -7,6 +7,7 @@ import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sp
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction, loginDemoAction } from '@/app/actions/professional';
+import InstallApp from '@/components/pwa/InstallApp';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,16 +61,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-4 select-none relative overflow-hidden">
+    <div className="min-h-screen min-h-dvh bg-cream flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden">
       {/* Halo decorativo bordô (futurista) */}
       <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-100/50 blur-3xl" />
 
       {/* Voltar */}
-      <div className="absolute top-6 left-6 z-10">
+      <div className="absolute top-6 left-6 z-10 pt-safe">
         <Link
           href="/"
-          className="flex items-center gap-2 text-xs font-bold text-gray-450 hover:text-forest transition-colors"
+          className="tap flex items-center gap-2 text-xs font-bold text-gray-450 hover:text-forest transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Voltar para Início</span>
@@ -101,7 +102,7 @@ export default function LoginPage() {
               key={k}
               type="button"
               onClick={() => setMode(k)}
-              className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
+              className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
                 mode === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'
               }`}
             >
@@ -160,7 +161,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom cursor-pointer disabled:opacity-60"
+              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom cursor-pointer disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
               <span>{isLoading ? 'Autenticando...' : 'Acessar Painel'}</span>
@@ -177,7 +178,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleDemo}
             disabled={demoLoading}
-            className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 bg-cream border border-wine-700/20 text-wine-700 text-sm font-bold rounded-2xl hover:bg-wine-50 transition-all-custom cursor-pointer disabled:opacity-60"
+            className="tap mt-4 flex items-center justify-center gap-2 w-full py-3.5 bg-cream border border-wine-700/20 text-wine-700 text-sm font-bold rounded-2xl hover:bg-wine-50 transition-all-custom cursor-pointer disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
             <span>{demoLoading ? 'Abrindo...' : 'Conta teste (Amanda Costa)'}</span>
@@ -198,6 +199,11 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Instalar como app no celular (PWA) */}
+        <div className="mt-4">
+          <InstallApp />
         </div>
       </div>
     </div>

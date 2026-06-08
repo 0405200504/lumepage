@@ -115,8 +115,48 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
         </button>
       </div>
 
-      {/* Lista de Bloqueios */}
-      <div className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs overflow-hidden">
+      {/* Cards (mobile) */}
+      <div className="lg:hidden space-y-3">
+        {initialBlocks.length > 0 ? (
+          initialBlocks.map((block) => {
+            const dateObj = new Date(`${block.date}T12:00:00`);
+            return (
+              <div key={block.id} className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs p-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-800">{dateObj.toLocaleDateString('pt-BR')}</p>
+                  <div className="mt-1.5">
+                    {block.block_type === 'full_day' ? (
+                      <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-100/50 rounded-md px-2 py-0.5">Dia Inteiro</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700">
+                        <Clock className="h-3.5 w-3.5 text-gray-450" />
+                        {block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    {block.reason || <span className="italic text-gray-400">Bloqueio manual de agenda</span>}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setBlockToDelete(block.id); setIsDeleteOpen(true); }}
+                  title="Remover bloqueio"
+                  className="tap p-2.5 hover:bg-red-50 text-red-600 rounded-xl transition-colors border border-red-100/50 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })
+        ) : (
+          <div className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs py-12 text-center text-xs text-gray-450">
+            Você não tem nenhum bloqueio de horário ativo na sua agenda.
+          </div>
+        )}
+      </div>
+
+      {/* Lista de Bloqueios (desktop) */}
+      <div className="hidden lg:block bg-white border border-[#efe9e6] rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#efe9e6] text-left">
             <thead className="bg-[#f4f1ec]/40 text-xs font-bold text-gray-400 uppercase tracking-wider">

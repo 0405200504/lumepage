@@ -162,8 +162,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
 
       {/* Barra de navegação inferior (mobile · profissional) */}
       {role === 'professional' && (
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-gray-150 px-2 pt-1.5 pb-safe">
-        <div className="flex items-stretch justify-around">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-gray-150 px-2 pt-2 pb-safe shadow-[0_-8px_24px_-16px_rgba(38,4,10,0.25)]">
+        <div className="flex items-stretch justify-around gap-1">
           {bottomLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href));
@@ -172,20 +172,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 rounded-xl transition-colors ${
+                className={`tap relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-2xl transition-colors ${
                   active ? 'text-wine-700' : 'text-gray-450'
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'text-wine-700' : ''}`} />
-                <span className="text-[9px] font-bold">{link.label}</span>
+                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-wine-700/10' : ''}`}>
+                  <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-105' : ''}`} strokeWidth={active ? 2.4 : 2} />
+                </span>
+                <span className={`text-[9px] ${active ? 'font-black' : 'font-bold'}`}>{link.label}</span>
               </Link>
             );
           })}
           <button
             onClick={() => setIsOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 rounded-xl text-gray-450"
+            className="tap relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-2xl text-gray-450"
           >
-            <Menu className="h-5 w-5" />
+            <span className="flex items-center justify-center h-8 w-12 rounded-2xl">
+              <Menu className="h-[22px] w-[22px]" />
+            </span>
             <span className="text-[9px] font-bold">Mais</span>
           </button>
         </div>

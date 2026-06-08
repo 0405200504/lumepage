@@ -83,7 +83,41 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     window.open(buildWhatsappLink(app.client_whatsapp, msg), '_blank');
   };
 
-  const iconBtn = 'p-2 rounded-xl transition-all-custom disabled:opacity-40';
+  const iconBtn = 'tap p-2 rounded-xl transition-all-custom disabled:opacity-40';
+
+  // Ações de um agendamento — reutilizadas na tabela (desktop) e nos cards (mobile)
+  const AppointmentActions = ({ app }: { app: Appointment }) => (
+    <>
+      {app.status === 'pending' && (
+        <button onClick={() => handleUpdateStatus(app.id, 'confirmed')} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
+          <Check className="h-4 w-4" />
+        </button>
+      )}
+      {app.status === 'confirmed' && (
+        <button onClick={() => handleUpdateStatus(app.id, 'completed')} disabled={updatingId === app.id} title="Marcar como finalizado" className={`${iconBtn} hover:bg-wine-700/8 text-wine-700`}>
+          <CheckCircle className="h-4 w-4" />
+        </button>
+      )}
+      {(app.status === 'confirmed' || app.status === 'pending') && (
+        <button onClick={() => handleUpdateStatus(app.id, 'no_show')} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
+          <Ban className="h-4 w-4" />
+        </button>
+      )}
+      {['pending', 'confirmed'].includes(app.status) && (
+        <button onClick={() => { setSelectedApp(app); setShowCancelDialog(true); }} disabled={updatingId === app.id} title="Cancelar" className={`${iconBtn} hover:bg-gray-150 text-gray-450`}>
+          <X className="h-4 w-4" />
+        </button>
+      )}
+      {app.status !== 'cancelled' && app.status !== 'no_show' && (
+        <button onClick={() => handleReminder(app)} title="Enviar lembrete no WhatsApp" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045] border border-gray-150`}>
+          <Bell className="h-4 w-4" />
+        </button>
+      )}
+      <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-cream text-gray-450 border border-gray-150`}>
+        <MessageCircle className="h-4 w-4" />
+      </button>
+    </>
+  );
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -134,8 +168,53 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         </div>
       </div>
 
-      {/* Tabela de Agendamentos */}
-      <div className="card overflow-hidden">
+      {/* Cards (mobile) */}
+      <div className="lg:hidden space-y-3">
+        {filteredAppointments.length > 0 ? (
+          filteredAppointments.map((app) => {
+            const m = statusMeta(app.status);
+            return (
+              <div key={app.id} className="card p-4 active:scale-[0.99] transition-transform">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-md whitespace-nowrap">
+                        {formatDateBR(app.date)}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-450">
+                        <Clock className="h-3.5 w-3.5" />
+                        {app.start_time.substring(0, 5)}–{app.end_time.substring(0, 5)}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-ink mt-2 truncate">{app.client_name}</h4>
+                    <p className="text-xs text-gray-450 mt-0.5 truncate">{app.service?.name} · {app.service?.duration_minutes} min</p>
+                    <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-xs text-gray-450 mt-0.5 inline-block">{app.client_whatsapp}</a>
+                  </div>
+                  <span className={`shrink-0 text-[10px] font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
+                </div>
+
+                {app.notes && (
+                  <p className="mt-2 text-[11px] font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-lg px-2 py-1">Nota: {app.notes}</p>
+                )}
+                {app.cancellation_reason && (
+                  <p className="mt-2 text-[11px] text-gray-450">Motivo: {app.cancellation_reason}</p>
+                )}
+
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-150 flex-wrap">
+                  <AppointmentActions app={app} />
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="card py-12 text-center text-xs text-gray-450">
+            Nenhum agendamento atende aos filtros aplicados.
+          </div>
+        )}
+      </div>
+
+      {/* Tabela de Agendamentos (desktop) */}
+      <div className="hidden lg:block card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-150 text-left">
             <thead className="bg-cream/60 text-[10px] font-black text-gray-450 uppercase tracking-wider">
@@ -185,36 +264,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {app.status === 'pending' && (
-                            <button onClick={() => handleUpdateStatus(app.id, 'confirmed')} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
-                              <Check className="h-4 w-4" />
-                            </button>
-                          )}
-                          {app.status === 'confirmed' && (
-                            <button onClick={() => handleUpdateStatus(app.id, 'completed')} disabled={updatingId === app.id} title="Marcar como finalizado" className={`${iconBtn} hover:bg-wine-700/8 text-wine-700`}>
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                          )}
-                          {(app.status === 'confirmed' || app.status === 'pending') && (
-                            <button onClick={() => handleUpdateStatus(app.id, 'no_show')} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
-                              <Ban className="h-4 w-4" />
-                            </button>
-                          )}
-                          {['pending', 'confirmed'].includes(app.status) && (
-                            <button onClick={() => { setSelectedApp(app); setShowCancelDialog(true); }} disabled={updatingId === app.id} title="Cancelar" className={`${iconBtn} hover:bg-gray-150 text-gray-450`}>
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
-                          {/* Lembrete WhatsApp */}
-                          {app.status !== 'cancelled' && app.status !== 'no_show' && (
-                            <button onClick={() => handleReminder(app)} title="Enviar lembrete no WhatsApp" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045] border border-gray-150`}>
-                              <Bell className="h-4 w-4" />
-                            </button>
-                          )}
-                          {/* Conversa livre WhatsApp */}
-                          <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-cream text-gray-450`}>
-                            <MessageCircle className="h-4 w-4" />
-                          </button>
+                          <AppointmentActions app={app} />
                         </div>
                       </td>
                     </tr>
