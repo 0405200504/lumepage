@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sparkles } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction, loginDemoAction } from '@/app/actions/professional';
@@ -65,17 +64,6 @@ export default function LoginPage() {
       {/* Halo decorativo bordô (futurista) */}
       <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-100/50 blur-3xl" />
-
-      {/* Voltar */}
-      <div className="absolute top-6 left-6 z-10 pt-safe">
-        <Link
-          href="/"
-          className="tap flex items-center gap-2 text-xs font-bold text-gray-450 hover:text-forest transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Voltar para Início</span>
-        </Link>
-      </div>
 
       <div className="max-w-md w-full z-10 animate-fade-up">
         {/* Logo */}
