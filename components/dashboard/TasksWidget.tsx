@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/types/database';
-import { Plus, Check, Trash2, NotebookPen } from 'lucide-react';
+import { Plus, Check, Trash2, NotebookPen, CalendarClock } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { createTaskAction, toggleTaskAction, deleteTaskAction } from '@/app/actions/crm';
+import { formatDateBR } from '@/lib/whatsapp';
 
 interface TasksWidgetProps {
   professionalId: string;
@@ -16,30 +17,36 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
   const router = useRouter();
   const { error } = useToast();
   const [content, setContent] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
   const [busy, setBusy] = useState(false);
-  // Estado otimista local para resposta instantânea
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+
+  // Mantém a lista em sincronia com o servidor (corrige o check não persistir)
+  useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = content.trim();
     if (!text) return;
     setBusy(true);
-    const optimistic: Task = { id: `tmp-${Date.now()}`, professional_id: professionalId, content: text, done: false, created_at: new Date().toISOString() };
-    setTasks((t) => [optimistic, ...t]);
-    setContent('');
     try {
-      const res = await createTaskAction(professionalId, text);
-      if (!res.success) { setTasks((t) => t.filter(x => x.id !== optimistic.id)); error('Falha', res.error || 'Não foi possível salvar.'); }
-      else router.refresh();
+      const res = await createTaskAction(professionalId, { content: text, dueDate: dueDate || null, dueTime: dueTime || null });
+      if (!res.success) { error('Falha', res.error || 'Não foi possível salvar.'); }
+      else { setContent(''); setDueDate(''); setDueTime(''); router.refresh(); }
     } finally { setBusy(false); }
   };
 
   const toggle = async (task: Task) => {
+    // feedback instantâneo
     setTasks((t) => t.map(x => x.id === task.id ? { ...x, done: !x.done } : x));
     const res = await toggleTaskAction(professionalId, task.id, !task.done);
-    if (!res.success) { setTasks((t) => t.map(x => x.id === task.id ? { ...x, done: task.done } : x)); error('Falha', res.error || 'Erro.'); }
-    else router.refresh();
+    if (!res.success) {
+      setTasks((t) => t.map(x => x.id === task.id ? { ...x, done: task.done } : x));
+      error('Falha', res.error || 'Erro ao atualizar.');
+    } else {
+      router.refresh();
+    }
   };
 
   const remove = async (task: Task) => {
@@ -58,35 +65,41 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
         <div className="p-2 rounded-xl bg-wine-700/8 text-wine-700"><NotebookPen className="h-4 w-4" /></div>
         <div>
           <h3 className="text-base font-black text-ink tracking-tight leading-none">Bloco de notas & tarefas</h3>
-          <p className="text-[11px] text-gray-450 mt-1">Anote o que é importante e não esqueça nada do dia.</p>
+          <p className="text-[11px] text-gray-450 mt-1">Anote o que é importante. Com data, a tarefa aparece na sua Agenda.</p>
         </div>
       </div>
 
-      <form onSubmit={add} className="flex gap-2">
-        <input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Ex: comprar algodão, retornar p/ Marina, pagar fornecedor..."
-          className="flex-1 min-w-0 px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
-        />
-        <button type="submit" disabled={busy} className="shrink-0 px-3.5 surface-wine text-white rounded-xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60" aria-label="Adicionar">
-          <Plus className="h-5 w-5" />
-        </button>
+      <form onSubmit={add} className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Ex: comprar algodão, retornar p/ Marina, pagar fornecedor..."
+            className="flex-1 min-w-0 px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+          />
+          <button type="submit" disabled={busy} className="shrink-0 px-3.5 surface-wine text-white rounded-xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60" aria-label="Adicionar">
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-3.5 w-3.5 text-gray-450 shrink-0" />
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} title="Data (opcional)"
+            className="px-2.5 py-1.5 bg-cream/60 border border-gray-150 rounded-lg text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+          <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} title="Horário (opcional)" disabled={!dueDate}
+            className="px-2.5 py-1.5 bg-cream/60 border border-gray-150 rounded-lg text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15 disabled:opacity-40" />
+          <span className="text-[10px] text-gray-450">opcional — vai p/ a agenda</span>
+        </div>
       </form>
 
-      <div className="space-y-1.5 max-h-72 overflow-y-auto -mx-1 px-1">
+      <div className="space-y-1.5 max-h-80 overflow-y-auto -mx-1 px-1">
         {tasks.length === 0 && (
           <p className="text-xs text-gray-450 text-center py-6">Nada anotado ainda. Comece pela primeira tarefa acima ☝️</p>
         )}
-        {pending.map((t) => (
-          <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
-        ))}
+        {pending.map((t) => <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />)}
         {done.length > 0 && (
           <>
             <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider pt-2 pl-1">Concluídas ({done.length})</p>
-            {done.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
-            ))}
+            {done.map((t) => <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />)}
           </>
         )}
       </div>
@@ -97,16 +110,25 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
 const TaskRow: React.FC<{ task: Task; onToggle: (t: Task) => void; onRemove: (t: Task) => void; }> = ({ task, onToggle, onRemove }) => (
   <div className="group flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-cream/60 transition-colors">
     <button
+      type="button"
       onClick={() => onToggle(task)}
       className={`h-5 w-5 shrink-0 rounded-md border flex items-center justify-center transition-all ${
-        task.done ? 'surface-wine border-transparent text-white' : 'border-gray-250 hover:border-wine-700'
+        task.done ? 'bg-wine-700 border-wine-700 text-white' : 'border-gray-250 hover:border-wine-700'
       }`}
       aria-label={task.done ? 'Desmarcar' : 'Concluir'}
     >
       {task.done && <Check className="h-3.5 w-3.5" />}
     </button>
-    <span className={`flex-1 text-sm ${task.done ? 'line-through text-gray-450' : 'text-ink'}`}>{task.content}</span>
-    <button onClick={() => onRemove(task)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-450 hover:text-[#b23a48] transition-all" aria-label="Excluir">
+    <div className="flex-1 min-w-0">
+      <span className={`text-sm block ${task.done ? 'line-through text-gray-450' : 'text-ink'}`}>{task.content}</span>
+      {task.due_date && (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600 bg-wine-700/8 rounded-md px-1.5 py-0.5 mt-0.5">
+          <CalendarClock className="h-2.5 w-2.5" />
+          {formatDateBR(task.due_date)}{task.due_time ? ` · ${task.due_time.substring(0, 5)}` : ''}
+        </span>
+      )}
+    </div>
+    <button type="button" onClick={() => onRemove(task)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-450 hover:text-[#b23a48] transition-all" aria-label="Excluir">
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   </div>

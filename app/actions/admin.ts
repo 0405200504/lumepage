@@ -173,6 +173,72 @@ export async function updateProfessionalStatusAction(professionalId: string, sta
   }
 }
 
+// ===================== SALÕES (gerente multi-painel) =====================
+export async function createSalonAction(name: string) {
+  try {
+    if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    if (!name.trim()) return { success: false, error: 'Dê um nome ao salão.' };
+    const salon = await dbService.createSalon(name.trim());
+    return { success: true, salon };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao criar salão.' };
+  }
+}
+
+export async function assignProfessionalToSalonAction(professionalId: string, salonId: string | null) {
+  try {
+    if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    await dbService.setProfessionalSalon(professionalId, salonId);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao vincular profissional.' };
+  }
+}
+
+export async function createSalonManagerAction(input: { name: string; email: string; password: string; salonId: string }) {
+  try {
+    if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    const name = input.name.trim();
+    const email = input.email.trim().toLowerCase();
+    if (!name || !email || !input.password) return { success: false, error: 'Preencha nome, e-mail e senha.' };
+    if (input.password.length < 6) return { success: false, error: 'A senha precisa ter ao menos 6 caracteres.' };
+
+    if (isSupabaseConfigured) {
+      const clientAdmin = getSupabaseAdmin();
+      if (!clientAdmin) return { success: false, error: 'Service role não configurada.' };
+      const existing = await dbService.getProfileByEmail(email);
+      if (existing) return { success: false, error: 'Já existe uma conta com esse e-mail.' };
+
+      const { data: authUser, error: authErr } = await clientAdmin.auth.admin.createUser({
+        email, password: input.password, email_confirm: true, user_metadata: { name },
+      });
+      if (authErr) return { success: false, error: authErr.message };
+
+      // A trigger cria o profile; atualizamos para gerente do salão
+      const { error: upErr } = await clientAdmin
+        .from('profiles')
+        .update({ name, is_salon_manager: true, salon_id: input.salonId, professional_id: null })
+        .eq('auth_user_id', authUser.user!.id);
+      if (upErr) {
+        await clientAdmin.auth.admin.deleteUser(authUser.user!.id);
+        return { success: false, error: 'Falha ao configurar gerente (rode a migração v6): ' + upErr.message };
+      }
+      return { success: true };
+    }
+
+    // Mock
+    await dbService.createProfile({
+      id: 'mgr_' + Math.random().toString(36).slice(2, 9),
+      auth_user_id: 'mock_' + Math.random().toString(36).slice(2, 9),
+      name, email, role: 'professional', professional_id: null,
+      salon_id: input.salonId, is_salon_manager: true,
+    });
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao criar gerente.' };
+  }
+}
+
 /**
  * Exclui DEFINITIVAMENTE uma profissional: remove o usuário do Auth, os perfis de
  * login e todos os dados vinculados (cascade). Ação irreversível — apenas Super Admin.

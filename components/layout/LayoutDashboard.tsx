@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { SessionData } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
+import { ActingBanner } from '@/components/salon/ActingBanner';
 
 interface LayoutDashboardProps {
   children: React.ReactNode;
@@ -42,12 +43,13 @@ export const LayoutDashboard: React.FC<LayoutDashboardProps> = async ({
       />
       
       <div className="flex-1 flex flex-col min-w-0">
-        <Header 
-          title={title} 
-          subtitle={subtitle} 
-          userName={session.name} 
-          userEmail={session.email} 
-          role="professional" 
+        {session.is_salon_manager && <ActingBanner brandName={brandName || 'profissional'} />}
+        <Header
+          title={title}
+          subtitle={subtitle}
+          userName={session.name}
+          userEmail={session.email}
+          role="professional"
         />
         
         <main className="flex-1 p-4 sm:p-6 pb-28 lg:pb-6 overflow-y-auto max-w-7xl w-full mx-auto">

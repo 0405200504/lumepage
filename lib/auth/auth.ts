@@ -12,6 +12,22 @@ export interface SessionData {
   email: string;
   role: 'super_admin' | 'professional';
   professional_id: string | null;
+  salon_id?: string | null;
+  is_salon_manager?: boolean;
+}
+
+/** Monta o SessionData a partir do perfil (inclui dados de gerente de salão). */
+function buildSession(profile: Profile, authUserId: string | null): SessionData {
+  return {
+    profile_id: profile.id,
+    auth_user_id: authUserId,
+    name: profile.name,
+    email: profile.email,
+    role: profile.role,
+    professional_id: profile.professional_id,
+    salon_id: profile.salon_id ?? null,
+    is_salon_manager: profile.is_salon_manager ?? false,
+  };
 }
 
 export const authService = {
@@ -40,14 +56,7 @@ export const authService = {
           }
 
           // 3. Salvar cookie de sessão para redundância e rapidez nas rotas do servidor
-          const sessionData: SessionData = {
-            profile_id: profile.id,
-            auth_user_id: authData.user.id,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            professional_id: profile.professional_id
-          };
+          const sessionData: SessionData = buildSession(profile, authData.user.id);
 
           const cookieStore = await cookies();
           cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
@@ -73,14 +82,7 @@ export const authService = {
     }
 
     // No Mock aceitamos qualquer senha para fins de facilidade de testes
-    const sessionData: SessionData = {
-      profile_id: profile.id,
-      auth_user_id: null,
-      name: profile.name,
-      email: profile.email,
-      role: profile.role,
-      professional_id: profile.professional_id
-    };
+    const sessionData: SessionData = buildSession(profile, null);
 
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
@@ -131,14 +133,7 @@ export const authService = {
           if (user) {
             const profile = await dbService.getProfileByAuthUserId(user.id);
             if (profile) {
-              return {
-                profile_id: profile.id,
-                auth_user_id: user.id,
-                name: profile.name,
-                email: profile.email,
-                role: profile.role,
-                professional_id: profile.professional_id
-              };
+              return buildSession(profile, user.id);
             }
           }
         }

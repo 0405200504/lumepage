@@ -4,9 +4,16 @@ export type AppointmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'complet
 export type BlockType = 'full_day' | 'custom_time';
 export type ConfirmationMode = 'manual' | 'automatic';
 
+export interface Salon {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Professional {
   id: string;
   owner_user_id: string | null;
+  salon_id?: string | null; // salão a que pertence (requer migração v6)
   name: string;
   brand_name: string;
   slug: string;
@@ -34,6 +41,8 @@ export interface Profile {
   email: string;
   role: UserRole;
   professional_id: string | null;
+  salon_id?: string | null;          // salão gerenciado (requer migração v6)
+  is_salon_manager?: boolean;        // gerente de salão (requer migração v6)
   created_at: string;
   updated_at: string;
 }
@@ -127,6 +136,8 @@ export interface Task {
   professional_id: string;
   content: string;
   done: boolean;
+  due_date?: string | null;  // "YYYY-MM-DD" — agenda (requer migração v5)
+  due_time?: string | null;  // "HH:MM" — agenda (requer migração v5)
   created_at: string;
 }
 

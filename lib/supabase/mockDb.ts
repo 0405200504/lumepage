@@ -1,7 +1,7 @@
 import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus, BlockType,
-  Transaction, Task, FixedExpense
+  Transaction, Task, FixedExpense, Salon
 } from '@/types/database';
 
 // Declarar tipo global para persistência em memória durante o dev server
@@ -19,6 +19,7 @@ declare global {
     tasks: Task[];
     fixedExpenses: FixedExpense[];
   } | undefined;
+  var __mockSalons: Salon[] | undefined;
 }
 
 const DEFAULT_PROF_ID = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
@@ -565,9 +566,27 @@ export const mockDb = {
     if (t) t.done = done;
     return t || null;
   },
+  updateTask: (id: string, fields: Partial<Task>) => {
+    const t = mockData.tasks.find(x => x.id === id);
+    if (t) Object.assign(t, fields);
+    return true;
+  },
   deleteTask: (id: string) => {
     const i = mockData.tasks.findIndex(t => t.id === id);
     if (i >= 0) mockData.tasks.splice(i, 1);
+    return true;
+  },
+  deleteClient: (id: string) => {
+    mockData.clients = mockData.clients.filter(c => c.id !== id);
+    return true;
+  },
+  deleteClientsByIds: (ids: string[]) => {
+    const set = new Set(ids);
+    mockData.clients = mockData.clients.filter(c => !set.has(c.id));
+    return true;
+  },
+  deleteAllClientsForProfessional: (profId: string) => {
+    mockData.clients = mockData.clients.filter(c => c.professional_id !== profId);
     return true;
   },
 
@@ -591,6 +610,20 @@ export const mockDb = {
     .sort((a, b) => `${b.date}${b.start_time}`.localeCompare(`${a.date}${a.start_time}`)),
   getAllClients: () => [...mockData.clients].sort((a, b) => a.name.localeCompare(b.name)),
   getAllTransactions: () => [...mockData.transactions].sort((a, b) => b.date.localeCompare(a.date)),
+
+  // Salões (mock em memória)
+  getSalons: () => (globalThis.__mockSalons ||= []),
+  getSalonById: (id: string) => (globalThis.__mockSalons ||= []).find(s => s.id === id) || null,
+  createSalon: (name: string) => {
+    const s = { id: 'salon_' + Math.random().toString(36).slice(2, 10), name, created_at: new Date().toISOString() };
+    (globalThis.__mockSalons ||= []).push(s);
+    return s;
+  },
+  setProfessionalSalon: (professionalId: string, salonId: string | null) => {
+    const p = mockData.professionals.find(x => x.id === professionalId);
+    if (p) p.salon_id = salonId;
+    return true;
+  },
 
   deleteProfessional: (id: string) => {
     mockData.professionals = mockData.professionals.filter(p => p.id !== id);

@@ -31,6 +31,8 @@ export default function LoginPage() {
         success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
         if (res.profile.role === 'super_admin') {
           router.push('/admin');
+        } else if (res.profile.is_salon_manager) {
+          router.push('/salon');
         } else {
           router.push('/dashboard');
         }

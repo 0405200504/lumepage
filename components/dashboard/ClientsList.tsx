@@ -10,7 +10,8 @@ import {
 import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import { useToast } from '../ui/Toast';
-import { createClientAction, importClientsAction } from '@/app/actions/crm';
+import { createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction } from '@/app/actions/crm';
+import { Trash2 } from 'lucide-react';
 
 interface ClientsListProps {
   professionalId: string;
@@ -85,6 +86,32 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'away' | 'birthday'>('all');
   const [detail, setDetail] = useState<Client | null>(null);
+
+  // Edição em lote
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const toggleSel = (id: string) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const clearSel = () => setSelected(new Set());
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await deleteClientsAction(professionalId, [...selected]);
+      if (res.success) { success('Excluídos', `${res.count} cliente(s) removido(s).`); clearSel(); router.refresh(); }
+      else error('Falha', res.error || 'Não foi possível excluir.');
+    } finally { setBulkBusy(false); }
+  };
+
+  const deleteAll = async () => {
+    setBulkBusy(true);
+    try {
+      const res = await deleteAllClientsAction(professionalId);
+      if (res.success) { success('Tudo limpo', 'Todos os clientes foram excluídos.'); clearSel(); setConfirmDeleteAll(false); router.refresh(); }
+      else error('Falha', res.error || 'Não foi possível excluir.');
+    } finally { setBulkBusy(false); }
+  };
 
   // Cadastro manual
   const [showAdd, setShowAdd] = useState(false);
@@ -251,12 +278,41 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
         </div>
       </div>
 
+      {/* Barra de ações em lote */}
+      {filteredClients.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 card p-3">
+          <span className="text-xs font-bold text-ink">
+            {selected.size > 0 ? `${selected.size} selecionado(s)` : 'Edição em lote'}
+          </span>
+          {selected.size > 0 && (
+            <>
+              <button onClick={clearSel} className="text-[11px] font-bold text-gray-450 hover:underline">Limpar seleção</button>
+              <button onClick={bulkDelete} disabled={bulkBusy} className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#b23a48] text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                <Trash2 className="h-3.5 w-3.5" /> Excluir selecionados ({selected.size})
+              </button>
+            </>
+          )}
+          <button onClick={() => setConfirmDeleteAll(true)} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 border border-[#b23a48]/30 text-[#b23a48] text-xs font-bold rounded-xl hover:bg-[#b23a48]/10">
+            <Trash2 className="h-3.5 w-3.5" /> Excluir todos
+          </button>
+        </div>
+      )}
+
       {/* Tabela */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-150 text-left">
             <thead className="bg-cream/60 text-[10px] font-black text-gray-450 uppercase tracking-wider">
               <tr>
+                <th className="px-4 py-4 w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todos"
+                    checked={filteredClients.length > 0 && filteredClients.every(c => selected.has(c.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(filteredClients.map(c => c.id)) : new Set())}
+                    className="h-4 w-4 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700"
+                  />
+                </th>
                 <th className="px-6 py-4">Cliente</th>
                 <th className="px-6 py-4">WhatsApp</th>
                 <th className="px-6 py-4">Visitas / Faltas</th>
@@ -271,7 +327,16 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                   const rel = reliability(s);
                   const away = isAway(s);
                   return (
-                    <tr key={client.id} className="hover:bg-cream/50 transition-colors">
+                    <tr key={client.id} className={`transition-colors ${selected.has(client.id) ? 'bg-wine-50' : 'hover:bg-cream/50'}`}>
+                      <td className="px-4 py-4 w-10">
+                        <input
+                          type="checkbox"
+                          aria-label={`Selecionar ${client.name}`}
+                          checked={selected.has(client.id)}
+                          onChange={() => toggleSel(client.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-ink">{client.name}</p>
@@ -319,7 +384,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-xs text-gray-450">
+                  <td colSpan={6} className="py-12 text-center text-xs text-gray-450">
                     {filter === 'all' ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente neste filtro.'}
                   </td>
                 </tr>
@@ -382,6 +447,28 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           </div>
         );
       })()}
+
+      {/* Modal: excluir TODOS os clientes */}
+      {confirmDeleteAll && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => !bulkBusy && setConfirmDeleteAll(false)} />
+          <div className="relative card p-6 max-w-md w-full z-10 animate-slide-up">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2.5 rounded-2xl bg-[#b23a48]/10 text-[#b23a48]"><Trash2 className="h-5 w-5" /></div>
+              <h3 className="text-lg font-black text-ink tracking-tight">Excluir todos os clientes</h3>
+            </div>
+            <p className="text-xs text-gray-450 leading-relaxed">
+              Isso remove <strong className="text-[#b23a48]">todos os {initialClients.length} clientes</strong> da sua carteira. O histórico de agendamentos é mantido, mas os contatos somem. <strong>Esta ação é irreversível.</strong>
+            </p>
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button onClick={() => setConfirmDeleteAll(false)} disabled={bulkBusy} className="px-4 py-2 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
+              <button onClick={deleteAll} disabled={bulkBusy} className="px-4 py-2 bg-[#b23a48] text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                {bulkBusy ? 'Excluindo...' : 'Sim, excluir todos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Adicionar cliente manualmente */}
       {showAdd && (

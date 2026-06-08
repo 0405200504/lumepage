@@ -50,14 +50,41 @@ export async function deleteTransactionAction(professionalId: string, id: string
 }
 
 // ===================== TAREFAS =====================
-export async function createTaskAction(professionalId: string, content: string) {
+export async function createTaskAction(
+  professionalId: string,
+  input: string | { content: string; dueDate?: string | null; dueTime?: string | null }
+) {
   try {
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    if (!content.trim()) return { success: false, error: 'Escreva algo na tarefa.' };
-    const task = await dbService.createTask({ professional_id: professionalId, content: content.trim() });
+    const content = (typeof input === 'string' ? input : input.content || '').trim();
+    if (!content) return { success: false, error: 'Escreva algo na tarefa.' };
+    const dueDate = typeof input === 'string' ? null : (input.dueDate || null);
+    const dueTime = typeof input === 'string' ? null : (input.dueTime || null);
+    const task = await dbService.createTask({
+      professional_id: professionalId, content,
+      due_date: dueDate, due_time: dueTime,
+    });
     return { success: true, task };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao criar tarefa.' };
+  }
+}
+
+export async function updateTaskAction(
+  professionalId: string, id: string,
+  fields: { content?: string; done?: boolean; dueDate?: string | null; dueTime?: string | null }
+) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    const payload: { content?: string; done?: boolean; due_date?: string | null; due_time?: string | null } = {};
+    if (fields.content !== undefined) payload.content = fields.content.trim();
+    if (fields.done !== undefined) payload.done = fields.done;
+    if (fields.dueDate !== undefined) payload.due_date = fields.dueDate;
+    if (fields.dueTime !== undefined) payload.due_time = fields.dueTime;
+    await dbService.updateTask(id, payload);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar tarefa.' };
   }
 }
 
@@ -165,5 +192,27 @@ export async function importClientsAction(professionalId: string, rows: ImportRo
     return { success: true, imported, skipped };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao importar lista.' };
+  }
+}
+
+// Exclusão em lote de clientes
+export async function deleteClientsAction(professionalId: string, ids: string[]) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
+    await dbService.deleteClientsByIds(ids);
+    return { success: true, count: ids.length };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir clientes.' };
+  }
+}
+
+export async function deleteAllClientsAction(professionalId: string) {
+  try {
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.deleteAllClientsForProfessional(professionalId);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir clientes.' };
   }
 }

@@ -16,17 +16,20 @@ export default async function AgendaPage() {
   const appointments = await dbService.getAppointmentsByProfessional(professionalId);
   const settings = await dbService.getSettingsByProfessional(professionalId);
   const timeBlocks = await dbService.getTimeBlocksByProfessional(professionalId);
+  const tasks = await dbService.getTasksByProfessional(professionalId);
 
   return (
     <LayoutDashboard
       session={session}
       title="Agenda"
-      subtitle="Sua visão ampla do ano, do mês e da semana — com feriados nacionais destacados."
+      subtitle="Ano, mês e semana — agendamentos, feriados e tarefas (arraste para remarcar)."
     >
       <AgendaCalendar
         appointments={appointments}
         timeBlocks={timeBlocks}
         reminderTemplate={settings?.whatsapp_confirmation_message || ''}
+        professionalId={professionalId}
+        initialTasks={tasks}
       />
     </LayoutDashboard>
   );

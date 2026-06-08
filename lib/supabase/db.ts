@@ -3,7 +3,7 @@ import { mockDb } from './mockDb';
 import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus,
-  Transaction, Task, FixedExpense
+  Transaction, Task, FixedExpense, Salon
 } from '@/types/database';
 
 /**
@@ -629,14 +629,24 @@ export const dbService = {
 
   createTask: async (data: Omit<Task, 'id' | 'done' | 'created_at'>): Promise<Task> => {
     if (isSupabaseConfigured) {
+      // due_date/due_time dependem da migração v5 — gravados em best-effort
+      const { due_date, due_time, ...core } = data;
       const { data: result, error } = await getDb()
         .from('tasks')
-        .insert({ ...data, done: false })
+        .insert({ ...core, done: false })
         .select()
         .single();
       if (error) {
         if (isMissingTable(error)) throw new Error('Lista de tarefas não ativada. Rode supabase/migration_v3.sql no Supabase.');
         throw error;
+      }
+      if (due_date !== undefined || due_time !== undefined) {
+        const extra: Record<string, unknown> = {};
+        if (due_date !== undefined) extra.due_date = due_date;
+        if (due_time !== undefined) extra.due_time = due_time;
+        const { error: e2 } = await getDb().from('tasks').update(extra).eq('id', result.id);
+        if (e2) console.warn('[tasks] due_date/due_time ausentes — rode supabase/migration_v5.sql:', e2.message);
+        else Object.assign(result as object, extra);
       }
       return result;
     }
@@ -652,6 +662,26 @@ export const dbService = {
     return mockDb.toggleTask(id, done);
   },
 
+  // Atualiza conteúdo/horário da tarefa (due_date/due_time best-effort — migração v5)
+  updateTask: async (id: string, fields: Partial<Pick<Task, 'content' | 'done' | 'due_date' | 'due_time'>>): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { due_date, due_time, ...core } = fields;
+      if (Object.keys(core).length) {
+        const { error } = await getDb().from('tasks').update(core).eq('id', id);
+        if (error && !isMissingTable(error)) throw error;
+      }
+      if (due_date !== undefined || due_time !== undefined) {
+        const extra: Record<string, unknown> = {};
+        if (due_date !== undefined) extra.due_date = due_date;
+        if (due_time !== undefined) extra.due_time = due_time;
+        const { error } = await getDb().from('tasks').update(extra).eq('id', id);
+        if (error && !isMissingTable(error)) console.warn('[tasks] due fields ausentes — rode supabase/migration_v5.sql:', error.message);
+      }
+      return true;
+    }
+    return mockDb.updateTask(id, fields);
+  },
+
   deleteTask: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb().from('tasks').delete().eq('id', id);
@@ -659,6 +689,35 @@ export const dbService = {
       return true;
     }
     return mockDb.deleteTask(id);
+  },
+
+  // Exclusão de clientes (individual / lote / todos) — edição em lote
+  deleteClient: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('clients').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteClient(id);
+  },
+
+  deleteClientsByIds: async (ids: string[]): Promise<boolean> => {
+    if (!ids.length) return true;
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('clients').delete().in('id', ids);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteClientsByIds(ids);
+  },
+
+  deleteAllClientsForProfessional: async (profId: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('clients').delete().eq('professional_id', profId);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteAllClientsForProfessional(profId);
   },
 
   // ===================== FIXED EXPENSES (CONTAS FIXAS) =====================
@@ -733,6 +792,46 @@ export const dbService = {
       return data || [];
     }
     return mockDb.getAllTransactions();
+  },
+
+  // ===================== SALÕES =====================
+  getSalons: async (): Promise<Salon[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('salons').select('*').order('name');
+      if (error) { if (isMissingTable(error)) { warnMigration('salons'); return []; } throw error; }
+      return data || [];
+    }
+    return mockDb.getSalons();
+  },
+
+  getSalonById: async (id: string): Promise<Salon | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('salons').select('*').eq('id', id).maybeSingle();
+      if (error) { if (isMissingTable(error)) return null; throw error; }
+      return data;
+    }
+    return mockDb.getSalonById(id);
+  },
+
+  createSalon: async (name: string): Promise<Salon> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('salons').insert({ name }).select().single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Salões não ativados. Rode supabase/migration_v6.sql no Supabase.');
+        throw error;
+      }
+      return data;
+    }
+    return mockDb.createSalon(name);
+  },
+
+  setProfessionalSalon: async (professionalId: string, salonId: string | null): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('professionals').update({ salon_id: salonId }).eq('id', professionalId);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.setProfessionalSalon(professionalId, salonId);
   },
 
   // Exclui a profissional e TODOS os dados vinculados (cascade) + perfis de login
