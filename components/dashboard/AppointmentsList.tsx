@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Appointment, Setting, AppointmentStatus } from '@/types/database';
 import {
-  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell
+  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
-import { updateAppointmentStatusAction } from '@/app/actions/professional';
+import { updateAppointmentStatusAction, deleteAppointmentAction } from '@/app/actions/professional';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink, buildWhatsappLink, fillTemplate, formatDateBR } from '@/lib/whatsapp';
 
@@ -63,6 +63,24 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     }
   };
 
+  const handleDeleteAppt = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
+    setUpdatingId(id);
+    try {
+      const res = await deleteAppointmentAction(id, professionalId);
+      if (res.success) {
+        success('Excluído!', 'Agendamento removido com sucesso.');
+        router.refresh();
+      } else {
+        error('Falha', res.error || 'Ocorreu um erro ao excluir o agendamento.');
+      }
+    } catch (e) {
+      error('Erro', 'Ocorreu uma falha ao enviar solicitação.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // Lembrete (24h) — abre WhatsApp com mensagem pronta
   const handleReminder = (app: Appointment) => {
     window.open(buildReminderLink(app, settings?.whatsapp_confirmation_message), '_blank');
@@ -115,6 +133,9 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       )}
       <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-cream text-gray-450 border border-gray-150`}>
         <MessageCircle className="h-4 w-4" />
+      </button>
+      <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir Agendamento" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-[#b23a48] border border-gray-150`}>
+        <Trash2 className="h-4 w-4" />
       </button>
     </>
   );
