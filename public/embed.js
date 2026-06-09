@@ -59,10 +59,12 @@
         card.style.height = 'min(86vh, 760px)';
         card.style.borderRadius = '28px';
         card.style.maxHeight = '86vh';
+        overlay.style.alignItems = 'center';
       } else {
-        card.style.height = '100%';
-        card.style.borderRadius = '0';
-        card.style.maxHeight = '100%';
+        card.style.height = '90vh';
+        card.style.borderRadius = '28px 28px 0 0';
+        card.style.maxHeight = '90vh';
+        overlay.style.alignItems = 'flex-end';
       }
     }
     applySize();
