@@ -538,6 +538,13 @@ export const mockDb = {
     }
     return null;
   },
+  deleteAppointment: (id: string) => {
+    const i = mockData.appointments.findIndex(a => a.id === id);
+    if (i >= 0) {
+      mockData.appointments.splice(i, 1);
+    }
+    return true;
+  },
 
   // Transactions (financeiro)
   getTransactionsByProfessional: (profId: string) =>

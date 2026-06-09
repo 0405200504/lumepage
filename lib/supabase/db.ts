@@ -568,6 +568,18 @@ export const dbService = {
     return mockDb.updateAppointmentStatus(id, status, cancellationReason);
   },
 
+  deleteAppointment: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb()
+        .from('appointments')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteAppointment(id);
+  },
+
   // ===================== TRANSACTIONS (FINANCEIRO) =====================
   getTransactionsByProfessional: async (profId: string): Promise<Transaction[]> => {
     if (isSupabaseConfigured) {

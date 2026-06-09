@@ -11,6 +11,7 @@ import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink } from '@/lib/whatsapp';
 import { createTaskAction, toggleTaskAction, deleteTaskAction, updateTaskAction } from '@/app/actions/crm';
+import { deleteAppointmentAction } from '@/app/actions/professional';
 
 type View = 'year' | 'month' | 'week';
 
@@ -98,6 +99,13 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     if (!res.success) setTasks(initialTasks); else router.refresh();
   };
 
+  const removeAppt = async (apptId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
+    const res = await deleteAppointmentAction(apptId, professionalId);
+    if (res.success) router.refresh();
+    else alert('Erro ao excluir agendamento.');
+  };
+
   const goToday = () => setCursor(startOfMonth(today));
   const step = (dir: 1 | -1) => {
     if (view === 'year') setCursor(new Date(cursor.getFullYear() + dir, 0, 1));
@@ -179,6 +187,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           onAddTask={addTask}
           onToggleTask={toggleT}
           onRemoveTask={removeT}
+          onRemoveAppt={removeAppt}
         />
       )}
     </div>
@@ -340,8 +349,8 @@ const DayDetail: React.FC<{
   iso: string; appts: Appointment[]; tasks: Task[]; holiday?: Holiday; blocks: TimeBlock[];
   reminderTemplate?: string; onClose: () => void;
   onAddTask: (iso: string, content: string, time: string) => Promise<{ success: boolean; error?: string }>;
-  onToggleTask: (t: Task) => void; onRemoveTask: (t: Task) => void;
-}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, onClose, onAddTask, onToggleTask, onRemoveTask }) => {
+  onToggleTask: (t: Task) => void; onRemoveTask: (t: Task) => void; onRemoveAppt: (id: string) => void;
+}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt }) => {
   const [y, mo, d] = iso.split('-').map(Number);
   const dateObj = new Date(y, mo - 1, d);
   const longLabel = `${WEEKDAYS_SHORT[dateObj.getDay()]}, ${d} de ${MONTHS[mo - 1]} de ${y}`;
@@ -411,7 +420,10 @@ const DayDetail: React.FC<{
                 <div key={a.id} className="rounded-2xl border border-gray-150 bg-paper p-4 shadow-soft mb-2">
                   <div className="flex items-center justify-between">
                     <span className="inline-flex items-center gap-1.5 text-xs font-black text-forest"><Clock className="h-3.5 w-3.5" />{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
+                      <button onClick={(e) => { e.stopPropagation(); onRemoveAppt(a.id); }} className="p-1 text-gray-450 hover:text-[#b23a48] transition-colors rounded-lg hover:bg-cream" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
                   </div>
                   <h4 className="font-bold text-sm text-ink mt-2">{a.client_name}</h4>
                   <p className="text-xs text-gray-450">{a.service?.name}</p>

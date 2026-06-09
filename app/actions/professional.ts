@@ -199,6 +199,20 @@ export async function updateAppointmentStatusAction(appointmentId: string, profe
   }
 }
 
+export async function deleteAppointmentAction(appointmentId: string, professionalId: string) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorizeAction(professionalId)) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+
+    await dbService.deleteAppointment(appointmentId);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao excluir agendamento.' };
+  }
+}
+
 // 7. Logout do sistema
 export async function logoutAction() {
   const res = await authService.logout();
