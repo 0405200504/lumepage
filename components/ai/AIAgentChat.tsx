@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useChat } from '@ai-sdk/react';
+import { useChat } from 'ai/react';
 import { Sparkles, X, Send, Mic, Loader2, Bot, User } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 

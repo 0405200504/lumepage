@@ -36,7 +36,7 @@ Regras importantes:
 3. Ao usar ferramentas, confirme para o usuário que a ação foi realizada de forma amigável.
 `;
 
-    const result = streamText({
+    const result = await streamText({
       model: openai('gpt-4o-mini'),
       system: systemPrompt,
       messages,
@@ -44,6 +44,7 @@ Regras importantes:
         getAppointments: tool({
           description: 'Busca os agendamentos já marcados na agenda da profissional.',
           parameters: z.object({}),
+          // @ts-ignore: Tipagem da lib 'ai' falha com parâmetros vazios
           execute: async (args) => {
             const appointments = await dbService.getAppointmentsByProfessional(professionalId);
             return appointments.map(app => ({
