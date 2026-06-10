@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Download, Share, Plus, X, Check, Smartphone } from 'lucide-react';
+import { Download, Share, Plus, X, Check, Smartphone, MoreVertical } from 'lucide-react';
 
 /**
  * Evento beforeinstallprompt (Chrome/Edge/Android). Não existe no lib.dom padrão.
@@ -29,9 +29,14 @@ function isIOS(): boolean {
   return iOSDevice || iPadOS;
 }
 
+function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /android/i.test(navigator.userAgent);
+}
+
 /**
  * Botão "Instalar app" para a tela de login.
- * - Android/Chrome/Edge: dispara o prompt nativo de instalação.
+ * - Android/Chrome/Edge: dispara o prompt nativo de instalação ou mostra guia.
  * - iOS/Safari: abre um guia visual (Compartilhar → Adicionar à Tela de Início).
  * - Já instalado (standalone): não renderiza nada.
  */
@@ -39,7 +44,9 @@ export default function InstallApp() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
+  const [android, setAndroid] = useState(false);
   const [showIosSheet, setShowIosSheet] = useState(false);
+  const [showAndroidSheet, setShowAndroidSheet] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -49,6 +56,7 @@ export default function InstallApp() {
       return;
     }
     setIos(isIOS());
+    setAndroid(isAndroid());
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -58,6 +66,7 @@ export default function InstallApp() {
       setInstalled(true);
       setDeferred(null);
       setShowIosSheet(false);
+      setShowAndroidSheet(false);
     };
 
     window.addEventListener('beforeinstallprompt', onPrompt);
@@ -71,20 +80,28 @@ export default function InstallApp() {
   // Evita flash de conteúdo no SSR e some se já instalado
   if (!mounted || installed) return null;
 
-  // Em Android/desktop sem o evento ainda capturado e fora do iOS, não mostra
-  // (o navegador não suporta instalação ou já foi instalado anteriormente).
-  if (!ios && !deferred) return null;
+  // Em desktop sem o evento capturado e fora de mobile, não mostra.
+  // Permite mostrar no Android e iOS sempre.
+  if (!ios && !android && !deferred) return null;
 
   const handleClick = async () => {
     if (ios) {
       setShowIosSheet(true);
       return;
     }
-    if (!deferred) return;
-    await deferred.prompt();
-    const choice = await deferred.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
-    setDeferred(null);
+    // Se tiver prompt nativo (Android Chrome/Edge)
+    if (deferred) {
+      await deferred.prompt();
+      const choice = await deferred.userChoice;
+      if (choice.outcome === 'accepted') setInstalled(true);
+      setDeferred(null);
+      return;
+    }
+    // Fallback Android caso não haja prompt capturado
+    if (android) {
+      setShowAndroidSheet(true);
+      return;
+    }
   };
 
   return (
@@ -149,6 +166,65 @@ export default function InstallApp() {
             <button
               type="button"
               onClick={() => setShowIosSheet(false)}
+              className="tap mt-6 w-full py-3.5 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guia de instalação no Android */}
+      {android && showAndroidSheet && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-[#1a0e12]/50 backdrop-blur-sm"
+            onClick={() => setShowAndroidSheet(false)}
+          />
+          <div className="relative z-10 w-full sm:max-w-sm bg-paper rounded-t-4xl sm:rounded-4xl p-7 safe-sheet shadow-glow animate-slide-up">
+            <button
+              type="button"
+              onClick={() => setShowAndroidSheet(false)}
+              className="tap absolute top-5 right-5 p-1.5 rounded-xl text-gray-450 hover:bg-cream"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="h-14 w-14 surface-wine text-white rounded-3xl flex items-center justify-center shadow-soft ring-hairline">
+                <Smartphone className="h-7 w-7" />
+              </div>
+              <h3 className="mt-4 text-lg font-black text-ink tracking-tight">Instalar a Lume</h3>
+              <p className="mt-1 text-xs text-gray-450 leading-relaxed max-w-[18rem]">
+                Adicione à tela inicial para abrir como um app, em tela cheia.
+              </p>
+            </div>
+
+            <ol className="mt-6 space-y-3">
+              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">1</span>
+                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+                  Toque em <MoreVertical className="h-4 w-4 text-wine-700 inline" /> <strong>Menu</strong> no canto superior
+                </span>
+              </li>
+              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">2</span>
+                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+                  Escolha <span className="inline-flex items-center gap-1"><Download className="h-4 w-4 text-wine-700" /></span> <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>
+                </span>
+              </li>
+              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">3</span>
+                <span className="text-xs text-ink font-semibold flex items-center gap-1.5">
+                  Confirme em <Check className="h-4 w-4 text-ok inline" /> <strong>Instalar / Adicionar</strong>
+                </span>
+              </li>
+            </ol>
+
+            <button
+              type="button"
+              onClick={() => setShowAndroidSheet(false)}
               className="tap mt-6 w-full py-3.5 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom"
             >
               Entendi

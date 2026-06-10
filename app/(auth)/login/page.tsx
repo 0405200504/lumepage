@@ -99,6 +99,11 @@ export default function LoginPage() {
           ))}
         </div>
 
+        {/* Instalar como app no celular (PWA) */}
+        <div className="mb-5">
+          <InstallApp />
+        </div>
+
         {/* Card de Login */}
         <div className="card p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -187,11 +192,6 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Instalar como app no celular (PWA) */}
-        <div className="mt-4">
-          <InstallApp />
         </div>
       </div>
     </div>

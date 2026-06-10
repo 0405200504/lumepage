@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { SessionData } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
 import { ActingBanner } from '@/components/salon/ActingBanner';
+import { AIAgentChat } from '@/components/ai/AIAgentChat';
 
 interface LayoutDashboardProps {
   children: React.ReactNode;
@@ -56,6 +57,8 @@ export const LayoutDashboard: React.FC<LayoutDashboardProps> = async ({
           {children}
         </main>
       </div>
+
+      <AIAgentChat />
     </div>
   );
 };
