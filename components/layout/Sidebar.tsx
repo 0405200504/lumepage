@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
                 <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-wine-700/10' : ''}`}>
                   <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-105' : ''}`} strokeWidth={active ? 2.4 : 2} />
                 </span>
-                <span className={`text-[9px] ${active ? 'font-black' : 'font-bold'}`}>{link.label}</span>
+                <span className={`text-[10px] tracking-tight ${active ? 'font-bold' : 'font-semibold'}`}>{link.label}</span>
               </Link>
             );
           })}
@@ -191,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
             <span className="flex items-center justify-center h-8 w-12 rounded-2xl">
               <Menu className="h-[22px] w-[22px]" />
             </span>
-            <span className="text-[9px] font-bold">Mais</span>
+            <span className="text-[10px] tracking-tight font-semibold">Mais</span>
           </button>
         </div>
       </nav>
@@ -200,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
       {/* Sidebar Mobile Overlay */}
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-[#1a0e12]/60 backdrop-blur-xs" onClick={() => setIsOpen(false)} />
+          <div className="absolute inset-0 bg-[#1a0e12]/70" onClick={() => setIsOpen(false)} />
           <aside className="relative w-64 h-full shadow-2xl animate-slide-right">
             <SidebarContent />
           </aside>

@@ -58,7 +58,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       {/* Backdrop (Fundo Escurecido com Blur) */}
       <div 
         onClick={onClose}
-        className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+        className="absolute inset-0 bg-black/50 sm:bg-black/40 sm:backdrop-blur-md transition-opacity duration-200 animate-fade-in"
       />
 
       {/* Modal Container */}

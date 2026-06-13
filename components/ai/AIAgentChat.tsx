@@ -23,15 +23,20 @@ export function AIAgentChat() {
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll para a última mensagem
+  // Auto-scroll para a última mensagem (instantâneo — sem animação que engasga no mobile)
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
   }, [messages, isTranscribing, isLoading]);
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Microfone indisponível', 'O navegador não suporta áudio ou a página precisa estar em HTTPS.');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -53,9 +58,13 @@ export function AIAgentChat() {
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing microphone:', error);
-      toast.error('Microfone bloqueado', 'Por favor, permita o acesso ao microfone.');
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error('Microfone bloqueado', 'Por favor, clique no ícone de cadeado na barra de endereços e permita o uso do microfone.');
+      } else {
+        toast.error('Erro no microfone', 'Não foi possível acessar o seu microfone.');
+      }
     }
   };
 

@@ -50,17 +50,31 @@
   --radius-4xl: 2rem;
   --radius-5xl: 2.5rem;
 
-  /* — Sombras suaves (futuristas) — */
-  --shadow-soft: 0 1px 2px rgba(38, 4, 10, 0.04), 0 8px 24px -12px rgba(38, 4, 10, 0.10);
-  --shadow-glow: 0 20px 60px -24px rgba(80, 11, 24, 0.45);
+  /* — Sombras (sistema profissional · nítidas e em camadas) — */
+  --shadow-xs:   0 1px 2px rgba(38, 4, 10, 0.05);
+  --shadow-soft: 0 1px 2px rgba(38, 4, 10, 0.04), 0 4px 16px -8px rgba(38, 4, 10, 0.08);
+  --shadow-md:   0 2px 4px rgba(38, 4, 10, 0.04), 0 12px 28px -12px rgba(38, 4, 10, 0.12);
+  --shadow-lg:   0 8px 24px -8px rgba(38, 4, 10, 0.14), 0 24px 48px -24px rgba(38, 4, 10, 0.18);
+  --shadow-glow: 0 20px 60px -24px rgba(80, 11, 24, 0.40);
 }
 
 /* — Base — */
 html {
-  scroll-behavior: smooth;
+  /* Rolagem instantânea: nada de animação que dá sensação de "lentidão" no toque */
+  scroll-behavior: auto;
   /* Evita reflow de fonte no giro de tela (iOS) */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* Respeita usuários que pedem menos movimento e elimina jank de animação */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -78,6 +92,12 @@ body {
 /* Tipografia, ícones e elementos de UI não devem ser selecionáveis num app */
 button, a, label, nav, header, .tap {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Resposta de toque imediata em TUDO que é clicável (não só no .tap):
+   remove o atraso histórico de ~300ms e o gesto de duplo-toque-zoom. */
+button, a, label, select, [role='button'], summary {
+  touch-action: manipulation;
 }
 
 /* Rolagem com inércia em containers internos (cara de app) */
@@ -155,19 +175,45 @@ h1, h2, h3, h4, h5, h6 {
 ::selection { background: rgba(80, 11, 24, 0.12); color: var(--color-wine-800); }
 
 /* — Utilitários — */
-.transition-all-custom { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+/* Anima só o necessário (não "all") — mais fluido e sem repaint desnecessário */
+.transition-all-custom {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-/* Vidro / glassmorphism sutil */
+/* Vidro / glassmorphism sutil.
+   No mobile o blur de backdrop é caro (engasga o toque), então usamos
+   fundo sólido lá e só ligamos o blur no desktop. */
 .glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(255, 255, 255, 0.92);
 }
 .glass-dark {
-  background: rgba(80, 11, 24, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(80, 11, 24, 0.96);
 }
+@media (min-width: 1024px) {
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  .glass-dark {
+    background: rgba(80, 11, 24, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+/* Foco visível e consistente (acessibilidade + cara de produto sério).
+   Só aparece na navegação por teclado, nunca atrapalha o toque/clique. */
+:focus-visible {
+  outline: 2px solid var(--color-wine-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) { outline: none; }
 
 /* Superfície bordô com profundidade (futurista) */
 .surface-wine {
@@ -192,13 +238,13 @@ h1, h2, h3, h4, h5, h6 {
   from { transform: translateX(-100%); opacity: 0.4; }
   to   { transform: translateX(0); opacity: 1; }
 }
-.animate-slide-right { animation: slide-right 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+.animate-slide-right { animation: slide-right 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-up { animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-up { animation: fade-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
@@ -210,7 +256,7 @@ h1, h2, h3, h4, h5, h6 {
   from { transform: translateY(16px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
-.animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-up { animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* Safe-area (PWA / notch) */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
