@@ -178,6 +178,23 @@ export async function createClientAction(professionalId: string, input: {
   }
 }
 
+// Ficha técnica / observações da cliente
+export async function updateClientNotesAction(professionalId: string, clientId: string, notes: string) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    const client = await dbService.getClientById(clientId);
+    if (!client || client.professional_id !== professionalId) {
+      return { success: false, error: 'Cliente não encontrada.' };
+    }
+    const ok = await dbService.updateClientNotes(clientId, notes);
+    if (!ok) return { success: false, error: 'Não foi possível salvar. Rode a migração v7 no Supabase.' };
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar a ficha.' };
+  }
+}
+
 interface ImportRow { name: string; whatsapp: string; email?: string; birthday?: string; }
 
 export async function importClientsAction(professionalId: string, rows: ImportRow[]) {

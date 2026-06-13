@@ -353,7 +353,7 @@ export const dbService = {
   upsertSettings: async (data: Partial<Setting> & { professional_id: string }): Promise<Setting> => {
     if (isSupabaseConfigured) {
       // Campos opcionais que dependem de migração — gravados em separado (best-effort)
-      const { requires_deposit, deposit_instructions, booking_theme, ...core } = data as Partial<Setting> & { professional_id: string };
+      const { requires_deposit, deposit_instructions, booking_theme, public_slots_limit, ...core } = data as Partial<Setting> & { professional_id: string };
       const { data: result, error } = await getDb()
         .from('settings')
         .upsert(core, { onConflict: 'professional_id' })
@@ -376,6 +376,20 @@ export const dbService = {
           Object.assign(result as object, extras);
         }
       }
+
+      // Limite de horários públicos (migração v7) — best-effort separado
+      if (public_slots_limit !== undefined) {
+        const { error: limitErr } = await getDb()
+          .from('settings')
+          .update({ public_slots_limit })
+          .eq('professional_id', data.professional_id);
+        if (limitErr) {
+          console.warn('[settings] Coluna public_slots_limit ausente — rode supabase/migration_v7.sql:', limitErr.message);
+        } else {
+          (result as Record<string, unknown>).public_slots_limit = public_slots_limit;
+        }
+      }
+
       return result;
     }
     return mockDb.upsertSettings(data);
@@ -436,6 +450,23 @@ export const dbService = {
       return result;
     }
     return mockDb.createClient(data);
+  },
+
+  // Ficha técnica / observações da cliente (requer migração v7). Retorna false se a coluna não existir.
+  updateClientNotes: async (id: string, notes: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      mockDb.updateClient(id, { notes });
+      return true;
+    }
+    const { error } = await getDb()
+      .from('clients')
+      .update({ notes })
+      .eq('id', id);
+    if (error) {
+      console.warn('[clients] Coluna notes ausente — rode supabase/migration_v7.sql:', error.message);
+      return false;
+    }
+    return true;
   },
 
   // Appointments

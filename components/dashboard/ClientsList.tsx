@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Client, Appointment } from '@/types/database';
 import {
@@ -10,7 +10,7 @@ import {
 import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import { useToast } from '../ui/Toast';
-import { createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction } from '@/app/actions/crm';
+import { createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction, updateClientNotesAction } from '@/app/actions/crm';
 import { Trash2 } from 'lucide-react';
 
 interface ClientsListProps {
@@ -86,6 +86,32 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'away' | 'birthday'>('all');
   const [detail, setDetail] = useState<Client | null>(null);
+
+  // Ficha técnica / observações da cliente
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (detail) setNoteDraft(notesById[detail.id] ?? detail.notes ?? '');
+  }, [detail, notesById]);
+
+  const saveNote = async () => {
+    if (!detail) return;
+    setSavingNote(true);
+    try {
+      const res = await updateClientNotesAction(professionalId, detail.id, noteDraft);
+      if (res.success) {
+        setNotesById(prev => ({ ...prev, [detail.id]: noteDraft }));
+        success('Ficha salva', 'As observações da cliente foram atualizadas.');
+      } else {
+        error('Erro', res.error || 'Não foi possível salvar a ficha.');
+      }
+    } catch {
+      error('Erro', 'Falha ao salvar a ficha.');
+    } finally {
+      setSavingNote(false);
+    }
+  };
 
   // Edição em lote
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -488,7 +514,31 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 ))}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-2.5">
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {/* Ficha técnica / observações da cliente */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Ficha da cliente</p>
+                    <button
+                      onClick={saveNote}
+                      disabled={savingNote}
+                      className="tap text-[11px] font-bold text-white bg-wine-700 hover:bg-wine-800 rounded-lg px-3 py-1.5 disabled:opacity-60 transition-all-custom"
+                    >
+                      {savingNote ? 'Salvando…' : 'Salvar ficha'}
+                    </button>
+                  </div>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    rows={5}
+                    placeholder="Observações gerais, preferências, cuidados especiais, produtos usados, alergias/sensibilidades, informações para os próximos atendimentos…"
+                    className="block w-full px-3 py-2.5 bg-cream/50 border border-gray-150 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Fica salva nesta cliente. Para observações de um atendimento específico, use as notas do agendamento.
+                  </span>
+                </div>
+
                 <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Histórico de atendimentos</p>
                 {s.history.length === 0 ? (
                   <p className="text-xs text-gray-450 py-8 text-center">Sem agendamentos registrados.</p>

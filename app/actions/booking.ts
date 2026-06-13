@@ -32,7 +32,29 @@ export async function getBookingData(slug: string) {
 }
 
 /**
- * Retorna os slots de horários disponíveis para um dia e serviço específico.
+ * Seleciona N itens distribuídos de forma natural ao longo do array (não sequenciais).
+ * Ex.: de 12 horários livres, escolhe 4 espalhados pela manhã/tarde.
+ */
+function pickDistributed<T>(arr: T[], n: number): T[] {
+  if (n <= 0 || arr.length <= n) return arr;
+  if (n === 1) return [arr[Math.floor(arr.length / 2)]];
+  const result: T[] = [];
+  const seen = new Set<number>();
+  const step = (arr.length - 1) / (n - 1);
+  for (let i = 0; i < n; i++) {
+    let idx = Math.round(i * step);
+    while (seen.has(idx) && idx < arr.length - 1) idx++;
+    if (seen.has(idx)) continue;
+    seen.add(idx);
+    result.push(arr[idx]);
+  }
+  return result;
+}
+
+/**
+ * Retorna os slots de horários disponíveis para um dia e serviço específico (PÚBLICO).
+ * Respeita o limite público (settings.public_slots_limit): mostra só N horários livres,
+ * distribuídos naturalmente, sem revelar todos os horários vagos. A agenda real não muda.
  */
 export async function getSlotsAction(professionalId: string, dateStr: string, serviceId: string) {
   try {
@@ -42,6 +64,32 @@ export async function getSlotsAction(professionalId: string, dateStr: string, se
     }
 
     const slots = await getAvailableSlots(professionalId, dateStr, service.duration_minutes);
+
+    const settings = await dbService.getSettingsByProfessional(professionalId);
+    const limit = settings?.public_slots_limit ?? 0;
+    if (limit && limit > 0) {
+      // Só horários livres, distribuídos; ocupados nunca aparecem nessa visão limitada.
+      const available = slots.filter(s => s.isAvailable);
+      return { success: true, slots: pickDistributed(available, limit) };
+    }
+
+    return { success: true, slots };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao calcular horários livres.' };
+  }
+}
+
+/**
+ * Slots para uso INTERNO (painel da profissional): sempre TODOS os horários livres,
+ * ignorando o limite público. Aceita duração personalizada (agendamento manual).
+ */
+export async function getSlotsInternalAction(professionalId: string, dateStr: string, durationMinutes: number) {
+  try {
+    const session = await import('@/lib/auth/auth').then(m => m.authService.getCurrentUser());
+    if (!session || session.professional_id !== professionalId) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+    const slots = await getAvailableSlots(professionalId, dateStr, durationMinutes);
     return { success: true, slots };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao calcular horários livres.' };

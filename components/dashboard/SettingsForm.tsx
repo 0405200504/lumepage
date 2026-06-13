@@ -40,6 +40,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   const [minNoticeHours, setMinNoticeHours] = useState(settings?.min_notice_hours || 3);
   const [maxDaysAhead, setMaxDaysAhead] = useState(settings?.max_days_ahead || 30);
   const [showPricePublic, setShowPricePublic] = useState(settings?.show_price_public ?? true);
+  const [publicSlotsLimit, setPublicSlotsLimit] = useState<number>(settings?.public_slots_limit ?? 0);
 
   // Sinal / Antecipação (anti no-show)
   const [requiresDeposit, setRequiresDeposit] = useState(settings?.requires_deposit ?? false);
@@ -90,6 +91,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         min_notice_hours: minNoticeHours,
         max_days_ahead: maxDaysAhead,
         show_price_public: showPricePublic,
+        public_slots_limit: publicSlotsLimit,
         whatsapp_confirmation_message: whatsappConfirmation,
         whatsapp_cancel_message: whatsappCancel,
         requires_deposit: requiresDeposit,
@@ -379,6 +381,43 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                 <label htmlFor="showPrice" className="text-xs font-bold text-gray-700 cursor-pointer">
                   Exibir preços dos serviços na página pública
                 </label>
+              </div>
+            </div>
+
+            {/* Limite de horários exibidos na página pública */}
+            <div className="border-t border-gray-150 pt-5 space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                  Horários exibidos na página pública
+                </label>
+                <select
+                  value={[0, 3, 5, 8].includes(publicSlotsLimit) ? String(publicSlotsLimit) : 'custom'}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'custom') setPublicSlotsLimit(prev => ([0, 3, 5, 8].includes(prev) ? 4 : prev));
+                    else setPublicSlotsLimit(parseInt(v, 10));
+                  }}
+                  className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none bg-white"
+                >
+                  <option value="0">Mostrar todos os horários disponíveis</option>
+                  <option value="3">Mostrar até 3 horários por dia</option>
+                  <option value="5">Mostrar até 5 horários por dia</option>
+                  <option value="8">Mostrar até 8 horários por dia</option>
+                  <option value="custom">Quantidade personalizada…</option>
+                </select>
+                {![0, 3, 5, 8].includes(publicSlotsLimit) && (
+                  <input
+                    type="number"
+                    min={1}
+                    value={publicSlotsLimit}
+                    onChange={(e) => setPublicSlotsLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="block w-full mt-2 px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none"
+                    placeholder="Quantidade de horários por dia"
+                  />
+                )}
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Afeta apenas o que a cliente vê. Você continua enxergando todos os horários no seu painel. Os horários mostrados são distribuídos ao longo do dia.
+                </span>
               </div>
             </div>
 

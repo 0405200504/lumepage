@@ -101,6 +101,7 @@ export interface Setting {
   requires_deposit?: boolean; // exige sinal/antecipação (opcional — requer migração v2)
   deposit_instructions?: string | null; // instruções de sinal exibidas no agendamento
   booking_theme?: string | null; // tema decorativo do popup (sparkles/stars/flowers/hearts/none)
+  public_slots_limit?: number; // 0/undefined = mostrar todos; N = mostrar até N horários por dia na página pública (requer migração v7)
   created_at: string;
   updated_at: string;
 }
@@ -112,10 +113,28 @@ export interface Client {
   whatsapp: string;
   email: string | null;
   birthday?: string | null; // "YYYY-MM-DD" (opcional — requer migração v2)
+  notes?: string | null; // ficha técnica / observações gerais da cliente (requer migração v7)
   total_appointments: number;
   last_appointment_at: string | null;
   created_at: string;
   updated_at?: string;
+}
+
+export type WaitlistStatus = 'waiting' | 'contacted' | 'scheduled' | 'cancelled' | 'no_response';
+
+export interface WaitlistEntry {
+  id: string;
+  professional_id: string;
+  client_name: string;
+  client_whatsapp: string;
+  service_id?: string | null;
+  service_name?: string | null;
+  desired_date?: string | null; // "YYYY-MM-DD"
+  desired_period?: string | null; // texto livre: "manhã", "sábado", etc.
+  time_preference?: string | null; // ex.: "depois das 18h"
+  notes?: string | null;
+  status: WaitlistStatus;
+  created_at: string;
 }
 
 export type TransactionType = 'income' | 'expense';
