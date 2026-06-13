@@ -1,7 +1,6 @@
 import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { AvailabilityEditor } from '@/components/dashboard/AvailabilityEditor';
 
 export const metadata = {
@@ -15,13 +14,5 @@ export default async function DashboardAvailabilityPage() {
 
   const rules = await dbService.getAvailabilityRulesByProfessional(professionalId);
 
-  return (
-    <LayoutDashboard 
-      session={session} 
-      title="Disponibilidade Semanal" 
-      subtitle="Configure o seu horário de funcionamento regular e intervalo de almoço para cada dia da semana."
-    >
-      <AvailabilityEditor initialRules={rules} professionalId={professionalId} />
-    </LayoutDashboard>
-  );
+  return <AvailabilityEditor initialRules={rules} professionalId={professionalId} />;
 }

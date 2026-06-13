@@ -1,7 +1,6 @@
 import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { TimeBlocksList } from '@/components/dashboard/TimeBlocksList';
 
 export const metadata = {
@@ -15,13 +14,5 @@ export default async function DashboardBlocksPage() {
 
   const blocks = await dbService.getTimeBlocksByProfessional(professionalId);
 
-  return (
-    <LayoutDashboard 
-      session={session} 
-      title="Bloqueio de Horários" 
-      subtitle="Feche dias específicos ou horas do expediente para folgas, imprevistos ou atendimentos externos."
-    >
-      <TimeBlocksList initialBlocks={blocks} professionalId={professionalId} />
-    </LayoutDashboard>
-  );
+  return <TimeBlocksList initialBlocks={blocks} professionalId={professionalId} />;
 }

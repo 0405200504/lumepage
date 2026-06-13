@@ -1,7 +1,6 @@
 import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { AgendaCalendar } from '@/components/dashboard/AgendaCalendar';
 
 export const metadata = {
@@ -19,18 +18,12 @@ export default async function AgendaPage() {
   const tasks = await dbService.getTasksByProfessional(professionalId);
 
   return (
-    <LayoutDashboard
-      session={session}
-      title="Agenda"
-      subtitle="Ano, mês e semana — agendamentos, feriados e tarefas (arraste para remarcar)."
-    >
-      <AgendaCalendar
-        appointments={appointments}
-        timeBlocks={timeBlocks}
-        reminderTemplate={settings?.whatsapp_confirmation_message || ''}
-        professionalId={professionalId}
-        initialTasks={tasks}
-      />
-    </LayoutDashboard>
+    <AgendaCalendar
+      appointments={appointments}
+      timeBlocks={timeBlocks}
+      reminderTemplate={settings?.whatsapp_confirmation_message || ''}
+      professionalId={professionalId}
+      initialTasks={tasks}
+    />
   );
 }

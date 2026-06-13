@@ -112,7 +112,7 @@ export function AIAgentChat() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 h-14 w-14 bg-wine-700 text-white rounded-full shadow-glow flex items-center justify-center hover:scale-105 transition-transform z-50 tap"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 h-14 w-14 bg-wine-700 text-white rounded-full shadow-glow flex items-center justify-center hover:scale-105 transition-transform z-50 tap"
           aria-label="Abrir Assistente IA"
         >
           <Sparkles className="h-6 w-6" />

@@ -1,7 +1,6 @@
 import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { ServicesList } from '@/components/dashboard/ServicesList';
 
 export const metadata = {
@@ -15,13 +14,5 @@ export default async function DashboardServicesPage() {
 
   const services = await dbService.getServicesByProfessional(professionalId);
 
-  return (
-    <LayoutDashboard 
-      session={session} 
-      title="Catálogo de Serviços" 
-      subtitle="Defina os procedimentos, tempos de duração e os valores exibidos para os seus clientes na página de agendamentos."
-    >
-      <ServicesList initialServices={services} professionalId={professionalId} />
-    </LayoutDashboard>
-  );
+  return <ServicesList initialServices={services} professionalId={professionalId} />;
 }

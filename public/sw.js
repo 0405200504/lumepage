@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v1';
+const CACHE = 'lume-shell-v2';
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
@@ -20,6 +20,19 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // NÃO intercepta dados/RSC do Next nem APIs: deixa o navegador resolver
+  // direto, sem o overhead de passar pelo service worker. Isso é o que mais
+  // pesava no app instalado — cada ação/navegação esperava o SW intermediar.
+  if (
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/_next/data') ||
+    url.searchParams.has('_rsc') ||
+    req.headers.get('RSC') === '1' ||
+    req.headers.get('Next-Router-Prefetch') === '1'
+  ) {
+    return;
+  }
+
   // Estáticos do Next e ícones: cache-first
   if (url.pathname.startsWith('/_next/static') || url.pathname.startsWith('/icon') || url.pathname === '/apple-touch-icon.png') {
     event.respondWith(
@@ -32,16 +45,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navegações e dados: network-first com fallback ao cache (offline)
-  event.respondWith(
-    fetch(req).then((res) => {
-      if (req.mode === 'navigate') {
+  // Só navegações de documento (HTML): network-first com fallback offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-      }
-      return res;
-    }).catch(() => caches.match(req).then((hit) => hit || caches.match('/dashboard')))
-  );
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || caches.match('/dashboard')))
+    );
+    return;
+  }
+
+  // Qualquer outra requisição GET: não intercepta (sem overhead do SW).
 });
 
 // ==========================================

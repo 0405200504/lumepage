@@ -1,7 +1,6 @@
 import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { LayoutDashboard } from '@/components/layout/LayoutDashboard';
 import { TasksWidget } from '@/components/dashboard/TasksWidget';
 
 export const metadata = {
@@ -14,13 +13,5 @@ export default async function TasksPage() {
   const professionalId = session.professional_id!;
   const tasks = await dbService.getTasksByProfessional(professionalId);
 
-  return (
-    <LayoutDashboard
-      session={session}
-      title="Tarefas & Notas"
-      subtitle="Anote o que é importante. Com data e horário, a tarefa aparece na sua Agenda."
-    >
-      <TasksWidget professionalId={professionalId} initialTasks={tasks} />
-    </LayoutDashboard>
-  );
+  return <TasksWidget professionalId={professionalId} initialTasks={tasks} />;
 }
