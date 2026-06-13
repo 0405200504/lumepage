@@ -46,7 +46,7 @@ Regras importantes:
 `;
 
     const result = await streamText({
-      model: google(process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
+      model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
       system: systemPrompt,
       messages,
       tools: {
