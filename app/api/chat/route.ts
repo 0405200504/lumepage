@@ -3,6 +3,7 @@ import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
+import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
 
 // Permite tempo de resposta maior para funções complexas
 export const maxDuration = 30;
@@ -25,86 +26,189 @@ export async function POST(req: Request) {
     // 2. Extrair mensagens do body
     const { messages } = await req.json();
 
-    // 3. Buscar contexto para passar para o agente
-    // Pega serviços para que a IA possa saber os IDs dos serviços para agendamento
+    // 3. Contexto do sistema: serviços (com IDs) e a data de hoje (fuso BR)
     const services = await dbService.getServicesByProfessional(professionalId);
-    const servicesList = services.map(s => `- ${s.name} (ID: ${s.id}, Duração: ${s.duration_minutes} min)`).join('\n');
+    const servicesList = services.length
+      ? services
+          .map(s => `- ${s.name} (ID: ${s.id}, Duração: ${s.duration_minutes} min)`)
+          .join('\n')
+      : '(nenhum serviço cadastrado ainda)';
 
-    // System prompt define o comportamento do agente
-    const systemPrompt = `Você é um assistente virtual super inteligente integrado ao sistema de agenda 'Lume'.
-Seu objetivo é ajudar a profissional de beleza (dona da agenda) a gerenciar seu salão.
-Você pode visualizar a agenda, marcar clientes, criar tarefas e responder dúvidas de forma concisa e amigável.
+    const now = new Date();
+    const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now);
+    const weekday = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
+
+    // System prompt: persona + escopo restrito ao sistema Lume
+    const systemPrompt = `Você é a "Lume", a assistente virtual integrada EXCLUSIVAMENTE ao sistema de gestão Lume.
+Você ajuda a profissional de beleza (dona da agenda) a administrar o próprio negócio DENTRO do Lume.
+
+Hoje é ${weekday}, ${todayISO} (horário de São Paulo). Use isso para entender datas relativas como "hoje", "amanhã", "sexta", "semana que vem".
+
 O ID da profissional logada é: ${professionalId}
 
-Aqui está a lista de serviços cadastrados que ela oferece (com seus respectivos IDs):
+Serviços cadastrados (use estes IDs ao agendar):
 ${servicesList}
 
-Regras importantes:
-1. Sempre use as ferramentas disponíveis para buscar informações antes de afirmar que algo não existe.
-2. Para agendar, você PRECISARÁ de: Nome da cliente, WhatsApp, Data (YYYY-MM-DD), Hora de Início (HH:MM) e o ID do serviço. Calcule o horário de término baseado na duração do serviço.
-3. Ao usar ferramentas, confirme para o usuário que a ação foi realizada de forma amigável.
-`;
+== ESCOPO (muito importante) ==
+- Você SÓ trata da gestão do salão desta profissional no Lume: agenda, agendamentos, clientes, serviços, tarefas/notas e finanças.
+- Se perguntarem algo fora desse escopo (conhecimento geral, outros assuntos, outros sistemas, opiniões etc.), recuse com educação e ofereça ajuda com o que você sabe fazer no Lume.
+- NUNCA invente dados. SEMPRE use as ferramentas para ler os dados reais antes de afirmar qualquer coisa (agendamentos, clientes, horários etc.).
+- Responda sempre em português do Brasil, de forma curta, clara e amigável.
+
+== AÇÕES QUE VOCÊ EXECUTA ==
+Você pode realizar ações de verdade pela profissional. Antes de executar, confira se tem os dados necessários (pergunte o que faltar); depois de executar, confirme o resultado de forma simples.
+1. Cadastrar cliente (createClient): precisa de nome e WhatsApp (e-mail é opcional).
+2. Agendar (createAppointment): precisa de serviço (ID da lista), nome da cliente, WhatsApp, data (YYYY-MM-DD) e hora de início (HH:MM).
+   - Antes de confirmar um horário, use checkAvailability para ver se está livre e, se não estiver, sugira horários próximos disponíveis.
+   - O horário de término é calculado automaticamente pela duração do serviço.
+3. Criar tarefa/nota (createTask): precisa do conteúdo. Se a profissional disser uma data/hora, preencha due_date (YYYY-MM-DD) e due_time (HH:MM) para a tarefa aparecer na Agenda.
+
+Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
 
     const result = await streamText({
       model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
       system: systemPrompt,
       messages,
       tools: {
+        // ===== LEITURA (sempre baseada em dados reais do sistema) =====
         getAppointments: tool({
-          description: 'Busca os agendamentos já marcados na agenda da profissional.',
+          description: 'Lista os agendamentos já marcados na agenda da profissional.',
           parameters: z.object({}),
-          // @ts-ignore: Tipagem da lib 'ai' falha com parâmetros vazios
-          execute: async (args) => {
+          execute: async () => {
             const appointments = await dbService.getAppointmentsByProfessional(professionalId);
             return appointments.map(app => ({
               id: app.id,
               date: app.date,
               time: `${app.start_time} - ${app.end_time}`,
               client: app.client_name,
-              status: app.status
+              status: app.status,
             }));
           },
         }),
-        createAppointment: tool({
-          description: 'Cria um novo agendamento na agenda da profissional.',
+        listClients: tool({
+          description: 'Lista as clientes cadastradas da profissional (nome, WhatsApp, total de atendimentos).',
+          parameters: z.object({}),
+          execute: async () => {
+            const clients = await dbService.getClientsByProfessional(professionalId);
+            return clients.map(c => ({
+              id: c.id,
+              name: c.name,
+              whatsapp: c.whatsapp,
+              email: c.email,
+              total_appointments: c.total_appointments,
+            }));
+          },
+        }),
+        listServices: tool({
+          description: 'Lista os serviços cadastrados, com duração e preço.',
+          parameters: z.object({}),
+          execute: async () => {
+            const svcs = await dbService.getServicesByProfessional(professionalId);
+            return svcs.map(s => ({
+              id: s.id,
+              name: s.name,
+              duration_minutes: s.duration_minutes,
+              price_cents: s.price_cents,
+              is_active: s.is_active,
+            }));
+          },
+        }),
+        listTasks: tool({
+          description: 'Lista as tarefas e notas da profissional.',
+          parameters: z.object({}),
+          execute: async () => {
+            const tasks = await dbService.getTasksByProfessional(professionalId);
+            return tasks.map(t => ({
+              id: t.id,
+              content: t.content,
+              done: t.done,
+              due_date: t.due_date ?? null,
+              due_time: t.due_time ?? null,
+            }));
+          },
+        }),
+        checkAvailability: tool({
+          description: 'Verifica os horários livres para um serviço em uma data específica. Use antes de agendar.',
           parameters: z.object({
-            service_id: z.string().describe('ID do serviço que será realizado (veja na lista de serviços)'),
+            date: z.string().describe('Data no formato YYYY-MM-DD'),
+            service_id: z.string().describe('ID do serviço (veja na lista de serviços)'),
+          }),
+          execute: async ({ date, service_id }) => {
+            const res = await getSlotsAction(professionalId, date, service_id);
+            if (!res.success) return { success: false, error: res.error };
+            const livres = (res.slots || []).filter((s: { isAvailable: boolean }) => s.isAvailable).map((s: { time: string }) => s.time);
+            return { success: true, date, available_times: livres };
+          },
+        }),
+
+        // ===== EXECUÇÃO (ações reais) =====
+        createClient: tool({
+          description: 'Cadastra uma nova cliente para a profissional.',
+          parameters: z.object({
+            name: z.string().describe('Nome da cliente'),
+            whatsapp: z.string().describe('WhatsApp da cliente (apenas números)'),
+            email: z.string().optional().describe('E-mail da cliente (opcional)'),
+            birthday: z.string().optional().describe('Aniversário no formato YYYY-MM-DD (opcional)'),
+          }),
+          execute: async ({ name, whatsapp, email, birthday }) => {
+            try {
+              const client = await dbService.createClient({
+                professional_id: professionalId,
+                name,
+                whatsapp: whatsapp.replace(/\D/g, ''),
+                email: email || null,
+                birthday: birthday || null,
+              });
+              return { success: true, client_id: client.id, name: client.name };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao cadastrar cliente.' };
+            }
+          },
+        }),
+        createAppointment: tool({
+          description: 'Cria um novo agendamento na agenda. Valida conflito de horário e avisa a profissional.',
+          parameters: z.object({
+            service_id: z.string().describe('ID do serviço (veja na lista de serviços)'),
             client_name: z.string().describe('Nome da cliente'),
-            client_whatsapp: z.string().describe('WhatsApp da cliente (Apenas números)'),
+            client_whatsapp: z.string().describe('WhatsApp da cliente (apenas números)'),
             date: z.string().describe('Data do agendamento no formato YYYY-MM-DD'),
             start_time: z.string().describe('Hora de início no formato HH:MM'),
-            end_time: z.string().describe('Hora de término no formato HH:MM'),
-            notes: z.string().optional().describe('Observações opcionais')
+            notes: z.string().optional().describe('Observações opcionais'),
           }),
-          execute: async (args) => {
-            const appointment = await dbService.createAppointment({
-              professional_id: professionalId,
-              service_id: args.service_id,
-              client_id: null, // A função no BD cria o cliente ou busca pelo whatsapp
-              client_name: args.client_name,
-              client_whatsapp: args.client_whatsapp,
-              client_email: null,
-              date: args.date,
-              start_time: args.start_time,
-              end_time: args.end_time,
-              notes: args.notes || null,
-            } as any);
-            return { success: true, appointment_id: appointment.id };
+          execute: async ({ service_id, client_name, client_whatsapp, date, start_time, notes }) => {
+            const res = await createAppointmentAction({
+              professionalId,
+              serviceId: service_id,
+              clientName: client_name,
+              clientWhatsapp: client_whatsapp,
+              date,
+              startTime: start_time,
+              notes,
+            });
+            return res;
           },
         }),
         createTask: tool({
-          description: 'Cria uma nova tarefa ou anotação para a profissional.',
+          description: 'Cria uma nova tarefa ou anotação. Com data/hora, ela aparece na Agenda.',
           parameters: z.object({
-            content: z.string().describe('O conteúdo da tarefa ou anotação')
+            content: z.string().describe('O conteúdo da tarefa ou anotação'),
+            due_date: z.string().optional().describe('Data no formato YYYY-MM-DD (opcional)'),
+            due_time: z.string().optional().describe('Hora no formato HH:MM (opcional)'),
           }),
-          execute: async ({ content }) => {
-            const task = await dbService.createTask({
-              professional_id: professionalId,
-              content
-            });
-            return { success: true, task_id: task.id };
+          execute: async ({ content, due_date, due_time }) => {
+            try {
+              const task = await dbService.createTask({
+                professional_id: professionalId,
+                content,
+                due_date: due_date || null,
+                due_time: due_time || null,
+              });
+              return { success: true, task_id: task.id };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao criar tarefa.' };
+            }
           },
-        })
+        }),
       },
     });
 
