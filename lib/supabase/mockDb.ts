@@ -18,6 +18,7 @@ declare global {
     transactions: Transaction[];
     tasks: Task[];
     fixedExpenses: FixedExpense[];
+    pushSubscriptions: any[];
   } | undefined;
   var __mockSalons: Salon[] | undefined;
 }
@@ -167,7 +168,8 @@ if (!globalThis.__mockDb) {
     appointments: [],
     transactions: [],
     tasks: [],
-    fixedExpenses: []
+    fixedExpenses: [],
+    pushSubscriptions: []
   };
 
   // Agendamentos simulados iniciais para hoje e amanhã
@@ -629,6 +631,22 @@ export const mockDb = {
   setProfessionalSalon: (professionalId: string, salonId: string | null) => {
     const p = mockData.professionals.find(x => x.id === professionalId);
     if (p) p.salon_id = salonId;
+    return true;
+  },
+
+  getPushSubscriptionsByProfessional: (profId: string) => mockData.pushSubscriptions.filter(s => s.professional_id === profId),
+  savePushSubscription: (data: { professional_id: string; endpoint: string; auth: string; p256dh: string }) => {
+    const existingIdx = mockData.pushSubscriptions.findIndex(s => s.endpoint === data.endpoint);
+    if (existingIdx >= 0) {
+      mockData.pushSubscriptions[existingIdx] = { ...mockData.pushSubscriptions[existingIdx], ...data };
+      return mockData.pushSubscriptions[existingIdx];
+    }
+    const newSub = { id: 'sub_' + Math.random().toString(36).slice(2, 10), created_at: new Date().toISOString(), ...data };
+    mockData.pushSubscriptions.push(newSub);
+    return newSub;
+  },
+  removePushSubscription: (endpoint: string) => {
+    mockData.pushSubscriptions = mockData.pushSubscriptions.filter(s => s.endpoint !== endpoint);
     return true;
   },
 

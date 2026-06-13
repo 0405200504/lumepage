@@ -43,3 +43,50 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => caches.match(req).then((hit) => hit || caches.match('/dashboard')))
   );
 });
+
+// ==========================================
+// Web Push Notifications
+// ==========================================
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  
+  try {
+    const data = event.data.json();
+    const title = data.title || 'Lume Agendamentos';
+    const options = {
+      body: data.body || 'Você tem uma nova notificação.',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png', // Ícone monocromático idealmente
+      vibrate: [200, 100, 200, 100, 200, 100, 200],
+      data: {
+        url: data.url || '/dashboard'
+      }
+    };
+    
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    console.error('Erro ao processar push data:', e);
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.url || '/dashboard';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Se a aba já estiver aberta, foca nela e navega
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes('/dashboard') && 'focus' in client) {
+          return client.focus().then(() => client.navigate(urlToOpen));
+        }
+      }
+      // Se não, abre uma nova aba
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

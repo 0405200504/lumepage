@@ -2,7 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
-import { requireProfessional } from '@/lib/auth/session';
+import { authService } from '@/lib/auth/auth';
 
 // Permite tempo de resposta maior para funções complexas
 export const maxDuration = 30;
@@ -10,8 +10,11 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
     // 1. Obter a sessão e o ID da profissional autenticada
-    const session = await requireProfessional();
-    const professionalId = session.professional_id!;
+    const session = await authService.getCurrentUser();
+    if (!session || !session.professional_id) {
+      return new Response('Não autorizado', { status: 401 });
+    }
+    const professionalId = session.professional_id;
 
     // 2. Extrair mensagens do body
     const { messages } = await req.json();
@@ -71,7 +74,7 @@ Regras importantes:
             const appointment = await dbService.createAppointment({
               professional_id: professionalId,
               service_id: args.service_id,
-              client_id: '', // A função no BD cria o cliente ou busca pelo whatsapp
+              client_id: null, // A função no BD cria o cliente ou busca pelo whatsapp
               client_name: args.client_name,
               client_whatsapp: args.client_whatsapp,
               client_email: null,

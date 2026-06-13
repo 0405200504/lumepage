@@ -856,6 +856,42 @@ export const dbService = {
       return true;
     }
     return mockDb.deleteProfessional(id);
+  },
+
+  // ===================== PUSH NOTIFICATIONS =====================
+  getPushSubscriptionsByProfessional: async (profId: string): Promise<any[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('push_subscriptions').select('*').eq('professional_id', profId);
+      if (error) { if (isMissingTable(error)) { warnMigration('push_subscriptions'); return []; } throw error; }
+      return data || [];
+    }
+    return mockDb.getPushSubscriptionsByProfessional(profId);
+  },
+
+  savePushSubscription: async (data: { professional_id: string; endpoint: string; auth: string; p256dh: string }): Promise<any> => {
+    if (isSupabaseConfigured) {
+      // Usar upsert baseado no endpoint
+      const { data: result, error } = await getDb()
+        .from('push_subscriptions')
+        .upsert(data, { onConflict: 'endpoint' })
+        .select()
+        .single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Notificações não ativadas. Rode supabase/migration_push.sql no Supabase.');
+        throw error;
+      }
+      return result;
+    }
+    return mockDb.savePushSubscription(data);
+  },
+
+  removePushSubscription: async (endpoint: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('push_subscriptions').delete().eq('endpoint', endpoint);
+      if (error && !isMissingTable(error)) throw error;
+      return true;
+    }
+    return mockDb.removePushSubscription(endpoint);
   }
 };
 export default dbService;

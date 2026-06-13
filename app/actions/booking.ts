@@ -48,6 +48,17 @@ export async function getSlotsAction(professionalId: string, dateStr: string, se
   }
 }
 
+import webpush from 'web-push';
+
+// Configuração do Web Push
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:contato@lumepremium.com', // Coloque um email de contato válido
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
 interface CreateAppointmentInput {
   professionalId: string;
   serviceId: string;
@@ -128,6 +139,43 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     // Best-effort: registrar aniversário da cliente (requer migração v2 — não bloqueia o agendamento)
     if (clientBirthday) {
       await dbService.setClientBirthday(professionalId, clientWhatsapp.replace(/\D/g, ''), clientBirthday);
+    }
+
+    // 5. Enviar notificação Web Push
+    try {
+      const subs = await dbService.getPushSubscriptionsByProfessional(professionalId);
+      if (subs && subs.length > 0 && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+        const payload = JSON.stringify({
+          title: 'Novo Agendamento! 🎉',
+          body: `${clientName} marcou ${service.name} para ${date.split('-').reverse().join('/')} às ${startTime}.`,
+          url: '/dashboard'
+        });
+
+        // Enviar para todas as inscrições (celular, desktop, etc)
+        const pushPromises = subs.map(async (sub) => {
+          try {
+            await webpush.sendNotification({
+              endpoint: sub.endpoint,
+              keys: {
+                auth: sub.auth,
+                p256dh: sub.p256dh
+              }
+            }, payload);
+          } catch (err: any) {
+            // Se o token expirou ou foi removido (Status 410 / 404), remover do BD
+            if (err.statusCode === 404 || err.statusCode === 410) {
+              await dbService.removePushSubscription(sub.endpoint);
+            } else {
+              console.error('Erro ao enviar push notification:', err);
+            }
+          }
+        });
+
+        await Promise.allSettled(pushPromises);
+      }
+    } catch (pushErr) {
+      console.error('Falha geral no disparo de Web Push:', pushErr);
+      // Não bloqueamos o agendamento em caso de erro no Push
     }
 
     return {

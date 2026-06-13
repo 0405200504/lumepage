@@ -169,3 +169,12 @@ export interface Appointment {
   service?: Service; // Relacionamento incluído em SELECTs
   professional?: Professional;
 }
+
+export interface PushSubscriptionRow {
+  id: string;
+  professional_id: string;
+  endpoint: string;
+  auth: string;
+  p256dh: string;
+  created_at: string;
+}
