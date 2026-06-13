@@ -5,6 +5,17 @@ import { useChat } from 'ai/react';
 import { Sparkles, X, Send, Mic, Loader2, Bot, User } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
+// Remove marcações de Markdown que apareceriam como texto cru no balão do chat
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
+    .replace(/__(.*?)__/g, '$1')        // __negrito__
+    .replace(/\*(.*?)\*/g, '$1')        // *itálico*
+    .replace(/`([^`]+)`/g, '$1')        // `código`
+    .replace(/^\s*[*+]\s+/gm, '- ')     // listas "* item" -> "- item"
+    .replace(/^#{1,6}\s+/gm, '');       // títulos "# "
+}
+
 export function AIAgentChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -159,13 +170,13 @@ export function AIAgentChat() {
                   </div>
                 )}
                 
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
-                  m.role === 'user' 
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                  m.role === 'user'
                     ? 'bg-wine-700 text-white rounded-br-sm' 
                     : 'bg-white border border-gray-150 text-ink rounded-bl-sm shadow-sm'
                 }`}>
-                  {m.content}
-                  
+                  {m.role === 'user' ? m.content : stripMarkdown(m.content)}
+
                   {/* Renderização de Tools (quando a IA chama uma função) */}
                   {m.toolInvocations?.map((toolInvocation) => {
                     const { toolName, toolCallId, state } = toolInvocation;
