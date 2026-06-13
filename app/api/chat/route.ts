@@ -57,11 +57,17 @@ ${servicesList}
 
 == AÇÕES QUE VOCÊ EXECUTA ==
 Você pode realizar ações de verdade pela profissional. Antes de executar, confira se tem os dados necessários (pergunte o que faltar); depois de executar, confirme o resultado de forma simples.
+Para agir sobre um agendamento existente (cancelar, remarcar, concluir), primeiro use getAppointments para achar o ID correto.
 1. Cadastrar cliente (createClient): precisa de nome e WhatsApp (e-mail é opcional).
 2. Agendar (createAppointment): precisa de serviço (ID da lista), nome da cliente, WhatsApp, data (YYYY-MM-DD) e hora de início (HH:MM).
    - Antes de confirmar um horário, use checkAvailability para ver se está livre e, se não estiver, sugira horários próximos disponíveis.
    - O horário de término é calculado automaticamente pela duração do serviço.
-3. Criar tarefa/nota (createTask): precisa do conteúdo. Se a profissional disser uma data/hora, preencha due_date (YYYY-MM-DD) e due_time (HH:MM) para a tarefa aparecer na Agenda.
+3. Cancelar agendamento (cancelAppointment): precisa do ID do agendamento. Confirme com a profissional antes de cancelar.
+4. Remarcar agendamento (rescheduleAppointment): precisa do ID, nova data e nova hora. Verifique antes se o novo horário está livre (checkAvailability).
+5. Concluir/marcar comparecimento (completeAppointment): marca um agendamento como atendido (concluído).
+6. Criar tarefa/nota (createTask): precisa do conteúdo. Se a profissional disser uma data/hora, preencha due_date (YYYY-MM-DD) e due_time (HH:MM) para a tarefa aparecer na Agenda.
+7. Concluir tarefa (markTaskDone): marca uma tarefa como feita (ou desfaz). Use listTasks para achar o ID.
+8. Lançar no financeiro (addTransaction): registra uma entrada (income) ou saída (expense), com valor em reais, categoria e data (padrão hoje).
 
 Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
 
@@ -206,6 +212,113 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
               return { success: true, task_id: task.id };
             } catch (e: unknown) {
               return { success: false, error: e instanceof Error ? e.message : 'Falha ao criar tarefa.' };
+            }
+          },
+        }),
+        cancelAppointment: tool({
+          description: 'Cancela um agendamento existente. Use getAppointments para achar o ID.',
+          parameters: z.object({
+            appointment_id: z.string().describe('ID do agendamento a cancelar'),
+            reason: z.string().optional().describe('Motivo do cancelamento (opcional)'),
+          }),
+          execute: async ({ appointment_id, reason }) => {
+            try {
+              const appt = await dbService.getAppointmentById(appointment_id);
+              if (!appt || appt.professional_id !== professionalId) {
+                return { success: false, error: 'Agendamento não encontrado.' };
+              }
+              await dbService.updateAppointmentStatus(appointment_id, 'cancelled', reason);
+              return { success: true };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao cancelar.' };
+            }
+          },
+        }),
+        completeAppointment: tool({
+          description: 'Marca um agendamento como concluído/atendido. Use getAppointments para achar o ID.',
+          parameters: z.object({
+            appointment_id: z.string().describe('ID do agendamento'),
+          }),
+          execute: async ({ appointment_id }) => {
+            try {
+              const appt = await dbService.getAppointmentById(appointment_id);
+              if (!appt || appt.professional_id !== professionalId) {
+                return { success: false, error: 'Agendamento não encontrado.' };
+              }
+              await dbService.updateAppointmentStatus(appointment_id, 'completed');
+              return { success: true };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao concluir.' };
+            }
+          },
+        }),
+        rescheduleAppointment: tool({
+          description: 'Remarca um agendamento para nova data/hora. Verifique antes com checkAvailability se o horário está livre.',
+          parameters: z.object({
+            appointment_id: z.string().describe('ID do agendamento a remarcar'),
+            new_date: z.string().describe('Nova data no formato YYYY-MM-DD'),
+            new_start_time: z.string().describe('Nova hora de início no formato HH:MM'),
+          }),
+          execute: async ({ appointment_id, new_date, new_start_time }) => {
+            try {
+              const appt = await dbService.getAppointmentById(appointment_id);
+              if (!appt || appt.professional_id !== professionalId) {
+                return { success: false, error: 'Agendamento não encontrado.' };
+              }
+              const service = await dbService.getServiceById(appt.service_id);
+              const duration = service?.duration_minutes ?? 60;
+
+              // Calcula o novo horário de término a partir da duração do serviço
+              const [h, m] = new_start_time.split(':').map(Number);
+              const startMin = h * 60 + m;
+              const endMin = startMin + duration;
+              const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00`;
+              const startTime = `${new_start_time}:00`;
+
+              await dbService.updateAppointmentSchedule(appointment_id, new_date, startTime, endTime);
+              return { success: true, new_date, new_start_time };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao remarcar.' };
+            }
+          },
+        }),
+        markTaskDone: tool({
+          description: 'Marca uma tarefa como concluída (ou desfaz). Use listTasks para achar o ID.',
+          parameters: z.object({
+            task_id: z.string().describe('ID da tarefa'),
+            done: z.boolean().optional().describe('true = concluída (padrão), false = reabrir'),
+          }),
+          execute: async ({ task_id, done }) => {
+            try {
+              await dbService.toggleTask(task_id, done ?? true);
+              return { success: true };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao atualizar tarefa.' };
+            }
+          },
+        }),
+        addTransaction: tool({
+          description: 'Lança uma movimentação no financeiro: entrada (income) ou saída (expense).',
+          parameters: z.object({
+            type: z.enum(['income', 'expense']).describe('income = entrada, expense = saída'),
+            amount: z.number().describe('Valor em reais (ex.: 80.50)'),
+            category: z.string().describe('Categoria (ex.: "Serviço", "Produtos", "Aluguel")'),
+            description: z.string().optional().describe('Descrição opcional'),
+            date: z.string().optional().describe('Data no formato YYYY-MM-DD (padrão: hoje)'),
+          }),
+          execute: async ({ type, amount, category, description, date }) => {
+            try {
+              const tx = await dbService.createTransaction({
+                professional_id: professionalId,
+                type,
+                amount_cents: Math.round(amount * 100),
+                category,
+                description: description || null,
+                date: date || todayISO,
+              });
+              return { success: true, transaction_id: tx.id };
+            } catch (e: unknown) {
+              return { success: false, error: e instanceof Error ? e.message : 'Falha ao lançar no financeiro.' };
             }
           },
         }),

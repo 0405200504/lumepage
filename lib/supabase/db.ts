@@ -568,6 +568,25 @@ export const dbService = {
     return mockDb.updateAppointmentStatus(id, status, cancellationReason);
   },
 
+  updateAppointmentSchedule: async (id: string, date: string, startTime: string, endTime: string): Promise<Appointment | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .update({
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return mockDb.updateAppointmentSchedule(id, date, startTime, endTime);
+  },
+
   deleteAppointment: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()

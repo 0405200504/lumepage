@@ -540,6 +540,20 @@ export const mockDb = {
     }
     return null;
   },
+  updateAppointmentSchedule: (id: string, date: string, startTime: string, endTime: string) => {
+    const idx = mockData.appointments.findIndex(a => a.id === id);
+    if (idx >= 0) {
+      mockData.appointments[idx] = {
+        ...mockData.appointments[idx],
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        updated_at: new Date().toISOString()
+      };
+      return mockData.appointments[idx];
+    }
+    return null;
+  },
   deleteAppointment: (id: string) => {
     const i = mockData.appointments.findIndex(a => a.id === id);
     if (i >= 0) {
