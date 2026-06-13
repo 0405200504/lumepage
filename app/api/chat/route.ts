@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
@@ -9,6 +9,12 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+    // 0. Garante que a chave do Gemini está configurada
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.error('GOOGLE_GENERATIVE_AI_API_KEY não configurada no ambiente.');
+      return new Response('Assistente indisponível: chave da IA (Gemini) não configurada.', { status: 503 });
+    }
+
     // 1. Obter a sessão e o ID da profissional autenticada
     const session = await authService.getCurrentUser();
     if (!session || !session.professional_id) {
@@ -40,7 +46,7 @@ Regras importantes:
 `;
 
     const result = await streamText({
-      model: openai('gpt-4o-mini'),
+      model: google(process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
       system: systemPrompt,
       messages,
       tools: {
