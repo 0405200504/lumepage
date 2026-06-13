@@ -1,7 +1,7 @@
 import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus, BlockType,
-  Transaction, Task, FixedExpense, Salon
+  Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus
 } from '@/types/database';
 
 // Declarar tipo global para persistência em memória durante o dev server
@@ -21,6 +21,7 @@ declare global {
     pushSubscriptions: any[];
   } | undefined;
   var __mockSalons: Salon[] | undefined;
+  var __mockWaitlist: WaitlistEntry[] | undefined;
 }
 
 const DEFAULT_PROF_ID = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
@@ -676,6 +677,38 @@ export const mockDb = {
     mockData.transactions = mockData.transactions.filter(t => t.professional_id !== id);
     mockData.tasks = mockData.tasks.filter(t => t.professional_id !== id);
     mockData.fixedExpenses = mockData.fixedExpenses.filter(f => f.professional_id !== id);
+    return true;
+  },
+
+  // ===================== LISTA DE ESPERA =====================
+  getWaitlistByProfessional: (profId: string): WaitlistEntry[] => {
+    const list = (globalThis.__mockWaitlist ||= []);
+    return list.filter(w => w.professional_id === profId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+  createWaitlistEntry: (data: Omit<WaitlistEntry, 'id' | 'created_at' | 'status'> & { status?: WaitlistStatus }): WaitlistEntry => {
+    const list = (globalThis.__mockWaitlist ||= []);
+    const entry: WaitlistEntry = {
+      id: 'wl_' + Math.random().toString(36).substr(2, 9),
+      status: data.status || 'waiting',
+      created_at: new Date().toISOString(),
+      ...data,
+    };
+    list.push(entry);
+    return entry;
+  },
+  updateWaitlistStatus: (id: string, status: WaitlistStatus): WaitlistEntry | null => {
+    const list = (globalThis.__mockWaitlist ||= []);
+    const idx = list.findIndex(w => w.id === id);
+    if (idx >= 0) { list[idx] = { ...list[idx], status }; return list[idx]; }
+    return null;
+  },
+  getWaitlistEntryById: (id: string): WaitlistEntry | null => {
+    const list = (globalThis.__mockWaitlist ||= []);
+    return list.find(w => w.id === id) || null;
+  },
+  deleteWaitlistEntry: (id: string): boolean => {
+    const list = (globalThis.__mockWaitlist ||= []);
+    globalThis.__mockWaitlist = list.filter(w => w.id !== id);
     return true;
   }
 };

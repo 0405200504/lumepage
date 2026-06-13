@@ -3,7 +3,7 @@ import { mockDb } from './mockDb';
 import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus,
-  Transaction, Task, FixedExpense, Salon
+  Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus
 } from '@/types/database';
 
 /**
@@ -906,6 +906,71 @@ export const dbService = {
       return true;
     }
     return mockDb.deleteProfessional(id);
+  },
+
+  // ===================== LISTA DE ESPERA =====================
+  getWaitlistByProfessional: async (profId: string): Promise<WaitlistEntry[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('waitlist_entries')
+        .select('*')
+        .eq('professional_id', profId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingTable(error)) { warnMigration('waitlist_entries'); return []; }
+        throw error;
+      }
+      return data || [];
+    }
+    return mockDb.getWaitlistByProfessional(profId);
+  },
+
+  getWaitlistEntryById: async (id: string): Promise<WaitlistEntry | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('waitlist_entries').select('*').eq('id', id).maybeSingle();
+      if (error) { if (isMissingTable(error)) return null; throw error; }
+      return data;
+    }
+    return mockDb.getWaitlistEntryById(id);
+  },
+
+  createWaitlistEntry: async (data: Omit<WaitlistEntry, 'id' | 'created_at' | 'status'> & { status?: WaitlistStatus }): Promise<WaitlistEntry> => {
+    if (isSupabaseConfigured) {
+      const { data: result, error } = await getDb()
+        .from('waitlist_entries')
+        .insert(data)
+        .select()
+        .single();
+      if (error) {
+        if (isMissingTable(error)) throw new Error('Lista de espera não ativada. Rode supabase/migration_v7.sql no Supabase.');
+        throw error;
+      }
+      return result;
+    }
+    return mockDb.createWaitlistEntry(data);
+  },
+
+  updateWaitlistStatus: async (id: string, status: WaitlistStatus): Promise<WaitlistEntry | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('waitlist_entries')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return mockDb.updateWaitlistStatus(id, status);
+  },
+
+  deleteWaitlistEntry: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('waitlist_entries').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteWaitlistEntry(id);
   },
 
   // ===================== PUSH NOTIFICATIONS =====================

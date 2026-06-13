@@ -28,6 +28,10 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string }> = {
     title: 'Gestão de Agendamentos',
     subtitle: 'Acompanhe, aprove e gerencie os horários agendados pelos seus clientes finais.',
   },
+  '/dashboard/waitlist': {
+    title: 'Lista de Espera',
+    subtitle: 'Clientes aguardando horário — contate, encaixe ou organize as solicitações.',
+  },
   '/dashboard/availability': {
     title: 'Disponibilidade Semanal',
     subtitle: 'Configure o seu horário de funcionamento regular e intervalo de almoço para cada dia da semana.',

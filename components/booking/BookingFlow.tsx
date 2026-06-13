@@ -7,6 +7,7 @@ import {
   ChevronRight, ArrowLeft, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
 } from 'lucide-react';
 import { getSlotsAction, createAppointmentAction } from '@/app/actions/booking';
+import { addToWaitlistAction } from '@/app/actions/waitlist';
 import { useToast } from '../ui/Toast';
 import { BookingDecor } from './BookingDecor';
 
@@ -50,6 +51,51 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdAppointmentId, setCreatedAppointmentId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Lista de espera (cliente)
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [waitlistSent, setWaitlistSent] = useState(false);
+  const [wlBusy, setWlBusy] = useState(false);
+  const [wlName, setWlName] = useState('');
+  const [wlPhone, setWlPhone] = useState('');
+  const [wlPeriod, setWlPeriod] = useState('');
+  const [wlPref, setWlPref] = useState('');
+  const [wlNotes, setWlNotes] = useState('');
+
+  const openWaitlist = () => {
+    setWlName(clientName || '');
+    setWlPhone(clientWhatsapp || '');
+    setWlPeriod(selectedDate ? new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR') : '');
+    setWlPref(''); setWlNotes(''); setWaitlistSent(false);
+    setShowWaitlist(true);
+  };
+
+  const submitWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWlBusy(true);
+    try {
+      const res = await addToWaitlistAction({
+        professionalId: professional.id,
+        clientName: wlName,
+        clientWhatsapp: wlPhone,
+        serviceId: selectedService?.id,
+        desiredDate: selectedDate || undefined,
+        desiredPeriod: wlPeriod || undefined,
+        timePreference: wlPref || undefined,
+        notes: wlNotes || undefined,
+      });
+      if (res.success) {
+        setWaitlistSent(true);
+        success('Tudo certo!', 'Você entrou na lista de espera. Avisaremos se abrir um horário.');
+      } else {
+        error('Ops', res.error || 'Não foi possível entrar na lista.');
+      }
+    } catch {
+      error('Erro', 'Falha ao entrar na lista de espera.');
+    } finally {
+      setWlBusy(false);
+    }
+  };
 
   // Cores personalizadas do profissional
   const primaryColor = professional.primary_color || '#500b18';
@@ -421,6 +467,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 <p className="text-[10px] text-gray-450 mt-1">Por favor, escolha outro dia para continuar.</p>
               </div>
             )}
+
+            {/* Entrada na lista de espera */}
+            <div className="text-center pt-1">
+              <button
+                onClick={openWaitlist}
+                className="text-xs font-bold text-[var(--brand)] hover:underline cursor-pointer"
+              >
+                Não encontrou um horário? Entre na lista de espera
+              </button>
+            </div>
           </div>
         )}
 
@@ -704,6 +760,49 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         )}
 
       </div>
+
+      {/* Modal: Lista de espera */}
+      {showWaitlist && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowWaitlist(false)} />
+          <div className="relative bg-white w-full sm:max-w-md mx-0 sm:mx-4 rounded-t-3xl sm:rounded-3xl p-6 z-10 max-h-[92vh] overflow-y-auto safe-sheet shadow-2xl">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-bold text-gray-800 tracking-tight">Lista de espera</h3>
+              <button onClick={() => setShowWaitlist(false)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><span className="sr-only">Fechar</span>✕</button>
+            </div>
+
+            {waitlistSent ? (
+              <div className="py-8 text-center">
+                <CheckCircle2 className="h-10 w-10 mx-auto text-[var(--brand)]" />
+                <p className="text-sm font-bold text-gray-800 mt-3">Você está na lista!</p>
+                <p className="text-xs text-gray-450 mt-1">Se abrir um horário, entraremos em contato pelo seu WhatsApp.</p>
+                <button onClick={() => setShowWaitlist(false)} className="mt-5 px-5 py-2.5 rounded-xl text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand)' }}>Fechar</button>
+              </div>
+            ) : (
+              <form onSubmit={submitWaitlist} className="space-y-3 mt-3">
+                <p className="text-xs text-gray-450">Deixe seus dados e avisaremos assim que abrir um horário.</p>
+                <input required value={wlName} onChange={(e) => setWlName(e.target.value)} placeholder="Seu nome *"
+                  className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
+                <input required inputMode="tel" value={wlPhone} onChange={(e) => setWlPhone(e.target.value)} placeholder="WhatsApp (com DDD) *"
+                  className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
+                {selectedService && (
+                  <p className="text-[11px] text-gray-450">Serviço: <strong className="text-gray-700">{selectedService.name}</strong></p>
+                )}
+                <input value={wlPeriod} onChange={(e) => setWlPeriod(e.target.value)} placeholder="Dia ou período desejado (ex.: sábado, manhã)"
+                  className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
+                <input value={wlPref} onChange={(e) => setWlPref(e.target.value)} placeholder="Melhor horário / preferência (ex.: depois das 18h)"
+                  className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
+                <textarea value={wlNotes} onChange={(e) => setWlNotes(e.target.value)} rows={2} placeholder="Observação (opcional)"
+                  className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)] resize-y" />
+                <button type="submit" disabled={wlBusy}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: 'var(--brand)' }}>
+                  {wlBusy ? 'Enviando…' : 'Entrar na lista de espera'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
