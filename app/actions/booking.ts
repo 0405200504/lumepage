@@ -1,7 +1,8 @@
 'use server';
 
 import { dbService } from '@/lib/supabase/db';
-import { getAvailableSlots } from '@/lib/appointments/slots';
+import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
+import { authService } from '@/lib/auth/auth';
 import { Appointment } from '@/types/database';
 import { isDemo } from '@/lib/demo';
 
@@ -85,14 +86,101 @@ export async function getSlotsAction(professionalId: string, dateStr: string, se
  */
 export async function getSlotsInternalAction(professionalId: string, dateStr: string, durationMinutes: number) {
   try {
-    const session = await import('@/lib/auth/auth').then(m => m.authService.getCurrentUser());
-    if (!session || session.professional_id !== professionalId) {
+    const session = await authService.getCurrentUser();
+    if (!session || (session.professional_id !== professionalId && session.role !== 'super_admin' && !session.is_salon_manager)) {
       return { success: false, error: 'Não autorizado.' };
     }
     const slots = await getAvailableSlots(professionalId, dateStr, durationMinutes);
     return { success: true, slots };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao calcular horários livres.' };
+  }
+}
+
+/**
+ * Cria um agendamento MANUAL pelo painel, com duração personalizada opcional.
+ * - Se durationMinutes não vier, usa a duração padrão do serviço.
+ * - Permite horário de início arbitrário (não preso à grade de slots).
+ * - Bloqueia conflito com outros agendamentos (considerando o buffer) e dia bloqueado.
+ * - A duração padrão do serviço NÃO é alterada (vale só para este agendamento).
+ */
+export async function createManualAppointmentAction(input: {
+  professionalId: string;
+  serviceId: string;
+  clientName: string;
+  clientWhatsapp: string;
+  date: string;
+  startTime: string; // "HH:MM"
+  durationMinutes?: number;
+  notes?: string;
+}) {
+  try {
+    const { professionalId, serviceId, clientName, clientWhatsapp, date, startTime } = input;
+
+    const session = await authService.getCurrentUser();
+    if (!session || (session.professional_id !== professionalId && session.role !== 'super_admin' && !session.is_salon_manager)) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+    if (isDemo(professionalId)) return { success: true, appointmentId: 'demo' };
+    if (!serviceId || !clientName?.trim() || !clientWhatsapp?.trim() || !date || !startTime) {
+      return { success: false, error: 'Preencha serviço, cliente, data e horário.' };
+    }
+
+    const service = await dbService.getServiceById(serviceId);
+    if (!service) return { success: false, error: 'Serviço inválido.' };
+
+    const duration = input.durationMinutes && input.durationMinutes > 0
+      ? Math.round(input.durationMinutes)
+      : service.duration_minutes;
+
+    const startMin = timeToMinutes(startTime);
+    const endMin = startMin + duration;
+    if (endMin <= startMin) return { success: false, error: 'Duração inválida.' };
+
+    // Dia bloqueado?
+    const dayBlocks = (await dbService.getTimeBlocksByProfessional(professionalId)).filter(b => b.date === date);
+    if (dayBlocks.some(b => b.block_type === 'full_day')) {
+      return { success: false, error: 'A agenda está bloqueada (dia inteiro) nesta data.' };
+    }
+
+    // Conflito com outros agendamentos (considerando o buffer pós-atendimento)
+    const settings = await dbService.getSettingsByProfessional(professionalId);
+    const buffer = settings?.default_buffer_minutes ?? 0;
+    const dayAppts = (await dbService.getAppointmentsByProfessional(professionalId))
+      .filter(a => a.date === date && a.status !== 'cancelled');
+    const conflict = dayAppts.some(a => {
+      const aStart = timeToMinutes(a.start_time);
+      const aEnd = timeToMinutes(a.end_time) + buffer;
+      return Math.max(startMin, aStart) < Math.min(endMin, aEnd);
+    });
+    if (conflict) {
+      return { success: false, error: 'Esse intervalo conflita com outro agendamento. Escolha outro horário ou ajuste a duração.' };
+    }
+
+    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00`;
+    const finalStart = startTime.length === 5 ? `${startTime}:00` : startTime;
+
+    const appointment = await dbService.createAppointment({
+      professional_id: professionalId,
+      service_id: serviceId,
+      client_id: null,
+      client_name: clientName.trim(),
+      client_whatsapp: clientWhatsapp.replace(/\D/g, ''),
+      client_email: null,
+      date,
+      start_time: finalStart,
+      end_time: endTime,
+      notes: input.notes?.trim() || null,
+      cancellation_reason: null,
+    });
+
+    // Agendamento criado pela profissional já entra como confirmado
+    try { await dbService.updateAppointmentStatus(appointment.id, 'confirmed'); } catch {}
+
+    return { success: true, appointmentId: appointment.id };
+  } catch (e: any) {
+    console.error('Erro ao criar agendamento manual:', e);
+    return { success: false, error: e.message || 'Erro ao criar agendamento.' };
   }
 }
 

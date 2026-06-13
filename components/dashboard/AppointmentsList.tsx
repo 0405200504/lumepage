@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Appointment, Setting, AppointmentStatus } from '@/types/database';
+import { Appointment, Setting, AppointmentStatus, Service } from '@/types/database';
 import {
-  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2
+  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateAppointmentStatusAction, deleteAppointmentAction } from '@/app/actions/professional';
+import { createManualAppointmentAction } from '@/app/actions/booking';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink, buildWhatsappLink, fillTemplate, formatDateBR } from '@/lib/whatsapp';
 
@@ -15,18 +16,88 @@ interface AppointmentsListProps {
   initialAppointments: Appointment[];
   professionalId: string;
   settings: Setting | null;
+  services?: Service[];
+}
+
+// Duração real usada no agendamento (fim − início, em minutos)
+function realDurationMin(app: Appointment): number {
+  const toMin = (t: string) => { const [h, m] = (t || '').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  return Math.max(0, toMin(app.end_time) - toMin(app.start_time));
+}
+
+// Soma minutos a um horário "HH:MM" e retorna "HH:MM"
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = (h || 0) * 60 + (m || 0) + (minutes || 0);
+  const hh = Math.floor(((total % 1440) + 1440) % 1440 / 60);
+  const mm = ((total % 60) + 60) % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
 export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   initialAppointments,
   professionalId,
   settings,
+  services = [],
 }) => {
   const router = useRouter();
   const { success, error, info } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
+
+  // Novo agendamento manual (com duração personalizada)
+  const activeServices = services.filter(s => s.is_active);
+  const [showNew, setShowNew] = useState(false);
+  const [savingNew, setSavingNew] = useState(false);
+  const [nName, setNName] = useState('');
+  const [nPhone, setNPhone] = useState('');
+  const [nServiceId, setNServiceId] = useState('');
+  const [nDate, setNDate] = useState('');
+  const [nTime, setNTime] = useState('');
+  const [nDuration, setNDuration] = useState<number>(60);
+  const [nNotes, setNNotes] = useState('');
+
+  const openNew = () => {
+    const first = activeServices[0];
+    setNName(''); setNPhone(''); setNServiceId(first?.id || '');
+    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes('');
+    setShowNew(true);
+  };
+
+  const onSelectService = (id: string) => {
+    setNServiceId(id);
+    const svc = activeServices.find(s => s.id === id);
+    if (svc) setNDuration(svc.duration_minutes);
+  };
+
+  const createManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingNew(true);
+    try {
+      const res = await createManualAppointmentAction({
+        professionalId,
+        serviceId: nServiceId,
+        clientName: nName,
+        clientWhatsapp: nPhone,
+        date: nDate,
+        startTime: nTime,
+        durationMinutes: nDuration,
+        notes: nNotes || undefined,
+      });
+      if (res.success) {
+        success('Agendamento criado!', 'O horário foi reservado na sua agenda.');
+        setShowNew(false);
+        router.refresh();
+      } else {
+        error('Não foi possível agendar', res.error || 'Verifique os dados e tente novamente.');
+      }
+    } catch {
+      error('Erro', 'Falha ao criar o agendamento.');
+    } finally {
+      setSavingNew(false);
+    }
+  };
 
   const [selectedApp, setSelectedApp] = useState<Appointment | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -142,6 +213,16 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-up">
+      {/* Ação: novo agendamento manual */}
+      <div className="flex justify-end">
+        <button
+          onClick={openNew}
+          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom"
+        >
+          <Plus className="h-4 w-4" /> Novo agendamento
+        </button>
+      </div>
+
       {/* Barra de Filtros e Busca */}
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between card p-4">
         <div className="relative w-full lg:max-w-xs">
@@ -208,7 +289,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                       </span>
                     </div>
                     <h4 className="font-bold text-ink mt-2 truncate">{app.client_name}</h4>
-                    <p className="text-xs text-gray-450 mt-0.5 truncate">{app.service?.name} · {app.service?.duration_minutes} min</p>
+                    <p className="text-xs text-gray-450 mt-0.5 truncate">{app.service?.name} · {realDurationMin(app)} min</p>
                     <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-xs text-gray-450 mt-0.5 inline-block">{app.client_whatsapp}</a>
                   </div>
                   <span className={`shrink-0 text-[10px] font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
@@ -273,7 +354,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
                       <td className="px-6 py-4">
                         <p className="font-semibold text-ink">{app.service?.name}</p>
-                        <p className="text-xs text-gray-450 mt-0.5">{app.service?.duration_minutes} minutos</p>
+                        <p className="text-xs text-gray-450 mt-0.5">{realDurationMin(app)} minutos</p>
                       </td>
 
                       <td className="px-6 py-4">
@@ -335,6 +416,81 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 Cancelar e avisar no WhatsApp
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Novo agendamento manual (com duração personalizada) */}
+      {showNew && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowNew(false)} />
+          <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-ink tracking-tight">Novo agendamento</h3>
+              <button onClick={() => setShowNew(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+            </div>
+
+            {activeServices.length === 0 ? (
+              <p className="text-sm text-gray-450 py-6 text-center">
+                Cadastre ao menos um serviço para criar agendamentos manuais.
+              </p>
+            ) : (
+              <form onSubmit={createManual} className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
+                  <input required value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Nome da cliente"
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
+                  <input required inputMode="tel" value={nPhone} onChange={(e) => setNPhone(e.target.value)} placeholder="11999999999"
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviço *</label>
+                  <select required value={nServiceId} onChange={(e) => onSelectService(e.target.value)}
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700">
+                    {activeServices.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes} min</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Data *</label>
+                    <input required type="date" value={nDate} onChange={(e) => setNDate(e.target.value)}
+                      className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Início *</label>
+                    <input required type="time" value={nTime} onChange={(e) => setNTime(e.target.value)}
+                      className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Duração deste atendimento (min) *</label>
+                  <input required type="number" min={5} step={5} value={nDuration}
+                    onChange={(e) => setNDuration(Math.max(5, parseInt(e.target.value, 10) || 0))}
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Vale só para este agendamento — não altera a duração padrão do serviço.
+                    {nTime && nDuration > 0 && (
+                      <> Ocupa <strong className="text-ink">{nTime}</strong> → <strong className="text-ink">{addMinutes(nTime, nDuration)}</strong>.</>
+                    )}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Observações do atendimento</label>
+                  <textarea value={nNotes} onChange={(e) => setNNotes(e.target.value)} rows={2} placeholder="Opcional"
+                    className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
+                </div>
+                <div className="flex justify-end gap-2.5 pt-1">
+                  <button type="button" onClick={() => setShowNew(false)} className="px-4 py-2.5 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
+                  <button type="submit" disabled={savingNew} className="tap px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                    {savingNew ? 'Salvando…' : 'Criar agendamento'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
