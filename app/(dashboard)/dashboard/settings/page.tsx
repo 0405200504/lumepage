@@ -12,8 +12,10 @@ export default async function DashboardSettingsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const professional = await dbService.getProfessionalById(professionalId);
-  const settings = await dbService.getSettingsByProfessional(professionalId);
+  const [professional, settings] = await Promise.all([
+    dbService.getProfessionalById(professionalId),
+    dbService.getSettingsByProfessional(professionalId),
+  ]);
 
   if (!professional) {
     return (

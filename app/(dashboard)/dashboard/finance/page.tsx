@@ -12,9 +12,11 @@ export default async function FinancePage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const transactions = await dbService.getTransactionsByProfessional(professionalId);
-  const appointments = await dbService.getAppointmentsByProfessional(professionalId);
-  const fixedExpenses = await dbService.getFixedExpensesByProfessional(professionalId);
+  const [transactions, appointments, fixedExpenses] = await Promise.all([
+    dbService.getTransactionsByProfessional(professionalId),
+    dbService.getAppointmentsByProfessional(professionalId),
+    dbService.getFixedExpensesByProfessional(professionalId),
+  ]);
 
   return (
     <FinancePanel

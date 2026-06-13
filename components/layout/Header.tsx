@@ -71,15 +71,16 @@ export const Header: React.FC<HeaderProps> = ({
   const resolvedSubtitle = subtitle ?? meta?.subtitle;
 
   return (
-    <header className="flex justify-between items-center gap-3 glass border-b border-gray-150 px-4 sm:px-6 py-4 sm:py-5 pt-safe sticky top-0 z-30 select-none">
+    <header className="flex justify-between items-center gap-3 glass border-b border-gray-150 px-4 sm:px-6 py-3.5 sm:py-5 pt-safe sticky top-0 z-30 select-none">
       <div className="min-w-0">
-        <h2 className="text-lg sm:text-xl font-black text-ink tracking-tight leading-tight truncate">{resolvedTitle}</h2>
-        {resolvedSubtitle && <p className="text-xs text-gray-450 mt-1 max-w-2xl line-clamp-1 sm:line-clamp-none">{resolvedSubtitle}</p>}
+        <h2 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{resolvedTitle}</h2>
+        {/* Subtítulo descritivo só no desktop — no celular o header fica enxuto, cara de app */}
+        {resolvedSubtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{resolvedSubtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-3 shrink-0 bg-paper/70 border border-gray-150 rounded-2xl p-2 sm:p-2.5 shadow-soft">
-        {/* Avatar/Icon */}
-        <div className="h-9 w-9 bg-wine-700/6 text-forest rounded-xl flex items-center justify-center font-bold shrink-0">
+      {/* No mobile: só o avatar limpo (estilo app). No desktop: caixa com nome/email. */}
+      <div className="flex items-center gap-0 sm:gap-3 shrink-0 sm:bg-paper/70 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2.5 sm:shadow-soft">
+        <div className="h-9 w-9 bg-wine-700/8 text-forest rounded-full sm:rounded-xl flex items-center justify-center font-bold shrink-0">
           {role === 'super_admin' ? (
             <ShieldAlert className="h-5 w-5 text-forest" />
           ) : (
@@ -87,7 +88,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* User Info — oculto em telas pequenas (já visível na barra lateral) */}
         <div className="text-left hidden sm:block">
           <p className="text-xs font-bold text-ink leading-none">{userName}</p>
           <span className="text-[10px] text-gray-450 mt-1 block truncate max-w-[150px]" title={userEmail}>

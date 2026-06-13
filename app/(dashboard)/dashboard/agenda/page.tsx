@@ -12,10 +12,12 @@ export default async function AgendaPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const appointments = await dbService.getAppointmentsByProfessional(professionalId);
-  const settings = await dbService.getSettingsByProfessional(professionalId);
-  const timeBlocks = await dbService.getTimeBlocksByProfessional(professionalId);
-  const tasks = await dbService.getTasksByProfessional(professionalId);
+  const [appointments, settings, timeBlocks, tasks] = await Promise.all([
+    dbService.getAppointmentsByProfessional(professionalId),
+    dbService.getSettingsByProfessional(professionalId),
+    dbService.getTimeBlocksByProfessional(professionalId),
+    dbService.getTasksByProfessional(professionalId),
+  ]);
 
   return (
     <AgendaCalendar

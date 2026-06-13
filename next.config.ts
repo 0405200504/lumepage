@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Cache de navegação do cliente: ao reabrir uma aba já visitada, o Next
+    // reusa o conteúdo em memória em vez de buscar tudo de novo no servidor.
+    // Resultado: trocar entre Agenda/Tarefas/etc. fica instantâneo na revisita.
+    // (As telas atualizam o próprio estado após edições, então não há risco de
+    //  mostrar dado velho depois de uma ação.)
+    staleTimes: {
+      dynamic: 180, // segundos que páginas dinâmicas ficam no cache do cliente
+      static: 300,
+    },
+  },
   async headers() {
     return [
       {

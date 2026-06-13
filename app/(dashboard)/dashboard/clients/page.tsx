@@ -12,8 +12,10 @@ export default async function DashboardClientsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const clients = await dbService.getClientsByProfessional(professionalId);
-  const appointments = await dbService.getAppointmentsByProfessional(professionalId);
+  const [clients, appointments] = await Promise.all([
+    dbService.getClientsByProfessional(professionalId),
+    dbService.getAppointmentsByProfessional(professionalId),
+  ]);
 
   return <ClientsList professionalId={professionalId} initialClients={clients} appointments={appointments} />;
 }

@@ -177,8 +177,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
                   active ? 'text-wine-700' : 'text-gray-450'
                 }`}
               >
-                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-wine-700/10' : ''}`}>
-                  <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-105' : ''}`} strokeWidth={active ? 2.4 : 2} />
+                {active && <span className="absolute top-0 h-1 w-7 rounded-full bg-wine-700" />}
+                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-wine-700/12' : ''}`}>
+                  <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-110' : ''}`} strokeWidth={active ? 2.5 : 2} />
                 </span>
                 <span className={`text-[10px] tracking-tight ${active ? 'font-bold' : 'font-semibold'}`}>{link.label}</span>
               </Link>

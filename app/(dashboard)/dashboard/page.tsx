@@ -16,11 +16,13 @@ export default async function DashboardPage() {
 
   const professionalId = session.professional_id!;
 
-  // Buscar dados
-  const professional = await dbService.getProfessionalById(professionalId);
-  const appointments = await dbService.getAppointmentsByProfessional(professionalId);
-  const services = await dbService.getServicesByProfessional(professionalId);
-  const tasks = await dbService.getTasksByProfessional(professionalId);
+  // Buscar dados em paralelo (não em sequência) — corta o tempo de espera
+  const [professional, appointments, services, tasks] = await Promise.all([
+    dbService.getProfessionalById(professionalId),
+    dbService.getAppointmentsByProfessional(professionalId),
+    dbService.getServicesByProfessional(professionalId),
+    dbService.getTasksByProfessional(professionalId),
+  ]);
 
   return (
     <div className="space-y-6">
