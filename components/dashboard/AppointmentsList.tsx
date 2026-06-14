@@ -7,6 +7,7 @@ import {
   Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import { Portal } from '../ui/Portal';
 import { updateAppointmentStatusAction, deleteAppointmentAction } from '@/app/actions/professional';
 import { createManualAppointmentAction } from '@/app/actions/booking';
 import { statusMeta } from '@/lib/appointments/status';
@@ -386,7 +387,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
       {/* Modal de Cancelamento */}
       {showCancelDialog && selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <Portal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#1a0e12]/40 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)} />
           <div className="relative card p-6 max-w-md w-full mx-4 z-10 animate-fade-up">
             <h3 className="text-lg font-black text-ink tracking-tight">Cancelar Agendamento</h3>
@@ -418,9 +420,11 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
             </div>
           </div>
         </div>
+        </Portal>
       )}
       {/* Modal: Novo agendamento manual (com duração personalizada) */}
       {showNew && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowNew(false)} />
           <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
@@ -493,6 +497,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
             )}
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

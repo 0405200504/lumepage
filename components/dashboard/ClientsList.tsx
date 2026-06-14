@@ -10,6 +10,7 @@ import {
 import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import { useToast } from '../ui/Toast';
+import { Portal } from '../ui/Portal';
 import { createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction, updateClientNotesAction } from '@/app/actions/crm';
 import { Trash2 } from 'lucide-react';
 
@@ -489,6 +490,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {detail && (() => {
         const s = getStats(detail);
         return (
+          <Portal>
           <div className="fixed inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setDetail(null)} />
             <aside className="relative w-full max-w-md h-full bg-paper shadow-glow flex flex-col animate-slide-right">
@@ -560,6 +562,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
               </div>
             </aside>
           </div>
+          </Portal>
         );
       })()}
 
@@ -587,6 +590,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
 
       {/* Modal: Adicionar cliente manualmente */}
       {showAdd && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
           <div className="relative card w-full max-w-md rounded-3xl p-6 z-10 animate-slide-up max-h-[90vh] overflow-y-auto">
@@ -629,6 +633,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Modal: Importar lista (CSV) */}

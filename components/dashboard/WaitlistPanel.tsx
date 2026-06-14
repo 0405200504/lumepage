@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { WaitlistEntry, WaitlistStatus, Service } from '@/types/database';
 import { Clock, MessageCircle, X, Plus, Trash2, CalendarPlus, UserPlus } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import { Portal } from '../ui/Portal';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import {
   updateWaitlistStatusAction, deleteWaitlistEntryAction,
@@ -211,6 +212,7 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
 
       {/* Modal: adicionar manualmente */}
       {showAdd && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
           <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
@@ -243,10 +245,12 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Modal: encaixar (criar agendamento) */}
       {fit && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setFit(null)} />
           <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
@@ -293,6 +297,7 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
