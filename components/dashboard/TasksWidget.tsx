@@ -13,12 +13,20 @@ interface TasksWidgetProps {
   initialTasks: Task[];
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const isoFromNow = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initialTasks }) => {
   const router = useRouter();
   const { error } = useToast();
   const [content, setContent] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
@@ -33,7 +41,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
     try {
       const res = await createTaskAction(professionalId, { content: text, dueDate: dueDate || null, dueTime: dueTime || null });
       if (!res.success) { error('Falha', res.error || 'Não foi possível salvar.'); }
-      else { setContent(''); setDueDate(''); setDueTime(''); router.refresh(); }
+      else { setContent(''); setDueDate(''); setDueTime(''); setShowCustom(false); router.refresh(); }
     } finally { setBusy(false); }
   };
 
@@ -69,26 +77,87 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
         </div>
       </div>
 
-      <form onSubmit={add} className="space-y-2">
-        <div className="flex gap-2">
+      <form onSubmit={add} className="space-y-3 bg-cream/40 border border-gray-150 rounded-2xl p-3.5">
+        {/* Passo 1: o que anotar */}
+        <div>
+          <label className="block text-[11px] font-bold text-gray-450 mb-1.5">
+            <span className="text-wine-700">1.</span> O que você precisa lembrar?
+          </label>
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Ex: comprar algodão, retornar p/ Marina, pagar fornecedor..."
-            className="flex-1 min-w-0 px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+            placeholder="Ex: comprar algodão, retornar p/ Marina, pagar fornecedor…"
+            className="w-full px-3.5 py-3 bg-paper border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
           />
-          <button type="submit" disabled={busy} className="shrink-0 px-3.5 surface-wine text-white rounded-xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60" aria-label="Adicionar">
-            <Plus className="h-5 w-5" />
-          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-3.5 w-3.5 text-gray-450 shrink-0" />
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} title="Data (opcional)"
-            className="px-2.5 py-1.5 bg-cream/60 border border-gray-150 rounded-lg text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
-          <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} title="Horário (opcional)" disabled={!dueDate}
-            className="px-2.5 py-1.5 bg-cream/60 border border-gray-150 rounded-lg text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15 disabled:opacity-40" />
-          <span className="text-[10px] text-gray-450">opcional — vai p/ a agenda</span>
+
+        {/* Passo 2: quando (chips didáticos) */}
+        <div>
+          <label className="block text-[11px] font-bold text-gray-450 mb-1.5">
+            <span className="text-wine-700">2.</span> Quando? <span className="font-normal text-gray-450/80">— com data, aparece na sua Agenda</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: 'Sem data', val: '' },
+              { label: 'Hoje', val: isoFromNow(0) },
+              { label: 'Amanhã', val: isoFromNow(1) },
+              { label: 'Em 7 dias', val: isoFromNow(7) },
+            ].map((chip) => {
+              const active = !showCustom && dueDate === chip.val;
+              return (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => { setShowCustom(false); setDueDate(chip.val); if (!chip.val) setDueTime(''); }}
+                  className={`tap text-xs font-bold px-3 py-1.5 rounded-full border transition-all-custom ${
+                    active ? 'surface-wine text-white border-transparent shadow-soft' : 'bg-paper text-gray-450 border-gray-150 hover:text-ink'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setShowCustom(true)}
+              className={`tap inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full border transition-all-custom ${
+                showCustom ? 'surface-wine text-white border-transparent shadow-soft' : 'bg-paper text-gray-450 border-gray-150 hover:text-ink'
+              }`}
+            >
+              <CalendarClock className="h-3.5 w-3.5" /> Escolher data
+            </button>
+          </div>
+
+          {showCustom && (
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="mt-2 px-3 py-2 bg-paper border border-gray-150 rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+            />
+          )}
+
+          {/* Horário opcional — só quando há data */}
+          {dueDate && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-gray-450">Horário (opcional):</span>
+              <input
+                type="time"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+                className="px-2.5 py-1.5 bg-paper border border-gray-150 rounded-lg text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+              />
+            </div>
+          )}
         </div>
+
+        <button
+          type="submit"
+          disabled={busy || !content.trim()}
+          className="tap w-full inline-flex items-center justify-center gap-2 py-3 surface-wine text-white text-sm font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {busy ? 'Salvando…' : 'Adicionar tarefa'}
+        </button>
       </form>
 
       <div className="space-y-1.5 max-h-80 overflow-y-auto -mx-1 px-1">
