@@ -21,7 +21,7 @@ export function AIAgentChat() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   
-  const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, isLoading, setMessages } = useChat({
     api: '/api/chat',
     onError: (error) => {
       console.error('Chat error:', error);
@@ -33,6 +33,7 @@ export function AIAgentChat() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll para a última mensagem (instantâneo — sem animação que engasga no mobile)
   useEffect(() => {
@@ -40,6 +41,18 @@ export function AIAgentChat() {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
   }, [messages, isTranscribing, isLoading]);
+
+  // Reinicia a conversa após 10 minutos de inatividade (não armazenamos o histórico).
+  useEffect(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    if (messages.length === 0) return;
+    inactivityTimer.current = setTimeout(() => {
+      setMessages([]);
+    }, 10 * 60 * 1000);
+    return () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [messages, input, isOpen, setMessages]);
 
   const startRecording = async () => {
     try {

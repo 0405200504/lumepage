@@ -148,7 +148,7 @@ export async function deleteFixedExpenseAction(professionalId: string, id: strin
 
 // ===================== CLIENTES =====================
 export async function createClientAction(professionalId: string, input: {
-  name: string; whatsapp: string; email?: string; birthday?: string;
+  name: string; whatsapp: string; email?: string; birthday?: string; notes?: string;
 }) {
   try {
     if (isDemo(professionalId)) return { success: true };
@@ -171,6 +171,9 @@ export async function createClientAction(professionalId: string, input: {
     });
     if (input.birthday) {
       await dbService.setClientBirthday(professionalId, whatsapp, input.birthday);
+    }
+    if (input.notes?.trim()) {
+      await dbService.updateClientNotes(client.id, input.notes.trim());
     }
     return { success: true, client };
   } catch (e: unknown) {

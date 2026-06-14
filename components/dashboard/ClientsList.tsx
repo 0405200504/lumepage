@@ -145,6 +145,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
   const [fPhone, setFPhone] = useState('');
   const [fEmail, setFEmail] = useState('');
   const [fBday, setFBday] = useState('');
+  const [fNotes, setFNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Importação
@@ -156,10 +157,10 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await createClientAction(professionalId, { name: fName, whatsapp: fPhone, email: fEmail, birthday: fBday || undefined });
+      const res = await createClientAction(professionalId, { name: fName, whatsapp: fPhone, email: fEmail, birthday: fBday || undefined, notes: fNotes || undefined });
       if (res.success) {
         success('Cliente cadastrada!', `${fName} foi adicionada à sua carteira.`);
-        setShowAdd(false); setFName(''); setFPhone(''); setFEmail(''); setFBday('');
+        setShowAdd(false); setFName(''); setFPhone(''); setFEmail(''); setFBday(''); setFNotes('');
         router.refresh();
       } else error('Falha', res.error || 'Não foi possível cadastrar.');
     } finally { setSaving(false); }
@@ -586,9 +587,9 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
 
       {/* Modal: Adicionar cliente manualmente */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
-          <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up">
+          <div className="relative card w-full max-w-md rounded-3xl p-6 z-10 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-black text-ink tracking-tight">Adicionar cliente</h3>
               <button onClick={() => setShowAdd(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
@@ -615,6 +616,12 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">E-mail (opcional)</label>
                 <input type="email" value={fEmail} onChange={(e) => setFEmail(e.target.value)} placeholder="cliente@email.com"
                   className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Ficha técnica / observações (opcional)</label>
+                <textarea value={fNotes} onChange={(e) => setFNotes(e.target.value)} rows={3}
+                  placeholder="Preferências, cuidados especiais, alergias/sensibilidades, produtos usados…"
+                  className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
               </div>
               <button type="submit" disabled={saving} className="w-full py-4 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60">
                 {saving ? 'Salvando...' : 'Cadastrar cliente'}

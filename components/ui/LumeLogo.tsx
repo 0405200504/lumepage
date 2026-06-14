@@ -13,27 +13,27 @@ const ASPECT = 'aspect-[1125/398]';
 /**
  * Wordmark oficial da Lume. Sempre proporcional.
  * - variant="light": usa a arte creme diretamente (fundos escuros/bordô).
- * - variant="wine": aplica a logo como máscara e pinta com currentColor (fundos claros).
+ * - variant="wine": recolore a arte com currentColor via filtro SVG (fundos claros).
+ *   Usamos filtro SVG (e não CSS mask) por ser mais confiável em PWA/Safari.
  */
 export const LumeLogo: React.FC<LumeLogoProps> = ({ variant = 'light', className = 'h-7' }) => {
   if (variant === 'wine') {
     return (
-      <span
+      <svg
+        viewBox="0 0 1125 398"
+        className={`${className} w-auto`}
         role="img"
         aria-label="Lume"
-        className={`${ASPECT} ${className} inline-block`}
-        style={{
-          backgroundColor: 'currentColor',
-          WebkitMaskImage: 'url(/lume-logo.png)',
-          maskImage: 'url(/lume-logo.png)',
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskSize: 'contain',
-          maskSize: 'contain',
-          WebkitMaskPosition: 'center',
-          maskPosition: 'center',
-        }}
-      />
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <filter id="lume-wine-tint" x="0" y="0" width="100%" height="100%">
+            <feFlood floodColor="currentColor" result="c" />
+            <feComposite in="c" in2="SourceAlpha" operator="in" />
+          </filter>
+        </defs>
+        <image href="/lume-logo.png" x="0" y="0" width="1125" height="398" filter="url(#lume-wine-tint)" />
+      </svg>
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
