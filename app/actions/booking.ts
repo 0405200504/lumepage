@@ -277,6 +277,17 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       await dbService.setClientBirthday(professionalId, clientWhatsapp.replace(/\D/g, ''), clientBirthday);
     }
 
+    // Confirmação automática: se a profissional ativou em Configurações → Agenda,
+    // o agendamento já entra como CONFIRMADO (em vez de pendente).
+    try {
+      const settings = await dbService.getSettingsByProfessional(professionalId);
+      if (settings?.confirmation_mode === 'automatic') {
+        await dbService.updateAppointmentStatus(appointment.id, 'confirmed');
+      }
+    } catch (e) {
+      console.error('Falha ao aplicar confirmação automática:', e);
+    }
+
     // 5. Enviar notificação Web Push
     try {
       const subs = await dbService.getPushSubscriptionsByProfessional(professionalId);
