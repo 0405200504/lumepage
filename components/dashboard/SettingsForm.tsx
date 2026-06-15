@@ -2,25 +2,28 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Professional, Setting, ConfirmationMode } from '@/types/database';
-import { Save, Sparkles, User, Settings, MessageSquare, Paintbrush, ExternalLink } from 'lucide-react';
+import { Professional, Setting, ConfirmationMode, WhatsAppSettings } from '@/types/database';
+import { Save, Sparkles, User, Settings, MessageSquare, Paintbrush, ExternalLink, Bot } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
 import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
 import { BookingDecor } from '@/components/booking/BookingDecor';
+import { WhatsAppBotPanel } from '@/components/dashboard/WhatsAppBotPanel';
 
 interface SettingsFormProps {
   professional: Professional;
   settings: Setting | null;
+  waSettings?: WhatsAppSettings | null;
 }
 
 export const SettingsForm: React.FC<SettingsFormProps> = ({
   professional,
-  settings
+  settings,
+  waSettings,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'whatsapp' | 'branding'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'whatsapp' | 'branding' | 'bot'>('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estados de Cadastro
@@ -159,17 +162,38 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           type="button"
           onClick={() => setActiveTab('branding')}
           className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
-            activeTab === 'branding' 
-              ? 'bg-[#500b18] text-white shadow-md shadow-black/10' 
+            activeTab === 'branding'
+              ? 'bg-[#500b18] text-white shadow-md shadow-black/10'
               : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
           }`}
         >
           <Paintbrush className="h-4 w-4" />
           <span>Identidade Visual</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('bot')}
+          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
+            activeTab === 'bot'
+              ? 'bg-[#500b18] text-white shadow-md shadow-black/10'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+          }`}
+        >
+          <Bot className="h-4 w-4" />
+          <span>Bot WhatsApp</span>
+        </button>
       </div>
 
-      {/* Formulário Principal */}
+      {/* Aba Bot WhatsApp — componente próprio, fora do <form> */}
+      {activeTab === 'bot' && (
+        <div className="flex-1">
+          <WhatsAppBotPanel initialSettings={waSettings ?? null} />
+        </div>
+      )}
+
+      {/* Formulário Principal — todas as outras abas */}
+      {activeTab !== 'bot' && (
       <form onSubmit={handleSave} className="flex-1 bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
         
         {/* ABA: Perfil */}
@@ -611,6 +635,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 };

@@ -3,7 +3,8 @@ import { mockDb } from './mockDb';
 import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus,
-  Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus
+  Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus,
+  WhatsAppSettings, WhatsAppConversation
 } from '@/types/database';
 
 /**
@@ -1007,6 +1008,98 @@ export const dbService = {
       return true;
     }
     return mockDb.removePushSubscription(endpoint);
-  }
+  },
+
+  // ── WhatsApp Bot ──────────────────────────────────────────────────────────
+
+  getWhatsAppSettings: async (professionalId: string): Promise<WhatsAppSettings | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('whatsapp_settings')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('whatsapp_settings'); return null; }
+      throw error;
+    }
+    return data;
+  },
+
+  upsertWhatsAppSettings: async (
+    professionalId: string,
+    patch: Partial<Omit<WhatsAppSettings, 'id' | 'professional_id' | 'created_at' | 'updated_at' | 'webhook_secret'>>
+  ): Promise<WhatsAppSettings> => {
+    const { data, error } = await getDb()
+      .from('whatsapp_settings')
+      .upsert(
+        { ...patch, professional_id: professionalId, updated_at: new Date().toISOString() },
+        { onConflict: 'professional_id' }
+      )
+      .select()
+      .single();
+    if (error) {
+      if (isMissingTable(error)) throw new Error('Rode supabase/migration_v8.sql no Supabase para ativar o bot WhatsApp.');
+      throw error;
+    }
+    return data;
+  },
+
+  getWhatsAppConversation: async (
+    professionalId: string,
+    clientPhone: string
+  ): Promise<WhatsAppConversation | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('whatsapp_conversations')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .eq('client_phone', clientPhone)
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) return null;
+      throw error;
+    }
+    return data;
+  },
+
+  upsertWhatsAppConversation: async (
+    professionalId: string,
+    clientPhone: string,
+    messages: WhatsAppConversation['messages']
+  ): Promise<void> => {
+    const { error } = await getDb()
+      .from('whatsapp_conversations')
+      .upsert(
+        {
+          professional_id: professionalId,
+          client_phone: clientPhone,
+          messages,
+          bot_paused: false,
+          last_message_at: new Date().toISOString(),
+        },
+        { onConflict: 'professional_id,client_phone' }
+      );
+    if (error && !isMissingTable(error)) throw error;
+  },
+
+  pauseWhatsAppConversation: async (
+    professionalId: string,
+    clientPhone: string
+  ): Promise<void> => {
+    const { error } = await getDb()
+      .from('whatsapp_conversations')
+      .upsert(
+        {
+          professional_id: professionalId,
+          client_phone: clientPhone,
+          messages: [],
+          bot_paused: true,
+          last_message_at: new Date().toISOString(),
+        },
+        { onConflict: 'professional_id,client_phone' }
+      );
+    if (error && !isMissingTable(error)) throw error;
+  },
 };
 export default dbService;

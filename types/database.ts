@@ -197,3 +197,27 @@ export interface PushSubscriptionRow {
   p256dh: string;
   created_at: string;
 }
+
+export interface WhatsAppSettings {
+  id: string;
+  professional_id: string;
+  uazapi_url: string;
+  uazapi_token: string;
+  webhook_secret: string;
+  bot_enabled: boolean;
+  confirmation_enabled: boolean;
+  bot_persona: string | null;
+  stop_keyword: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppConversation {
+  id: string;
+  professional_id: string;
+  client_phone: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string; at: number }>;
+  bot_paused: boolean;
+  last_message_at: string;
+  created_at: string;
+}

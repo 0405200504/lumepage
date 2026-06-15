@@ -3,8 +3,9 @@
 import { dbService } from '@/lib/supabase/db';
 import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
 import { authService } from '@/lib/auth/auth';
-import { Appointment } from '@/types/database';
 import { isDemo } from '@/lib/demo';
+import { sendWhatsAppText } from '@/lib/uazapi';
+import { fillTemplate, formatDateBR } from '@/lib/whatsapp';
 
 /**
  * Busca dados da profissional e serviços pelo slug para a página pública.
@@ -323,6 +324,34 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     } catch (pushErr) {
       console.error('Falha geral no disparo de Web Push:', pushErr);
       // Não bloqueamos o agendamento em caso de erro no Push
+    }
+
+    // 6. Enviar confirmação via WhatsApp automaticamente (best-effort, não bloqueia)
+    try {
+      const [waSettings, agendaSettings] = await Promise.all([
+        dbService.getWhatsAppSettings(professionalId),
+        dbService.getSettingsByProfessional(professionalId),
+      ]);
+      if (waSettings?.confirmation_enabled && waSettings.uazapi_url && waSettings.uazapi_token) {
+        const confirmMsg = fillTemplate(
+          agendaSettings?.whatsapp_confirmation_message ||
+            'Oi, {nome}! Seu agendamento de {servico} foi confirmado para o dia {data} às {horario}. Te esperamos! 💛',
+          {
+            nome: clientName.split(' ')[0],
+            servico: service.name,
+            data: formatDateBR(date),
+            horario: startTime,
+          }
+        );
+        await sendWhatsAppText(
+          waSettings.uazapi_url,
+          waSettings.uazapi_token,
+          clientWhatsapp.replace(/\D/g, ''),
+          confirmMsg
+        );
+      }
+    } catch (waErr) {
+      console.error('Falha ao enviar confirmação WhatsApp:', waErr);
     }
 
     return {
