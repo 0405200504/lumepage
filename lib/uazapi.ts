@@ -32,20 +32,25 @@ export async function configureUazapiWebhook(
   token: string,
   webhookUrl: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${baseUrl}/webhook`, {
-      method: 'PUT',
-      headers: { token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ webhookUrl, events: ['message'] }),
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      return { success: false, error: `uazapi retornou ${res.status}: ${body}` };
+  // Tenta PUT primeiro (docs v2); se retornar 405, tenta POST (versões alternativas)
+  for (const method of ['PUT', 'POST'] as const) {
+    try {
+      const res = await fetch(`${baseUrl}/webhook`, {
+        method,
+        headers: { token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhookUrl, events: ['message'] }),
+      });
+      if (res.status === 405) continue;
+      if (!res.ok) {
+        const body = await res.text();
+        return { success: false, error: `uazapi retornou ${res.status}: ${body}` };
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Erro de rede' };
     }
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : 'Erro de rede' };
   }
+  return { success: false, error: 'uazapi não aceitou PUT nem POST em /webhook.' };
 }
 
 /** Verifica o status da conexão da instância WhatsApp. */
