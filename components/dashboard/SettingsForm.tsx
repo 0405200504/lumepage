@@ -2,28 +2,25 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Professional, Setting, ConfirmationMode, WhatsAppSettings } from '@/types/database';
-import { Save, Sparkles, User, Settings, MessageSquare, Paintbrush, ExternalLink, Bot } from 'lucide-react';
+import { Professional, Setting, ConfirmationMode } from '@/types/database';
+import { Save, Sparkles, User, Settings, Paintbrush } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
 import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
 import { BookingDecor } from '@/components/booking/BookingDecor';
-import { WhatsAppBotPanel } from '@/components/dashboard/WhatsAppBotPanel';
 
 interface SettingsFormProps {
   professional: Professional;
   settings: Setting | null;
-  waSettings?: WhatsAppSettings | null;
 }
 
 export const SettingsForm: React.FC<SettingsFormProps> = ({
   professional,
   settings,
-  waSettings,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'whatsapp' | 'branding' | 'bot'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'branding'>('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estados de Cadastro
@@ -52,15 +49,11 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
     'Para confirmar seu horário, é necessário um sinal de 50% via Pix. Envie o comprovante pelo WhatsApp após agendar. 💛'
   );
 
-  // Estados de Mensagens do WhatsApp
-  const [whatsappConfirmation, setWhatsappConfirmation] = useState(
-    settings?.whatsapp_confirmation_message || 
-    'Oi, {nome}! Tudo bem? Passando para confirmar seu agendamento de {servico} no dia {data} às {horario}.'
-  );
-  const [whatsappCancel, setWhatsappCancel] = useState(
-    settings?.whatsapp_cancel_message || 
-    'Oi, {nome}! Seu agendamento de {servico} no dia {data} às {horario} precisou ser cancelado. Motivo: {motivo}.'
-  );
+  // Mantém os valores atuais do BD para não sobrescrever ao salvar as outras abas
+  const whatsappConfirmation = settings?.whatsapp_confirmation_message ||
+    'Oi, {nome}! Tudo bem? Passando para confirmar seu agendamento de {servico} no dia {data} às {horario}.';
+  const whatsappCancel = settings?.whatsapp_cancel_message ||
+    'Oi, {nome}! Seu agendamento de {servico} no dia {data} às {horario} precisou ser cancelado. Motivo: {motivo}.';
 
   // Estados de Branding
   const [primaryColor, setPrimaryColor] = useState(professional.primary_color || '#500b18');
@@ -147,19 +140,6 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
         <button
           type="button"
-          onClick={() => setActiveTab('whatsapp')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
-            activeTab === 'whatsapp' 
-              ? 'bg-[#500b18] text-white shadow-md shadow-black/10' 
-              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-          }`}
-        >
-          <MessageSquare className="h-4 w-4" />
-          <span>Mensagens WhatsApp</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('branding')}
           className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
             activeTab === 'branding'
@@ -170,30 +150,9 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           <Paintbrush className="h-4 w-4" />
           <span>Identidade Visual</span>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('bot')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
-            activeTab === 'bot'
-              ? 'bg-[#500b18] text-white shadow-md shadow-black/10'
-              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-          }`}
-        >
-          <Bot className="h-4 w-4" />
-          <span>Bot WhatsApp</span>
-        </button>
       </div>
 
-      {/* Aba Bot WhatsApp — componente próprio, fora do <form> */}
-      {activeTab === 'bot' && (
-        <div className="flex-1">
-          <WhatsAppBotPanel initialSettings={waSettings ?? null} />
-        </div>
-      )}
-
-      {/* Formulário Principal — todas as outras abas */}
-      {activeTab !== 'bot' && (
+      {/* Formulário Principal */}
       <form onSubmit={handleSave} className="flex-1 bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
         
         {/* ABA: Perfil */}
@@ -478,56 +437,6 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </div>
         )}
 
-        {/* ABA: WhatsApp */}
-        {activeTab === 'whatsapp' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-gray-800 tracking-tight">Modelos de Mensagens de WhatsApp</h3>
-              <p className="text-xs text-gray-450 mt-1">
-                Customize as mensagens de notificação rápida de agendamento que você dispara pelo painel para suas clientes.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
-                  Mensagem de Confirmação
-                </label>
-                <textarea
-                  rows={3}
-                  value={whatsappConfirmation}
-                  onChange={(e) => setWhatsappConfirmation(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
-                  Mensagem de Cancelamento
-                </label>
-                <textarea
-                  rows={3}
-                  value={whatsappCancel}
-                  onChange={(e) => setWhatsappCancel(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono"
-                />
-              </div>
-
-              {/* Dicas de Tags */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-[11px] text-gray-500 leading-relaxed">
-                <p className="font-bold text-gray-700">Variáveis Dinâmicas Aceitas:</p>
-                <ul className="list-disc pl-4 mt-1.5 space-y-1">
-                  <li><code className="bg-gray-200 px-1 rounded-sm text-forest font-bold">{'{nome}'}</code> - Nome da cliente</li>
-                  <li><code className="bg-gray-200 px-1 rounded-sm text-forest font-bold">{'{servico}'}</code> - Nome do procedimento</li>
-                  <li><code className="bg-gray-200 px-1 rounded-sm text-forest font-bold">{'{data}'}</code> - Data do agendamento</li>
-                  <li><code className="bg-gray-200 px-1 rounded-sm text-forest font-bold">{'{horario}'}</code> - Horário de início</li>
-                  <li><code className="bg-gray-200 px-1 rounded-sm text-forest font-bold">{'{motivo}'}</code> - Motivo do cancelamento (apenas no cancelamento)</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ABA: Branding/Identidade Visual */}
         {activeTab === 'branding' && (
           <div className="space-y-6">
@@ -635,7 +544,6 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </button>
         </div>
       </form>
-      )}
     </div>
   );
 };

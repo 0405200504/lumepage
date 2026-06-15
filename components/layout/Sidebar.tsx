@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -61,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
       { href: '/dashboard/blocks', label: 'Bloqueios', icon: Lock },
       { href: '/dashboard/clients', label: 'Clientes', icon: Users },
       { href: '/dashboard/finance', label: 'Contas', icon: Wallet },
+      { href: '/dashboard/whatsapp', label: 'Bot WhatsApp', icon: Bot },
       { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
     ];
   };

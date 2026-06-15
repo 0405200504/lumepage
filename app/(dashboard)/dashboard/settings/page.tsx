@@ -3,18 +3,16 @@ import { dbService } from '@/lib/supabase/db';
 import { SettingsForm } from '@/components/dashboard/SettingsForm';
 
 export const metadata = {
-  title: 'Configurações de Perfil e Agenda | Lume Agenda Dashboard',
-  description: 'Gerencie seus dados de contato, redes sociais, avisos prévios de agendamentos e paleta de cores.'
+  title: 'Configurações | Lume',
 };
 
 export default async function DashboardSettingsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [professional, settings, waSettings] = await Promise.all([
+  const [professional, settings] = await Promise.all([
     dbService.getProfessionalById(professionalId),
     dbService.getSettingsByProfessional(professionalId),
-    dbService.getWhatsAppSettings(professionalId),
   ]);
 
   if (!professional) {
@@ -25,5 +23,5 @@ export default async function DashboardSettingsPage() {
     );
   }
 
-  return <SettingsForm professional={professional} settings={settings} waSettings={waSettings} />;
+  return <SettingsForm professional={professional} settings={settings} />;
 }
