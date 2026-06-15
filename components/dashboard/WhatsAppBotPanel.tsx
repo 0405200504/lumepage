@@ -47,8 +47,12 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
-    checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error'));
-    getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null));
+    checkWhatsAppStatusAction()
+      .then(r => setStatus((r.status as ConnectionStatus) || 'error'))
+      .catch(() => setStatus('error'));
+    getWebhookUrlAction()
+      .then(r => setWebhookUrl(r.webhookUrl || null))
+      .catch(() => {});
   }, []);
 
   function handleCopy() {
@@ -72,7 +76,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       if (res.success) {
         success('Salvo!', 'Configurações do bot WhatsApp atualizadas.');
         // Atualiza webhook URL após salvar (pode ter sido criada pela primeira vez)
-        getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null));
+        getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null)).catch(() => {});
       } else {
         error('Erro ao salvar', res.error || 'Tente novamente.');
       }
@@ -99,7 +103,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       if (res.success) {
         success('Webhook ativado!', 'A uazapi vai enviar mensagens para o Lume automaticamente.');
         if (res.webhookUrl) setWebhookUrl(res.webhookUrl);
-        checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error'));
+        checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error')).catch(() => {});
       } else {
         error('Erro ao ativar webhook', res.error || 'Verifique a URL e o token.');
       }
@@ -108,7 +112,9 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
   function handleRefreshStatus() {
     setStatus('loading');
-    checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error'));
+    checkWhatsAppStatusAction()
+      .then(r => setStatus((r.status as ConnectionStatus) || 'error'))
+      .catch(() => setStatus('error'));
   }
 
   const s = statusLabel[status];
