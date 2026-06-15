@@ -81,12 +81,13 @@ export async function checkWhatsAppStatusAction() {
   }
 }
 
+
 export async function diagnoseWhatsAppAction() {
   try {
     const professionalId = await getProfessionalId();
     if (!professionalId) return { ok: false, steps: [], error: 'Não autenticado.' };
 
-    const steps: Array<{ label: string; ok: boolean; detail: string }> = [];
+    const steps: Array<{ label: string; ok: boolean; warn?: boolean; detail: string }> = [];
 
     // 1. Tabela existe e settings carregam?
     let waSettings = null;
@@ -115,17 +116,17 @@ export async function diagnoseWhatsAppAction() {
     // 3. Bot ativado?
     steps.push({ label: 'Bot ativado', ok: !!waSettings.bot_enabled, detail: waSettings.bot_enabled ? 'Ativo' : 'Desativado — ligue o toggle e salve' });
 
-    // 4. Conexão com uazapi
+    // 4. Conexão com uazapi (informativo — não bloqueia o bot)
     const { checkUazapiStatus: check } = await import('@/lib/uazapi');
-    const { status, raw } = await check(waSettings.uazapi_url, waSettings.uazapi_token);
+    const { status, rawJson } = await check(waSettings.uazapi_url, waSettings.uazapi_token);
     const isConnected = status === 'open';
-    const rawDetail = raw ? ` (resposta: ${JSON.stringify(raw).slice(0, 120)})` : '';
     steps.push({
-      label: 'WhatsApp conectado',
-      ok: isConnected,
+      label: 'Status da instância',
+      ok: true,
+      warn: !isConnected,
       detail: isConnected
-        ? 'Conectado'
-        : `Status detectado: "${status}"${rawDetail}`,
+        ? 'Conectado (open)'
+        : `Não confirmado via API — se o WhatsApp está conectado no painel uazapi, ignore este aviso`,
     });
 
     // 5. Webhook URL gerada?
@@ -133,8 +134,8 @@ export async function diagnoseWhatsAppAction() {
     const hasAppUrl = !!(appUrl && !appUrl.includes('SEU_APP'));
     steps.push({ label: 'NEXT_PUBLIC_APP_URL', ok: hasAppUrl, detail: hasAppUrl ? appUrl! : 'Variável não configurada no Vercel' });
 
-    const allOk = steps.every(s => s.ok);
-    return { ok: allOk, steps };
+    const criticalOk = steps.filter((_, i) => i !== 3).every(s => s.ok); // ignora o status check
+    return { ok: criticalOk, steps };
   } catch (e: unknown) {
     return { ok: false, steps: [], error: e instanceof Error ? e.message : 'Erro inesperado' };
   }

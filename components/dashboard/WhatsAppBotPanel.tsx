@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import {
   Bot, Wifi, WifiOff, Copy, Check, Settings2, RefreshCw, Zap, ChevronDown, ChevronUp,
-  XCircle, CheckCircle2, Loader2,
+  XCircle, CheckCircle2, Loader2, AlertCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { WhatsAppSettings } from '@/types/database';
@@ -329,13 +329,15 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
             )}
             {diagResult.steps?.map((step, i) => (
               <div key={i} className="flex items-start gap-2 text-xs">
-                {step.ok
+                {step.ok && !step.warn
                   ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                  : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  : step.warn
+                    ? <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                    : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 }
                 <div>
                   <span className="font-medium text-gray-700">{step.label}: </span>
-                  <span className={step.ok ? 'text-gray-500' : 'text-red-500'}>{step.detail}</span>
+                  <span className={step.ok && !step.warn ? 'text-gray-500' : step.warn ? 'text-yellow-600' : 'text-red-500'}>{step.detail}</span>
                 </div>
               </div>
             ))}

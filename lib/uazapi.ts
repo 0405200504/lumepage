@@ -53,34 +53,35 @@ export async function configureUazapiWebhook(
   return { success: false, error: 'uazapi não aceitou PUT nem POST em /webhook.' };
 }
 
-/** Verifica o status da conexão da instância WhatsApp. Retorna também o raw para debug. */
+/** Verifica o status da conexão da instância WhatsApp. */
 export async function checkUazapiStatus(
   baseUrl: string,
   token: string
-): Promise<{ status: 'open' | 'connecting' | 'close' | 'qr' | 'error'; raw?: unknown }> {
+): Promise<{ status: 'open' | 'connecting' | 'close' | 'qr' | 'error'; rawJson?: string }> {
   try {
     const res = await fetch(`${baseUrl}/instance/status`, {
       headers: { token },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) {
-      const raw = await res.text().catch(() => res.status.toString());
-      return { status: 'error', raw };
-    }
-    const data = await res.json();
-    // uazapi pode retornar status em vários níveis do JSON
-    const s: string = (
-      data?.status ??
-      data?.state ??
-      data?.data?.status ??
-      data?.data?.state ??
-      data?.instance?.status ??
-      ''
-    ).toLowerCase();
+    const text = await res.text();
+    if (!res.ok) return { status: 'error', rawJson: text.slice(0, 200) };
+
+    // Parse manual — evita throw em respostas HTML ou inesperadas
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(text); } catch { return { status: 'error', rawJson: text.slice(0, 200) }; }
+
+    // uazapi pode retornar status em vários campos e valores
+    const candidates = [
+      data?.status, data?.state,
+      (data?.data as Record<string, unknown>)?.status,
+      (data?.data as Record<string, unknown>)?.state,
+      (data?.instance as Record<string, unknown>)?.status,
+    ];
+    const s = candidates.find(v => typeof v === 'string') as string | undefined;
     const valid = ['open', 'connecting', 'close', 'qr'] as const;
-    const matched = valid.find(v => s.includes(v));
-    return { status: matched ?? 'error', raw: data };
+    const matched = valid.find(v => (s ?? '').toLowerCase().includes(v));
+    return { status: matched ?? 'error', rawJson: text.slice(0, 200) };
   } catch (e) {
-    return { status: 'error', raw: e instanceof Error ? e.message : String(e) };
+    return { status: 'error', rawJson: e instanceof Error ? e.message : String(e) };
   }
 }
