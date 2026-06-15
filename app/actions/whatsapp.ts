@@ -81,6 +81,58 @@ export async function checkWhatsAppStatusAction() {
   }
 }
 
+export async function diagnoseWhatsAppAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { ok: false, steps: [], error: 'Não autenticado.' };
+
+    const steps: Array<{ label: string; ok: boolean; detail: string }> = [];
+
+    // 1. Tabela existe e settings carregam?
+    let waSettings = null;
+    try {
+      waSettings = await dbService.getWhatsAppSettings(professionalId);
+      steps.push({ label: 'Tabela whatsapp_settings', ok: true, detail: waSettings ? 'Configurações encontradas' : 'Tabela existe mas sem configurações (salve as credenciais)' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      steps.push({ label: 'Tabela whatsapp_settings', ok: false, detail: msg.includes('migration') ? 'Tabela não existe — rode supabase/migration_v8.sql no Supabase' : msg });
+      return { ok: false, steps };
+    }
+
+    if (!waSettings) {
+      steps.push({ label: 'Credenciais salvas', ok: false, detail: 'Preencha URL e token e clique em "Salvar configurações"' });
+      return { ok: false, steps };
+    }
+
+    // 2. Credenciais preenchidas?
+    const hasUrl = !!waSettings.uazapi_url;
+    const hasToken = !!waSettings.uazapi_token;
+    steps.push({ label: 'URL da instância', ok: hasUrl, detail: hasUrl ? waSettings.uazapi_url : 'URL não configurada' });
+    steps.push({ label: 'Token da instância', ok: hasToken, detail: hasToken ? '••••••••' + waSettings.uazapi_token.slice(-4) : 'Token não configurado' });
+
+    if (!hasUrl || !hasToken) return { ok: false, steps };
+
+    // 3. Bot ativado?
+    steps.push({ label: 'Bot ativado', ok: !!waSettings.bot_enabled, detail: waSettings.bot_enabled ? 'Ativo' : 'Desativado — ligue o toggle e salve' });
+
+    // 4. Conexão com uazapi
+    const { checkUazapiStatus: check } = await import('@/lib/uazapi');
+    const status = await check(waSettings.uazapi_url, waSettings.uazapi_token);
+    const isConnected = status === 'open';
+    steps.push({ label: 'WhatsApp conectado', ok: isConnected, detail: isConnected ? 'Conectado' : `Status: ${status} — verifique a instância no painel uazapi` });
+
+    // 5. Webhook URL gerada?
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const hasAppUrl = !!(appUrl && !appUrl.includes('SEU_APP'));
+    steps.push({ label: 'NEXT_PUBLIC_APP_URL', ok: hasAppUrl, detail: hasAppUrl ? appUrl! : 'Variável não configurada no Vercel' });
+
+    const allOk = steps.every(s => s.ok);
+    return { ok: allOk, steps };
+  } catch (e: unknown) {
+    return { ok: false, steps: [], error: e instanceof Error ? e.message : 'Erro inesperado' };
+  }
+}
+
 export async function getWebhookUrlAction() {
   try {
     const professionalId = await getProfessionalId();

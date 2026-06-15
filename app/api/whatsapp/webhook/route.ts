@@ -24,14 +24,22 @@ export async function POST(req: NextRequest) {
   const pid = req.nextUrl.searchParams.get('pid');
   const secret = req.nextUrl.searchParams.get('secret');
 
-  if (!pid) return NextResponse.json({ ok: true });
+  console.log('[WhatsApp Webhook] recebido — pid:', pid, 'secret:', secret ? '✓' : '✗');
+
+  if (!pid) {
+    console.warn('[WhatsApp Webhook] pid ausente na URL do webhook — configure o webhook corretamente');
+    return NextResponse.json({ ok: true });
+  }
 
   let body: UazapiMessagePayload;
   try {
     body = await req.json();
   } catch {
+    console.warn('[WhatsApp Webhook] payload inválido');
     return NextResponse.json({ ok: true });
   }
+
+  console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| de:', body.data?.from, '| fromMe:', body.data?.fromMe);
 
   // Responde 200 imediatamente e processa em background (uazapi exige < 5s)
   processMessage(pid, secret, body).catch(console.error);
@@ -49,8 +57,9 @@ async function processMessage(professionalId: string, secret: string | null, bod
     if (data.type !== 'text') return;
 
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
-    if (!waSettings || !waSettings.bot_enabled) return;
-    if (!waSettings.uazapi_url || !waSettings.uazapi_token) return;
+    if (!waSettings) { console.warn('[WhatsApp Bot] sem configurações no banco — rode migration_v8.sql e salve as credenciais'); return; }
+    if (!waSettings.bot_enabled) { console.log('[WhatsApp Bot] bot desativado para profissional', professionalId); return; }
+    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[WhatsApp Bot] URL ou token da uazapi não configurados'); return; }
 
     // Valida o secret para evitar chamadas não autorizadas
     if (secret && waSettings.webhook_secret !== secret) return;
@@ -143,7 +152,9 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     }
 
     // Envia a resposta via uazapi
-    await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
+    console.log('[WhatsApp Bot] enviando resposta para', clientPhone, ':', responseText.slice(0, 60));
+    const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
+    if (!sent) console.error('[WhatsApp Bot] falha ao enviar mensagem para', clientPhone);
 
     // Salva o histórico da conversa para manter contexto nas próximas mensagens
     const updatedMessages: WhatsAppConversation['messages'] = [

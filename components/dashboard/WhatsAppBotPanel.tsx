@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import {
   Bot, Wifi, WifiOff, Copy, Check, Settings2, RefreshCw, Zap, ChevronDown, ChevronUp,
+  XCircle, CheckCircle2, Loader2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { WhatsAppSettings } from '@/types/database';
@@ -11,6 +12,7 @@ import {
   setupWebhookAction,
   checkWhatsAppStatusAction,
   getWebhookUrlAction,
+  diagnoseWhatsAppAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppBotPanelProps {
@@ -44,6 +46,8 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagResult, setDiagResult] = useState<Awaited<ReturnType<typeof diagnoseWhatsAppAction>> | null>(null);
 
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
@@ -124,6 +128,14 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
       })
       .catch(() => setStatus('error'));
+  }
+
+  async function handleDiagnose() {
+    setDiagnosing(true);
+    setDiagResult(null);
+    const result = await diagnoseWhatsAppAction().catch(() => ({ ok: false, steps: [], error: 'Erro ao verificar' }));
+    setDiagResult(result);
+    setDiagnosing(false);
   }
 
   const s = statusLabel[status] ?? statusLabel['error'];
@@ -291,6 +303,48 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
           )}
         </div>
       )}
+
+      {/* Diagnóstico */}
+      <div className="border-t border-[#efe9e6] pt-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-800">Verificar configuração</p>
+          <button
+            type="button"
+            onClick={handleDiagnose}
+            disabled={diagnosing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#efe9e6] text-xs font-semibold text-gray-600 hover:bg-[#faf8f7] transition-colors disabled:opacity-50"
+          >
+            {diagnosing
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <RefreshCw className="w-3.5 h-3.5" />
+            }
+            {diagnosing ? 'Verificando...' : 'Verificar agora'}
+          </button>
+        </div>
+
+        {diagResult && (
+          <div className="space-y-1.5">
+            {'error' in diagResult && diagResult.error && (
+              <p className="text-xs text-red-500">{diagResult.error}</p>
+            )}
+            {diagResult.steps?.map((step, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                {step.ok
+                  ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                  : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                }
+                <div>
+                  <span className="font-medium text-gray-700">{step.label}: </span>
+                  <span className={step.ok ? 'text-gray-500' : 'text-red-500'}>{step.detail}</span>
+                </div>
+              </div>
+            ))}
+            {diagResult.ok && (
+              <p className="text-xs text-green-600 font-medium mt-2">Tudo configurado! O bot está pronto para responder.</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
