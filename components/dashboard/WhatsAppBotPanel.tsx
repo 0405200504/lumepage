@@ -48,7 +48,10 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
     checkWhatsAppStatusAction()
-      .then(r => setStatus((r.status as ConnectionStatus) || 'error'))
+      .then(r => {
+        const val = r.status as string;
+        setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
+      })
       .catch(() => setStatus('error'));
     getWebhookUrlAction()
       .then(r => setWebhookUrl(r.webhookUrl || null))
@@ -103,7 +106,10 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       if (res.success) {
         success('Webhook ativado!', 'A uazapi vai enviar mensagens para o Lume automaticamente.');
         if (res.webhookUrl) setWebhookUrl(res.webhookUrl);
-        checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error')).catch(() => {});
+        checkWhatsAppStatusAction().then(r => {
+          const val = r.status as string;
+          setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
+        }).catch(() => {});
       } else {
         error('Erro ao ativar webhook', res.error || 'Verifique a URL e o token.');
       }
@@ -113,11 +119,14 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   function handleRefreshStatus() {
     setStatus('loading');
     checkWhatsAppStatusAction()
-      .then(r => setStatus((r.status as ConnectionStatus) || 'error'))
+      .then(r => {
+        const val = r.status as string;
+        setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
+      })
       .catch(() => setStatus('error'));
   }
 
-  const s = statusLabel[status];
+  const s = statusLabel[status] ?? statusLabel['error'];
   const isConfigured = !!(uazapiUrl && uazapiToken);
 
   return (

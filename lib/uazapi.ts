@@ -65,7 +65,9 @@ export async function checkUazapiStatus(
     });
     if (!res.ok) return 'error';
     const data = await res.json();
-    return data.status ?? 'error';
+    const s = data?.state ?? data?.status ?? '';
+    const valid = ['open', 'connecting', 'close', 'qr'];
+    return valid.includes(s) ? (s as 'open' | 'connecting' | 'close' | 'qr') : 'error';
   } catch {
     return 'error';
   }

@@ -11,7 +11,7 @@ export default function WhatsAppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[WhatsApp page error]', error);
+    console.error('[WhatsApp page error]', error?.message, error?.stack);
   }, [error]);
 
   return (
@@ -21,7 +21,7 @@ export default function WhatsAppError({
       </div>
       <div>
         <p className="text-sm font-semibold text-gray-800">Algo deu errado</p>
-        <p className="text-xs text-gray-500 mt-1">Não foi possível carregar as configurações do Bot WhatsApp.</p>
+        <p className="text-xs text-gray-500 mt-1">{error?.message || 'Não foi possível carregar as configurações do Bot WhatsApp.'}</p>
       </div>
       <button
         onClick={reset}
