@@ -81,14 +81,27 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
   function handleSetupWebhook() {
     startTransition(async () => {
+      // Garante que as credenciais estão salvas no banco antes de configurar o webhook
+      const saveRes = await saveWhatsAppSettingsAction({
+        uazapi_url: uazapiUrl,
+        uazapi_token: uazapiToken,
+        bot_enabled: botEnabled,
+        confirmation_enabled: confirmationEnabled,
+        bot_persona: botPersona,
+        stop_keyword: stopKeyword,
+      });
+      if (!saveRes.success) {
+        error('Erro ao salvar credenciais', saveRes.error || 'Tente novamente.');
+        return;
+      }
+
       const res = await setupWebhookAction();
       if (res.success) {
-        success('Webhook configurado!', 'A uazapi vai enviar mensagens para o Lume automaticamente.');
+        success('Webhook ativado!', 'A uazapi vai enviar mensagens para o Lume automaticamente.');
         if (res.webhookUrl) setWebhookUrl(res.webhookUrl);
-        // Verifica status após configurar
         checkWhatsAppStatusAction().then(r => setStatus((r.status as ConnectionStatus) || 'error'));
       } else {
-        error('Erro ao configurar webhook', res.error || 'Verifique a URL e o token.');
+        error('Erro ao ativar webhook', res.error || 'Verifique a URL e o token.');
       }
     });
   }
