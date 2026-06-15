@@ -10,7 +10,12 @@ export default async function WhatsAppBotPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const waSettings = await dbService.getWhatsAppSettings(professionalId);
+  let waSettings = null;
+  try {
+    waSettings = await dbService.getWhatsAppSettings(professionalId);
+  } catch {
+    // tabela ainda não existe — continua com null
+  }
 
   return <WhatsAppBotPanel initialSettings={waSettings} />;
 }

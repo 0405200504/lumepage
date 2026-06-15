@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { after } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { google } from '@ai-sdk/google';
@@ -34,10 +33,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Processa de forma assíncrona após retornar 200 (uazapi exige resposta em < 5s)
-  after(async () => {
-    await processMessage(pid, secret, body);
-  });
+  // Responde 200 imediatamente e processa em background (uazapi exige < 5s)
+  processMessage(pid, secret, body).catch(console.error);
 
   return NextResponse.json({ ok: true });
 }
