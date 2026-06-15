@@ -74,8 +74,8 @@ export async function checkWhatsAppStatusAction() {
       return { success: true, status: 'not_configured' as const };
     }
 
-    const status = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token);
-    return { success: true, status };
+    const result = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token);
+    return { success: true, status: result.status };
   } catch {
     return { success: true, status: 'error' as const };
   }
@@ -117,9 +117,16 @@ export async function diagnoseWhatsAppAction() {
 
     // 4. Conexão com uazapi
     const { checkUazapiStatus: check } = await import('@/lib/uazapi');
-    const status = await check(waSettings.uazapi_url, waSettings.uazapi_token);
+    const { status, raw } = await check(waSettings.uazapi_url, waSettings.uazapi_token);
     const isConnected = status === 'open';
-    steps.push({ label: 'WhatsApp conectado', ok: isConnected, detail: isConnected ? 'Conectado' : `Status: ${status} — verifique a instância no painel uazapi` });
+    const rawDetail = raw ? ` (resposta: ${JSON.stringify(raw).slice(0, 120)})` : '';
+    steps.push({
+      label: 'WhatsApp conectado',
+      ok: isConnected,
+      detail: isConnected
+        ? 'Conectado'
+        : `Status detectado: "${status}"${rawDetail}`,
+    });
 
     // 5. Webhook URL gerada?
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;

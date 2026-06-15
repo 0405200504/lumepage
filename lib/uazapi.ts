@@ -53,22 +53,34 @@ export async function configureUazapiWebhook(
   return { success: false, error: 'uazapi não aceitou PUT nem POST em /webhook.' };
 }
 
-/** Verifica o status da conexão da instância WhatsApp. */
+/** Verifica o status da conexão da instância WhatsApp. Retorna também o raw para debug. */
 export async function checkUazapiStatus(
   baseUrl: string,
   token: string
-): Promise<'open' | 'connecting' | 'close' | 'qr' | 'error'> {
+): Promise<{ status: 'open' | 'connecting' | 'close' | 'qr' | 'error'; raw?: unknown }> {
   try {
     const res = await fetch(`${baseUrl}/instance/status`, {
       headers: { token },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return 'error';
+    if (!res.ok) {
+      const raw = await res.text().catch(() => res.status.toString());
+      return { status: 'error', raw };
+    }
     const data = await res.json();
-    const s = data?.state ?? data?.status ?? '';
-    const valid = ['open', 'connecting', 'close', 'qr'];
-    return valid.includes(s) ? (s as 'open' | 'connecting' | 'close' | 'qr') : 'error';
-  } catch {
-    return 'error';
+    // uazapi pode retornar status em vários níveis do JSON
+    const s: string = (
+      data?.status ??
+      data?.state ??
+      data?.data?.status ??
+      data?.data?.state ??
+      data?.instance?.status ??
+      ''
+    ).toLowerCase();
+    const valid = ['open', 'connecting', 'close', 'qr'] as const;
+    const matched = valid.find(v => s.includes(v));
+    return { status: matched ?? 'error', raw: data };
+  } catch (e) {
+    return { status: 'error', raw: e instanceof Error ? e.message : String(e) };
   }
 }
