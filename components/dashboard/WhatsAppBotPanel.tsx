@@ -315,8 +315,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
             <div>
               <p className="text-sm font-semibold text-gray-800">Conectar ao WhatsApp</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Clique no botão para registrar automaticamente o webhook na sua instância uazapi.
-                Faça isso sempre que trocar a URL ou o token.
+                Tente o botão automático primeiro. Se não funcionar, copie a URL abaixo e cole manualmente no painel da uazapi em &ldquo;Webhook&rdquo;.
               </p>
             </div>
             <button
@@ -330,13 +329,19 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
             </button>
           </div>
 
-          {/* URL do webhook para referência */}
+          {/* URL do webhook — destacada para cópia manual */}
           {webhookUrl && (
-            <div className="flex items-center gap-2 bg-[#faf8f7] border border-[#efe9e6] rounded-xl px-3 py-2">
-              <p className="text-xs text-gray-500 font-mono truncate flex-1">{webhookUrl}</p>
-              <button type="button" onClick={handleCopy} className="shrink-0 text-gray-400 hover:text-gray-700 transition-colors">
-                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </button>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-600">URL do webhook (cole no painel da uazapi):</p>
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                <p className="text-xs text-gray-700 font-mono truncate flex-1">{webhookUrl}</p>
+                <button type="button" onClick={handleCopy} className="shrink-0 text-gray-400 hover:text-gray-700 transition-colors">
+                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-amber-700">
+                No painel uazapi: vá em <strong>Webhook</strong> → cole a URL acima → marque os eventos <strong>message</strong> → salve e ative.
+              </p>
             </div>
           )}
         </div>

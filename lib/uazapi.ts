@@ -35,26 +35,27 @@ export async function configureUazapiWebhook(
   const headers = { token, 'Content-Type': 'application/json' };
   const logs: string[] = [];
 
-  // 1. Busca o webhook existente para obter o ID (uazapi retorna array)
+  // 1. Busca o webhook existente para obter o ID e o estado atual
   let existingId: string | null = null;
   try {
     const getRes = await fetch(`${baseUrl}/webhook`, { headers, signal: AbortSignal.timeout(6000) });
     const getText = await getRes.text().catch(() => '');
-    logs.push(`GET /webhook → ${getRes.status}: ${getText.slice(0, 200)}`);
+    logs.push(`GET /webhook → ${getRes.status}: ${getText.slice(0, 300)}`);
     if (getRes.ok) {
       let parsed: unknown;
       try { parsed = JSON.parse(getText); } catch { /* ignore */ }
-      const entry = Array.isArray(parsed) ? (parsed[0] as Record<string, unknown>) : (parsed as Record<string, unknown>);
-      existingId = (entry?.id ?? null) as string | null;
+      const entries = Array.isArray(parsed) ? parsed : [parsed];
+      const first = entries[0] as Record<string, unknown> | null;
+      existingId = (first?.id ?? null) as string | null;
     }
   } catch (e) {
     logs.push(`GET /webhook → exception: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // 2. Payload com todos os campos que a uazapi espera
+  // 2. Payload completo
   const payload = {
     url: webhookUrl,
-    webhookUrl,        // alias caso uazapi prefira este campo
+    webhookUrl,
     enabled: true,
     events: ['message'],
     addUrlEvents: false,
@@ -62,45 +63,45 @@ export async function configureUazapiWebhook(
     excludeMessages: [],
   };
 
-  // 3a. Se temos um ID, atualiza via PUT /webhook/{id}
+  // 3a. Se existe ID: tenta DELETE do existente e depois POST com novo
   if (existingId) {
     try {
-      const putRes = await fetch(`${baseUrl}/webhook/${existingId}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ ...payload, id: existingId }),
-        signal: AbortSignal.timeout(8000),
+      const delRes = await fetch(`${baseUrl}/webhook/${existingId}`, {
+        method: 'DELETE', headers, signal: AbortSignal.timeout(6000),
       });
-      const putText = await putRes.text().catch(() => '');
-      logs.push(`PUT /webhook/${existingId} → ${putRes.status}: ${putText.slice(0, 200)}`);
-      if (putRes.ok) return { success: true, debug: logs.join(' | ') };
-      // Se falhou por ID, tenta sem ID
+      logs.push(`DELETE /webhook/${existingId} → ${delRes.status}`);
     } catch (e) {
-      logs.push(`PUT /webhook/${existingId} → exception: ${e instanceof Error ? e.message : String(e)}`);
+      logs.push(`DELETE /webhook/${existingId} → exception: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  // 3b. Tenta PUT /webhook (sem ID) e depois POST /webhook
-  for (const [method, path] of [['PUT', '/webhook'], ['POST', '/webhook']] as const) {
-    try {
-      const res = await fetch(`${baseUrl}${path}`, {
-        method,
-        headers,
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(8000),
-      });
-      const text = await res.text().catch(() => '');
-      logs.push(`${method} ${path} → ${res.status}: ${text.slice(0, 200)}`);
-      if (res.status === 405) continue;
-      if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}: ${text}`, debug: logs.join(' | ') };
-      return { success: true, debug: logs.join(' | ') };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erro de rede';
-      logs.push(`${method} ${path} → exception: ${msg}`);
-    }
+  // 3b. POST para criar novo webhook limpo
+  try {
+    const postRes = await fetch(`${baseUrl}/webhook`, {
+      method: 'POST', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000),
+    });
+    const postText = await postRes.text().catch(() => '');
+    logs.push(`POST /webhook → ${postRes.status}: ${postText.slice(0, 200)}`);
+    if (postRes.ok) return { success: true, debug: logs.join(' | ') };
+  } catch (e) {
+    logs.push(`POST /webhook → exception: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  return { success: false, error: 'uazapi não aceitou nenhuma forma de configuração de webhook.', debug: logs.join(' | ') };
+  // 3c. Fallback: PUT /webhook (sem ID)
+  try {
+    const putRes = await fetch(`${baseUrl}/webhook`, {
+      method: 'PUT', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000),
+    });
+    const putText = await putRes.text().catch(() => '');
+    logs.push(`PUT /webhook → ${putRes.status}: ${putText.slice(0, 200)}`);
+    if (putRes.ok) return { success: true, debug: logs.join(' | ') };
+    return { success: false, error: `uazapi retornou ${putRes.status}`, debug: logs.join(' | ') };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro de rede';
+    logs.push(`PUT /webhook → exception: ${msg}`);
+  }
+
+  return { success: false, error: 'uazapi não aceitou configuração de webhook via API. Configure manualmente no painel da uazapi.', debug: logs.join(' | ') };
 }
 
 /** Verifica o status da conexão da instância WhatsApp. */
