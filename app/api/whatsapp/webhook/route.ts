@@ -84,7 +84,6 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const msg = body.message;
 
     if (!msg) { console.log('[Bot] sem message no payload'); return; }
-
     if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
     if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
     if (msg.type && msg.type !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type); return; }
@@ -93,7 +92,6 @@ async function processMessage(professionalId: string, secret: string | null, bod
     if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
     if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
     if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
-
     if (secret && waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido'); return; }
 
     const clientPhone = phoneFromJid(msg.chatid || '');
@@ -102,7 +100,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const messageText = (msg.text || '').trim();
     if (!messageText) { console.log('[Bot] mensagem vazia'); return; }
 
-    console.log('[Bot] processando mensagem de', clientPhone, ':', messageText.slice(0, 50));
+    console.log('[Bot] mensagem de', clientPhone, ':', messageText.slice(0, 50));
 
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
     if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
@@ -114,6 +112,27 @@ async function processMessage(professionalId: string, secret: string | null, bod
         'Tudo bem! Vou chamar a profissional para te atender pessoalmente. Um momento 😊');
       return;
     }
+
+    // ── DEBOUNCE ──────────────────────────────────────────────────────────────
+    // Salva a mensagem imediatamente (atualiza last_message_at no banco).
+    // Depois aguarda 1.5s: se outra mensagem da mesma cliente chegar nesse
+    // intervalo, ela sobrescreverá last_message_at e este processamento aborta,
+    // cedendo o controle para a mensagem mais recente (que terá o contexto completo).
+    const arrivalTime = Date.now();
+    const pendingMessages = [
+      ...(conversation?.messages || []),
+      { role: 'user' as const, content: messageText, at: arrivalTime },
+    ];
+    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, pendingMessages, conversation?.client_summary ?? undefined);
+
+    await new Promise(r => setTimeout(r, 1500));
+
+    const freshConv = await dbService.getWhatsAppConversation(professionalId, clientPhone);
+    if (freshConv && new Date(freshConv.last_message_at).getTime() > arrivalTime) {
+      console.log('[Bot] mensagem mais nova detectada — abortando esta para evitar resposta dupla');
+      return;
+    }
+    // ── FIM DEBOUNCE ──────────────────────────────────────────────────────────
 
     const [professional, services] = await Promise.all([
       dbService.getProfessionalById(professionalId),
@@ -134,30 +153,35 @@ async function processMessage(professionalId: string, secret: string | null, bod
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
-    const history = ((conversation?.messages || []) as Array<{ role: 'user' | 'assistant'; content: string }>).slice(-20);
+    // Usa mensagens do banco após o debounce — pode incluir múltiplas mensagens
+    // rápidas da cliente que chegaram enquanto aguardávamos.
+    const allMessages = (freshConv?.messages || pendingMessages) as Array<{ role: 'user' | 'assistant'; content: string }>;
+    const history = allMessages.slice(-20);
+    const hasPriorExchange = allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
     const systemPrompt = `Você é a assistente virtual de WhatsApp de ${professional?.name || 'uma profissional de beleza'} (${professional?.brand_name || ''}).
-Responda de forma simpática, curta e direta — como uma atendente humana, não como um robô.
-Nunca diga que é uma IA ou assistente virtual. Use linguagem informal e calorosa.
+Responda de forma simpática, curta e direta — como uma atendente humana real.
+Nunca mencione que é uma IA ou assistente virtual.
+${hasPriorExchange
+  ? 'ATENÇÃO: você já está em conversa com esta cliente. NUNCA se reapresente. NUNCA comece com "Oi, tudo bem?" ou qualquer saudação nova — responda direto o que ela perguntou.'
+  : 'É o primeiro contato: pode se apresentar brevemente com o nome que você usa.'
+}
 Hoje é ${nowBR}.
 
 Serviços disponíveis:
 ${servicesList}
 
 Link para agendar online: ${bookingUrl}
-
-${conversation?.client_summary
-  ? `O que você já sabe sobre esta cliente: ${conversation.client_summary}\nUse esse contexto naturalmente. Não se apresente novamente — vocês já conversaram antes.`
-  : 'Esta é provavelmente a primeira conversa com esta cliente.'}
+${freshConv?.client_summary ? `\nO que você sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
 
 Instruções:
-- Se a cliente quiser agendar, ver horários disponíveis ou marcar um horário → responda com o link: ${bookingUrl}
-- Para dúvidas sobre preços, duração ou serviços → responda com base nos dados acima.
-- Se não souber responder algo → diga que vai verificar com a profissional e peça para aguardar.
-- Se a cliente pedir para falar diretamente com a profissional, com a Julia, ou com um atendente humano (de qualquer forma que expresse isso) → responda dizendo que vai avisar a Julia agora e peça para aguardar. Inclua o marcador [PAUSAR_BOT] ao FINAL da resposta (ele é removido automaticamente antes de enviar).
-- Se a cliente digitar "${stopKeyword}" → diga que vai chamar a profissional e inclua [PAUSAR_BOT] ao final.
-- Respostas curtas e objetivas (máximo 3 linhas). Sem formatação markdown. Use emojis com moderação.
-${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : ''}`;
+- Se a cliente quiser agendar ou ver horários → mande o link: ${bookingUrl}
+- Para dúvidas sobre preços ou serviços → responda com base nos dados acima.
+- Se não souber → diga que vai confirmar com a profissional.
+- Se a cliente pedir para falar com a Julia ou com uma pessoa → avise que vai chamar agora e inclua [PAUSAR_BOT] no final.
+- Se a cliente digitar "${stopKeyword}" → diga que vai chamar a profissional e inclua [PAUSAR_BOT] no final.
+- Máximo 3 linhas. Sem markdown. Emojis com moderação.
+${waSettings.bot_persona ? `\nPersonalidade e regras: ${waSettings.bot_persona}` : ''}`;
 
     let responseText: string;
     let shouldPauseBot = false;
@@ -165,45 +189,37 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
       const result = await generateText({
         model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
         system: systemPrompt,
-        messages: [...history, { role: 'user' as const, content: messageText }],
+        messages: history,
         abortSignal: AbortSignal.timeout(25000),
       });
       const raw = result.text.trim();
       shouldPauseBot = raw.includes('[PAUSAR_BOT]');
       responseText = raw.replace('[PAUSAR_BOT]', '').trim();
-      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80), shouldPauseBot ? '→ pausando bot' : '');
+      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80), shouldPauseBot ? '→ pausando' : '');
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       console.error('[Bot] Gemini falhou, usando fallback:', errMsg);
       await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_gemini_error', [
         { role: 'user' as const, content: errMsg.slice(0, 500), at: Date.now() }
       ]).catch(() => {});
-      responseText = `Olá! Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
+      responseText = `Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
     }
 
-    // Delay proporcional ao tamanho da resposta (entre 1.5s e 5s) simulando digitação
     const typingDelay = Math.min(Math.max(responseText.length * 35, 1500), 5000);
     await sendTypingPresence(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, typingDelay);
 
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
-    console.log('[Bot] mensagem enviada:', sent);
+    console.log('[Bot] enviado:', sent);
 
-    // Pausa o bot se Gemini sinalizou transferência para atendimento humano
-    if (shouldPauseBot) {
-      dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
-    }
-
-    // Registra cliente na base (best-effort, não bloqueia)
+    if (shouldPauseBot) dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
     const updatedMessages = [
-      ...(conversation?.messages || []),
-      { role: 'user' as const, content: messageText, at: Date.now() },
+      ...(freshConv?.messages || pendingMessages),
       { role: 'assistant' as const, content: responseText, at: Date.now() },
     ];
 
-    // Atualiza resumo da cliente em background (não bloqueia a resposta)
-    updateClientSummary(conversation?.client_summary, messageText, responseText)
+    updateClientSummary(freshConv?.client_summary, messageText, responseText)
       .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
       .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
 
