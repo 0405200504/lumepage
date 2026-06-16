@@ -2,7 +2,7 @@
 
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
-import { configureUazapiWebhook, checkUazapiStatus } from '@/lib/uazapi';
+import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText } from '@/lib/uazapi';
 
 async function getProfessionalId(): Promise<string | null> {
   try {
@@ -81,6 +81,32 @@ export async function checkWhatsAppStatusAction() {
   }
 }
 
+export async function sendTestMessageAction(phone: string) {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false, error: 'Não autenticado.' };
+
+    const waSettings = await dbService.getWhatsAppSettings(professionalId);
+    if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) {
+      return { success: false, error: 'Credenciais não configuradas.' };
+    }
+
+    // Limpa o número (remove tudo que não for dígito)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) return { success: false, error: 'Número inválido. Use formato: 5511999999999' };
+
+    const sent = await sendWhatsAppText(
+      waSettings.uazapi_url,
+      waSettings.uazapi_token,
+      cleanPhone,
+      '✅ Teste do bot Lume — se você recebeu esta mensagem, o envio está funcionando!'
+    );
+    if (!sent) return { success: false, error: 'uazapi não enviou a mensagem. Verifique URL e token.' };
+    return { success: true as const };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao enviar.' };
+  }
+}
 
 export async function diagnoseWhatsAppAction() {
   try {
@@ -89,14 +115,14 @@ export async function diagnoseWhatsAppAction() {
 
     const steps: Array<{ label: string; ok: boolean; warn?: boolean; detail: string }> = [];
 
-    // 1. Tabela existe e settings carregam?
+    // 1. Tabela e settings
     let waSettings = null;
     try {
       waSettings = await dbService.getWhatsAppSettings(professionalId);
-      steps.push({ label: 'Tabela whatsapp_settings', ok: true, detail: waSettings ? 'Configurações encontradas' : 'Tabela existe mas sem configurações (salve as credenciais)' });
+      steps.push({ label: 'Tabela no banco', ok: true, detail: waSettings ? 'Configurações encontradas' : 'Tabela existe mas sem configurações — salve as credenciais' });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      steps.push({ label: 'Tabela whatsapp_settings', ok: false, detail: msg.includes('migration') ? 'Tabela não existe — rode supabase/migration_v8.sql no Supabase' : msg });
+      steps.push({ label: 'Tabela no banco', ok: false, detail: msg.includes('migration') ? 'Tabela não existe — rode supabase/migration_v8.sql no Supabase' : msg });
       return { ok: false, steps };
     }
 
@@ -105,36 +131,64 @@ export async function diagnoseWhatsAppAction() {
       return { ok: false, steps };
     }
 
-    // 2. Credenciais preenchidas?
+    // 2. Credenciais
     const hasUrl = !!waSettings.uazapi_url;
     const hasToken = !!waSettings.uazapi_token;
     steps.push({ label: 'URL da instância', ok: hasUrl, detail: hasUrl ? waSettings.uazapi_url : 'URL não configurada' });
-    steps.push({ label: 'Token da instância', ok: hasToken, detail: hasToken ? '••••••••' + waSettings.uazapi_token.slice(-4) : 'Token não configurado' });
-
+    steps.push({ label: 'Token', ok: hasToken, detail: hasToken ? '••••••••' + waSettings.uazapi_token.slice(-4) : 'Token não configurado' });
     if (!hasUrl || !hasToken) return { ok: false, steps };
 
-    // 3. Bot ativado?
+    // 3. Bot ativado
     steps.push({ label: 'Bot ativado', ok: !!waSettings.bot_enabled, detail: waSettings.bot_enabled ? 'Ativo' : 'Desativado — ligue o toggle e salve' });
 
-    // 4. Conexão com uazapi (informativo — não bloqueia o bot)
-    const { checkUazapiStatus: check } = await import('@/lib/uazapi');
-    const { status, rawJson } = await check(waSettings.uazapi_url, waSettings.uazapi_token);
-    const isConnected = status === 'open';
+    // 4. Status da instância (informativo)
+    const { status } = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token);
     steps.push({
       label: 'Status da instância',
       ok: true,
-      warn: !isConnected,
-      detail: isConnected
-        ? 'Conectado (open)'
-        : `Não confirmado via API — se o WhatsApp está conectado no painel uazapi, ignore este aviso`,
+      warn: status !== 'open',
+      detail: status === 'open' ? 'Conectado (open)' : 'Não confirmado via API — se o WhatsApp está conectado no painel uazapi, ignore',
     });
 
-    // 5. Webhook URL gerada?
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const hasAppUrl = !!(appUrl && !appUrl.includes('SEU_APP'));
-    steps.push({ label: 'NEXT_PUBLIC_APP_URL', ok: hasAppUrl, detail: hasAppUrl ? appUrl! : 'Variável não configurada no Vercel' });
+    // 5. Webhook registrado na uazapi
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+    const expectedWebhook = appUrl && !appUrl.includes('SEU_APP')
+      ? `${appUrl}/api/whatsapp/webhook?pid=${professionalId}&secret=${waSettings.webhook_secret}`
+      : null;
 
-    const criticalOk = steps.filter((_, i) => i !== 3).every(s => s.ok); // ignora o status check
+    let registeredWebhook: string | null = null;
+    try {
+      const res = await fetch(`${waSettings.uazapi_url}/webhook`, {
+        headers: { token: waSettings.uazapi_token },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (res.ok) {
+        const text = await res.text();
+        let data: Record<string, unknown> = {};
+        try { data = JSON.parse(text); } catch { /* ignore */ }
+        registeredWebhook = (data?.webhookUrl ?? data?.url ?? data?.webhook) as string | null;
+      }
+    } catch { /* ignora erro de rede */ }
+
+    if (!expectedWebhook) {
+      steps.push({ label: 'NEXT_PUBLIC_APP_URL', ok: false, detail: 'Variável não configurada no Vercel' });
+    } else if (!registeredWebhook) {
+      steps.push({
+        label: 'Webhook na uazapi',
+        ok: false,
+        detail: `Nenhum webhook registrado — clique em "Ativar webhook" para registrar`,
+      });
+    } else if (!registeredWebhook.includes(professionalId)) {
+      steps.push({
+        label: 'Webhook na uazapi',
+        ok: false,
+        detail: `URL errada registrada: "${registeredWebhook.slice(0, 80)}" — clique em "Ativar webhook" para corrigir`,
+      });
+    } else {
+      steps.push({ label: 'Webhook na uazapi', ok: true, detail: `Registrado corretamente` });
+    }
+
+    const criticalOk = steps.filter((s) => !s.warn).every(s => s.ok);
     return { ok: criticalOk, steps };
   } catch (e: unknown) {
     return { ok: false, steps: [], error: e instanceof Error ? e.message : 'Erro inesperado' };

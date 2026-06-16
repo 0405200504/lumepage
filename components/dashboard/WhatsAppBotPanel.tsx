@@ -13,6 +13,7 @@ import {
   checkWhatsAppStatusAction,
   getWebhookUrlAction,
   diagnoseWhatsAppAction,
+  sendTestMessageAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppBotPanelProps {
@@ -48,6 +49,8 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState<Awaited<ReturnType<typeof diagnoseWhatsAppAction>> | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
@@ -128,6 +131,18 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
       })
       .catch(() => setStatus('error'));
+  }
+
+  async function handleTestMessage() {
+    setTestResult(null);
+    startTransition(async () => {
+      const res = await sendTestMessageAction(testPhone);
+      if (res.success) {
+        setTestResult('✅ Mensagem enviada! Se chegou no WhatsApp, o envio está funcionando.');
+      } else {
+        setTestResult(`❌ Falha: ${res.error}`);
+      }
+    });
   }
 
   async function handleDiagnose() {
@@ -300,6 +315,36 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Teste de envio */}
+      {isConfigured && (
+        <div className="border-t border-[#efe9e6] pt-5 space-y-2">
+          <p className="text-sm font-semibold text-gray-800">Testar envio de mensagem</p>
+          <p className="text-xs text-gray-500">Digite um número e envie uma mensagem de teste para confirmar que as credenciais funcionam.</p>
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              placeholder="5511999999999"
+              value={testPhone}
+              onChange={e => setTestPhone(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7]"
+            />
+            <button
+              type="button"
+              onClick={handleTestMessage}
+              disabled={isPending || !testPhone}
+              className="shrink-0 px-4 py-2 rounded-xl bg-[#500b18] text-white text-sm font-semibold hover:bg-[#3d0812] transition-colors disabled:opacity-50"
+            >
+              Enviar teste
+            </button>
+          </div>
+          {testResult && (
+            <p className={`text-xs font-medium ${testResult.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+              {testResult}
+            </p>
           )}
         </div>
       )}
