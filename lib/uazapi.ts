@@ -1,3 +1,26 @@
+/**
+ * Envia indicador "digitando..." no WhatsApp e aguarda o delay antes de retornar.
+ * Best-effort: engole erros para não quebrar o bot se o endpoint não existir.
+ */
+export async function sendTypingPresence(
+  baseUrl: string,
+  token: string,
+  phone: string,
+  durationMs: number
+): Promise<void> {
+  try {
+    await fetch(`${baseUrl}/chat/presence`, {
+      method: 'POST',
+      headers: { token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: phone, presence: 'composing' }),
+      signal: AbortSignal.timeout(5000),
+    });
+    await new Promise(r => setTimeout(r, durationMs));
+  } catch {
+    // silencioso — o bot funciona mesmo se o endpoint não existir
+  }
+}
+
 /** Extrai o número de telefone do JID do WhatsApp (remove @s.whatsapp.net). */
 export function phoneFromJid(jid: string): string {
   return jid.replace(/@s\.whatsapp\.net$/, '').replace(/@g\.us$/, '');

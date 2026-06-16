@@ -453,6 +453,18 @@ export const dbService = {
     return mockDb.createClient(data);
   },
 
+  // Cria a cliente pelo contato WhatsApp se ainda não existir (nunca sobrescreve dados existentes).
+  upsertWhatsAppClient: async (professionalId: string, phone: string, name: string): Promise<void> => {
+    if (!isSupabaseConfigured) return;
+    const { error } = await getDb()
+      .from('clients')
+      .upsert(
+        { professional_id: professionalId, whatsapp: phone, name: name || phone },
+        { onConflict: 'professional_id,whatsapp', ignoreDuplicates: true }
+      );
+    if (error) console.warn('[clients] upsertWhatsAppClient:', error.message);
+  },
+
   // Ficha técnica / observações da cliente (requer migração v7). Retorna false se a coluna não existir.
   updateClientNotes: async (id: string, notes: string): Promise<boolean> => {
     if (!isSupabaseConfigured) {

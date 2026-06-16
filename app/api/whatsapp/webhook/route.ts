@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
-import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
+import { sendWhatsAppText, phoneFromJid, sendTypingPresence } from '@/lib/uazapi';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
@@ -155,8 +155,15 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
       responseText = `Olá! Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
     }
 
+    // Delay proporcional ao tamanho da resposta (entre 1.5s e 5s) simulando digitação
+    const typingDelay = Math.min(Math.max(responseText.length * 35, 1500), 5000);
+    await sendTypingPresence(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, typingDelay);
+
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     console.log('[Bot] mensagem enviada:', sent);
+
+    // Registra cliente na base (best-effort, não bloqueia)
+    dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
     dbService.upsertWhatsAppConversation(professionalId, clientPhone, [
       ...(conversation?.messages || []),
