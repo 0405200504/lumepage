@@ -61,6 +61,24 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
+async function updateClientSummary(
+  prev: string | null | undefined,
+  userMessage: string,
+  botReply: string
+): Promise<string | null> {
+  try {
+    const result = await generateText({
+      model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
+      system: 'Você mantém um registro conciso sobre clientes de um salão de beleza. Responda APENAS com o texto do resumo, sem explicações adicionais.',
+      prompt: `Resumo anterior: "${prev || 'nenhum ainda'}"\n\nÚltima troca:\nCliente: "${userMessage}"\nAssistente: "${botReply}"\n\nAtualize o resumo com o que é útil lembrar sobre esta cliente (nome, preferências de horário, serviços de interesse, histórico mencionado, observações). Máximo 3 frases curtas. Se nada novo for relevante, retorne o resumo anterior sem alteração.`,
+      abortSignal: AbortSignal.timeout(15000),
+    });
+    return result.text.trim() || prev || null;
+  } catch {
+    return prev ?? null;
+  }
+}
+
 async function processMessage(professionalId: string, secret: string | null, body: UazapiMessagePayload) {
   try {
     const msg = body.message;
@@ -116,7 +134,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
-    const history = ((conversation?.messages || []) as Array<{ role: 'user' | 'assistant'; content: string }>).slice(-10);
+    const history = ((conversation?.messages || []) as Array<{ role: 'user' | 'assistant'; content: string }>).slice(-20);
 
     const systemPrompt = `Você é a assistente virtual de WhatsApp de ${professional?.name || 'uma profissional de beleza'} (${professional?.brand_name || ''}).
 Responda de forma simpática, curta e direta — como uma atendente humana, não como um robô.
@@ -127,6 +145,10 @@ Serviços disponíveis:
 ${servicesList}
 
 Link para agendar online: ${bookingUrl}
+
+${conversation?.client_summary
+  ? `O que você já sabe sobre esta cliente: ${conversation.client_summary}\nUse esse contexto naturalmente. Não se apresente novamente — vocês já conversaram antes.`
+  : 'Esta é provavelmente a primeira conversa com esta cliente.'}
 
 Instruções:
 - Se a cliente quiser agendar, ver horários disponíveis ou marcar um horário → responda com o link: ${bookingUrl}
@@ -165,11 +187,16 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     // Registra cliente na base (best-effort, não bloqueia)
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
-    dbService.upsertWhatsAppConversation(professionalId, clientPhone, [
+    const updatedMessages = [
       ...(conversation?.messages || []),
       { role: 'user' as const, content: messageText, at: Date.now() },
       { role: 'assistant' as const, content: responseText, at: Date.now() },
-    ]).catch(() => {});
+    ];
+
+    // Atualiza resumo da cliente em background (não bloqueia a resposta)
+    updateClientSummary(conversation?.client_summary, messageText, responseText)
+      .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
+      .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
 
   } catch (e) {
     console.error('[WhatsApp Webhook] erro:', e);

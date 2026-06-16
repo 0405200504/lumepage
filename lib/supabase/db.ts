@@ -1078,20 +1078,20 @@ export const dbService = {
   upsertWhatsAppConversation: async (
     professionalId: string,
     clientPhone: string,
-    messages: WhatsAppConversation['messages']
+    messages: WhatsAppConversation['messages'],
+    clientSummary?: string
   ): Promise<void> => {
+    const payload: Record<string, unknown> = {
+      professional_id: professionalId,
+      client_phone: clientPhone,
+      messages,
+      bot_paused: false,
+      last_message_at: new Date().toISOString(),
+    };
+    if (clientSummary !== undefined) payload.client_summary = clientSummary;
     const { error } = await getDb()
       .from('whatsapp_conversations')
-      .upsert(
-        {
-          professional_id: professionalId,
-          client_phone: clientPhone,
-          messages,
-          bot_paused: false,
-          last_message_at: new Date().toISOString(),
-        },
-        { onConflict: 'professional_id,client_phone' }
-      );
+      .upsert(payload, { onConflict: 'professional_id,client_phone' });
     if (error && !isMissingTable(error)) throw error;
   },
 
