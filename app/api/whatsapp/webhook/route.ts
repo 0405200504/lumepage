@@ -7,18 +7,23 @@ import { generateText } from 'ai';
 
 export const maxDuration = 60;
 
+// Formato real desta instância (fork uazapiGO) — difere da doc genérica:
+// não tem `event`/`data`, e sim `EventType`/`message`, com o texto em
+// `message.text` (não `message.body`) e o telefone em `message.chatid`
+// (não `message.from`). Confirmado inspecionando o payload bruto recebido.
 interface UazapiMessagePayload {
-  instance?: string;
-  event?: string;
-  data?: {
+  EventType?: string;
+  instanceName?: string;
+  message?: {
     id?: string;
-    from?: string;
+    messageid?: string;
+    chatid?: string;
     fromMe?: boolean;
     isGroup?: boolean;
-    body?: string;
+    text?: string;
     type?: string;
-    timestamp?: number;
-    pushName?: string;
+    senderName?: string;
+    messageTimestamp?: number;
   };
 }
 
@@ -40,12 +45,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
+  console.log('[WhatsApp Webhook] evento:', body.EventType, '| tipo:', body.message?.type, '| fromMe:', body.message?.fromMe, '| de:', body.message?.chatid);
 
   // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel)
-  // Loga o payload bruto inteiro — precisamos descobrir o formato real que esta instância envia.
   await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
-    { role: 'user' as const, content: JSON.stringify(body).slice(0, 3000), at: Date.now() }
+    { role: 'user' as const, content: JSON.stringify({ EventType: body.EventType, fromMe: body.message?.fromMe, isGroup: body.message?.isGroup, type: body.message?.type, chatid: body.message?.chatid }), at: Date.now() }
   ]).catch(() => {});
 
   // after() responde à uazapi IMEDIATAMENTE (< 200ms) e continua o processamento
@@ -59,16 +63,13 @@ export async function POST(req: NextRequest) {
 
 async function processMessage(professionalId: string, secret: string | null, body: UazapiMessagePayload) {
   try {
-    const { event, data } = body;
+    const msg = body.message;
 
-    if (!data) { console.log('[Bot] sem data no payload'); return; }
+    if (!msg) { console.log('[Bot] sem message no payload'); return; }
 
-    if (data.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
-    if (data.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
-
-    const hasText = !!(data.body?.trim());
-    if (event !== 'message' && !hasText) { console.log('[Bot] ignorando — evento:', event, 'sem texto'); return; }
-    if (data.type && data.type !== 'text') { console.log('[Bot] ignorando — tipo:', data.type); return; }
+    if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
+    if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
+    if (msg.type && msg.type !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type); return; }
 
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
     if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
@@ -77,10 +78,10 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     if (secret && waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido'); return; }
 
-    const clientPhone = phoneFromJid(data.from || '');
-    if (!clientPhone) { console.warn('[Bot] número inválido:', data.from); return; }
+    const clientPhone = phoneFromJid(msg.chatid || '');
+    if (!clientPhone) { console.warn('[Bot] número inválido:', msg.chatid); return; }
 
-    const messageText = (data.body || '').trim();
+    const messageText = (msg.text || '').trim();
     if (!messageText) { console.log('[Bot] mensagem vazia'); return; }
 
     console.log('[Bot] processando mensagem de', clientPhone, ':', messageText.slice(0, 50));
