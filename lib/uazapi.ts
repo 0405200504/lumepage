@@ -52,14 +52,14 @@ export async function configureUazapiWebhook(
     logs.push(`GET /webhook → exception: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // 2. Payload completo
+  // 2. Payload completo — addUrlEvents:true é o que manda eventos para a URL
   const payload = {
     url: webhookUrl,
     webhookUrl,
     enabled: true,
+    addUrlEvents: true,
+    addUrlTypesMessages: true,
     events: ['message'],
-    addUrlEvents: false,
-    addUrlTypesMessages: false,
     excludeMessages: [],
   };
 
