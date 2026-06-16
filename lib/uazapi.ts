@@ -32,7 +32,8 @@ export async function configureUazapiWebhook(
   token: string,
   webhookUrl: string
 ): Promise<{ success: boolean; error?: string; debug?: string }> {
-  const body = { webhookUrl, events: ['message'] };
+  // uazapi usa "url" (não "webhookUrl") e precisa de enabled:true
+  const body = { url: webhookUrl, webhookUrl, enabled: true, events: ['message'] };
   for (const method of ['PUT', 'POST'] as const) {
     try {
       const res = await fetch(`${baseUrl}/webhook`, {

@@ -168,16 +168,18 @@ export async function diagnoseWhatsAppAction() {
       const text = await res.text();
       getWebhookRaw += text.slice(0, 300);
       if (res.ok) {
-        let data: Record<string, unknown> = {};
-        try { data = JSON.parse(text); } catch { /* ignore */ }
-        // tenta vários formatos de resposta
+        let parsed: unknown;
+        try { parsed = JSON.parse(text); } catch { /* ignore */ }
+        // uazapi retorna array de webhooks: [{ url, webhookUrl, enabled, ... }]
+        const entry = Array.isArray(parsed)
+          ? (parsed[0] as Record<string, unknown>)
+          : (parsed as Record<string, unknown>);
         registeredWebhook = (
-          data?.webhookUrl ??
-          data?.url ??
-          data?.webhook ??
-          (data?.data as Record<string, unknown>)?.webhookUrl ??
-          (data?.data as Record<string, unknown>)?.url
+          entry?.url ?? entry?.webhookUrl ?? entry?.webhook ??
+          (entry?.data as Record<string, unknown>)?.url
         ) as string | null;
+        // URL vazia conta como não registrada
+        if (!registeredWebhook) registeredWebhook = null;
       }
     } catch (e) {
       getWebhookRaw = e instanceof Error ? e.message : String(e);
