@@ -46,6 +46,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [confirmationEnabled, setConfirmationEnabled] = useState(initialSettings?.confirmation_enabled ?? true);
   const [botPersona, setBotPersona] = useState(initialSettings?.bot_persona || '');
   const [stopKeyword, setStopKeyword] = useState(initialSettings?.stop_keyword || '#humano');
+  const [bookingUrl, setBookingUrl] = useState(initialSettings?.booking_url || '');
 
   const [status, setStatus] = useState<ConnectionStatus>('loading');
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
@@ -98,6 +99,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         confirmation_enabled: confirmationEnabled,
         bot_persona: botPersona,
         stop_keyword: stopKeyword,
+        booking_url: bookingUrl,
       });
       if (res.success) {
         success('Salvo!', 'Configurações do bot WhatsApp atualizadas.');
@@ -119,6 +121,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         confirmation_enabled: confirmationEnabled,
         bot_persona: botPersona,
         stop_keyword: stopKeyword,
+        booking_url: bookingUrl,
       });
       if (!saveRes.success) {
         error('Erro ao salvar credenciais', saveRes.error || 'Tente novamente.');
@@ -319,6 +322,23 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
               className="w-full px-4 py-2.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7]"
             />
           </div>
+        </div>
+
+        {/* Link de agendamento */}
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+            Link de agendamento
+          </label>
+          <input
+            type="url"
+            placeholder="https://seusite.vercel.app/"
+            value={bookingUrl}
+            onChange={e => setBookingUrl(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7]"
+          />
+          <p className="text-xs text-gray-400">
+            Sempre que uma cliente quiser agendar, o bot envia este link.
+          </p>
         </div>
 
         {/* Ativar/desativar funções */}

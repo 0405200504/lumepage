@@ -20,6 +20,7 @@ export async function saveWhatsAppSettingsAction(input: {
   confirmation_enabled: boolean;
   bot_persona?: string;
   stop_keyword?: string;
+  booking_url?: string;
 }) {
   try {
     const professionalId = await getProfessionalId();
@@ -32,6 +33,7 @@ export async function saveWhatsAppSettingsAction(input: {
       confirmation_enabled: input.confirmation_enabled,
       bot_persona: input.bot_persona?.trim() || null,
       stop_keyword: input.stop_keyword?.trim() || '#humano',
+      booking_url: input.booking_url?.trim() || null,
     });
     return { success: true as const, settings };
   } catch (e: unknown) {

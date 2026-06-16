@@ -121,7 +121,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     ]);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    const bookingUrl = `${appUrl}/agendar/${professional?.slug}`;
+    const bookingUrl = waSettings.booking_url || `${appUrl}/agendar/${professional?.slug}`;
 
     const activeServices = services.filter(s => s.is_active);
     const servicesList = activeServices.length

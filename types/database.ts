@@ -208,6 +208,7 @@ export interface WhatsAppSettings {
   confirmation_enabled: boolean;
   bot_persona: string | null;
   stop_keyword: string;
+  booking_url: string | null;
   created_at: string;
   updated_at: string;
 }
