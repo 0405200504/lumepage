@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useCallback } from 'react';
+import QRCode from 'qrcode';
 import {
   Bot, Wifi, WifiOff, Copy, Check, Settings2, RefreshCw, Zap, ChevronDown, ChevronUp,
-  XCircle, CheckCircle2, Loader2, AlertCircle,
+  XCircle, CheckCircle2, Loader2, AlertCircle, QrCode as QrCodeIcon,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { WhatsAppSettings } from '@/types/database';
@@ -16,7 +17,10 @@ import {
   sendTestMessageAction,
   getLastWebhookCallAction,
   simulateIncomingMessageAction,
+  getQRCodeAction,
 } from '@/app/actions/whatsapp';
+
+const PERSONA_MAX_LENGTH = 2000;
 
 interface WhatsAppBotPanelProps {
   initialSettings: WhatsAppSettings | null;
@@ -57,6 +61,13 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [simPhone, setSimPhone] = useState('');
   const [simResult, setSimResult] = useState<string | null>(null);
+
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrRaw, setQrRaw] = useState<string | null>(null);
+  const [qrAsyncImgSrc, setQrAsyncImgSrc] = useState<string | null>(null);
+  const [qrConnected, setQrConnected] = useState(false);
 
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
@@ -139,6 +150,66 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       .catch(() => setStatus('error'));
   }
 
+  const handleOpenQrModal = useCallback(async () => {
+    setQrModalOpen(true);
+    setQrLoading(true);
+    setQrError(null);
+    setQrRaw(null);
+    setQrAsyncImgSrc(null);
+    setQrConnected(false);
+
+    const res = await getQRCodeAction();
+    setQrLoading(false);
+
+    if (!res.success) {
+      setQrError(res.error || 'Erro ao gerar QR Code.');
+      return;
+    }
+    if (!res.qrcode) {
+      // já conectado — não há QR pra mostrar
+      setQrConnected(true);
+      setStatus('open');
+      return;
+    }
+    setQrRaw(res.qrcode);
+  }, []);
+
+  function handleCloseQrModal() {
+    setQrModalOpen(false);
+  }
+
+  // Valor crú retornado pela uazapi pode já vir como imagem base64 pronta
+  // (com ou sem prefixo data:) — isso é derivável direto no render.
+  const qrDirectImgSrc = !qrRaw ? null
+    : qrRaw.startsWith('data:image') ? qrRaw
+    : /^(iVBORw0KG|\/9j\/)/.test(qrRaw) ? `data:image/png;base64,${qrRaw}`
+    : null;
+
+  // Se não for nenhum dos formatos acima, é uma string de pareamento crua —
+  // precisa gerar a imagem do QR code no navegador (única parte genuinamente assíncrona).
+  useEffect(() => {
+    if (!qrRaw || qrDirectImgSrc) return;
+    QRCode.toDataURL(qrRaw, { width: 280, margin: 1 })
+      .then(setQrAsyncImgSrc)
+      .catch(() => setQrError('Não foi possível renderizar o QR Code recebido.'));
+  }, [qrRaw, qrDirectImgSrc]);
+
+  const qrImgSrc = qrDirectImgSrc ?? qrAsyncImgSrc;
+
+  // Enquanto o modal estiver aberto e aguardando leitura, verifica a conexão periodicamente
+  useEffect(() => {
+    if (!qrModalOpen || qrConnected || qrLoading) return;
+    const interval = setInterval(async () => {
+      const r = await checkWhatsAppStatusAction().catch(() => null);
+      if (r?.status === 'open') {
+        setQrConnected(true);
+        setStatus('open');
+        success('Conectado!', 'O WhatsApp foi conectado com sucesso.');
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [qrModalOpen, qrConnected, qrLoading, success]);
+
   async function handleTestMessage() {
     setTestResult(null);
     startTransition(async () => {
@@ -208,6 +279,23 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         </button>
       </div>
 
+      {/* Banner de desconexão — visível sempre que a instância cair */}
+      {isConfigured && (status === 'close' || status === 'qr' || status === 'error') && (
+        <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-red-500 shrink-0" />
+            <p className="text-xs font-medium text-red-700">WhatsApp desconectado — clientes não estão recebendo respostas do bot.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleOpenQrModal}
+            className="shrink-0 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors"
+          >
+            Reconectar agora
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-5">
         {/* Credenciais uazapi */}
         <div className="space-y-3">
@@ -251,6 +339,25 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
           />
         </div>
 
+        {/* Treinar a IA — campo prioritário e prominente */}
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+            Treinar a IA (personalidade e regras de resposta)
+          </label>
+          <p className="text-xs text-gray-500">
+            Explique como a IA deve se comportar com as clientes: tom de voz, o que pode ou não pode prometer, como tratar dúvidas sobre preço, dor, prazos, etc. Quanto mais específico, mais coerente fica a resposta.
+          </p>
+          <textarea
+            rows={6}
+            maxLength={PERSONA_MAX_LENGTH}
+            placeholder={`Ex: Fale sempre num tom acolhedor e descontraído, como uma amiga.\nNunca invente preço ou prazo que não esteja na lista de serviços — se não souber, diga que vai confirmar.\nSe perguntarem sobre dor do procedimento, tranquilize e diga que a profissional explica tudo no dia.\nSe perguntarem sobre estacionamento, diga que há vagas na rua na frente do salão.`}
+            value={botPersona}
+            onChange={e => setBotPersona(e.target.value.slice(0, PERSONA_MAX_LENGTH))}
+            className="w-full px-3 py-2.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7] resize-none"
+          />
+          <p className="text-xs text-gray-400 text-right">{botPersona.length}/{PERSONA_MAX_LENGTH}</p>
+        </div>
+
         {/* Avançado (colapsável) */}
         <div className="border border-[#efe9e6] rounded-2xl overflow-hidden">
           <button
@@ -267,18 +374,6 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
           {showAdvanced && (
             <div className="px-4 pb-4 space-y-3 border-t border-[#efe9e6] pt-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Personalidade / tom de voz do bot (opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Ex: Responda de forma super animada, use muito emoji e trate as clientes pelo primeiro nome."
-                  value={botPersona}
-                  onChange={e => setBotPersona(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7] resize-none"
-                />
-              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   Palavra-chave para chamar atendimento humano
@@ -318,15 +413,25 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                 Tente o botão automático primeiro. Se não funcionar, copie a URL abaixo e cole manualmente no painel da uazapi em &ldquo;Webhook&rdquo;.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleSetupWebhook}
-              disabled={isPending}
-              className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <Zap className="w-4 h-4" />
-              Ativar webhook
-            </button>
+            <div className="shrink-0 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenQrModal}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#500b18] text-[#500b18] text-sm font-semibold hover:bg-[#500b18]/5 transition-colors"
+              >
+                <QrCodeIcon className="w-4 h-4" />
+                Conectar via QR Code
+              </button>
+              <button
+                type="button"
+                onClick={handleSetupWebhook}
+                disabled={isPending}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <Zap className="w-4 h-4" />
+                Ativar webhook
+              </button>
+            </div>
           </div>
 
           {/* URL do webhook — destacada para cópia manual */}
@@ -481,6 +586,67 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
           </div>
         )}
       </div>
+
+      {/* Modal de conexão via QR Code */}
+      {qrModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={handleCloseQrModal}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">Conectar WhatsApp</p>
+              <button type="button" onClick={handleCloseQrModal} className="text-gray-400 hover:text-gray-700 transition-colors">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {qrLoading && (
+              <div className="flex flex-col items-center gap-2 py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <p className="text-xs text-gray-500">Gerando QR Code...</p>
+              </div>
+            )}
+
+            {qrError && !qrLoading && (
+              <div className="space-y-3 py-2">
+                <p className="text-xs text-red-500">{qrError}</p>
+                <button
+                  type="button"
+                  onClick={handleOpenQrModal}
+                  className="text-xs font-semibold text-[#500b18] underline"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
+            {qrConnected && !qrLoading && (
+              <div className="flex flex-col items-center gap-2 py-10">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+                <p className="text-sm font-semibold text-gray-800">WhatsApp conectado!</p>
+              </div>
+            )}
+
+            {qrImgSrc && !qrConnected && !qrLoading && (
+              <div className="flex flex-col items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrImgSrc} alt="QR Code do WhatsApp" className="w-64 h-64 rounded-xl border border-[#efe9e6]" />
+                <p className="text-xs text-gray-500 text-center">
+                  No celular: abra o WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar um aparelho → aponte a câmera para este código.
+                </p>
+                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Aguardando leitura...
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

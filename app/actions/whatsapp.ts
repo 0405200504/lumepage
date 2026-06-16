@@ -2,7 +2,7 @@
 
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
-import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText } from '@/lib/uazapi';
+import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode } from '@/lib/uazapi';
 
 async function getProfessionalId(): Promise<string | null> {
   try {
@@ -30,7 +30,7 @@ export async function saveWhatsAppSettingsAction(input: {
       uazapi_token: input.uazapi_token.trim(),
       bot_enabled: input.bot_enabled,
       confirmation_enabled: input.confirmation_enabled,
-      bot_persona: input.bot_persona?.trim() || null,
+      bot_persona: input.bot_persona?.trim().slice(0, 2000) || null,
       stop_keyword: input.stop_keyword?.trim() || '#humano',
     });
     return { success: true as const, settings };
@@ -62,6 +62,28 @@ export async function setupWebhookAction() {
     return { success: true as const, webhookUrl, debug: result.debug };
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao ativar webhook.' };
+  }
+}
+
+export async function getQRCodeAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false as const, error: 'Sessão inválida. Faça login novamente.' };
+
+    const waSettings = await dbService.getWhatsAppSettings(professionalId);
+    if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) {
+      return { success: false as const, error: 'Configure e salve a URL e o token da uazapi primeiro.' };
+    }
+
+    const result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
+    console.log('[getQRCode]', result.debug);
+
+    if (!result.success) {
+      return { success: false as const, error: result.error, debug: result.debug };
+    }
+    return { success: true as const, qrcode: result.qrcode ?? null, status: result.status };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao gerar QR Code.' };
   }
 }
 
@@ -229,13 +251,15 @@ export async function simulateIncomingMessageAction(testPhone: string) {
     const webhookUrl = `${appUrl}/api/whatsapp/webhook?pid=${professionalId}&secret=${waSettings.webhook_secret}`;
 
     const fakePayload = {
-      event: 'message',
-      data: {
-        from: `${cleanPhone}@s.whatsapp.net`,
+      EventType: 'messages',
+      message: {
+        chatid: `${cleanPhone}@s.whatsapp.net`,
         fromMe: false,
         isGroup: false,
-        body: 'Olá, gostaria de agendar um horário',
+        text: 'Olá, gostaria de agendar um horário',
         type: 'text',
+        id: 'SIMULADO_' + Date.now(),
+        messageid: 'SIMULADO_' + Date.now(),
       },
     };
 

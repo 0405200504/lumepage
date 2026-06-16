@@ -104,6 +104,72 @@ export async function configureUazapiWebhook(
   return { success: false, error: 'uazapi não aceitou configuração de webhook via API. Configure manualmente no painel da uazapi.', debug: logs.join(' | ') };
 }
 
+/** Extrai o campo de QR code de formatos de resposta variados da uazapi. */
+function extractQrField(data: Record<string, unknown>): string | null {
+  const instance = data.instance as Record<string, unknown> | undefined;
+  const nested = data.data as Record<string, unknown> | undefined;
+  const qrcodeObj = data.qrcode;
+  const qrcodeNested = (typeof qrcodeObj === 'object' && qrcodeObj !== null)
+    ? qrcodeObj as Record<string, unknown>
+    : undefined;
+
+  const candidates: unknown[] = [
+    typeof qrcodeObj === 'string' ? qrcodeObj : undefined,
+    data.qr, data.base64, data.code,
+    instance?.qrcode, instance?.qr,
+    nested?.qrcode, nested?.qr, nested?.base64,
+    qrcodeNested?.base64, qrcodeNested?.code,
+  ];
+  const found = candidates.find(v => typeof v === 'string' && v.length > 20);
+  return (found as string | undefined) ?? null;
+}
+
+/** Extrai o campo de status de formatos de resposta variados da uazapi. */
+function extractStatusField(data: Record<string, unknown>): string | null {
+  const instance = data.instance as Record<string, unknown> | undefined;
+  const nested = data.data as Record<string, unknown> | undefined;
+  const candidates: unknown[] = [data.status, data.state, instance?.status, nested?.status];
+  return (candidates.find(v => typeof v === 'string') as string | undefined) ?? null;
+}
+
+/**
+ * Busca o QR code para conectar/reconectar a instância. Esta instância uazapi é um
+ * fork não-documentado — tentamos os paths mais comuns para esse tipo de API
+ * (mesmo padrão de nomenclatura de `/instance/status`, que já confirmamos funcionar).
+ */
+export async function getUazapiQRCode(
+  baseUrl: string,
+  token: string
+): Promise<{ success: boolean; qrcode?: string | null; status?: string; error?: string; debug?: string }> {
+  const headers = { token, 'Content-Type': 'application/json' };
+  const logs: string[] = [];
+  const candidates = ['/instance/connect', '/instance/qrcode', '/instance/qr'];
+
+  for (const path of candidates) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { headers, signal: AbortSignal.timeout(15000) });
+      const text = await res.text();
+      logs.push(`GET ${path} → ${res.status}: ${text.slice(0, 200)}`);
+      if (!res.ok) continue;
+
+      let data: Record<string, unknown> = {};
+      try { data = JSON.parse(text); } catch { continue; }
+
+      const qr = extractQrField(data);
+      if (qr) return { success: true, qrcode: qr, debug: logs.join(' | ') };
+
+      const statusVal = extractStatusField(data);
+      if (statusVal && /open|connected/i.test(statusVal)) {
+        return { success: true, qrcode: null, status: statusVal, debug: logs.join(' | ') };
+      }
+    } catch (e) {
+      logs.push(`GET ${path} → exception: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  return { success: false, error: 'Não foi possível obter o QR Code da uazapi.', debug: logs.join(' | ') };
+}
+
 /** Verifica o status da conexão da instância WhatsApp. */
 export async function checkUazapiStatus(
   baseUrl: string,
