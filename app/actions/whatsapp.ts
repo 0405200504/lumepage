@@ -210,6 +210,25 @@ export async function diagnoseWhatsAppAction() {
   }
 }
 
+export async function getLastWebhookCallAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { receivedAt: null, payload: null };
+
+    const conv = await dbService.getWhatsAppConversation(professionalId, '_debug_last_call');
+    if (!conv || !Array.isArray(conv.messages) || conv.messages.length === 0) {
+      return { receivedAt: null, payload: null };
+    }
+    const last = conv.messages[conv.messages.length - 1];
+    return {
+      receivedAt: last.at,
+      payload: last.content,
+    };
+  } catch {
+    return { receivedAt: null, payload: null };
+  }
+}
+
 export async function getWebhookUrlAction() {
   try {
     const professionalId = await getProfessionalId();

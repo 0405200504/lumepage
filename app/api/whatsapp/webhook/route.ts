@@ -42,6 +42,11 @@ export async function POST(req: NextRequest) {
 
   console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
 
+  // Grava que o webhook foi chamado (aparece no diagnóstico do painel)
+  dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
+    { role: 'user' as const, content: JSON.stringify({ event: body.event, fromMe: body.data?.fromMe, type: body.data?.type, from: body.data?.from }), at: Date.now() }
+  ]).catch(() => {});
+
   // Aguarda o processamento ANTES de responder.
   // Em Vercel serverless, fire-and-forget é morto quando a resposta é enviada.
   // O Gemini tem timeout de 4s para garantir resposta total < 5s (limite da uazapi).
@@ -151,15 +156,12 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     // Salva histórico (best-effort — não bloqueia)
     dbService.upsertWhatsAppConversation(professionalId, clientPhone, [
       ...(conversation?.messages || []),
-      { role: 'user', content: messageText, at: Date.now() },
-      { role: 'assistant', content: responseText, at: Date.now() },
-    ] as WhatsAppConversation['messages']).catch(() => {});
+      { role: 'user' as const, content: messageText, at: Date.now() },
+      { role: 'assistant' as const, content: responseText, at: Date.now() },
+    ]).catch(() => {});
 
   } catch (e) {
     console.error('[WhatsApp Webhook] erro:', e);
   }
 }
 
-type WhatsAppConversation = {
-  messages: Array<{ role: 'user' | 'assistant'; content: string; at: number }>;
-};

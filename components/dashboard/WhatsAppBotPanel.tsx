@@ -14,6 +14,7 @@ import {
   getWebhookUrlAction,
   diagnoseWhatsAppAction,
   sendTestMessageAction,
+  getLastWebhookCallAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppBotPanelProps {
@@ -49,6 +50,8 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState<Awaited<ReturnType<typeof diagnoseWhatsAppAction>> | null>(null);
+  const [lastWebhookAt, setLastWebhookAt] = useState<number | null>(null);
+  const [lastWebhookPayload, setLastWebhookPayload] = useState<string | null>(null);
   const [testPhone, setTestPhone] = useState('');
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -148,8 +151,13 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   async function handleDiagnose() {
     setDiagnosing(true);
     setDiagResult(null);
-    const result = await diagnoseWhatsAppAction().catch(() => ({ ok: false, steps: [], error: 'Erro ao verificar' }));
+    const [result, lastCall] = await Promise.all([
+      diagnoseWhatsAppAction().catch(() => ({ ok: false, steps: [], error: 'Erro ao verificar' })),
+      getLastWebhookCallAction().catch(() => ({ receivedAt: null, payload: null })),
+    ]);
     setDiagResult(result);
+    setLastWebhookAt(lastCall.receivedAt ?? null);
+    setLastWebhookPayload(lastCall.payload ?? null);
     setDiagnosing(false);
   }
 
@@ -386,6 +394,35 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                 </div>
               </div>
             ))}
+
+            {/* Rastreador de último webhook recebido */}
+            <div className="flex items-start gap-2 text-xs mt-1 pt-1.5 border-t border-[#efe9e6]">
+              {lastWebhookAt
+                ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                : <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+              }
+              <div>
+                <span className="font-medium text-gray-700">uazapi chamou nosso bot: </span>
+                {lastWebhookAt ? (
+                  <span className="text-gray-500">
+                    Sim — {(() => {
+                      const diff = Math.round((Date.now() - lastWebhookAt) / 1000);
+                      if (diff < 60) return `${diff}s atrás`;
+                      if (diff < 3600) return `${Math.round(diff / 60)}min atrás`;
+                      return new Date(lastWebhookAt).toLocaleTimeString('pt-BR');
+                    })()}
+                    {lastWebhookPayload && (
+                      <span className="text-gray-400 ml-1">({lastWebhookPayload.slice(0, 80)})</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-yellow-600">
+                    Nenhum evento recebido ainda — mande uma mensagem para Julia e clique em "Verificar agora"
+                  </span>
+                )}
+              </div>
+            </div>
+
             {diagResult.ok && (
               <p className="text-xs text-green-600 font-medium mt-2">Tudo configurado! O bot está pronto para responder.</p>
             )}
