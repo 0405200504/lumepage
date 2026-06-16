@@ -180,7 +180,31 @@ export async function deleteTimeBlockAction(professionalId: string, blockId: str
   }
 }
 
-// 6. Atualizar Status de Agendamento
+// 6. Editar Agendamento (reagendamento + troca de serviço/status/obs)
+export async function updateAppointmentAction(
+  appointmentId: string,
+  professionalId: string,
+  patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }
+) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorizeAction(professionalId)) return { success: false, error: 'Não autorizado.' };
+
+    const result = await dbService.updateAppointment(appointmentId, {
+      ...(patch.date && { date: patch.date }),
+      ...(patch.startTime && { start_time: patch.startTime }),
+      ...(patch.endTime && { end_time: patch.endTime }),
+      ...(patch.serviceId && { service_id: patch.serviceId }),
+      ...('notes' in patch && { notes: patch.notes ?? null }),
+      ...(patch.status && { status: patch.status }),
+    });
+    return { success: true, appointment: result };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar agendamento.' };
+  }
+}
+
+// 7. Atualizar Status de Agendamento
 export async function updateAppointmentStatusAction(appointmentId: string, professionalId: string, status: AppointmentStatus, cancellationReason?: string) {
   try {
     if (isDemo(professionalId)) return { success: true };

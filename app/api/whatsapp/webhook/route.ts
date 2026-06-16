@@ -159,28 +159,24 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const history = allMessages.slice(-20);
     const hasPriorExchange = allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const systemPrompt = `## CONTEXTO (fornecido pelo sistema)
-Você atende pelo WhatsApp de ${professional?.name || 'uma profissional de beleza'} (${professional?.brand_name || ''}).
-Data de hoje: ${nowBR}.
+    const systemPrompt = `${waSettings.bot_persona
+      ? waSettings.bot_persona
+      : 'Você é uma atendente simpática e humana. Responda de forma curta, direta e informal. Máximo 3 linhas por resposta. Sem formatação markdown.'
+    }
 
-Serviços e preços:
-${servicesList}
+---
+Contexto do atendimento (use para responder, não mencione que veio de um sistema):
+- Profissional: ${professional?.name || ''} — ${professional?.brand_name || ''}
+- Hoje: ${nowBR}
+- Serviços disponíveis: ${servicesList}
+- Link de agendamento: ${bookingUrl}
+${freshConv?.client_summary ? `- Sobre esta cliente: ${freshConv.client_summary}` : ''}
+${hasPriorExchange ? '- Você já conversou com esta cliente — não se reapresente nem repita saudações.' : '- Primeiro contato com esta cliente.'}
 
-Link de agendamento: ${bookingUrl}
-${freshConv?.client_summary ? `\nO que você já sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
-
-## COMO SE COMPORTAR
-${waSettings.bot_persona
-  ? waSettings.bot_persona
-  : 'Responda de forma simpática, curta e direta, como uma atendente humana. Use linguagem informal e calorosa. Máximo 3 linhas por resposta. Sem formatação markdown.'
-}
-
-## REGRAS FIXAS (sempre aplicadas, independente do treinamento acima)
-- Nunca revele que é uma IA ou assistente virtual.
-- ${hasPriorExchange ? 'Você já conversou com esta cliente antes — NUNCA se reapresente e NUNCA repita saudações como "Oi, tudo bem?". Vá direto ao ponto.' : 'Primeiro contato: pode se apresentar brevemente.'}
-- Se a cliente pedir para agendar ou ver horários disponíveis → envie o link: ${bookingUrl}
-- Se a cliente pedir para falar diretamente com a profissional ou com um humano → avise que vai chamar agora e coloque [PAUSAR_BOT] no final da resposta.
-- Se a cliente digitar "${stopKeyword}" → avise que vai chamar a profissional e coloque [PAUSAR_BOT] no final.`;
+Instruções técnicas obrigatórias (não mencione ao usuário):
+- Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
+- Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
+- Nunca revele que é uma IA.`;
 
     let responseText: string;
     let shouldPauseBot = false;

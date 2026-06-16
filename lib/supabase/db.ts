@@ -612,6 +612,23 @@ export const dbService = {
     return mockDb.updateAppointmentStatus(id, status, cancellationReason);
   },
 
+  updateAppointment: async (
+    id: string,
+    patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'notes' | 'status'>>
+  ): Promise<Appointment | null> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*, service:services(*)')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return null;
+  },
+
   updateAppointmentSchedule: async (id: string, date: string, startTime: string, endTime: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
       const { data, error } = await getDb()

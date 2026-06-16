@@ -4,14 +4,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, CalendarDays, CalendarRange, LayoutGrid,
-  X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical
+  X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
 } from 'lucide-react';
-import { Appointment, TimeBlock, Task } from '@/types/database';
+import { Appointment, Service, TimeBlock, Task } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink } from '@/lib/whatsapp';
 import { createTaskAction, toggleTaskAction, deleteTaskAction, updateTaskAction } from '@/app/actions/crm';
-import { deleteAppointmentAction } from '@/app/actions/professional';
+import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/professional';
+import { AppointmentStatus } from '@/types/database';
 
 type View = 'year' | 'month' | 'week';
 
@@ -21,6 +22,7 @@ interface AgendaCalendarProps {
   reminderTemplate?: string;
   professionalId: string;
   initialTasks: Task[];
+  services: Service[];
 }
 
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -36,7 +38,7 @@ const sameDay = (a: Date, b: Date) => isoOf(a) === isoOf(b);
 const TASK_DND = 'application/lume-task';
 
 export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
-  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks,
+  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services,
 }) => {
   const router = useRouter();
   const today = new Date();
@@ -104,6 +106,13 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     const res = await deleteAppointmentAction(apptId, professionalId);
     if (res.success) router.refresh();
     else alert('Erro ao excluir agendamento.');
+  };
+
+  const editAppt = async (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => {
+    const res = await updateAppointmentAction(apptId, professionalId, patch);
+    if (res.success) router.refresh();
+    else alert('Erro ao atualizar agendamento.');
+    return res.success;
   };
 
   const goToday = () => setCursor(startOfMonth(today));
@@ -183,11 +192,13 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           holiday={holidayMap[selectedISO]}
           blocks={blockByDate[selectedISO] || []}
           reminderTemplate={reminderTemplate}
+          services={services}
           onClose={() => setSelectedISO(null)}
           onAddTask={addTask}
           onToggleTask={toggleT}
           onRemoveTask={removeT}
           onRemoveAppt={removeAppt}
+          onEditAppt={editAppt}
         />
       )}
     </div>
@@ -345,12 +356,21 @@ const YearView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
 };
 
 /* ---------------- DETALHE DO DIA ---------------- */
+const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
+  { value: 'pending', label: 'Pendente' },
+  { value: 'confirmed', label: 'Confirmado' },
+  { value: 'completed', label: 'Finalizado' },
+  { value: 'cancelled', label: 'Cancelado' },
+  { value: 'no_show', label: 'Falta' },
+];
+
 const DayDetail: React.FC<{
   iso: string; appts: Appointment[]; tasks: Task[]; holiday?: Holiday; blocks: TimeBlock[];
-  reminderTemplate?: string; onClose: () => void;
+  reminderTemplate?: string; services: Service[]; onClose: () => void;
   onAddTask: (iso: string, content: string, time: string) => Promise<{ success: boolean; error?: string }>;
   onToggleTask: (t: Task) => void; onRemoveTask: (t: Task) => void; onRemoveAppt: (id: string) => void;
-}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt }) => {
+  onEditAppt: (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => Promise<boolean>;
+}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, services, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt, onEditAppt }) => {
   const [y, mo, d] = iso.split('-').map(Number);
   const dateObj = new Date(y, mo - 1, d);
   const longLabel = `${WEEKDAYS_SHORT[dateObj.getDay()]}, ${d} de ${MONTHS[mo - 1]} de ${y}`;
@@ -358,6 +378,8 @@ const DayDetail: React.FC<{
   const [newTask, setNewTask] = useState('');
   const [newTime, setNewTime] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   const submitTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,19 +438,44 @@ const DayDetail: React.FC<{
               <div className="text-center py-8"><Sparkles className="h-7 w-7 text-wine-200 mx-auto" /><p className="text-xs text-gray-450 mt-2">Nenhum agendamento.</p></div>
             ) : ordered.map((a) => {
               const m = statusMeta(a.status);
+              const isEditing = editingId === a.id;
               return (
-                <div key={a.id} className="rounded-2xl border border-gray-150 bg-paper p-4 shadow-soft mb-2">
-                  <div className="flex items-center justify-between">
+                <div key={a.id} className="rounded-2xl border border-gray-150 bg-paper shadow-soft mb-2 overflow-hidden">
+                  {/* Cabeçalho do card */}
+                  <div className="flex items-center justify-between px-4 pt-4 pb-2">
                     <span className="inline-flex items-center gap-1.5 text-xs font-black text-forest"><Clock className="h-3.5 w-3.5" />{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
+                      <button onClick={() => setEditingId(isEditing ? null : a.id)} className="p-1 text-gray-450 hover:text-wine-700 transition-colors rounded-lg hover:bg-cream" title={isEditing ? 'Fechar edição' : 'Editar'}><Pencil className="h-3.5 w-3.5" /></button>
                       <button onClick={(e) => { e.stopPropagation(); onRemoveAppt(a.id); }} className="p-1 text-gray-450 hover:text-[#b23a48] transition-colors rounded-lg hover:bg-cream" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
-                  <h4 className="font-bold text-sm text-ink mt-2">{a.client_name}</h4>
-                  <p className="text-xs text-gray-450">{a.service?.name}</p>
-                  {a.status !== 'cancelled' && (
-                    <a href={buildReminderLink(a, reminderTemplate)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#226045] bg-[#2e7d5b]/10 hover:bg-[#2e7d5b]/16 border border-[#2e7d5b]/20 rounded-xl px-3 py-1.5 transition-colors"><MessageCircle className="h-3.5 w-3.5" /> Enviar lembrete</a>
+                  <div className="px-4 pb-3">
+                    <h4 className="font-bold text-sm text-ink">{a.client_name}</h4>
+                    <p className="text-xs text-gray-450">{a.service?.name}</p>
+                  </div>
+
+                  {/* Formulário de edição (inline) */}
+                  {isEditing && (
+                    <EditApptForm
+                      appt={a}
+                      services={services}
+                      saving={editSaving}
+                      onSave={async (patch) => {
+                        setEditSaving(true);
+                        const ok = await onEditAppt(a.id, patch);
+                        setEditSaving(false);
+                        if (ok) setEditingId(null);
+                      }}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  )}
+
+                  {/* Lembrete — só quando não está editando */}
+                  {!isEditing && a.status !== 'cancelled' && (
+                    <div className="px-4 pb-4">
+                      <a href={buildReminderLink(a, reminderTemplate)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#226045] bg-[#2e7d5b]/10 hover:bg-[#2e7d5b]/16 border border-[#2e7d5b]/20 rounded-xl px-3 py-1.5 transition-colors"><MessageCircle className="h-3.5 w-3.5" /> Enviar lembrete</a>
+                    </div>
                   )}
                 </div>
               );
@@ -436,6 +483,86 @@ const DayDetail: React.FC<{
           </div>
         </div>
       </aside>
+    </div>
+  );
+};
+
+/* ---- Formulário de edição de agendamento ---- */
+const EditApptForm: React.FC<{
+  appt: Appointment;
+  services: Service[];
+  saving: boolean;
+  onSave: (patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => void;
+  onCancel: () => void;
+}> = ({ appt, services, saving, onSave, onCancel }) => {
+  const [date, setDate] = useState(appt.date);
+  const [startTime, setStartTime] = useState(appt.start_time.substring(0, 5));
+  const [serviceId, setServiceId] = useState(appt.service_id || '');
+  const [status, setStatus] = useState<AppointmentStatus>(appt.status);
+  const [notes, setNotes] = useState(appt.notes || '');
+
+  const selectedService = services.find(s => s.id === serviceId);
+  const computedEndTime = (st: string, svc: Service | undefined) => {
+    if (!st || !svc) return appt.end_time.substring(0, 5);
+    const [h, m] = st.split(':').map(Number);
+    const total = h * 60 + m + svc.duration_minutes;
+    return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
+  };
+
+  const handleSave = () => {
+    const endTime = computedEndTime(startTime, selectedService);
+    onSave({ date, startTime: startTime + ':00', endTime: endTime + ':00', serviceId, notes, status });
+  };
+
+  return (
+    <div className="border-t border-gray-150 bg-cream/40 px-4 py-3 space-y-3">
+      <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Reagendar / editar</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Data</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Horário</label>
+          <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Serviço</label>
+        <select value={serviceId} onChange={e => setServiceId(e.target.value)}
+          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15">
+          {services.filter(s => s.is_active).map(s => (
+            <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes}min)</option>
+          ))}
+        </select>
+        {selectedService && (
+          <p className="text-[10px] text-gray-450 mt-0.5">Término previsto: {computedEndTime(startTime, selectedService)}</p>
+        )}
+      </div>
+      <div>
+        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Status</label>
+        <select value={status} onChange={e => setStatus(e.target.value as AppointmentStatus)}
+          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15">
+          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Observações</label>
+        <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre o agendamento..."
+          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15 resize-none" />
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleSave} disabled={saving}
+          className="flex-1 py-2 rounded-xl surface-wine text-white text-xs font-bold disabled:opacity-60 hover:opacity-90 transition-opacity">
+          {saving ? 'Salvando...' : 'Salvar'}
+        </button>
+        <button onClick={onCancel} disabled={saving}
+          className="flex-1 py-2 rounded-xl border border-gray-150 text-xs font-bold text-gray-450 hover:bg-cream transition-colors">
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 };

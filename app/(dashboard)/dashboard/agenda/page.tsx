@@ -12,11 +12,12 @@ export default async function AgendaPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [appointments, settings, timeBlocks, tasks] = await Promise.all([
+  const [appointments, settings, timeBlocks, tasks, services] = await Promise.all([
     dbService.getAppointmentsByProfessional(professionalId),
     dbService.getSettingsByProfessional(professionalId),
     dbService.getTimeBlocksByProfessional(professionalId),
     dbService.getTasksByProfessional(professionalId),
+    dbService.getServicesByProfessional(professionalId),
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function AgendaPage() {
       reminderTemplate={settings?.whatsapp_confirmation_message || ''}
       professionalId={professionalId}
       initialTasks={tasks}
+      services={services}
     />
   );
 }
