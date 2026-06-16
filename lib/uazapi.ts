@@ -104,70 +104,47 @@ export async function configureUazapiWebhook(
   return { success: false, error: 'uazapi não aceitou configuração de webhook via API. Configure manualmente no painel da uazapi.', debug: logs.join(' | ') };
 }
 
-/** Extrai o campo de QR code de formatos de resposta variados da uazapi. */
-function extractQrField(data: Record<string, unknown>): string | null {
-  const instance = data.instance as Record<string, unknown> | undefined;
-  const nested = data.data as Record<string, unknown> | undefined;
-  const qrcodeObj = data.qrcode;
-  const qrcodeNested = (typeof qrcodeObj === 'object' && qrcodeObj !== null)
-    ? qrcodeObj as Record<string, unknown>
-    : undefined;
-
-  const candidates: unknown[] = [
-    typeof qrcodeObj === 'string' ? qrcodeObj : undefined,
-    data.qr, data.base64, data.code,
-    instance?.qrcode, instance?.qr,
-    nested?.qrcode, nested?.qr, nested?.base64,
-    qrcodeNested?.base64, qrcodeNested?.code,
-  ];
-  const found = candidates.find(v => typeof v === 'string' && v.length > 20);
-  return (found as string | undefined) ?? null;
-}
-
-/** Extrai o campo de status de formatos de resposta variados da uazapi. */
-function extractStatusField(data: Record<string, unknown>): string | null {
-  const instance = data.instance as Record<string, unknown> | undefined;
-  const nested = data.data as Record<string, unknown> | undefined;
-  const candidates: unknown[] = [data.status, data.state, instance?.status, nested?.status];
-  return (candidates.find(v => typeof v === 'string') as string | undefined) ?? null;
-}
-
 /**
- * Busca o QR code para conectar/reconectar a instância. Esta instância uazapi é um
- * fork não-documentado — tentamos os paths mais comuns para esse tipo de API
- * (mesmo padrão de nomenclatura de `/instance/status`, que já confirmamos funcionar).
+ * Busca o QR code (ou pair code) para conectar/reconectar a instância.
+ * Confirmado por inspeção direta: o endpoint real é POST /instance/connect
+ * (não GET) e a resposta tem o formato:
+ *   { connected: boolean, instance: { status, qrcode, paircode, ... } }
+ * Quando já conectado, `qrcode`/`paircode` vêm vazios — não é erro.
  */
 export async function getUazapiQRCode(
   baseUrl: string,
   token: string
-): Promise<{ success: boolean; qrcode?: string | null; status?: string; error?: string; debug?: string }> {
-  const headers = { token, 'Content-Type': 'application/json' };
-  const logs: string[] = [];
-  const candidates = ['/instance/connect', '/instance/qrcode', '/instance/qr'];
+): Promise<{ success: boolean; qrcode?: string | null; paircode?: string | null; alreadyConnected?: boolean; error?: string; debug?: string }> {
+  try {
+    const res = await fetch(`${baseUrl}/instance/connect`, {
+      method: 'POST',
+      headers: { token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15000),
+    });
+    const text = await res.text();
+    if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}`, debug: text.slice(0, 300) };
 
-  for (const path of candidates) {
-    try {
-      const res = await fetch(`${baseUrl}${path}`, { headers, signal: AbortSignal.timeout(15000) });
-      const text = await res.text();
-      logs.push(`GET ${path} → ${res.status}: ${text.slice(0, 200)}`);
-      if (!res.ok) continue;
-
-      let data: Record<string, unknown> = {};
-      try { data = JSON.parse(text); } catch { continue; }
-
-      const qr = extractQrField(data);
-      if (qr) return { success: true, qrcode: qr, debug: logs.join(' | ') };
-
-      const statusVal = extractStatusField(data);
-      if (statusVal && /open|connected/i.test(statusVal)) {
-        return { success: true, qrcode: null, status: statusVal, debug: logs.join(' | ') };
-      }
-    } catch (e) {
-      logs.push(`GET ${path} → exception: ${e instanceof Error ? e.message : String(e)}`);
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(text); } catch {
+      return { success: false, error: 'Resposta inválida da uazapi.', debug: text.slice(0, 300) };
     }
-  }
 
-  return { success: false, error: 'Não foi possível obter o QR Code da uazapi.', debug: logs.join(' | ') };
+    const instance = data.instance as Record<string, unknown> | undefined;
+    const qrcode = [data.qrcode, instance?.qrcode].find(v => typeof v === 'string' && v.length > 20) as string | undefined;
+    const paircode = [data.paircode, instance?.paircode].find(v => typeof v === 'string' && v.length > 0) as string | undefined;
+
+    if (qrcode) return { success: true, qrcode, debug: text.slice(0, 200) };
+    if (paircode) return { success: true, paircode, debug: text.slice(0, 200) };
+
+    const instanceStatus = (instance?.status as string | undefined)?.toLowerCase() ?? '';
+    const connected = data.connected === true || ['connected', 'open'].includes(instanceStatus);
+    if (connected) return { success: true, alreadyConnected: true, debug: text.slice(0, 200) };
+
+    return { success: false, error: 'uazapi não retornou QR code nem código de pareamento.', debug: text.slice(0, 300) };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro de rede.' };
+  }
 }
 
 /** Verifica o status da conexão da instância WhatsApp. */
@@ -187,17 +164,23 @@ export async function checkUazapiStatus(
     let data: Record<string, unknown> = {};
     try { data = JSON.parse(text); } catch { return { status: 'error', rawJson: text.slice(0, 200) }; }
 
-    // uazapi pode retornar status em vários campos e valores
-    const candidates = [
-      data?.status, data?.state,
-      (data?.data as Record<string, unknown>)?.status,
-      (data?.data as Record<string, unknown>)?.state,
-      (data?.instance as Record<string, unknown>)?.status,
-    ];
-    const s = candidates.find(v => typeof v === 'string') as string | undefined;
-    const valid = ['open', 'connecting', 'close', 'qr'] as const;
-    const matched = valid.find(v => (s ?? '').toLowerCase().includes(v));
-    return { status: matched ?? 'error', rawJson: text.slice(0, 200) };
+    // Formato real confirmado: { instance: { status: "connected" }, status: { connected: true, ... } }
+    const instance = data.instance as Record<string, unknown> | undefined;
+    const statusObj = data.status;
+    const connectedBool = (typeof statusObj === 'object' && statusObj !== null)
+      ? (statusObj as Record<string, unknown>).connected
+      : undefined;
+    if (connectedBool === true) return { status: 'open', rawJson: text.slice(0, 300) };
+
+    const instanceStatus = ((instance?.status as string | undefined) ?? '').toLowerCase();
+    if (['connected', 'open', 'online'].includes(instanceStatus)) return { status: 'open', rawJson: text.slice(0, 300) };
+    if (instanceStatus.includes('connecting')) return { status: 'connecting', rawJson: text.slice(0, 300) };
+    if (instanceStatus.includes('qr')) return { status: 'qr', rawJson: text.slice(0, 300) };
+    if (['close', 'closed', 'disconnected', 'logout', 'logged_out'].some(v => instanceStatus.includes(v))) {
+      return { status: 'close', rawJson: text.slice(0, 300) };
+    }
+
+    return { status: 'error', rawJson: text.slice(0, 300) };
   } catch (e) {
     return { status: 'error', rawJson: e instanceof Error ? e.message : String(e) };
   }

@@ -66,6 +66,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrRaw, setQrRaw] = useState<string | null>(null);
+  const [qrPaircode, setQrPaircode] = useState<string | null>(null);
   const [qrAsyncImgSrc, setQrAsyncImgSrc] = useState<string | null>(null);
   const [qrConnected, setQrConnected] = useState(false);
 
@@ -155,6 +156,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
     setQrLoading(true);
     setQrError(null);
     setQrRaw(null);
+    setQrPaircode(null);
     setQrAsyncImgSrc(null);
     setQrConnected(false);
 
@@ -165,13 +167,14 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       setQrError(res.error || 'Erro ao gerar QR Code.');
       return;
     }
-    if (!res.qrcode) {
-      // já conectado — não há QR pra mostrar
+    if (res.alreadyConnected) {
       setQrConnected(true);
       setStatus('open');
       return;
     }
-    setQrRaw(res.qrcode);
+    if (res.qrcode) { setQrRaw(res.qrcode); return; }
+    if (res.paircode) { setQrPaircode(res.paircode); return; }
+    setQrError('A uazapi não retornou QR Code nem código de pareamento.');
   }, []);
 
   function handleCloseQrModal() {
@@ -641,6 +644,21 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                 <p className="text-xs text-gray-400 flex items-center gap-1.5">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Aguardando leitura...
+                </p>
+              </div>
+            )}
+
+            {qrPaircode && !qrConnected && !qrLoading && (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-2xl font-mono font-bold tracking-widest text-[#500b18] bg-[#faf8f7] border border-[#efe9e6] rounded-xl px-4 py-3">
+                  {qrPaircode}
+                </p>
+                <p className="text-xs text-gray-500 text-center">
+                  No celular: abra o WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite este código.
+                </p>
+                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Aguardando confirmação...
                 </p>
               </div>
             )}

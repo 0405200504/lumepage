@@ -81,7 +81,12 @@ export async function getQRCodeAction() {
     if (!result.success) {
       return { success: false as const, error: result.error, debug: result.debug };
     }
-    return { success: true as const, qrcode: result.qrcode ?? null, status: result.status };
+    return {
+      success: true as const,
+      qrcode: result.qrcode ?? null,
+      paircode: result.paircode ?? null,
+      alreadyConnected: result.alreadyConnected ?? false,
+    };
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao gerar QR Code.' };
   }
