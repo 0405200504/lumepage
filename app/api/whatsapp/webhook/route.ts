@@ -4,6 +4,7 @@ import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
+// 30s para ter margem para o Gemini, mas respondemos à uazapi em < 5s
 export const maxDuration = 30;
 
 interface UazapiMessagePayload {
@@ -17,6 +18,7 @@ interface UazapiMessagePayload {
     body?: string;
     type?: string;
     timestamp?: number;
+    pushName?: string;
   };
 }
 
@@ -24,10 +26,10 @@ export async function POST(req: NextRequest) {
   const pid = req.nextUrl.searchParams.get('pid');
   const secret = req.nextUrl.searchParams.get('secret');
 
-  console.log('[WhatsApp Webhook] recebido — pid:', pid, 'secret:', secret ? '✓' : '✗');
+  console.log('[WhatsApp Webhook] recebido — pid:', pid);
 
   if (!pid) {
-    console.warn('[WhatsApp Webhook] pid ausente na URL do webhook — configure o webhook corretamente');
+    console.warn('[WhatsApp Webhook] pid ausente na URL');
     return NextResponse.json({ ok: true });
   }
 
@@ -35,14 +37,15 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    console.warn('[WhatsApp Webhook] payload inválido');
     return NextResponse.json({ ok: true });
   }
 
-  console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| de:', body.data?.from, '| fromMe:', body.data?.fromMe);
+  console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
 
-  // Responde 200 imediatamente e processa em background (uazapi exige < 5s)
-  processMessage(pid, secret, body).catch(console.error);
+  // Aguarda o processamento ANTES de responder.
+  // Em Vercel serverless, fire-and-forget é morto quando a resposta é enviada.
+  // O Gemini tem timeout de 4s para garantir resposta total < 5s (limite da uazapi).
+  await processMessage(pid, secret, body);
 
   return NextResponse.json({ ok: true });
 }
@@ -51,43 +54,43 @@ async function processMessage(professionalId: string, secret: string | null, bod
   try {
     const { event, data } = body;
 
-    // Só processa mensagens de texto recebidas de clientes (não enviadas pela profissional, não de grupos)
-    if (event !== 'message' || !data) return;
-    if (data.fromMe || data.isGroup) return;
-    if (data.type !== 'text') return;
+    if (!data) { console.log('[Bot] sem data no payload'); return; }
+
+    // Ignora mensagens enviadas PELA profissional, grupos, e não-texto
+    if (data.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
+    if (data.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
+
+    // Aceita event === 'message' OU qualquer evento que tenha body de texto
+    const hasText = !!(data.body?.trim());
+    if (event !== 'message' && !hasText) { console.log('[Bot] ignorando — evento:', event, 'sem texto'); return; }
+    if (data.type && data.type !== 'text') { console.log('[Bot] ignorando — tipo:', data.type); return; }
 
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
-    if (!waSettings) { console.warn('[WhatsApp Bot] sem configurações no banco — rode migration_v8.sql e salve as credenciais'); return; }
-    if (!waSettings.bot_enabled) { console.log('[WhatsApp Bot] bot desativado para profissional', professionalId); return; }
-    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[WhatsApp Bot] URL ou token da uazapi não configurados'); return; }
+    if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
+    if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
+    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
 
-    // Valida o secret para evitar chamadas não autorizadas
-    if (secret && waSettings.webhook_secret !== secret) return;
+    if (secret && waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido'); return; }
 
     const clientPhone = phoneFromJid(data.from || '');
-    if (!clientPhone) return;
+    if (!clientPhone) { console.warn('[Bot] número inválido:', data.from); return; }
 
     const messageText = (data.body || '').trim();
-    if (!messageText) return;
+    if (!messageText) { console.log('[Bot] mensagem vazia'); return; }
 
-    // Verifica se o bot está pausado para essa conversa (cliente usou a palavra-chave de humano)
+    console.log('[Bot] processando mensagem de', clientPhone, ':', messageText.slice(0, 50));
+
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
-    if (conversation?.bot_paused) return;
+    if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
 
-    // Palavra-chave que desativa o bot para esse cliente
     const stopKeyword = waSettings.stop_keyword || '#humano';
     if (messageText.toLowerCase() === stopKeyword.toLowerCase()) {
       await dbService.pauseWhatsAppConversation(professionalId, clientPhone);
-      await sendWhatsAppText(
-        waSettings.uazapi_url,
-        waSettings.uazapi_token,
-        clientPhone,
-        'Tudo bem! Vou chamar a profissional para te atender pessoalmente. Um momento 😊'
-      );
+      await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone,
+        'Tudo bem! Vou chamar a profissional para te atender pessoalmente. Um momento 😊');
       return;
     }
 
-    // Carrega contexto da profissional para o Gemini
     const [professional, services] = await Promise.all([
       dbService.getProfessionalById(professionalId),
       dbService.getServicesByProfessional(professionalId),
@@ -98,22 +101,16 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const activeServices = services.filter(s => s.is_active);
     const servicesList = activeServices.length
-      ? activeServices
-          .map(s => `- ${s.name}: ${s.duration_minutes}min, R$ ${(s.price_cents / 100).toFixed(2).replace('.', ',')}`)
-          .join('\n')
+      ? activeServices.map(s =>
+          `- ${s.name}: ${s.duration_minutes}min, R$ ${(s.price_cents / 100).toFixed(2).replace('.', ',')}`
+        ).join('\n')
       : '(consulte diretamente com a profissional)';
 
     const nowBR = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+      timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
-    // Histórico da conversa (últimas 10 mensagens) para manter contexto
-    const history = ((conversation?.messages || []) as Array<{ role: 'user' | 'assistant'; content: string }>)
-      .slice(-10);
+    const history = ((conversation?.messages || []) as Array<{ role: 'user' | 'assistant'; content: string }>).slice(-10);
 
     const systemPrompt = `Você é a assistente virtual de WhatsApp de ${professional?.name || 'uma profissional de beleza'} (${professional?.brand_name || ''}).
 Responda de forma simpática, curta e direta — como uma atendente humana, não como um robô.
@@ -133,43 +130,36 @@ Instruções:
 - Respostas curtas e objetivas (máximo 3 linhas). Sem formatação markdown. Use emojis com moderação.
 ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : ''}`;
 
-    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-      ...history,
-      { role: 'user', content: messageText },
-    ];
-
     let responseText: string;
     try {
       const result = await generateText({
-        model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
+        model: google(process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
         system: systemPrompt,
-        messages,
+        messages: [...history, { role: 'user' as const, content: messageText }],
+        abortSignal: AbortSignal.timeout(4000), // máx 4s para caber no limite de 5s da uazapi
       });
       responseText = result.text.trim();
+      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80));
     } catch (e) {
-      console.error('[WhatsApp Bot] Gemini erro:', e);
+      console.error('[Bot] Gemini falhou, usando fallback:', e);
       responseText = `Olá! Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
     }
 
-    // Envia a resposta via uazapi
-    console.log('[WhatsApp Bot] enviando resposta para', clientPhone, ':', responseText.slice(0, 60));
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
-    if (!sent) console.error('[WhatsApp Bot] falha ao enviar mensagem para', clientPhone);
+    console.log('[Bot] mensagem enviada:', sent);
 
-    // Salva o histórico da conversa para manter contexto nas próximas mensagens
-    const updatedMessages: WhatsAppConversation['messages'] = [
+    // Salva histórico (best-effort — não bloqueia)
+    dbService.upsertWhatsAppConversation(professionalId, clientPhone, [
       ...(conversation?.messages || []),
       { role: 'user', content: messageText, at: Date.now() },
       { role: 'assistant', content: responseText, at: Date.now() },
-    ];
-    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages);
+    ] as WhatsAppConversation['messages']).catch(() => {});
 
   } catch (e) {
-    console.error('[WhatsApp Webhook] Erro ao processar mensagem:', e);
+    console.error('[WhatsApp Webhook] erro:', e);
   }
 }
 
-// Tipo local para evitar import circular
 type WhatsAppConversation = {
   messages: Array<{ role: 'user' | 'assistant'; content: string; at: number }>;
 };
