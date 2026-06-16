@@ -111,7 +111,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
       const res = await setupWebhookAction();
       if (res.success) {
-        success('Webhook ativado!', 'A uazapi vai enviar mensagens para o Lume automaticamente.');
+        success('Webhook ativado!', res.debug ?? 'A uazapi vai enviar mensagens para o Lume automaticamente.');
         if (res.webhookUrl) setWebhookUrl(res.webhookUrl);
         checkWhatsAppStatusAction().then(r => {
           const val = r.status as string;

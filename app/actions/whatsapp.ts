@@ -56,9 +56,10 @@ export async function setupWebhookAction() {
 
     const webhookUrl = `${appUrl}/api/whatsapp/webhook?pid=${professionalId}&secret=${waSettings.webhook_secret}`;
     const result = await configureUazapiWebhook(waSettings.uazapi_url, waSettings.uazapi_token, webhookUrl);
+    console.log('[setupWebhook]', result.debug);
 
     if (!result.success) return { success: false, error: result.error };
-    return { success: true as const, webhookUrl };
+    return { success: true as const, webhookUrl, debug: result.debug };
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao ativar webhook.' };
   }
@@ -157,18 +158,30 @@ export async function diagnoseWhatsAppAction() {
       : null;
 
     let registeredWebhook: string | null = null;
+    let getWebhookRaw = '';
     try {
       const res = await fetch(`${waSettings.uazapi_url}/webhook`, {
         headers: { token: waSettings.uazapi_token },
         signal: AbortSignal.timeout(6000),
       });
+      getWebhookRaw = `HTTP ${res.status}: `;
+      const text = await res.text();
+      getWebhookRaw += text.slice(0, 300);
       if (res.ok) {
-        const text = await res.text();
         let data: Record<string, unknown> = {};
         try { data = JSON.parse(text); } catch { /* ignore */ }
-        registeredWebhook = (data?.webhookUrl ?? data?.url ?? data?.webhook) as string | null;
+        // tenta vários formatos de resposta
+        registeredWebhook = (
+          data?.webhookUrl ??
+          data?.url ??
+          data?.webhook ??
+          (data?.data as Record<string, unknown>)?.webhookUrl ??
+          (data?.data as Record<string, unknown>)?.url
+        ) as string | null;
       }
-    } catch { /* ignora erro de rede */ }
+    } catch (e) {
+      getWebhookRaw = e instanceof Error ? e.message : String(e);
+    }
 
     if (!expectedWebhook) {
       steps.push({ label: 'NEXT_PUBLIC_APP_URL', ok: false, detail: 'Variável não configurada no Vercel' });
@@ -176,13 +189,13 @@ export async function diagnoseWhatsAppAction() {
       steps.push({
         label: 'Webhook na uazapi',
         ok: false,
-        detail: `Nenhum webhook registrado — clique em "Ativar webhook" para registrar`,
+        detail: `Nenhum webhook detectado. Resposta raw: ${getWebhookRaw}`,
       });
     } else if (!registeredWebhook.includes(professionalId)) {
       steps.push({
         label: 'Webhook na uazapi',
         ok: false,
-        detail: `URL errada registrada: "${registeredWebhook.slice(0, 80)}" — clique em "Ativar webhook" para corrigir`,
+        detail: `URL errada: "${registeredWebhook.slice(0, 80)}" — clique em "Ativar webhook"`,
       });
     } else {
       steps.push({ label: 'Webhook na uazapi', ok: true, detail: `Registrado corretamente` });
