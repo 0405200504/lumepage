@@ -32,28 +32,75 @@ export async function configureUazapiWebhook(
   token: string,
   webhookUrl: string
 ): Promise<{ success: boolean; error?: string; debug?: string }> {
-  // uazapi usa "url" (não "webhookUrl") e precisa de enabled:true
-  const body = { url: webhookUrl, webhookUrl, enabled: true, events: ['message'] };
-  for (const method of ['PUT', 'POST'] as const) {
+  const headers = { token, 'Content-Type': 'application/json' };
+  const logs: string[] = [];
+
+  // 1. Busca o webhook existente para obter o ID (uazapi retorna array)
+  let existingId: string | null = null;
+  try {
+    const getRes = await fetch(`${baseUrl}/webhook`, { headers, signal: AbortSignal.timeout(6000) });
+    const getText = await getRes.text().catch(() => '');
+    logs.push(`GET /webhook → ${getRes.status}: ${getText.slice(0, 200)}`);
+    if (getRes.ok) {
+      let parsed: unknown;
+      try { parsed = JSON.parse(getText); } catch { /* ignore */ }
+      const entry = Array.isArray(parsed) ? (parsed[0] as Record<string, unknown>) : (parsed as Record<string, unknown>);
+      existingId = (entry?.id ?? null) as string | null;
+    }
+  } catch (e) {
+    logs.push(`GET /webhook → exception: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // 2. Payload com todos os campos que a uazapi espera
+  const payload = {
+    url: webhookUrl,
+    webhookUrl,        // alias caso uazapi prefira este campo
+    enabled: true,
+    events: ['message'],
+    addUrlEvents: false,
+    addUrlTypesMessages: false,
+    excludeMessages: [],
+  };
+
+  // 3a. Se temos um ID, atualiza via PUT /webhook/{id}
+  if (existingId) {
     try {
-      const res = await fetch(`${baseUrl}/webhook`, {
-        method,
-        headers: { token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      const putRes = await fetch(`${baseUrl}/webhook/${existingId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ ...payload, id: existingId }),
+        signal: AbortSignal.timeout(8000),
       });
-      const responseText = await res.text().catch(() => '');
-      const debug = `${method} /webhook → HTTP ${res.status}: ${responseText.slice(0, 200)}`;
-      if (res.status === 405) continue;
-      if (!res.ok) {
-        return { success: false, error: `uazapi retornou ${res.status}: ${responseText}`, debug };
-      }
-      return { success: true, debug };
+      const putText = await putRes.text().catch(() => '');
+      logs.push(`PUT /webhook/${existingId} → ${putRes.status}: ${putText.slice(0, 200)}`);
+      if (putRes.ok) return { success: true, debug: logs.join(' | ') };
+      // Se falhou por ID, tenta sem ID
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erro de rede';
-      return { success: false, error: msg, debug: `${method} → exception: ${msg}` };
+      logs.push(`PUT /webhook/${existingId} → exception: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  return { success: false, error: 'uazapi não aceitou PUT nem POST em /webhook.' };
+
+  // 3b. Tenta PUT /webhook (sem ID) e depois POST /webhook
+  for (const [method, path] of [['PUT', '/webhook'], ['POST', '/webhook']] as const) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000),
+      });
+      const text = await res.text().catch(() => '');
+      logs.push(`${method} ${path} → ${res.status}: ${text.slice(0, 200)}`);
+      if (res.status === 405) continue;
+      if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}: ${text}`, debug: logs.join(' | ') };
+      return { success: true, debug: logs.join(' | ') };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erro de rede';
+      logs.push(`${method} ${path} → exception: ${msg}`);
+    }
+  }
+
+  return { success: false, error: 'uazapi não aceitou nenhuma forma de configuração de webhook.', debug: logs.join(' | ') };
 }
 
 /** Verifica o status da conexão da instância WhatsApp. */
