@@ -20,8 +20,6 @@ import {
   getQRCodeAction,
 } from '@/app/actions/whatsapp';
 
-const PERSONA_MAX_LENGTH = 2000;
-
 interface WhatsAppBotPanelProps {
   initialSettings: WhatsAppSettings | null;
 }
@@ -352,13 +350,12 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
           </p>
           <textarea
             rows={6}
-            maxLength={PERSONA_MAX_LENGTH}
             placeholder={`Ex: Fale sempre num tom acolhedor e descontraído, como uma amiga.\nNunca invente preço ou prazo que não esteja na lista de serviços — se não souber, diga que vai confirmar.\nSe perguntarem sobre dor do procedimento, tranquilize e diga que a profissional explica tudo no dia.\nSe perguntarem sobre estacionamento, diga que há vagas na rua na frente do salão.`}
             value={botPersona}
-            onChange={e => setBotPersona(e.target.value.slice(0, PERSONA_MAX_LENGTH))}
+            onChange={e => setBotPersona(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7] resize-none"
           />
-          <p className="text-xs text-gray-400 text-right">{botPersona.length}/{PERSONA_MAX_LENGTH}</p>
+          <p className="text-xs text-gray-400 text-right">{botPersona.length} caracteres</p>
         </div>
 
         {/* Avançado (colapsável) */}

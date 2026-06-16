@@ -30,7 +30,7 @@ export async function saveWhatsAppSettingsAction(input: {
       uazapi_token: input.uazapi_token.trim(),
       bot_enabled: input.bot_enabled,
       confirmation_enabled: input.confirmation_enabled,
-      bot_persona: input.bot_persona?.trim().slice(0, 2000) || null,
+      bot_persona: input.bot_persona?.trim() || null,
       stop_keyword: input.stop_keyword?.trim() || '#humano',
     });
     return { success: true as const, settings };
