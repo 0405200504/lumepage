@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
   console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
 
   // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel)
+  // Loga o payload bruto inteiro — precisamos descobrir o formato real que esta instância envia.
   await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
-    { role: 'user' as const, content: JSON.stringify({ event: body.event, fromMe: body.data?.fromMe, type: body.data?.type, from: body.data?.from }), at: Date.now() }
+    { role: 'user' as const, content: JSON.stringify(body).slice(0, 3000), at: Date.now() }
   ]).catch(() => {});
 
   // after() responde à uazapi IMEDIATAMENTE (< 200ms) e continua o processamento
