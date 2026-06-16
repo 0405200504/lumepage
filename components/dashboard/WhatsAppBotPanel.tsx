@@ -15,6 +15,7 @@ import {
   diagnoseWhatsAppAction,
   sendTestMessageAction,
   getLastWebhookCallAction,
+  simulateIncomingMessageAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppBotPanelProps {
@@ -54,6 +55,8 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [lastWebhookPayload, setLastWebhookPayload] = useState<string | null>(null);
   const [testPhone, setTestPhone] = useState('');
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [simPhone, setSimPhone] = useState('');
+  const [simResult, setSimResult] = useState<string | null>(null);
 
   // Carrega status e URL do webhook ao montar
   useEffect(() => {
@@ -144,6 +147,18 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         setTestResult('✅ Mensagem enviada! Se chegou no WhatsApp, o envio está funcionando.');
       } else {
         setTestResult(`❌ Falha: ${res.error}`);
+      }
+    });
+  }
+
+  async function handleSimulate() {
+    setSimResult('Simulando... (pode demorar até 15s)');
+    startTransition(async () => {
+      const res = await simulateIncomingMessageAction(simPhone);
+      if (res.success) {
+        setSimResult('✅ Bot processou a mensagem! Se o número recebeu resposta no WhatsApp, o bot está funcionando. O problema é a uazapi não disparando o webhook.');
+      } else {
+        setSimResult(`❌ Falha ao processar: ${'error' in res ? res.error : `HTTP ${res.status}`}`);
       }
     });
   }
@@ -352,6 +367,38 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
           {testResult && (
             <p className={`text-xs font-medium ${testResult.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
               {testResult}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Simular mensagem recebida (testa o pipeline completo sem depender da uazapi) */}
+      {isConfigured && (
+        <div className="border-t border-[#efe9e6] pt-5 space-y-2">
+          <p className="text-sm font-semibold text-gray-800">Simular mensagem recebida</p>
+          <p className="text-xs text-gray-500">
+            Dispara o bot como se a uazapi tivesse mandado uma mensagem. Se o número receber resposta, o bot está OK — o problema é só a uazapi não chamando o webhook.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              placeholder="5511999999999 (número que vai receber a resposta)"
+              value={simPhone}
+              onChange={e => setSimPhone(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7]"
+            />
+            <button
+              type="button"
+              onClick={handleSimulate}
+              disabled={isPending || !simPhone}
+              className="shrink-0 px-4 py-2 rounded-xl bg-[#500b18] text-white text-sm font-semibold hover:bg-[#3d0812] transition-colors disabled:opacity-50"
+            >
+              Simular
+            </button>
+          </div>
+          {simResult && (
+            <p className={`text-xs font-medium ${simResult.startsWith('✅') ? 'text-green-600' : simResult.startsWith('❌') ? 'text-red-500' : 'text-gray-500'}`}>
+              {simResult}
             </p>
           )}
         </div>

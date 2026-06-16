@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
 
   console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
 
-  // Grava que o webhook foi chamado (aparece no diagnóstico do painel)
-  dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
+  // Grava que o webhook foi chamado — await garante que é salvo antes de retornar
+  await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
     { role: 'user' as const, content: JSON.stringify({ event: body.event, fromMe: body.data?.fromMe, type: body.data?.type, from: body.data?.from }), at: Date.now() }
   ]).catch(() => {});
 

@@ -210,6 +210,48 @@ export async function diagnoseWhatsAppAction() {
   }
 }
 
+export async function simulateIncomingMessageAction(testPhone: string) {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false, error: 'Não autenticado.' };
+
+    const waSettings = await dbService.getWhatsAppSettings(professionalId);
+    if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) {
+      return { success: false, error: 'Credenciais não configuradas.' };
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) return { success: false, error: 'NEXT_PUBLIC_APP_URL não configurado.' };
+
+    const cleanPhone = testPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) return { success: false, error: 'Número inválido. Use formato: 5511999999999' };
+
+    const webhookUrl = `${appUrl}/api/whatsapp/webhook?pid=${professionalId}&secret=${waSettings.webhook_secret}`;
+
+    const fakePayload = {
+      event: 'message',
+      data: {
+        from: `${cleanPhone}@s.whatsapp.net`,
+        fromMe: false,
+        isGroup: false,
+        body: 'Olá, gostaria de agendar um horário',
+        type: 'text',
+      },
+    };
+
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fakePayload),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    return { success: res.ok, status: res.status };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao simular.' };
+  }
+}
+
 export async function getLastWebhookCallAction() {
   try {
     const professionalId = await getProfessionalId();
