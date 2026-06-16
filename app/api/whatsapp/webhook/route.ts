@@ -1,11 +1,11 @@
+import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
-// 30s para ter margem para o Gemini, mas respondemos à uazapi em < 5s
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 interface UazapiMessagePayload {
   instance?: string;
@@ -42,15 +42,16 @@ export async function POST(req: NextRequest) {
 
   console.log('[WhatsApp Webhook] evento:', body.event, '| tipo:', body.data?.type, '| fromMe:', body.data?.fromMe, '| de:', body.data?.from);
 
-  // Grava que o webhook foi chamado — await garante que é salvo antes de retornar
+  // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel)
   await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
     { role: 'user' as const, content: JSON.stringify({ event: body.event, fromMe: body.data?.fromMe, type: body.data?.type, from: body.data?.from }), at: Date.now() }
   ]).catch(() => {});
 
-  // Aguarda o processamento ANTES de responder.
-  // Em Vercel serverless, fire-and-forget é morto quando a resposta é enviada.
-  // O Gemini tem timeout de 4s para garantir resposta total < 5s (limite da uazapi).
-  await processMessage(pid, secret, body);
+  // after() responde à uazapi IMEDIATAMENTE (< 200ms) e continua o processamento
+  // em background — elimina qualquer risco de timeout da uazapi.
+  after(async () => {
+    await processMessage(pid, secret, body);
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -61,11 +62,9 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     if (!data) { console.log('[Bot] sem data no payload'); return; }
 
-    // Ignora mensagens enviadas PELA profissional, grupos, e não-texto
     if (data.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
     if (data.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
 
-    // Aceita event === 'message' OU qualquer evento que tenha body de texto
     const hasText = !!(data.body?.trim());
     if (event !== 'message' && !hasText) { console.log('[Bot] ignorando — evento:', event, 'sem texto'); return; }
     if (data.type && data.type !== 'text') { console.log('[Bot] ignorando — tipo:', data.type); return; }
@@ -141,7 +140,7 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
         model: google(process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
         system: systemPrompt,
         messages: [...history, { role: 'user' as const, content: messageText }],
-        abortSignal: AbortSignal.timeout(4000), // máx 4s para caber no limite de 5s da uazapi
+        abortSignal: AbortSignal.timeout(25000),
       });
       responseText = result.text.trim();
       console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80));
@@ -153,7 +152,6 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     console.log('[Bot] mensagem enviada:', sent);
 
-    // Salva histórico (best-effort — não bloqueia)
     dbService.upsertWhatsAppConversation(professionalId, clientPhone, [
       ...(conversation?.messages || []),
       { role: 'user' as const, content: messageText, at: Date.now() },
@@ -164,4 +162,3 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     console.error('[WhatsApp Webhook] erro:', e);
   }
 }
-
