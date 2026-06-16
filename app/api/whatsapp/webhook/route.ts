@@ -139,7 +139,7 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
     let responseText: string;
     try {
       const result = await generateText({
-        model: google(process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
+        model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
         system: systemPrompt,
         messages: [...history, { role: 'user' as const, content: messageText }],
         abortSignal: AbortSignal.timeout(25000),
