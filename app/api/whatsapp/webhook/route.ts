@@ -109,7 +109,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const stopKeyword = waSettings.stop_keyword || '#humano';
     if (messageText.toLowerCase() === stopKeyword.toLowerCase()) {
-      await dbService.pauseWhatsAppConversation(professionalId, clientPhone);
+      await dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
       await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone,
         'Tudo bem! Vou chamar a profissional para te atender pessoalmente. Um momento 😊');
       return;
@@ -154,11 +154,13 @@ Instruções:
 - Se a cliente quiser agendar, ver horários disponíveis ou marcar um horário → responda com o link: ${bookingUrl}
 - Para dúvidas sobre preços, duração ou serviços → responda com base nos dados acima.
 - Se não souber responder algo → diga que vai verificar com a profissional e peça para aguardar.
-- Se a cliente digitar "${stopKeyword}" → diga que vai chamar a profissional.
+- Se a cliente pedir para falar diretamente com a profissional, com a Julia, ou com um atendente humano (de qualquer forma que expresse isso) → responda dizendo que vai avisar a Julia agora e peça para aguardar. Inclua o marcador [PAUSAR_BOT] ao FINAL da resposta (ele é removido automaticamente antes de enviar).
+- Se a cliente digitar "${stopKeyword}" → diga que vai chamar a profissional e inclua [PAUSAR_BOT] ao final.
 - Respostas curtas e objetivas (máximo 3 linhas). Sem formatação markdown. Use emojis com moderação.
 ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : ''}`;
 
     let responseText: string;
+    let shouldPauseBot = false;
     try {
       const result = await generateText({
         model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
@@ -166,8 +168,10 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
         messages: [...history, { role: 'user' as const, content: messageText }],
         abortSignal: AbortSignal.timeout(25000),
       });
-      responseText = result.text.trim();
-      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80));
+      const raw = result.text.trim();
+      shouldPauseBot = raw.includes('[PAUSAR_BOT]');
+      responseText = raw.replace('[PAUSAR_BOT]', '').trim();
+      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80), shouldPauseBot ? '→ pausando bot' : '');
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       console.error('[Bot] Gemini falhou, usando fallback:', errMsg);
@@ -183,6 +187,11 @@ ${waSettings.bot_persona ? `\nPersonalidade e tom: ${waSettings.bot_persona}` : 
 
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     console.log('[Bot] mensagem enviada:', sent);
+
+    // Pausa o bot se Gemini sinalizou transferência para atendimento humano
+    if (shouldPauseBot) {
+      dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
+    }
 
     // Registra cliente na base (best-effort, não bloqueia)
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});

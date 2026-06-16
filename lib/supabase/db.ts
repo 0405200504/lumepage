@@ -1101,17 +1101,35 @@ export const dbService = {
   ): Promise<void> => {
     const { error } = await getDb()
       .from('whatsapp_conversations')
-      .upsert(
-        {
-          professional_id: professionalId,
-          client_phone: clientPhone,
-          messages: [],
-          bot_paused: true,
-          last_message_at: new Date().toISOString(),
-        },
-        { onConflict: 'professional_id,client_phone' }
-      );
+      .update({ bot_paused: true })
+      .eq('professional_id', professionalId)
+      .eq('client_phone', clientPhone);
     if (error && !isMissingTable(error)) throw error;
+  },
+
+  setBotPaused: async (professionalId: string, clientPhone: string, paused: boolean): Promise<void> => {
+    const { error } = await getDb()
+      .from('whatsapp_conversations')
+      .update({ bot_paused: paused })
+      .eq('professional_id', professionalId)
+      .eq('client_phone', clientPhone);
+    if (error && !isMissingTable(error)) throw error;
+  },
+
+  getAllWhatsAppConversations: async (professionalId: string): Promise<WhatsAppConversation[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb()
+      .from('whatsapp_conversations')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .not('client_phone', 'like', '_debug_%')
+      .order('last_message_at', { ascending: false })
+      .limit(50);
+    if (error) {
+      if (isMissingTable(error)) return [];
+      throw error;
+    }
+    return data || [];
   },
 };
 export default dbService;

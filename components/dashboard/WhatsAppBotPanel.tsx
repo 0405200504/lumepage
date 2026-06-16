@@ -18,7 +18,10 @@ import {
   getLastWebhookCallAction,
   simulateIncomingMessageAction,
   getQRCodeAction,
+  getConversationsAction,
+  toggleBotPauseAction,
 } from '@/app/actions/whatsapp';
+import { WhatsAppConversation } from '@/types/database';
 
 interface WhatsAppBotPanelProps {
   initialSettings: WhatsAppSettings | null;
@@ -60,6 +63,10 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [simPhone, setSimPhone] = useState('');
   const [simResult, setSimResult] = useState<string | null>(null);
+
+  const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
+  const [convsLoading, setConvsLoading] = useState(false);
+  const [convsOpen, setConvsOpen] = useState(false);
 
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrLoading, setQrLoading] = useState(false);
@@ -236,6 +243,26 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         setSimResult(`❌ Falha ao processar: ${'error' in res ? res.error : `HTTP ${res.status}`}`);
       }
     });
+  }
+
+  async function handleLoadConversations() {
+    setConvsOpen(v => {
+      if (!v) {
+        setConvsLoading(true);
+        getConversationsAction().then(data => {
+          setConversations(data);
+          setConvsLoading(false);
+        }).catch(() => setConvsLoading(false));
+      }
+      return !v;
+    });
+  }
+
+  async function handleTogglePause(clientPhone: string, paused: boolean) {
+    await toggleBotPauseAction(clientPhone, paused);
+    setConversations(prev => prev.map(c =>
+      c.client_phone === clientPhone ? { ...c, bot_paused: paused } : c
+    ));
   }
 
   async function handleDiagnose() {
@@ -607,6 +634,71 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         )}
       </div>
 
+      {/* Conversas — controle manual de atendimento */}
+      {isConfigured && (
+        <div className="border-t border-[#efe9e6] pt-5">
+          <button
+            type="button"
+            onClick={handleLoadConversations}
+            className="w-full flex items-center justify-between text-sm font-semibold text-gray-800 hover:opacity-70 transition-opacity"
+          >
+            Conversas
+            {convsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {convsOpen && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-gray-500">
+                Quando você assumir uma conversa, o bot para de responder aquela cliente. Retome quando quiser devolver para o bot.
+              </p>
+
+              {convsLoading && (
+                <div className="flex items-center gap-2 py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  <span className="text-xs text-gray-400">Carregando conversas...</span>
+                </div>
+              )}
+
+              {!convsLoading && conversations.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Nenhuma conversa ainda.</p>
+              )}
+
+              {!convsLoading && conversations.map(conv => {
+                const lastMsg = conv.messages.at(-1);
+                const label = conv.client_summary?.split('.')[0] || formatPhone(conv.client_phone);
+                return (
+                  <div key={conv.client_phone} className="flex items-center justify-between gap-3 bg-[#faf8f7] rounded-2xl px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{label}</p>
+                      {lastMsg && (
+                        <p className="text-xs text-gray-400 truncate">{lastMsg.content.slice(0, 60)}</p>
+                      )}
+                    </div>
+                    {conv.bot_paused ? (
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePause(conv.client_phone, false)}
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
+                      >
+                        Retomar bot
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePause(conv.client_phone, true)}
+                        className="shrink-0 px-3 py-1.5 rounded-xl border border-[#500b18] text-[#500b18] text-xs font-semibold hover:bg-[#500b18]/5 transition-colors"
+                      >
+                        Assumir conversa
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Modal de conexão via QR Code */}
       {qrModalOpen && (
         <div
@@ -684,6 +776,13 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       )}
     </div>
   );
+}
+
+function formatPhone(phone: string): string {
+  const d = phone.replace(/\D/g, '');
+  if (d.length === 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
+  if (d.length === 12) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
+  return phone;
 }
 
 // Componente auxiliar de toggle

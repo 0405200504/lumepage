@@ -283,6 +283,27 @@ export async function simulateIncomingMessageAction(testPhone: string) {
   }
 }
 
+export async function getConversationsAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return [];
+    return await dbService.getAllWhatsAppConversations(professionalId);
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleBotPauseAction(clientPhone: string, paused: boolean) {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false };
+    await dbService.setBotPaused(professionalId, clientPhone, paused);
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
+}
+
 export async function getLastWebhookCallAction() {
   try {
     const professionalId = await getProfessionalId();
