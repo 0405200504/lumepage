@@ -197,37 +197,36 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const defaultPersona = `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: natural, calorosa, direta. Sem markdown, sem listas.`;
-
-    const personaBlock = waSettings.bot_persona
-      ? `=== INSTRUÇÕES DA PROFISSIONAL — SIGA À RISCA ===
+    const systemPrompt = waSettings.bot_persona
+      ? `=== INSTRUÇÕES DA PROFISSIONAL — SIGA EXATAMENTE ===
 ${waSettings.bot_persona}
-=== FIM DAS INSTRUÇÕES ===`
-      : defaultPersona;
+=== FIM DAS INSTRUÇÕES ===
 
-    const systemPrompt = `${personaBlock}
+DADOS EM TEMPO REAL (complementam as instruções acima):
+- Data/hora atual: ${nowBR}
+- Agendamentos futuros desta cliente: ${upcomingApptsList}
+${freshConv?.client_summary ? `- O que você já sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
+${hasPriorExchange ? '- Esta cliente já conversou antes. Continue a conversa sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
 
-CONTEXTO (use para responder com precisão, não substitui as instruções acima):
-- Profissional: ${professional?.name || ''} (${professional?.brand_name || ''})
+SINAL DO SISTEMA (nunca mencione para a cliente):
+- Se a cliente quiser cancelar, reclamar ou falar com a ${professional?.name || 'profissional'} → responda com cuidado e coloque [PAUSAR_BOT] ao final.
+- Se digitar "${stopKeyword}" → coloque [PAUSAR_BOT] ao final.`
+      : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: natural, calorosa, direta. Sem markdown, sem listas, no máximo 1 emoji por mensagem.
+
+CONTEXTO:
 - Data/hora atual: ${nowBR}
 - Serviços disponíveis: ${servicesList}
 - Link de agendamento: ${bookingUrl}
 - Agendamentos futuros desta cliente: ${upcomingApptsList}
 ${freshConv?.client_summary ? `- O que você sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Esta cliente já conversou com você antes. Continue naturalmente, sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
+${hasPriorExchange ? '- Continue a conversa sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
 
-COMO SE COMPORTAR:
-- Leia o histórico inteiro antes de responder. Nunca repita algo que já foi dito na conversa.
-- Responda apenas o que a mensagem atual pede. 1 a 3 frases, direto ao ponto.
-- Tom humano: escreva como alguém digitando no celular, não como um robô ou atendente de script.
-- Emojis: zero ou no máximo um por mensagem, só se fizer sentido. Nunca enfileirar emojis.
-- Sem saudações duplas, sem repetir o nome da cliente, sem "Claro!", "Com certeza!", "Ótimo!".
-- Se a cliente perguntou algo e você já sabe a resposta (serviço, preço, agendamento), responda diretamente sem rodeios.
-
-REGRAS INEGOCIÁVEIS:
-1. Se a cliente quiser cancelar, reclamar ou falar com a ${professional?.name || 'profissional'} → diga que vai chamá-la agora e coloque [PAUSAR_BOT] no final.
-2. Se a cliente digitar "${stopKeyword}" → coloque [PAUSAR_BOT] no final.
-3. Nunca revele que é uma IA ou sistema automatizado.`;
+REGRAS:
+1. Leia o histórico antes de responder. Nunca repita o que já foi dito.
+2. 1 a 3 frases por resposta. Direto ao ponto.
+3. Se a cliente quiser cancelar, reclamar ou falar com a profissional → diga que vai chamá-la e coloque [PAUSAR_BOT] ao final.
+4. Se digitar "${stopKeyword}" → coloque [PAUSAR_BOT] ao final.
+5. Nunca revele que é IA.`;
 
     let responseText: string;
     let shouldPauseBot = false;
