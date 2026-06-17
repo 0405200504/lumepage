@@ -21,13 +21,18 @@ export default async function DashboardLayout({
 
   let brandName = '';
   let slug = '';
+  let pendingConversations = 0;
   if (session.professional_id) {
     try {
-      const prof = await dbService.getProfessionalById(session.professional_id);
+      const [prof, paused] = await Promise.all([
+        dbService.getProfessionalById(session.professional_id),
+        dbService.getPausedConversations(session.professional_id).catch(() => []),
+      ]);
       if (prof) {
         brandName = prof.brand_name;
         slug = prof.slug;
       }
+      pendingConversations = paused.length;
     } catch (e) {
       console.error('Erro ao buscar profissional no layout:', e);
     }
@@ -40,6 +45,7 @@ export default async function DashboardLayout({
         name={session.name}
         brandName={brandName || session.name}
         slug={slug}
+        pendingConversations={pendingConversations}
       />
 
       <div className="flex-1 flex flex-col min-w-0">

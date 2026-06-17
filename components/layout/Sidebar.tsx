@@ -15,9 +15,10 @@ interface SidebarProps {
   name: string;
   brandName?: string;
   slug?: string;
+  pendingConversations?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, pendingConversations }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { success, error } = useToast();
@@ -105,6 +106,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
             const Icon = link.icon;
             const isActive = pathname === link.href || (link.href !== '/dashboard' && link.href !== '/admin' && pathname.startsWith(link.href));
 
+            const badge = link.href === '/dashboard/whatsapp' && pendingConversations && pendingConversations > 0
+              ? pendingConversations
+              : null;
+
             return (
               <Link
                 key={link.href}
@@ -117,7 +122,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug })
                 }`}
               >
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#500b18]' : 'text-white/55 group-hover:text-white'}`} />
-                <span>{link.label}</span>
+                <span className="flex-1">{link.label}</span>
+                {badge && (
+                  <span className="text-[10px] font-bold text-white bg-amber-500 rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                    {badge}
+                  </span>
+                )}
               </Link>
             );
           })}

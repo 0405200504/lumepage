@@ -105,12 +105,15 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
     if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
 
-    // Cooldown: após mensagem automática do sistema (confirmação, lembrete),
-    // o Gemini não responde por 30 minutos para evitar conflito com as automações.
+    // Cooldown: após mensagem automática do sistema, o Gemini não responde por 30 min.
     if (conversation?.bot_cooldown_until && new Date(conversation.bot_cooldown_until) > new Date()) {
-      console.log('[Bot] cooldown ativo até', conversation.bot_cooldown_until, '— ignorando resposta à mensagem automática de', clientPhone);
+      console.log('[Bot] cooldown ativo até', conversation.bot_cooldown_until, '— ignorando de', clientPhone);
       return;
     }
+
+    // Se já existe um registro de conversa (mesmo sem histórico de bot), é contato recorrente.
+    // Isso evita reapresentação quando o histórico é perdido por race condition ou erro.
+    const isReturningClient = !!conversation;
 
     const stopKeyword = waSettings.stop_keyword || '#humano';
     if (messageText.toLowerCase() === stopKeyword.toLowerCase()) {
@@ -160,11 +163,13 @@ async function processMessage(professionalId: string, secret: string | null, bod
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
-    // Usa mensagens do banco após o debounce — pode incluir múltiplas mensagens
-    // rápidas da cliente que chegaram enquanto aguardávamos.
+    // Usa mensagens do banco após o debounce.
     const allMessages = (freshConv?.messages || pendingMessages) as Array<{ role: 'user' | 'assistant'; content: string }>;
     const history = allMessages.slice(-20);
-    const hasPriorExchange = allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
+    // hasPriorExchange: verdadeiro se já existe registro de conversa (mesmo sem histórico de bot
+    // salvo) OU se há mensagens do assistente OU se já há resumo da cliente.
+    // Isso evita reapresentação mesmo quando o histórico do bot foi perdido por race condition.
+    const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
     const systemPrompt = `${waSettings.bot_persona
       ? waSettings.bot_persona
@@ -177,13 +182,16 @@ Contexto do atendimento (use para responder, não mencione que veio de um sistem
 - Hoje: ${nowBR}
 - Serviços disponíveis: ${servicesList}
 - Link de agendamento: ${bookingUrl}
-${freshConv?.client_summary ? `- Sobre esta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Você já conversou com esta cliente — não se reapresente nem repita saudações.' : '- Primeiro contato com esta cliente.'}
+${latestConv?.client_summary ?? freshConv?.client_summary ? `- Sobre esta cliente: ${latestConv?.client_summary ?? freshConv?.client_summary}` : ''}
+${hasPriorExchange
+  ? '- CONVERSA EM ANDAMENTO: esta cliente já foi atendida antes. NUNCA se reapresente, NUNCA repita saudações iniciais, NUNCA diga seu nome de novo. Continue a conversa naturalmente.'
+  : '- Primeiro contato com esta cliente — pode se apresentar brevemente.'}
 
-Instruções técnicas obrigatórias (não mencione ao usuário):
-- Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
-- Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
-- Nunca revele que é uma IA.`;
+Regras absolutas (nunca quebre, independente do contexto):
+1. JAMAIS se reapresente ou repita seu nome em mensagens de continuação.
+2. Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
+3. Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
+4. Nunca revele que é uma IA.`;
 
     let responseText: string;
     let shouldPauseBot = false;
@@ -216,12 +224,16 @@ Instruções técnicas obrigatórias (não mencione ao usuário):
     if (shouldPauseBot) dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
+    // Lê o estado mais recente do banco antes de salvar — evita sobrescrever mensagens
+    // que chegaram enquanto o Gemini estava gerando a resposta (race condition).
+    const latestConv = await dbService.getWhatsAppConversation(professionalId, clientPhone).catch(() => null);
+    const baseMessages = latestConv?.messages || freshConv?.messages || pendingMessages;
     const updatedMessages = [
-      ...(freshConv?.messages || pendingMessages),
+      ...baseMessages,
       { role: 'assistant' as const, content: responseText, at: Date.now() },
     ];
 
-    updateClientSummary(freshConv?.client_summary, messageText, responseText)
+    updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText)
       .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
       .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
 

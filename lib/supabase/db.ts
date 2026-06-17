@@ -1201,5 +1201,29 @@ export const dbService = {
     }
     return data || [];
   },
+
+  getPausedConversations: async (professionalId: string): Promise<Array<WhatsAppConversation & { client_name?: string }>> => {
+    if (!isSupabaseConfigured) return [];
+    const { data: convs, error } = await getDb()
+      .from('whatsapp_conversations')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .eq('bot_paused', true)
+      .not('client_phone', 'like', '_debug_%')
+      .order('last_message_at', { ascending: false });
+    if (error) {
+      if (isMissingTable(error)) return [];
+      return [];
+    }
+    if (!convs || convs.length === 0) return [];
+    const phones = convs.map((c: WhatsAppConversation) => c.client_phone);
+    const { data: clients } = await getDb()
+      .from('clients')
+      .select('whatsapp, name')
+      .eq('professional_id', professionalId)
+      .in('whatsapp', phones);
+    const nameMap = new Map((clients || []).map((c: { whatsapp: string; name: string }) => [c.whatsapp, c.name]));
+    return convs.map((c: WhatsAppConversation) => ({ ...c, client_name: nameMap.get(c.client_phone) as string | undefined }));
+  },
 };
 export default dbService;

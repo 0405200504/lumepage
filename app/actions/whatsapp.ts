@@ -313,6 +313,16 @@ export async function getConversationsAction() {
   }
 }
 
+export async function getPendingConversationsAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return [];
+    return await dbService.getPausedConversations(professionalId);
+  } catch {
+    return [];
+  }
+}
+
 export async function toggleBotPauseAction(clientPhone: string, paused: boolean) {
   try {
     const professionalId = await getProfessionalId();

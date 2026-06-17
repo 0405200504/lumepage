@@ -1,9 +1,9 @@
-import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { TasksWidget } from '@/components/dashboard/TasksWidget';
 import { PushNotificationBanner } from '@/components/dashboard/PushNotificationBanner';
+import { PendingConversationsWidget } from '@/components/dashboard/PendingConversationsWidget';
 
 export const metadata = {
   title: 'Visão Geral | Lume Agenda Dashboard',
@@ -11,22 +11,22 @@ export const metadata = {
 };
 
 export default async function DashboardPage() {
-  // Garante autenticação de profissional
   const session = await requireProfessional();
-
   const professionalId = session.professional_id!;
 
-  // Buscar dados em paralelo (não em sequência) — corta o tempo de espera
-  const [professional, appointments, services, tasks] = await Promise.all([
+  const [professional, appointments, services, tasks, pendingConvs] = await Promise.all([
     dbService.getProfessionalById(professionalId),
     dbService.getAppointmentsByProfessional(professionalId),
     dbService.getServicesByProfessional(professionalId),
     dbService.getTasksByProfessional(professionalId),
+    dbService.getPausedConversations(professionalId).catch(() => []),
   ]);
 
   return (
     <div className="space-y-6">
       <PushNotificationBanner />
+
+      <PendingConversationsWidget initialConversations={pendingConvs} />
 
       {/* No mobile, Tarefas/Notas tem aba própria (bottom nav → Tarefas).
           No desktop, continua aqui na Início. */}
