@@ -7,6 +7,36 @@ import { generateText } from 'ai';
 
 export const maxDuration = 60;
 
+// Ordem de fallback: tenta o próximo modelo automaticamente quando quota acabar.
+// Configure GEMINI_MODEL no Vercel para forçar um modelo específico.
+const GEMINI_FALLBACK_MODELS = [
+  process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-2.0-flash',
+].filter((v, i, arr) => arr.indexOf(v) === i); // remove duplicatas
+
+function isQuotaError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429');
+}
+
+async function generateWithFallback(params: Parameters<typeof generateText>[0]): Promise<Awaited<ReturnType<typeof generateText>>> {
+  for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
+    const model = GEMINI_FALLBACK_MODELS[i];
+    try {
+      return await generateText({ ...params, model: google(model) });
+    } catch (e) {
+      if (isQuotaError(e) && i < GEMINI_FALLBACK_MODELS.length - 1) {
+        console.warn(`[Bot] quota esgotada em ${model}, tentando ${GEMINI_FALLBACK_MODELS[i + 1]}...`);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('Todos os modelos Gemini com quota esgotada.');
+}
+
 // Formato real desta instância (fork uazapiGO) — difere da doc genérica:
 // não tem `event`/`data`, e sim `EventType`/`message`, com o texto em
 // `message.text` (não `message.body`) e o telefone em `message.chatid`
@@ -67,8 +97,7 @@ async function updateClientSummary(
   botReply: string
 ): Promise<string | null> {
   try {
-    const result = await generateText({
-      model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
+    const result = await generateWithFallback({
       system: 'Você mantém um registro conciso sobre clientes de um salão de beleza. Responda APENAS com o texto do resumo, sem explicações adicionais.',
       prompt: `Resumo anterior: "${prev || 'nenhum ainda'}"\n\nÚltima troca:\nCliente: "${userMessage}"\nAssistente: "${botReply}"\n\nAtualize o resumo com o que é útil lembrar sobre esta cliente (nome, preferências de horário, serviços de interesse, histórico mencionado, observações). Máximo 3 frases curtas. Se nada novo for relevante, retorne o resumo anterior sem alteração.`,
       abortSignal: AbortSignal.timeout(15000),
@@ -233,8 +262,7 @@ REGRAS:
     let responseText: string;
     let shouldPauseBot = false;
     try {
-      const result = await generateText({
-        model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
+      const result = await generateWithFallback({
         system: systemPrompt,
         messages: history,
         abortSignal: AbortSignal.timeout(25000),
