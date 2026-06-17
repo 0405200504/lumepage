@@ -1,5 +1,8 @@
 import { google } from '@ai-sdk/google';
 import { streamText, generateText, tool } from 'ai';
+import { z } from 'zod';
+import { dbService } from '@/lib/supabase/db';
+import { authService } from '@/lib/auth/auth';
 
 const GEMINI_FALLBACK_MODELS = [
   process.env.GEMINI_MODEL || 'gemini-2.5-flash',
@@ -7,9 +10,6 @@ const GEMINI_FALLBACK_MODELS = [
   'gemini-1.5-flash-8b',
   'gemini-2.0-flash',
 ].filter((v, i, arr) => arr.indexOf(v) === i);
-import { z } from 'zod';
-import { dbService } from '@/lib/supabase/db';
-import { authService } from '@/lib/auth/auth';
 import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
 
 // Permite tempo de resposta maior para funções complexas

@@ -277,7 +277,7 @@ ${pilares}`;
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       console.error('[Bot] Gemini falhou, usando fallback:', errMsg);
-      await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_openai_error', [
+      await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_gemini_error', [
         { role: 'user' as const, content: errMsg.slice(0, 500), at: Date.now() }
       ]).catch(() => {});
       responseText = `Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
