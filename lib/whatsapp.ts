@@ -17,18 +17,26 @@ export function normalizeWhatsapp(raw: string): string {
   return digits;
 }
 
-/** Preenche os placeholders da mensagem ({nome}, {servico}, {data}, {horario}, {motivo}). */
+/** Preenche os placeholders da mensagem. Suporta variáveis fixas e personalizadas. */
 export function fillTemplate(
   template: string,
-  vars: { nome?: string; servico?: string; data?: string; horario?: string; motivo?: string; profissional?: string }
+  vars: { nome?: string; servico?: string; data?: string; horario?: string; motivo?: string; profissional?: string },
+  customVars?: Record<string, string> | null
 ): string {
-  return (template || '')
+  let result = (template || '')
     .replace(/\{nome\}/g, vars.nome ?? '')
     .replace(/\{servico\}/g, vars.servico ?? '')
     .replace(/\{data\}/g, vars.data ?? '')
     .replace(/\{horario\}/g, vars.horario ?? '')
     .replace(/\{motivo\}/g, vars.motivo ?? '')
     .replace(/\{profissional\}/g, vars.profissional ?? '');
+
+  if (customVars) {
+    for (const [key, val] of Object.entries(customVars)) {
+      result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+    }
+  }
+  return result;
 }
 
 const DEFAULT_REMINDER =

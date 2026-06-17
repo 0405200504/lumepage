@@ -30,6 +30,7 @@ export async function saveWhatsAppSettingsAction(input: {
   automation_day_of_enabled?: boolean;
   automation_day_of_message?: string;
   automation_day_of_time?: string;
+  custom_variables?: Record<string, string>;
 }) {
   try {
     const professionalId = await getProfessionalId();
@@ -52,6 +53,7 @@ export async function saveWhatsAppSettingsAction(input: {
       automation_day_of_enabled: input.automation_day_of_enabled ?? false,
       automation_day_of_message: input.automation_day_of_message?.trim() || null,
       automation_day_of_time: input.automation_day_of_time || '08:00',
+      custom_variables: input.custom_variables ?? {},
     });
     return { success: true as const, settings };
   } catch (e: unknown) {

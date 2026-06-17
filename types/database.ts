@@ -221,6 +221,7 @@ export interface WhatsAppSettings {
   automation_day_of_enabled: boolean;
   automation_day_of_message: string | null;
   automation_day_of_time: string;
+  custom_variables?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }

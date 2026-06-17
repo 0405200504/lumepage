@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
             data: formatDateBR(appt.date),
             horario: appt.start_time.substring(0, 5),
             profissional: professional?.name || '',
-          });
+          }, settings.custom_variables);
           const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
           if (ok) { await dbService.markReminderSent(appt.id, 'booking'); sent++; }
         }
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
-            });
+            }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) { await dbService.markReminderSent(appt.id, 'day_before'); sent++; }
           }
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
-            });
+            }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) { await dbService.markReminderSent(appt.id, 'day_of'); sent++; }
           }
