@@ -183,6 +183,7 @@ export interface Appointment {
   status: AppointmentStatus;
   notes: string | null;
   cancellation_reason: string | null;
+  payment_method?: string | null;
   created_at: string;
   updated_at: string;
   automation_booking_sent_at?: string | null;

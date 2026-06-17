@@ -62,6 +62,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const [nNotes, setNNotes] = useState('');
   const [nAllowOverlap, setNAllowOverlap] = useState(false);
   const [nClients, setNClients] = useState<Array<{ name: string; phone: string }>>([]);
+  const [nPaymentMethod, setNPaymentMethod] = useState('');
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -79,7 +80,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     const first = activeServices[0];
     setNName(''); setNPhone(''); setNServiceId(first?.id || '');
     setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes('');
-    setNAllowOverlap(false); setNClients([]); setActiveSuggestionIdx(null);
+    setNAllowOverlap(false); setNClients([]); setActiveSuggestionIdx(null); setNPaymentMethod('');
     setShowNew(true);
   };
 
@@ -114,6 +115,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
           durationMinutes: nDuration,
           notes: nNotes || undefined,
           allowOverlap: nAllowOverlap,
+          paymentMethod: nPaymentMethod || undefined,
         });
         if (!res.success) {
           error('Não foi possível agendar', res.error || 'Verifique os dados e tente novamente.');
@@ -622,6 +624,25 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                       <> Ocupa <strong className="text-ink">{nTime}</strong> → <strong className="text-ink">{addMinutes(nTime, nDuration)}</strong>.</>
                     )}
                   </span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito'].map(method => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setNPaymentMethod(nPaymentMethod === method ? '' : method)}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                          nPaymentMethod === method
+                            ? 'bg-wine-700 text-white border-wine-700'
+                            : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Observações do atendimento</label>

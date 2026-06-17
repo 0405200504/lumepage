@@ -3,6 +3,11 @@ import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR } from '@/lib/whatsapp';
 
+function formatPriceBRL(cents?: number | null): string {
+  if (!cents && cents !== 0) return '';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
 export const maxDuration = 60;
 
 // Chamado pelo Vercel Cron a cada 5 minutos (ver vercel.json)
@@ -64,6 +69,8 @@ export async function GET(req: NextRequest) {
             data: formatDateBR(appt.date),
             horario: appt.start_time.substring(0, 5),
             profissional: professional?.name || '',
+            preco: formatPriceBRL(appt.service?.price_cents),
+            forma_pagamento: appt.payment_method || '',
           }, settings.custom_variables);
           const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
           if (ok) { await dbService.markReminderSent(appt.id, 'booking'); sent++; }
@@ -84,6 +91,8 @@ export async function GET(req: NextRequest) {
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
+              preco: formatPriceBRL(appt.service?.price_cents),
+              forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) { await dbService.markReminderSent(appt.id, 'day_before'); sent++; }
@@ -105,6 +114,8 @@ export async function GET(req: NextRequest) {
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
+              preco: formatPriceBRL(appt.service?.price_cents),
+              forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) { await dbService.markReminderSent(appt.id, 'day_of'); sent++; }

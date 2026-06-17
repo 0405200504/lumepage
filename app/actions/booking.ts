@@ -115,6 +115,7 @@ export async function createManualAppointmentAction(input: {
   durationMinutes?: number;
   notes?: string;
   allowOverlap?: boolean;
+  paymentMethod?: string;
 }) {
   try {
     const { professionalId, serviceId, clientName, clientWhatsapp, date, startTime } = input;
@@ -177,6 +178,7 @@ export async function createManualAppointmentAction(input: {
       end_time: endTime,
       notes: input.notes?.trim() || null,
       cancellation_reason: null,
+      payment_method: input.paymentMethod || null,
     });
 
     // Agendamento criado pela profissional já entra como confirmado
@@ -213,6 +215,7 @@ interface CreateAppointmentInput {
   startTime: string; // "HH:MM"
   notes?: string;
   clientBirthday?: string;
+  paymentMethod?: string;
 }
 
 /**
@@ -277,7 +280,8 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       start_time: finalStartTime,
       end_time: endTime,
       notes: notes || null,
-      cancellation_reason: null
+      cancellation_reason: null,
+      payment_method: input.paymentMethod || null,
     });
 
     // Best-effort: registrar aniversário da cliente (requer migração v2 — não bloqueia o agendamento)

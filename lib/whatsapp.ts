@@ -20,7 +20,16 @@ export function normalizeWhatsapp(raw: string): string {
 /** Preenche os placeholders da mensagem. Suporta variáveis fixas e personalizadas. */
 export function fillTemplate(
   template: string,
-  vars: { nome?: string; servico?: string; data?: string; horario?: string; motivo?: string; profissional?: string },
+  vars: {
+    nome?: string;
+    servico?: string;
+    data?: string;
+    horario?: string;
+    motivo?: string;
+    profissional?: string;
+    preco?: string;
+    forma_pagamento?: string;
+  },
   customVars?: Record<string, string> | null
 ): string {
   let result = (template || '')
@@ -29,7 +38,9 @@ export function fillTemplate(
     .replace(/\{data\}/g, vars.data ?? '')
     .replace(/\{horario\}/g, vars.horario ?? '')
     .replace(/\{motivo\}/g, vars.motivo ?? '')
-    .replace(/\{profissional\}/g, vars.profissional ?? '');
+    .replace(/\{profissional\}/g, vars.profissional ?? '')
+    .replace(/\{preco\}/g, vars.preco ?? '')
+    .replace(/\{forma_pagamento\}/g, vars.forma_pagamento ?? '');
 
   if (customVars) {
     for (const [key, val] of Object.entries(customVars)) {

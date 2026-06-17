@@ -52,6 +52,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [createdAppointmentId, setCreatedAppointmentId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Forma de pagamento
+  const [paymentMethod, setPaymentMethod] = useState('');
+
   // Lista de espera (cliente)
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [waitlistSent, setWaitlistSent] = useState(false);
@@ -221,7 +224,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         clientBirthday: clientBirthday || undefined,
         date: selectedDate,
         startTime: selectedTime,
-        notes: notes || undefined
+        notes: notes || undefined,
+        paymentMethod: paymentMethod || undefined,
       });
 
       if (res.success && res.appointmentId) {
@@ -580,6 +584,28 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                  Forma de Pagamento (Opcional)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito'].map(method => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentMethod(paymentMethod === method ? '' : method)}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                        paymentMethod === method
+                          ? 'bg-[var(--brand)] text-white border-[var(--brand)]'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--brand)]/40'
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="w-full py-4 bg-[var(--brand)] hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer mt-4"
@@ -634,6 +660,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <span className="text-[10px] text-gray-450 block font-bold">WHATSAPP</span>
                   <span className="font-bold text-gray-800">{clientWhatsapp}</span>
                 </div>
+                {paymentMethod && (
+                  <div className="col-span-2">
+                    <span className="text-[10px] text-gray-450 block font-bold">FORMA DE PAGAMENTO</span>
+                    <span className="font-bold text-gray-800">{paymentMethod}</span>
+                  </div>
+                )}
               </div>
 
               {settings?.show_price_public && (
@@ -722,6 +754,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <span className="text-[9px] text-gray-400 block font-bold">HORÁRIO</span>
                   <span className="font-bold text-gray-800">{selectedTime.substring(0, 5)}</span>
                 </div>
+                {paymentMethod && (
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-gray-400 block font-bold">PAGAMENTO</span>
+                    <span className="font-bold text-gray-800">{paymentMethod}</span>
+                  </div>
+                )}
               </div>
             </div>
 

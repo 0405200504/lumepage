@@ -315,7 +315,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const s = statusLabel[status] ?? statusLabel['error'];
   const isConfigured = !!(uazapiUrl && uazapiToken);
   const activeAutomations = [autoBookingEnabled, autoDayBeforeEnabled, autoDayOfEnabled].filter(Boolean).length;
-  const builtinVars = ['nome', 'servico', 'data', 'horario', 'profissional'];
+  const builtinVars = ['nome', 'servico', 'data', 'horario', 'profissional', 'preco', 'forma_pagamento'];
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
 
   return (

@@ -582,7 +582,8 @@ export const dbService = {
           start_time: data.start_time,
           end_time: data.end_time,
           status: 'pending',
-          notes: data.notes
+          notes: data.notes,
+          payment_method: data.payment_method ?? null,
         })
         .select()
         .single();
