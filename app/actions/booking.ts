@@ -338,12 +338,21 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     }
 
     // 6. Enviar confirmação via WhatsApp automaticamente (best-effort, não bloqueia)
+    // IMPORTANTE: se automation_booking_enabled=true, o cron cuida do envio com a
+    // mensagem configurada pela profissional. Aqui só enviamos quando a automação
+    // está DESLIGADA e confirmation_enabled está ativo (sistema legado).
     try {
       const [waSettings, agendaSettings] = await Promise.all([
         dbService.getWhatsAppSettings(professionalId),
         dbService.getSettingsByProfessional(professionalId),
       ]);
-      if (waSettings?.confirmation_enabled && waSettings.uazapi_url && waSettings.uazapi_token) {
+      const cleanPhone = clientWhatsapp.replace(/\D/g, '');
+      if (
+        waSettings?.confirmation_enabled &&
+        !waSettings?.automation_booking_enabled &&
+        waSettings.uazapi_url &&
+        waSettings.uazapi_token
+      ) {
         const confirmMsg = fillTemplate(
           agendaSettings?.whatsapp_confirmation_message ||
             'Oi, {nome}! Seu agendamento de {servico} foi confirmado para o dia {data} às {horario}. Te esperamos! 💛',
@@ -354,12 +363,9 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
             horario: startTime,
           }
         );
-        await sendWhatsAppText(
-          waSettings.uazapi_url,
-          waSettings.uazapi_token,
-          clientWhatsapp.replace(/\D/g, ''),
-          confirmMsg
-        );
+        await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
+        // Ativa cooldown de 30 min para o Gemini não responder à confirmação
+        dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
       }
     } catch (waErr) {
       console.error('Falha ao enviar confirmação WhatsApp:', waErr);

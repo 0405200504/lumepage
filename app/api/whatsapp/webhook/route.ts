@@ -105,6 +105,13 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
     if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
 
+    // Cooldown: após mensagem automática do sistema (confirmação, lembrete),
+    // o Gemini não responde por 30 minutos para evitar conflito com as automações.
+    if (conversation?.bot_cooldown_until && new Date(conversation.bot_cooldown_until) > new Date()) {
+      console.log('[Bot] cooldown ativo até', conversation.bot_cooldown_until, '— ignorando resposta à mensagem automática de', clientPhone);
+      return;
+    }
+
     const stopKeyword = waSettings.stop_keyword || '#humano';
     if (messageText.toLowerCase() === stopKeyword.toLowerCase()) {
       await dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});

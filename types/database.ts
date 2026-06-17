@@ -233,6 +233,7 @@ export interface WhatsAppConversation {
   client_phone: string;
   messages: Array<{ role: 'user' | 'assistant'; content: string; at: number }>;
   bot_paused: boolean;
+  bot_cooldown_until?: string | null;
   client_summary?: string | null;
   last_message_at: string;
   created_at: string;

@@ -1157,6 +1157,35 @@ export const dbService = {
     if (error && !isMissingTable(error)) throw error;
   },
 
+  setBotCooldown: async (professionalId: string, clientPhone: string, minutes: number): Promise<void> => {
+    const until = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    // Tenta atualizar registro existente
+    const { data, error: updErr } = await getDb()
+      .from('whatsapp_conversations')
+      .update({ bot_cooldown_until: until })
+      .eq('professional_id', professionalId)
+      .eq('client_phone', clientPhone)
+      .select('id');
+    if (updErr && !isMissingTable(updErr)) return;
+    // Se não existia registro, cria um mínimo para guardar o cooldown
+    if (!data || data.length === 0) {
+      await getDb()
+        .from('whatsapp_conversations')
+        .insert({
+          professional_id: professionalId,
+          client_phone: clientPhone,
+          messages: [],
+          bot_paused: false,
+          bot_cooldown_until: until,
+          last_message_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+        .then(() => {})
+        .catch(() => {});
+    }
+  },
+
   getAllWhatsAppConversations: async (professionalId: string): Promise<WhatsAppConversation[]> => {
     if (!isSupabaseConfigured) return [];
     const { data, error } = await getDb()

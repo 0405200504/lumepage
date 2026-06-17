@@ -73,7 +73,11 @@ export async function GET(req: NextRequest) {
             forma_pagamento: appt.payment_method || '',
           }, settings.custom_variables);
           const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
-          if (ok) { await dbService.markReminderSent(appt.id, 'booking'); sent++; }
+          if (ok) {
+            await dbService.markReminderSent(appt.id, 'booking');
+            dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+            sent++;
+          }
         }
       }
 
@@ -95,7 +99,11 @@ export async function GET(req: NextRequest) {
               forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
-            if (ok) { await dbService.markReminderSent(appt.id, 'day_before'); sent++; }
+            if (ok) {
+              await dbService.markReminderSent(appt.id, 'day_before');
+              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              sent++;
+            }
           }
         }
       }
@@ -118,7 +126,11 @@ export async function GET(req: NextRequest) {
               forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
-            if (ok) { await dbService.markReminderSent(appt.id, 'day_of'); sent++; }
+            if (ok) {
+              await dbService.markReminderSent(appt.id, 'day_of');
+              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              sent++;
+            }
           }
         }
       }
