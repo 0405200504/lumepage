@@ -11,14 +11,21 @@ export const maxDuration = 60;
 // Configure GEMINI_MODEL no Vercel para forçar um modelo específico.
 const GEMINI_FALLBACK_MODELS = [
   process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
   'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash-lite',
 ].filter((v, i, arr) => arr.indexOf(v) === i); // remove duplicatas
 
-function isQuotaError(e: unknown): boolean {
+function isRetryableError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
-  return msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429');
+  return (
+    msg.includes('quota') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('429') ||
+    msg.includes('not found') ||
+    msg.includes('is not supported') ||
+    msg.includes('404')
+  );
 }
 
 async function generateWithFallback(params: Omit<Parameters<typeof generateText>[0], 'model'>): Promise<Awaited<ReturnType<typeof generateText>>> {
@@ -27,7 +34,7 @@ async function generateWithFallback(params: Omit<Parameters<typeof generateText>
     try {
       return await generateText({ ...params, model: google(model) });
     } catch (e) {
-      if (isQuotaError(e) && i < GEMINI_FALLBACK_MODELS.length - 1) {
+      if (isRetryableError(e) && i < GEMINI_FALLBACK_MODELS.length - 1) {
         console.warn(`[Bot] quota esgotada em ${model}, tentando ${GEMINI_FALLBACK_MODELS[i + 1]}...`);
         continue;
       }

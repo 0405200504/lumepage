@@ -6,9 +6,9 @@ import { authService } from '@/lib/auth/auth';
 
 const GEMINI_FALLBACK_MODELS = [
   process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
   'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash-lite',
 ].filter((v, i, arr) => arr.indexOf(v) === i);
 import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
 
@@ -87,7 +87,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
         break;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        if ((msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429')) && i < GEMINI_FALLBACK_MODELS.length - 1) continue;
+        if ((msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429') || msg.includes('not found') || msg.includes('is not supported') || msg.includes('404')) && i < GEMINI_FALLBACK_MODELS.length - 1) continue;
         break;
       }
     }
