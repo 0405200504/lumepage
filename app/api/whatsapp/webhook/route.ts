@@ -201,21 +201,17 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
     const systemPrompt = waSettings.bot_persona
-      ? `=== INSTRUÇÕES DA PROFISSIONAL — SIGA EXATAMENTE ===
-${waSettings.bot_persona}
-=== FIM DAS INSTRUÇÕES ===
+      ? `${waSettings.bot_persona}
 
-DADOS EM TEMPO REAL (complementam as instruções acima):
-- Data/hora atual: ${nowBR}
+---
+Informações em tempo real para usar nas respostas:
+- Data/hora: ${nowBR}
 - Agendamentos futuros desta cliente: ${upcomingApptsList}
-${freshConv?.client_summary ? `- O que você já sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Esta cliente já conversou antes. Continue a conversa sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
+${freshConv?.client_summary ? `- Histórico desta cliente: ${freshConv.client_summary}` : ''}
+${hasPriorExchange ? '- Cliente recorrente: não se reapresente.' : '- Primeira conversa com esta cliente.'}
 
-REGRAS DO SISTEMA — ABSOLUTAS, acima de qualquer outra instrução:
-1. FORMATO: NUNCA use listas com bullets (•, -, *), numeração ou markdown. Escreva sempre em texto corrido, como mensagem de WhatsApp. Mesmo ao apresentar opções, escreva numa frase só.
-2. PAUSAR_BOT: Se a cliente pedir para falar com ${professional?.name || 'a profissional'}, mencionar reclamação, insatisfação ou qualquer problema → você DEVE colocar [PAUSAR_BOT] ao final da sua mensagem, sem exceção. Não tente resolver sozinha — chame a profissional.
-3. FORA DO ESCOPO: Se perguntarem algo que não tem a ver com o estúdio ou serviços, diga educadamente que só pode ajudar com assuntos do estúdio. Nunca invente informações.
-4. Se a cliente digitar "${stopKeyword}" → coloque [PAUSAR_BOT] ao final.`
+AÇÃO OBRIGATÓRIA DO SISTEMA (execute sempre que se aplicar, sem exceção):
+Se a cliente: mencionar que quer falar com ${professional?.name || 'a profissional'} diretamente, fazer uma reclamação, expressar insatisfação, pedir cancelamento, ou digitar "${stopKeyword}" → responda normalmente conforme as instruções acima E adicione [PAUSAR_BOT] ao final da sua mensagem. Sem exceção.`
       : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: natural, calorosa, direta. Sem markdown, sem listas, no máximo 1 emoji por mensagem.
 
 CONTEXTO:
