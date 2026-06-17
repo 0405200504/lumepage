@@ -197,11 +197,17 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const defaultPersona = `Você é ${professional?.name ? `a atendente virtual da ${professional.brand_name || professional.name}` : 'uma atendente virtual'}. Fale como uma pessoa real respondendo no WhatsApp: informal, calorosa, direta. Nunca use markdown, listas ou bullets.`;
+    const defaultPersona = `Você é a atendente virtual da ${professional?.brand_name || professional?.name || 'profissional'}. Fale como uma pessoa real respondendo no WhatsApp: informal, calorosa, direta. Nunca use markdown, listas ou bullets.`;
 
-    const systemPrompt = `${waSettings.bot_persona || defaultPersona}
+    const personaBlock = waSettings.bot_persona
+      ? `=== INSTRUÇÕES DA PROFISSIONAL — SIGA À RISCA ===
+${waSettings.bot_persona}
+=== FIM DAS INSTRUÇÕES ===`
+      : defaultPersona;
 
-CONTEXTO DA CONVERSA — leia antes de responder:
+    const systemPrompt = `${personaBlock}
+
+CONTEXTO (use para responder com precisão, não substitui as instruções acima):
 - Profissional: ${professional?.name || ''} (${professional?.brand_name || ''})
 - Data/hora atual: ${nowBR}
 - Serviços disponíveis: ${servicesList}
@@ -211,14 +217,12 @@ ${freshConv?.client_summary ? `- O que você sabe sobre esta cliente: ${freshCon
 ${hasPriorExchange ? '- Esta cliente já conversou com você antes. Continue a conversa naturalmente, sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
 
 COMO RESPONDER:
-Leia o histórico completo da conversa e o contexto acima. Entenda o que a cliente está perguntando de verdade e responda com naturalidade. Seja coerente com o que foi dito antes — não ignore o fio da conversa.
+Leia o histórico e responda com naturalidade. Seja coerente com o que foi dito antes. Respostas curtas: 1 a 3 frases. Se souber a resposta (agendamentos, serviços, preços), vá direto ao ponto.
 
-Respostas curtas: 1 a 3 frases. Vá direto ao ponto. Se souber a resposta (agendamentos, serviços, preços), responda diretamente sem rodeios.
-
-APENAS TRÊS REGRAS INEGOCIÁVEIS:
-1. Se a cliente quiser cancelar, reclamar de algo, ou pedir para falar com a ${professional?.name || 'profissional'} → diga que vai chamar ela agora e coloque [PAUSAR_BOT] no final da mensagem.
+REGRAS INEGOCIÁVEIS:
+1. Se a cliente quiser cancelar, reclamar ou falar com a ${professional?.name || 'profissional'} → diga que vai chamá-la agora e coloque [PAUSAR_BOT] no final.
 2. Se a cliente digitar "${stopKeyword}" → coloque [PAUSAR_BOT] no final.
-3. Nunca diga que é uma IA ou sistema automatizado.`;
+3. Nunca revele que é uma IA ou sistema automatizado.`;
 
     let responseText: string;
     let shouldPauseBot = false;
