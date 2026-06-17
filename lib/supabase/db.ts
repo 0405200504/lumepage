@@ -597,13 +597,21 @@ export const dbService = {
 
   updateAppointmentStatus: async (id: string, status: AppointmentStatus, cancellationReason?: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
+      const patch: Record<string, unknown> = {
+        status,
+        cancellation_reason: cancellationReason || null,
+        updated_at: new Date().toISOString(),
+      };
+      // Cancelamento: zera flags para não disparar se o agendamento for reativado
+      // Reativação (saindo de cancelled): zera flags para as automações voltarem a disparar
+      if (status === 'cancelled' || status === 'pending' || status === 'confirmed') {
+        patch.automation_booking_sent_at = null;
+        patch.automation_day_before_sent_at = null;
+        patch.automation_day_of_sent_at = null;
+      }
       const { data, error } = await getDb()
         .from('appointments')
-        .update({ 
-          status, 
-          cancellation_reason: cancellationReason || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(patch)
         .eq('id', id)
         .select()
         .single();
@@ -618,9 +626,16 @@ export const dbService = {
     patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'notes' | 'status'>>
   ): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
+      const dbPatch: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+      // Remarcação: se data ou horário mudaram, zera automações para dispararem na nova data
+      if (patch.date || patch.start_time || patch.end_time) {
+        dbPatch.automation_booking_sent_at = null;
+        dbPatch.automation_day_before_sent_at = null;
+        dbPatch.automation_day_of_sent_at = null;
+      }
       const { data, error } = await getDb()
         .from('appointments')
-        .update({ ...patch, updated_at: new Date().toISOString() })
+        .update(dbPatch)
         .eq('id', id)
         .select('*, service:services(*)')
         .single();
@@ -638,7 +653,11 @@ export const dbService = {
           date,
           start_time: startTime,
           end_time: endTime,
-          updated_at: new Date().toISOString()
+          // Remarcação: zera as três flags para que as automações disparem na nova data
+          automation_booking_sent_at: null,
+          automation_day_before_sent_at: null,
+          automation_day_of_sent_at: null,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
