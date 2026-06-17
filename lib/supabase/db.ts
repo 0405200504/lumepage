@@ -1208,11 +1208,16 @@ export const dbService = {
   getUpcomingAppointmentsByPhone: async (professionalId: string, clientPhone: string): Promise<Appointment[]> => {
     if (!isSupabaseConfigured) return [];
     const today = new Date().toISOString().slice(0, 10);
+    // Tenta os dois formatos: com DDI (5511...) e sem DDI (11...) para retrocompat
+    const digits = clientPhone.replace(/\D/g, '');
+    const withDDI = digits.startsWith('55') ? digits : '55' + digits;
+    const withoutDDI = digits.startsWith('55') ? digits.slice(2) : digits;
+    const phones = Array.from(new Set([withDDI, withoutDDI]));
     const { data, error } = await getDb()
       .from('appointments')
       .select('*, service:services(*)')
       .eq('professional_id', professionalId)
-      .eq('client_whatsapp', clientPhone)
+      .in('client_whatsapp', phones)
       .neq('status', 'cancelled')
       .gte('date', today)
       .order('date', { ascending: true })

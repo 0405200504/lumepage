@@ -5,7 +5,7 @@ import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
 import { authService } from '@/lib/auth/auth';
 import { isDemo } from '@/lib/demo';
 import { sendWhatsAppText } from '@/lib/uazapi';
-import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
+import { fillTemplate, formatDateBR, formatPriceBRL, normalizeWhatsapp } from '@/lib/whatsapp';
 
 /**
  * Busca dados da profissional e serviços pelo slug para a página pública.
@@ -171,7 +171,7 @@ export async function createManualAppointmentAction(input: {
       service_id: serviceId,
       client_id: null,
       client_name: clientName.trim(),
-      client_whatsapp: clientWhatsapp.replace(/\D/g, ''),
+      client_whatsapp: normalizeWhatsapp(clientWhatsapp),
       client_email: null,
       date,
       start_time: finalStart,
@@ -185,12 +185,12 @@ export async function createManualAppointmentAction(input: {
     try { await dbService.updateAppointmentStatus(appointment.id, 'confirmed'); } catch {}
 
     // Garante que a cliente esteja na base de clientes (ignoreDuplicates = não sobrescreve)
-    dbService.upsertWhatsAppClient(professionalId, clientWhatsapp.replace(/\D/g, ''), clientName.trim()).catch(() => {});
+    dbService.upsertWhatsAppClient(professionalId, normalizeWhatsapp(clientWhatsapp), clientName.trim()).catch(() => {});
 
     // Envio instantâneo via automação se delay = 0
     try {
       const waSettings = await dbService.getWhatsAppSettings(professionalId);
-      const cleanPhone = clientWhatsapp.replace(/\D/g, '');
+      const cleanPhone = normalizeWhatsapp(clientWhatsapp);
       if (
         waSettings?.automation_booking_enabled &&
         waSettings?.automation_booking_message &&
@@ -210,7 +210,7 @@ export async function createManualAppointmentAction(input: {
         const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
         if (ok) {
           dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
-          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          await dbService.setBotCooldown(professionalId, cleanPhone, 3);
           dbService.appendAutomatedMessage(professionalId, cleanPhone, msg).catch(() => {});
         }
       }
@@ -303,7 +303,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       service_id: serviceId,
       client_id: null, // será vinculado internamente
       client_name: clientName,
-      client_whatsapp: clientWhatsapp.replace(/\D/g, ''), // apenas números
+      client_whatsapp: normalizeWhatsapp(clientWhatsapp), // apenas números
       client_email: clientEmail || null,
       date,
       start_time: finalStartTime,
@@ -315,7 +315,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
 
     // Best-effort: registrar aniversário da cliente (requer migração v2 — não bloqueia o agendamento)
     if (clientBirthday) {
-      await dbService.setClientBirthday(professionalId, clientWhatsapp.replace(/\D/g, ''), clientBirthday);
+      await dbService.setClientBirthday(professionalId, normalizeWhatsapp(clientWhatsapp), clientBirthday);
     }
 
     // Confirmação automática: se a profissional ativou em Configurações → Agenda,
@@ -372,7 +372,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
         dbService.getWhatsAppSettings(professionalId),
         dbService.getSettingsByProfessional(professionalId),
       ]);
-      const cleanPhone = clientWhatsapp.replace(/\D/g, '');
+      const cleanPhone = normalizeWhatsapp(clientWhatsapp);
 
       // Automação ativa com delay=0 → envio instantâneo usando a mensagem configurada
       if (
@@ -395,7 +395,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
         const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
         if (ok) {
           dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
-          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          await dbService.setBotCooldown(professionalId, cleanPhone, 3);
           dbService.appendAutomatedMessage(professionalId, cleanPhone, msg).catch(() => {});
         }
       // Sistema legado: confirmation_enabled sem automação ativa
@@ -417,7 +417,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
         );
         const okLegacy = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
         if (okLegacy) {
-          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          await dbService.setBotCooldown(professionalId, cleanPhone, 3);
           dbService.appendAutomatedMessage(professionalId, cleanPhone, confirmMsg).catch(() => {});
         }
       }

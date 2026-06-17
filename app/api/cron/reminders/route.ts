@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
           const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
           if (ok) {
             await dbService.markReminderSent(appt.id, 'booking');
-            dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+            dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 3).catch(() => {});
             dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
             sent++;
           }
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) {
               await dbService.markReminderSent(appt.id, 'day_before');
-              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 3).catch(() => {});
               dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
               sent++;
             }
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
             if (ok) {
               await dbService.markReminderSent(appt.id, 'day_of');
-              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 3).catch(() => {});
               dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
               sent++;
             }
