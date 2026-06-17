@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 // build: 2026-06-17b
 const nextConfig: NextConfig = {
+  devIndicators: false,
   experimental: {
     // Cache de navegação do cliente: ao reabrir uma aba já visitada, o Next
     // reusa o conteúdo em memória em vez de buscar tudo de novo no servidor.
