@@ -73,7 +73,7 @@ Para agir sobre um agendamento existente (cancelar, remarcar, concluir), primeir
 Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
 
     const result = await streamText({
-      model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'),
+      model: openai(process.env.OPENAI_MODEL || 'gpt-4o'),
       system: systemPrompt,
       messages,
       tools: {

@@ -68,7 +68,7 @@ async function updateClientSummary(
 ): Promise<string | null> {
   try {
     const result = await generateText({
-      model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'),
+      model: openai(process.env.OPENAI_MODEL || 'gpt-4o'),
       system: 'Você mantém um registro conciso sobre clientes de um salão de beleza. Responda APENAS com o texto do resumo, sem explicações adicionais.',
       prompt: `Resumo anterior: "${prev || 'nenhum ainda'}"\n\nÚltima troca:\nCliente: "${userMessage}"\nAssistente: "${botReply}"\n\nAtualize o resumo com o que é útil lembrar sobre esta cliente (nome, preferências de horário, serviços de interesse, histórico mencionado, observações). Máximo 3 frases curtas. Se nada novo for relevante, retorne o resumo anterior sem alteração.`,
       abortSignal: AbortSignal.timeout(15000),
@@ -237,7 +237,7 @@ REGRAS:
     let shouldPauseBot = false;
     try {
       const result = await generateText({
-        model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'),
+        model: openai(process.env.OPENAI_MODEL || 'gpt-4o'),
         system: systemPrompt,
         messages: history,
         abortSignal: AbortSignal.timeout(25000),
