@@ -1140,15 +1140,18 @@ export const dbService = {
     clientPhone: string,
     messages: WhatsAppConversation['messages'],
     clientSummary?: string,
-    lastMessageAt?: number
+    lastMessageAt?: number,
+    botPaused?: boolean
   ): Promise<void> => {
     const payload: Record<string, unknown> = {
       professional_id: professionalId,
       client_phone: clientPhone,
       messages,
-      bot_paused: false,
       last_message_at: lastMessageAt ? new Date(lastMessageAt).toISOString() : new Date().toISOString(),
     };
+    // bot_paused só é sobrescrito quando explicitamente passado.
+    // Sem isso, setBotPaused(true) seria anulado pelo save do histórico logo depois.
+    if (botPaused !== undefined) payload.bot_paused = botPaused;
     if (clientSummary !== undefined) payload.client_summary = clientSummary;
     const { error } = await getDb()
       .from('whatsapp_conversations')

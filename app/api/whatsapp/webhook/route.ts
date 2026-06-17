@@ -136,7 +136,8 @@ async function processMessage(professionalId: string, secret: string | null, bod
     // Passa arrivalTime para o upsert — DB armazena exatamente esse timestamp.
     // Sem isso, last_message_at fica alguns ms APÓS arrivalTime e o debounce
     // aborta sempre, achando que chegou mensagem mais nova.
-    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, pendingMessages, conversation?.client_summary ?? undefined, arrivalTime);
+    // botPaused=false só na criação (quando conversation é null) — não sobrescreve pausas já ativas
+    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, pendingMessages, conversation?.client_summary ?? undefined, arrivalTime, conversation ? undefined : false);
 
     await new Promise(r => setTimeout(r, 1500));
 
