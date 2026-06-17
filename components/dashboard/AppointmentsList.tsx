@@ -61,19 +61,25 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const [nDuration, setNDuration] = useState<number>(60);
   const [nNotes, setNNotes] = useState('');
   const [nAllowOverlap, setNAllowOverlap] = useState(false);
+  const [nClients, setNClients] = useState<Array<{ name: string; phone: string }>>([]);
+  const [activeSuggestionIdx, setActiveSuggestionIdx] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const clientSuggestions = nName.length >= 2
-    ? clients.filter(c =>
-        c.name.toLowerCase().includes(nName.toLowerCase()) ||
-        c.whatsapp.includes(nName.replace(/\D/g, ''))
-      ).slice(0, 8)
-    : [];
+  const getSuggestions = (query: string) =>
+    query.length >= 2
+      ? clients.filter(c =>
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.whatsapp.includes(query.replace(/\D/g, ''))
+        ).slice(0, 8)
+      : [];
+
+  const clientSuggestions = getSuggestions(nName);
 
   const openNew = () => {
     const first = activeServices[0];
     setNName(''); setNPhone(''); setNServiceId(first?.id || '');
-    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes(''); setNAllowOverlap(false);
+    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes('');
+    setNAllowOverlap(false); setNClients([]); setActiveSuggestionIdx(null);
     setShowNew(true);
   };
 
@@ -87,23 +93,40 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     e.preventDefault();
     setSavingNew(true);
     try {
-      const res = await createManualAppointmentAction({
-        professionalId,
-        serviceId: nServiceId,
-        clientName: nName,
-        clientWhatsapp: nPhone,
-        date: nDate,
-        startTime: nTime,
-        durationMinutes: nDuration,
-        notes: nNotes || undefined,
-        allowOverlap: nAllowOverlap,
-      });
-      if (res.success) {
-        success('Agendamento criado!', 'O horário foi reservado na sua agenda.');
+      const clientList = nAllowOverlap
+        ? nClients.filter(c => c.name.trim() && c.phone.trim())
+        : [{ name: nName, phone: nPhone }];
+
+      if (clientList.length === 0) {
+        error('Atenção', 'Preencha nome e WhatsApp de ao menos uma cliente.');
+        return;
+      }
+
+      let failed = false;
+      for (const client of clientList) {
+        const res = await createManualAppointmentAction({
+          professionalId,
+          serviceId: nServiceId,
+          clientName: client.name,
+          clientWhatsapp: client.phone,
+          date: nDate,
+          startTime: nTime,
+          durationMinutes: nDuration,
+          notes: nNotes || undefined,
+          allowOverlap: nAllowOverlap,
+        });
+        if (!res.success) {
+          error('Não foi possível agendar', res.error || 'Verifique os dados e tente novamente.');
+          failed = true;
+          break;
+        }
+      }
+
+      if (!failed) {
+        const count = clientList.length;
+        success('Agendamento criado!', count > 1 ? `${count} clientes agendadas no mesmo horário.` : 'O horário foi reservado na sua agenda.');
         setShowNew(false);
         router.refresh();
-      } else {
-        error('Não foi possível agendar', res.error || 'Verifique os dados e tente novamente.');
       }
     } catch {
       error('Erro', 'Falha ao criar o agendamento.');
@@ -451,38 +474,114 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
               </p>
             ) : (
               <form onSubmit={createManual} className="space-y-3">
-                <div className="relative">
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
-                  <input
-                    required
-                    autoComplete="off"
-                    value={nName}
-                    onChange={(e) => { setNName(e.target.value); setShowSuggestions(true); }}
-                    onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    placeholder="Nome da cliente"
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
-                  />
-                  {showSuggestions && clientSuggestions.length > 0 && (
-                    <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-48 overflow-y-auto">
-                      {clientSuggestions.map(c => (
-                        <li
-                          key={c.id}
-                          onMouseDown={() => { setNName(c.name); setNPhone(c.whatsapp); setShowSuggestions(false); }}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-cream cursor-pointer"
-                        >
-                          <span className="text-sm font-semibold text-ink">{c.name}</span>
-                          <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
-                  <input required inputMode="tel" value={nPhone} onChange={(e) => setNPhone(e.target.value)} placeholder="11999999999"
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
-                </div>
+                {!nAllowOverlap ? (
+                  <>
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
+                      <input
+                        required
+                        autoComplete="off"
+                        value={nName}
+                        onChange={(e) => { setNName(e.target.value); setShowSuggestions(true); }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        placeholder="Nome da cliente"
+                        className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                      />
+                      {showSuggestions && clientSuggestions.length > 0 && (
+                        <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-48 overflow-y-auto">
+                          {clientSuggestions.map(c => (
+                            <li key={c.id} onMouseDown={() => { setNName(c.name); setNPhone(c.whatsapp); setShowSuggestions(false); }}
+                              className="flex items-center justify-between px-3 py-2.5 hover:bg-cream cursor-pointer">
+                              <span className="text-sm font-semibold text-ink">{c.name}</span>
+                              <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
+                      <input required inputMode="tel" value={nPhone} onChange={(e) => setNPhone(e.target.value)} placeholder="11999999999"
+                        className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider">Clientes *</label>
+                      <span className="text-[11px] font-black text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-full">
+                        {nClients.filter(c => c.name.trim()).length} cliente{nClients.filter(c => c.name.trim()).length !== 1 ? 's' : ''} neste horário
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {nClients.map((client, idx) => {
+                        const rowSuggestions = getSuggestions(client.name);
+                        return (
+                          <div key={idx} className="flex gap-1.5 items-start">
+                            <span className="text-[10px] font-bold text-gray-450 mt-3.5 w-5 shrink-0 text-right">{idx + 1}.</span>
+                            <div className="flex-1 relative">
+                              <input
+                                required={idx < 2}
+                                autoComplete="off"
+                                value={client.name}
+                                placeholder="Nome"
+                                onChange={(e) => {
+                                  const updated = nClients.map((c, i) => i === idx ? { ...c, name: e.target.value } : c);
+                                  setNClients(updated);
+                                  setActiveSuggestionIdx(idx);
+                                }}
+                                onFocus={() => setActiveSuggestionIdx(idx)}
+                                onBlur={() => setTimeout(() => setActiveSuggestionIdx(null), 150)}
+                                className="block w-full px-2.5 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                              />
+                              {activeSuggestionIdx === idx && rowSuggestions.length > 0 && (
+                                <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-40 overflow-y-auto">
+                                  {rowSuggestions.map(c => (
+                                    <li key={c.id}
+                                      onMouseDown={() => {
+                                        const updated = nClients.map((cl, i) => i === idx ? { name: c.name, phone: c.whatsapp } : cl);
+                                        setNClients(updated); setActiveSuggestionIdx(null);
+                                      }}
+                                      className="flex items-center justify-between px-3 py-2 hover:bg-cream cursor-pointer">
+                                      <span className="text-sm font-semibold text-ink">{c.name}</span>
+                                      <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <input
+                                required={idx < 2}
+                                inputMode="tel"
+                                value={client.phone}
+                                placeholder="WhatsApp"
+                                onChange={(e) => {
+                                  const updated = nClients.map((c, i) => i === idx ? { ...c, phone: e.target.value } : c);
+                                  setNClients(updated);
+                                }}
+                                className="block w-full px-2.5 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                              />
+                            </div>
+                            {nClients.length > 2 && (
+                              <button type="button"
+                                onClick={() => setNClients(nClients.filter((_, i) => i !== idx))}
+                                className="mt-2 p-1.5 text-gray-450 hover:text-[#b23a48] rounded-lg hover:bg-cream transition-colors shrink-0">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button type="button"
+                      onClick={() => setNClients([...nClients, { name: '', phone: '' }])}
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-wine-700 hover:text-wine-800 transition-colors">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar outra cliente
+                    </button>
+                  </div>
+                )}
                 <div>
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviço *</label>
                   <select required value={nServiceId} onChange={(e) => onSelectService(e.target.value)}
@@ -525,7 +624,17 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   <input
                     type="checkbox"
                     checked={nAllowOverlap}
-                    onChange={(e) => setNAllowOverlap(e.target.checked)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setNAllowOverlap(checked);
+                      if (checked) {
+                        setNClients([{ name: nName, phone: nPhone }, { name: '', phone: '' }]);
+                      } else {
+                        setNName(nClients[0]?.name || '');
+                        setNPhone(nClients[0]?.phone || '');
+                        setNClients([]);
+                      }
+                    }}
                     className="mt-0.5 h-4 w-4 rounded accent-wine-700 shrink-0"
                   />
                   <span className="text-xs text-ink leading-snug">
