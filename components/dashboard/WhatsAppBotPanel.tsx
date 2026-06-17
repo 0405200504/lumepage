@@ -58,7 +58,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [autoBookingMessage, setAutoBookingMessage] = useState(
     initialSettings?.automation_booking_message || 'Oi, {nome}! 😊 Seu agendamento de {servico} foi confirmado para {data} às {horario}. Te esperamos!'
   );
-  const [autoBookingDelay, setAutoBookingDelay] = useState(initialSettings?.automation_booking_delay_minutes ?? 1);
+  const [autoBookingDelay, setAutoBookingDelay] = useState(initialSettings?.automation_booking_delay_minutes ?? 30);
   const [autoDayBeforeEnabled, setAutoDayBeforeEnabled] = useState(initialSettings?.automation_day_before_enabled ?? false);
   const [autoDayBeforeMessage, setAutoDayBeforeMessage] = useState(
     initialSettings?.automation_day_before_message || 'Olá, {nome}! Lembrete: amanhã você tem {servico} às {horario} com {profissional}. Até lá! 💛'
@@ -661,10 +661,10 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-xs font-medium text-gray-600 shrink-0">Enviar após</label>
-                  <input type="number" min={1} max={60} value={autoBookingDelay}
-                    onChange={e => setAutoBookingDelay(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-16 px-2 py-1.5 rounded-xl border border-[#efe9e6] text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
-                  <span className="text-xs text-gray-400">minuto(s) do agendamento</span>
+                  <input type="number" min={10} max={3600} value={autoBookingDelay}
+                    onChange={e => setAutoBookingDelay(Math.max(10, parseInt(e.target.value) || 30))}
+                    className="w-20 px-2 py-1.5 rounded-xl border border-[#efe9e6] text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                  <span className="text-xs text-gray-400">segundo(s) do agendamento</span>
                 </div>
               </div>
             </AutomationCard>

@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
       // ── Automação 1: Confirmação após agendamento ──────────────────────────
       if (settings.automation_booking_enabled && settings.automation_booking_message) {
-        const delayMs = (settings.automation_booking_delay_minutes ?? 1) * 60 * 1000;
+        const delayMs = (settings.automation_booking_delay_minutes ?? 30) * 1000;
         const eligible = activeAppts.filter(a =>
           !a.automation_booking_sent_at &&
           (Date.now() - new Date(a.created_at).getTime()) >= delayMs
