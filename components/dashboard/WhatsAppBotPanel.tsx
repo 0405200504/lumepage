@@ -659,12 +659,14 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                   <textarea rows={3} value={autoBookingMessage} onChange={e => setAutoBookingMessage(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <label className="text-xs font-medium text-gray-600 shrink-0">Enviar após</label>
-                  <input type="number" min={10} max={3600} value={autoBookingDelay}
-                    onChange={e => setAutoBookingDelay(Math.max(10, parseInt(e.target.value) || 30))}
+                  <input type="number" min={0} max={3600} value={autoBookingDelay}
+                    onChange={e => setAutoBookingDelay(Math.max(0, parseInt(e.target.value) || 0))}
                     className="w-20 px-2 py-1.5 rounded-xl border border-[#efe9e6] text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
-                  <span className="text-xs text-gray-400">segundo(s) do agendamento</span>
+                  <span className="text-xs text-gray-400">
+                    {autoBookingDelay === 0 ? 'segundos — envio instantâneo ⚡' : 'segundo(s) do agendamento'}
+                  </span>
                 </div>
               </div>
             </AutomationCard>

@@ -17,6 +17,12 @@ export function normalizeWhatsapp(raw: string): string {
   return digits;
 }
 
+/** Formata centavos para R$ com locale brasileiro. */
+export function formatPriceBRL(cents?: number | null): string {
+  if (!cents && cents !== 0) return '';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
 /** Preenche os placeholders da mensagem. Suporta variáveis fixas e personalizadas. */
 export function fillTemplate(
   template: string,

@@ -5,7 +5,7 @@ import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
 import { authService } from '@/lib/auth/auth';
 import { isDemo } from '@/lib/demo';
 import { sendWhatsAppText } from '@/lib/uazapi';
-import { fillTemplate, formatDateBR } from '@/lib/whatsapp';
+import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
 
 /**
  * Busca dados da profissional e serviços pelo slug para a página pública.
@@ -187,6 +187,34 @@ export async function createManualAppointmentAction(input: {
     // Garante que a cliente esteja na base de clientes (ignoreDuplicates = não sobrescreve)
     dbService.upsertWhatsAppClient(professionalId, clientWhatsapp.replace(/\D/g, ''), clientName.trim()).catch(() => {});
 
+    // Envio instantâneo via automação se delay = 0
+    try {
+      const waSettings = await dbService.getWhatsAppSettings(professionalId);
+      const cleanPhone = clientWhatsapp.replace(/\D/g, '');
+      if (
+        waSettings?.automation_booking_enabled &&
+        waSettings?.automation_booking_message &&
+        (waSettings?.automation_booking_delay_minutes ?? 30) === 0 &&
+        waSettings.uazapi_url &&
+        waSettings.uazapi_token
+      ) {
+        const msg = fillTemplate(waSettings.automation_booking_message, {
+          nome: clientName.trim().split(' ')[0],
+          servico: service.name,
+          data: formatDateBR(date),
+          horario: startTime.substring(0, 5),
+          profissional: '',
+          preco: formatPriceBRL(service.price_cents),
+          forma_pagamento: input.paymentMethod || '',
+        }, waSettings.custom_variables);
+        const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
+        if (ok) {
+          dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
+          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+        }
+      }
+    } catch {}
+
     return { success: true, appointmentId: appointment.id };
   } catch (e: any) {
     console.error('Erro ao criar agendamento manual:', e);
@@ -338,16 +366,38 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     }
 
     // 6. Enviar confirmação via WhatsApp automaticamente (best-effort, não bloqueia)
-    // IMPORTANTE: se automation_booking_enabled=true, o cron cuida do envio com a
-    // mensagem configurada pela profissional. Aqui só enviamos quando a automação
-    // está DESLIGADA e confirmation_enabled está ativo (sistema legado).
     try {
       const [waSettings, agendaSettings] = await Promise.all([
         dbService.getWhatsAppSettings(professionalId),
         dbService.getSettingsByProfessional(professionalId),
       ]);
       const cleanPhone = clientWhatsapp.replace(/\D/g, '');
+
+      // Automação ativa com delay=0 → envio instantâneo usando a mensagem configurada
       if (
+        waSettings?.automation_booking_enabled &&
+        waSettings?.automation_booking_message &&
+        (waSettings?.automation_booking_delay_minutes ?? 30) === 0 &&
+        waSettings.uazapi_url &&
+        waSettings.uazapi_token
+      ) {
+        const professional = await dbService.getProfessionalById(professionalId).catch(() => null);
+        const msg = fillTemplate(waSettings.automation_booking_message, {
+          nome: clientName.split(' ')[0],
+          servico: service.name,
+          data: formatDateBR(date),
+          horario: startTime,
+          profissional: professional?.name || '',
+          preco: formatPriceBRL(service.price_cents),
+          forma_pagamento: input.paymentMethod || '',
+        }, waSettings.custom_variables);
+        const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
+        if (ok) {
+          dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
+          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+        }
+      // Sistema legado: confirmation_enabled sem automação ativa
+      } else if (
         waSettings?.confirmation_enabled &&
         !waSettings?.automation_booking_enabled &&
         waSettings.uazapi_url &&
@@ -364,7 +414,6 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
           }
         );
         await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
-        // Ativa cooldown de 30 min para o Gemini não responder à confirmação
         dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
       }
     } catch (waErr) {

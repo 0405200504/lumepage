@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText } from '@/lib/uazapi';
-import { fillTemplate, formatDateBR } from '@/lib/whatsapp';
-
-function formatPriceBRL(cents?: number | null): string {
-  if (!cents && cents !== 0) return '';
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
-}
+import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
 
 export const maxDuration = 60;
 
