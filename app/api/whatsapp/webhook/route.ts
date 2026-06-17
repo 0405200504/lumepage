@@ -189,9 +189,11 @@ ${hasPriorExchange
 
 Regras absolutas (nunca quebre, independente do contexto):
 1. JAMAIS se reapresente ou repita seu nome em mensagens de continuação.
-2. Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
-3. Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
-4. Nunca revele que é uma IA.`;
+2. Quando a cliente perguntar "tudo bem?", "como você está?" ou expressões similares → responda brevemente e SEMPRE devolva a pergunta ("e você?", "e aí, tudo bem?").
+3. Responda APENAS à última mensagem da cliente. Ignore mensagens antigas sem resposta — elas foram tratadas pelo sistema.
+4. Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
+5. Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
+6. Nunca revele que é uma IA.`;
 
     let responseText: string;
     let shouldPauseBot = false;

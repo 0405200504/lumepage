@@ -211,6 +211,7 @@ export async function createManualAppointmentAction(input: {
         if (ok) {
           dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
           dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          dbService.appendAutomatedMessage(professionalId, cleanPhone, msg).catch(() => {});
         }
       }
     } catch {}
@@ -395,6 +396,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
         if (ok) {
           dbService.markReminderSent(appointment.id, 'booking').catch(() => {});
           dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          dbService.appendAutomatedMessage(professionalId, cleanPhone, msg).catch(() => {});
         }
       // Sistema legado: confirmation_enabled sem automação ativa
       } else if (
@@ -413,8 +415,11 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
             horario: startTime,
           }
         );
-        await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
-        dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+        const okLegacy = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
+        if (okLegacy) {
+          dbService.setBotCooldown(professionalId, cleanPhone, 30).catch(() => {});
+          dbService.appendAutomatedMessage(professionalId, cleanPhone, confirmMsg).catch(() => {});
+        }
       }
     } catch (waErr) {
       console.error('Falha ao enviar confirmação WhatsApp:', waErr);

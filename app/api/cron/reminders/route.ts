@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
           if (ok) {
             await dbService.markReminderSent(appt.id, 'booking');
             dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+            dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
             sent++;
           }
         }
@@ -97,6 +98,7 @@ export async function GET(req: NextRequest) {
             if (ok) {
               await dbService.markReminderSent(appt.id, 'day_before');
               dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
               sent++;
             }
           }
@@ -124,6 +126,7 @@ export async function GET(req: NextRequest) {
             if (ok) {
               await dbService.markReminderSent(appt.id, 'day_of');
               dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 30).catch(() => {});
+              dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
               sent++;
             }
           }

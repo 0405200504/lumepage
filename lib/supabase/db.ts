@@ -1186,6 +1186,37 @@ export const dbService = {
     }
   },
 
+  // Adiciona uma mensagem enviada automaticamente ao histórico da conversa.
+  // Usa UPDATE (não upsert que resetaria bot_paused) e cria o registro se não existir.
+  appendAutomatedMessage: async (professionalId: string, clientPhone: string, text: string): Promise<void> => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const conv = await dbService.getWhatsAppConversation(professionalId, clientPhone);
+      const messages = [
+        ...(conv?.messages || []),
+        { role: 'assistant' as const, content: text, at: Date.now() },
+      ];
+      const now = new Date().toISOString();
+      if (conv) {
+        await getDb()
+          .from('whatsapp_conversations')
+          .update({ messages, last_message_at: now })
+          .eq('professional_id', professionalId)
+          .eq('client_phone', clientPhone);
+      } else {
+        await getDb()
+          .from('whatsapp_conversations')
+          .insert({
+            professional_id: professionalId,
+            client_phone: clientPhone,
+            messages,
+            bot_paused: false,
+            last_message_at: now,
+          });
+      }
+    } catch { /* best-effort */ }
+  },
+
   getAllWhatsAppConversations: async (professionalId: string): Promise<WhatsAppConversation[]> => {
     if (!isSupabaseConfigured) return [];
     const { data, error } = await getDb()
