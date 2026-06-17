@@ -1139,14 +1139,15 @@ export const dbService = {
     professionalId: string,
     clientPhone: string,
     messages: WhatsAppConversation['messages'],
-    clientSummary?: string
+    clientSummary?: string,
+    lastMessageAt?: number
   ): Promise<void> => {
     const payload: Record<string, unknown> = {
       professional_id: professionalId,
       client_phone: clientPhone,
       messages,
       bot_paused: false,
-      last_message_at: new Date().toISOString(),
+      last_message_at: lastMessageAt ? new Date(lastMessageAt).toISOString() : new Date().toISOString(),
     };
     if (clientSummary !== undefined) payload.client_summary = clientSummary;
     const { error } = await getDb()
