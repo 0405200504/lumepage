@@ -60,6 +60,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const [nTime, setNTime] = useState('');
   const [nDuration, setNDuration] = useState<number>(60);
   const [nNotes, setNNotes] = useState('');
+  const [nAllowOverlap, setNAllowOverlap] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const clientSuggestions = nName.length >= 2
@@ -72,7 +73,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const openNew = () => {
     const first = activeServices[0];
     setNName(''); setNPhone(''); setNServiceId(first?.id || '');
-    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes('');
+    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes(''); setNAllowOverlap(false);
     setShowNew(true);
   };
 
@@ -95,6 +96,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         startTime: nTime,
         durationMinutes: nDuration,
         notes: nNotes || undefined,
+        allowOverlap: nAllowOverlap,
       });
       if (res.success) {
         success('Agendamento criado!', 'O horário foi reservado na sua agenda.');
@@ -519,6 +521,18 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   <textarea value={nNotes} onChange={(e) => setNNotes(e.target.value)} rows={2} placeholder="Opcional"
                     className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
                 </div>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-gray-150 bg-cream/40 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={nAllowOverlap}
+                    onChange={(e) => setNAllowOverlap(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded accent-wine-700 shrink-0"
+                  />
+                  <span className="text-xs text-ink leading-snug">
+                    <span className="font-bold">Permitir horário simultâneo</span>
+                    <span className="text-gray-450"> — agenda mais de uma cliente no mesmo horário (ex.: procedimentos em grupo)</span>
+                  </span>
+                </label>
                 <div className="flex justify-end gap-2.5 pt-1">
                   <button type="button" onClick={() => setShowNew(false)} className="px-4 py-2.5 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
                   <button type="submit" disabled={savingNew} className="tap px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">

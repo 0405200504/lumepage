@@ -114,6 +114,7 @@ export async function createManualAppointmentAction(input: {
   startTime: string; // "HH:MM"
   durationMinutes?: number;
   notes?: string;
+  allowOverlap?: boolean;
 }) {
   try {
     const { professionalId, serviceId, clientName, clientWhatsapp, date, startTime } = input;
@@ -145,17 +146,20 @@ export async function createManualAppointmentAction(input: {
     }
 
     // Conflito com outros agendamentos (considerando o buffer pós-atendimento)
-    const settings = await dbService.getSettingsByProfessional(professionalId);
-    const buffer = settings?.default_buffer_minutes ?? 0;
-    const dayAppts = (await dbService.getAppointmentsByProfessional(professionalId))
-      .filter(a => a.date === date && a.status !== 'cancelled');
-    const conflict = dayAppts.some(a => {
-      const aStart = timeToMinutes(a.start_time);
-      const aEnd = timeToMinutes(a.end_time) + buffer;
-      return Math.max(startMin, aStart) < Math.min(endMin, aEnd);
-    });
-    if (conflict) {
-      return { success: false, error: 'Esse intervalo conflita com outro agendamento. Escolha outro horário ou ajuste a duração.' };
+    // allowOverlap=true permite que a profissional agende múltiplas clientes no mesmo horário
+    if (!input.allowOverlap) {
+      const settings = await dbService.getSettingsByProfessional(professionalId);
+      const buffer = settings?.default_buffer_minutes ?? 0;
+      const dayAppts = (await dbService.getAppointmentsByProfessional(professionalId))
+        .filter(a => a.date === date && a.status !== 'cancelled');
+      const conflict = dayAppts.some(a => {
+        const aStart = timeToMinutes(a.start_time);
+        const aEnd = timeToMinutes(a.end_time) + buffer;
+        return Math.max(startMin, aStart) < Math.min(endMin, aEnd);
+      });
+      if (conflict) {
+        return { success: false, error: 'Esse intervalo conflita com outro agendamento. Escolha outro horário ou ajuste a duração.' };
+      }
     }
 
     const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00`;
