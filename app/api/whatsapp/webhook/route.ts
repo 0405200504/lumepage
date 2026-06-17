@@ -182,7 +182,7 @@ Contexto do atendimento (use para responder, não mencione que veio de um sistem
 - Hoje: ${nowBR}
 - Serviços disponíveis: ${servicesList}
 - Link de agendamento: ${bookingUrl}
-${latestConv?.client_summary ?? freshConv?.client_summary ? `- Sobre esta cliente: ${latestConv?.client_summary ?? freshConv?.client_summary}` : ''}
+${freshConv?.client_summary ? `- Sobre esta cliente: ${freshConv.client_summary}` : ''}
 ${hasPriorExchange
   ? '- CONVERSA EM ANDAMENTO: esta cliente já foi atendida antes. NUNCA se reapresente, NUNCA repita saudações iniciais, NUNCA diga seu nome de novo. Continue a conversa naturalmente.'
   : '- Primeiro contato com esta cliente — pode se apresentar brevemente.'}
