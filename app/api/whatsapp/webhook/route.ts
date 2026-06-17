@@ -215,13 +215,18 @@ Regras absolutas (nunca quebre, independente do contexto):
       responseText = `Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
     }
 
+    // Pausa ANTES de enviar a mensagem: qualquer resposta imediata da cliente já
+    // encontra bot_paused=true no banco e é ignorada pelo webhook.
+    if (shouldPauseBot) {
+      await dbService.setBotPaused(professionalId, clientPhone, true);
+      console.log('[Bot] pausado para', clientPhone, '— aguardando profissional retomar');
+    }
+
     const typingDelay = Math.min(Math.max(responseText.length * 35, 1500), 5000);
     await sendTypingPresence(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, typingDelay);
 
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     console.log('[Bot] enviado:', sent);
-
-    if (shouldPauseBot) dbService.setBotPaused(professionalId, clientPhone, true).catch(() => {});
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
     // Lê o estado mais recente do banco antes de salvar — evita sobrescrever mensagens
