@@ -1,15 +1,8 @@
-import { google } from '@ai-sdk/google';
-import { streamText, generateText, tool } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
-
-const GEMINI_FALLBACK_MODELS = [
-  process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-2.5-flash-lite',
-].filter((v, i, arr) => arr.indexOf(v) === i);
 import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
 
 // Permite tempo de resposta maior para funções complexas
@@ -18,9 +11,9 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
     // 0. Garante que a chave da OpenAI está configurada
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      console.error('GOOGLE_GENERATIVE_AI_API_KEY não configurada no ambiente.');
-      return new Response('Assistente indisponível: chave da IA (Gemini) não configurada.', { status: 503 });
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY não configurada no ambiente.');
+      return new Response('Assistente indisponível: chave da IA não configurada.', { status: 503 });
     }
 
     // 1. Obter a sessão e o ID da profissional autenticada
@@ -79,21 +72,8 @@ Para agir sobre um agendamento existente (cancelar, remarcar, concluir), primeir
 
 Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
 
-    let activeModel = google(GEMINI_FALLBACK_MODELS[0]);
-    for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
-      try {
-        activeModel = google(GEMINI_FALLBACK_MODELS[i]);
-        await generateText({ model: activeModel, prompt: 'ping', abortSignal: AbortSignal.timeout(5000) });
-        break;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if ((msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429') || msg.includes('not found') || msg.includes('is not supported') || msg.includes('404')) && i < GEMINI_FALLBACK_MODELS.length - 1) continue;
-        break;
-      }
-    }
-
     const result = await streamText({
-      model: activeModel,
+      model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'),
       system: systemPrompt,
       messages,
       tools: {

@@ -2,46 +2,15 @@ import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid, sendTypingPresence } from '@/lib/uazapi';
-import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 
 export const maxDuration = 60;
 
-// Ordem de fallback: tenta o próximo modelo automaticamente quando quota acabar.
-// Configure GEMINI_MODEL no Vercel para forçar um modelo específico.
-const GEMINI_FALLBACK_MODELS = [
-  process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-2.5-flash-lite',
-].filter((v, i, arr) => arr.indexOf(v) === i); // remove duplicatas
+const BOT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
-function isRetryableError(e: unknown): boolean {
-  const msg = e instanceof Error ? e.message : String(e);
-  return (
-    msg.includes('quota') ||
-    msg.includes('RESOURCE_EXHAUSTED') ||
-    msg.includes('429') ||
-    msg.includes('not found') ||
-    msg.includes('is not supported') ||
-    msg.includes('404')
-  );
-}
-
-async function generateWithFallback(params: Omit<Parameters<typeof generateText>[0], 'model'>): Promise<Awaited<ReturnType<typeof generateText>>> {
-  for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
-    const model = GEMINI_FALLBACK_MODELS[i];
-    try {
-      return await generateText({ ...params, model: google(model) });
-    } catch (e) {
-      if (isRetryableError(e) && i < GEMINI_FALLBACK_MODELS.length - 1) {
-        console.warn(`[Bot] quota esgotada em ${model}, tentando ${GEMINI_FALLBACK_MODELS[i + 1]}...`);
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new Error('Todos os modelos Gemini com quota esgotada.');
+async function generateWithModel(params: Omit<Parameters<typeof generateText>[0], 'model'>): Promise<Awaited<ReturnType<typeof generateText>>> {
+  return generateText({ ...params, model: openai(BOT_MODEL) });
 }
 
 // Formato real desta instância (fork uazapiGO) — difere da doc genérica:
@@ -104,7 +73,7 @@ async function updateClientSummary(
   botReply: string
 ): Promise<string | null> {
   try {
-    const result = await generateWithFallback({
+    const result = await generateWithModel({
       system: 'Você mantém um registro conciso sobre clientes de um salão de beleza. Responda APENAS com o texto do resumo, sem explicações adicionais.',
       prompt: `Resumo anterior: "${prev || 'nenhum ainda'}"\n\nÚltima troca:\nCliente: "${userMessage}"\nAssistente: "${botReply}"\n\nAtualize o resumo com o que é útil lembrar sobre esta cliente (nome, preferências de horário, serviços de interesse, histórico mencionado, observações). Máximo 3 frases curtas. Se nada novo for relevante, retorne o resumo anterior sem alteração.`,
       abortSignal: AbortSignal.timeout(15000),
@@ -272,7 +241,7 @@ ${pilares}`;
     let responseText: string;
     let shouldPauseBot = false;
     try {
-      const result = await generateWithFallback({
+      const result = await generateWithModel({
         system: systemPrompt,
         messages: history,
         abortSignal: AbortSignal.timeout(25000),
