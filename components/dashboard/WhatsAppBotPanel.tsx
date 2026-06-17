@@ -51,6 +51,18 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [stopKeyword, setStopKeyword] = useState(initialSettings?.stop_keyword || '#humano');
   const [bookingUrl, setBookingUrl] = useState(initialSettings?.booking_url || '');
 
+  // Automações
+  const [autoBookingEnabled, setAutoBookingEnabled] = useState(initialSettings?.automation_booking_enabled ?? false);
+  const [autoBookingMessage, setAutoBookingMessage] = useState(initialSettings?.automation_booking_message || 'Oi, {nome}! 😊 Seu agendamento de {servico} foi confirmado para {data} às {horario}. Te esperamos!');
+  const [autoBookingDelay, setAutoBookingDelay] = useState(initialSettings?.automation_booking_delay_minutes ?? 1);
+  const [autoDayBeforeEnabled, setAutoDayBeforeEnabled] = useState(initialSettings?.automation_day_before_enabled ?? false);
+  const [autoDayBeforeMessage, setAutoDayBeforeMessage] = useState(initialSettings?.automation_day_before_message || 'Olá, {nome}! Lembrete: amanhã você tem {servico} às {horario} com {profissional}. Até lá! 💛');
+  const [autoDayBeforeTime, setAutoDayBeforeTime] = useState((initialSettings?.automation_day_before_time || '10:00').substring(0, 5));
+  const [autoDayOfEnabled, setAutoDayOfEnabled] = useState(initialSettings?.automation_day_of_enabled ?? false);
+  const [autoDayOfMessage, setAutoDayOfMessage] = useState(initialSettings?.automation_day_of_message || 'Bom dia, {nome}! 🌸 Hoje é o dia do seu {servico} às {horario}. Te esperamos!');
+  const [autoDayOfTime, setAutoDayOfTime] = useState((initialSettings?.automation_day_of_time || '08:00').substring(0, 5));
+  const [showAutomations, setShowAutomations] = useState(false);
+
   const [status, setStatus] = useState<ConnectionStatus>('loading');
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -96,6 +108,18 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const automationPayload = () => ({
+    automation_booking_enabled: autoBookingEnabled,
+    automation_booking_message: autoBookingMessage,
+    automation_booking_delay_minutes: autoBookingDelay,
+    automation_day_before_enabled: autoDayBeforeEnabled,
+    automation_day_before_message: autoDayBeforeMessage,
+    automation_day_before_time: autoDayBeforeTime,
+    automation_day_of_enabled: autoDayOfEnabled,
+    automation_day_of_message: autoDayOfMessage,
+    automation_day_of_time: autoDayOfTime,
+  });
+
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
@@ -107,6 +131,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         bot_persona: botPersona,
         stop_keyword: stopKeyword,
         booking_url: bookingUrl,
+        ...automationPayload(),
       });
       if (res.success) {
         success('Salvo!', 'Configurações do bot WhatsApp atualizadas.');
@@ -129,6 +154,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         bot_persona: botPersona,
         stop_keyword: stopKeyword,
         booking_url: bookingUrl,
+        ...automationPayload(),
       });
       if (!saveRes.success) {
         error('Erro ao salvar credenciais', saveRes.error || 'Tente novamente.');
@@ -694,6 +720,135 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Automações de WhatsApp */}
+      {isConfigured && (
+        <div className="border-t border-[#efe9e6] pt-5">
+          <button
+            type="button"
+            onClick={() => setShowAutomations(v => !v)}
+            className="w-full flex items-center justify-between text-sm font-semibold text-gray-800 hover:opacity-70 transition-opacity"
+          >
+            <span className="flex items-center gap-2">
+              Automações de mensagem
+              {(autoBookingEnabled || autoDayBeforeEnabled || autoDayOfEnabled) && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                  {[autoBookingEnabled, autoDayBeforeEnabled, autoDayOfEnabled].filter(Boolean).length} ativa{[autoBookingEnabled, autoDayBeforeEnabled, autoDayOfEnabled].filter(Boolean).length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </span>
+            {showAutomations ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {showAutomations && (
+            <div className="mt-4 space-y-4">
+              <p className="text-xs text-gray-500">
+                Variáveis disponíveis: <code className="bg-gray-100 px-1 rounded">{'{nome}'}</code> <code className="bg-gray-100 px-1 rounded">{'{servico}'}</code> <code className="bg-gray-100 px-1 rounded">{'{data}'}</code> <code className="bg-gray-100 px-1 rounded">{'{horario}'}</code> <code className="bg-gray-100 px-1 rounded">{'{profissional}'}</code>
+              </p>
+
+              {/* Automação 1 — Confirmação de agendamento */}
+              <div className="border border-[#efe9e6] rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-[#faf8f7]">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">✅ Confirmação de agendamento</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Enviada automaticamente após a cliente agendar</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" className="sr-only" checked={autoBookingEnabled} onChange={e => setAutoBookingEnabled(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors ${autoBookingEnabled ? 'bg-green-500' : 'bg-gray-200'}`}>
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoBookingEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </div>
+                  </label>
+                </div>
+                {autoBookingEnabled && (
+                  <div className="px-4 py-3 space-y-3 border-t border-[#efe9e6]">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem</label>
+                      <textarea rows={3} value={autoBookingMessage} onChange={e => setAutoBookingMessage(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Enviar após quantos minutos?</label>
+                      <input type="number" min={1} max={60} value={autoBookingDelay} onChange={e => setAutoBookingDelay(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-24 px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                      <span className="text-xs text-gray-400 ml-2">minuto(s) após o agendamento</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Automação 2 — Lembrete dia anterior */}
+              <div className="border border-[#efe9e6] rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-[#faf8f7]">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">🔔 Lembrete — dia anterior</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Enviada no dia anterior ao agendamento</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" className="sr-only" checked={autoDayBeforeEnabled} onChange={e => setAutoDayBeforeEnabled(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors ${autoDayBeforeEnabled ? 'bg-green-500' : 'bg-gray-200'}`}>
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoDayBeforeEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </div>
+                  </label>
+                </div>
+                {autoDayBeforeEnabled && (
+                  <div className="px-4 py-3 space-y-3 border-t border-[#efe9e6]">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem</label>
+                      <textarea rows={3} value={autoDayBeforeMessage} onChange={e => setAutoDayBeforeMessage(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Horário de envio</label>
+                      <input type="time" value={autoDayBeforeTime} onChange={e => setAutoDayBeforeTime(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Automação 3 — Lembrete no dia */}
+              <div className="border border-[#efe9e6] rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-[#faf8f7]">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">☀️ Lembrete — no dia</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Enviada pela manhã no dia do agendamento</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" className="sr-only" checked={autoDayOfEnabled} onChange={e => setAutoDayOfEnabled(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors ${autoDayOfEnabled ? 'bg-green-500' : 'bg-gray-200'}`}>
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoDayOfEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </div>
+                  </label>
+                </div>
+                {autoDayOfEnabled && (
+                  <div className="px-4 py-3 space-y-3 border-t border-[#efe9e6]">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem</label>
+                      <textarea rows={3} value={autoDayOfMessage} onChange={e => setAutoDayOfMessage(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Horário de envio</label>
+                      <input type="time" value={autoDayOfTime} onChange={e => setAutoDayOfTime(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleSave as unknown as React.MouseEventHandler}
+                className="w-full py-2.5 rounded-xl bg-[#500b18] text-white text-sm font-semibold hover:bg-[#3d0812] transition-colors disabled:opacity-50"
+              >
+                {isPending ? 'Salvando...' : 'Salvar automações'}
+              </button>
             </div>
           )}
         </div>

@@ -21,6 +21,15 @@ export async function saveWhatsAppSettingsAction(input: {
   bot_persona?: string;
   stop_keyword?: string;
   booking_url?: string;
+  automation_booking_enabled?: boolean;
+  automation_booking_message?: string;
+  automation_booking_delay_minutes?: number;
+  automation_day_before_enabled?: boolean;
+  automation_day_before_message?: string;
+  automation_day_before_time?: string;
+  automation_day_of_enabled?: boolean;
+  automation_day_of_message?: string;
+  automation_day_of_time?: string;
 }) {
   try {
     const professionalId = await getProfessionalId();
@@ -34,6 +43,15 @@ export async function saveWhatsAppSettingsAction(input: {
       bot_persona: input.bot_persona?.trim() || null,
       stop_keyword: input.stop_keyword?.trim() || '#humano',
       booking_url: input.booking_url?.trim() || null,
+      automation_booking_enabled: input.automation_booking_enabled ?? false,
+      automation_booking_message: input.automation_booking_message?.trim() || null,
+      automation_booking_delay_minutes: input.automation_booking_delay_minutes ?? 1,
+      automation_day_before_enabled: input.automation_day_before_enabled ?? false,
+      automation_day_before_message: input.automation_day_before_message?.trim() || null,
+      automation_day_before_time: input.automation_day_before_time || '10:00',
+      automation_day_of_enabled: input.automation_day_of_enabled ?? false,
+      automation_day_of_message: input.automation_day_of_message?.trim() || null,
+      automation_day_of_time: input.automation_day_of_time || '08:00',
     });
     return { success: true as const, settings };
   } catch (e: unknown) {

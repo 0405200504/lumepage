@@ -20,14 +20,15 @@ export function normalizeWhatsapp(raw: string): string {
 /** Preenche os placeholders da mensagem ({nome}, {servico}, {data}, {horario}, {motivo}). */
 export function fillTemplate(
   template: string,
-  vars: { nome?: string; servico?: string; data?: string; horario?: string; motivo?: string }
+  vars: { nome?: string; servico?: string; data?: string; horario?: string; motivo?: string; profissional?: string }
 ): string {
   return (template || '')
     .replace(/\{nome\}/g, vars.nome ?? '')
     .replace(/\{servico\}/g, vars.servico ?? '')
     .replace(/\{data\}/g, vars.data ?? '')
     .replace(/\{horario\}/g, vars.horario ?? '')
-    .replace(/\{motivo\}/g, vars.motivo ?? '');
+    .replace(/\{motivo\}/g, vars.motivo ?? '')
+    .replace(/\{profissional\}/g, vars.profissional ?? '');
 }
 
 const DEFAULT_REMINDER =

@@ -1041,6 +1041,29 @@ export const dbService = {
 
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
 
+  getAllWhatsAppSettingsForCron: async (): Promise<WhatsAppSettings[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb()
+      .from('whatsapp_settings')
+      .select('*')
+      .not('uazapi_url', 'is', null)
+      .not('uazapi_token', 'is', null);
+    if (error) return [];
+    return data || [];
+  },
+
+  markReminderSent: async (appointmentId: string, type: 'booking' | 'day_before' | 'day_of'): Promise<void> => {
+    const col = type === 'booking'
+      ? 'automation_booking_sent_at'
+      : type === 'day_before'
+        ? 'automation_day_before_sent_at'
+        : 'automation_day_of_sent_at';
+    await getDb()
+      .from('appointments')
+      .update({ [col]: new Date().toISOString() })
+      .eq('id', appointmentId);
+  },
+
   getWhatsAppSettings: async (professionalId: string): Promise<WhatsAppSettings | null> => {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await getDb()

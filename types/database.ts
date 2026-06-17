@@ -185,6 +185,9 @@ export interface Appointment {
   cancellation_reason: string | null;
   created_at: string;
   updated_at: string;
+  automation_booking_sent_at?: string | null;
+  automation_day_before_sent_at?: string | null;
+  automation_day_of_sent_at?: string | null;
   service?: Service; // Relacionamento incluído em SELECTs
   professional?: Professional;
 }
@@ -209,6 +212,15 @@ export interface WhatsAppSettings {
   bot_persona: string | null;
   stop_keyword: string;
   booking_url: string | null;
+  automation_booking_enabled: boolean;
+  automation_booking_message: string | null;
+  automation_booking_delay_minutes: number;
+  automation_day_before_enabled: boolean;
+  automation_day_before_message: string | null;
+  automation_day_before_time: string;
+  automation_day_of_enabled: boolean;
+  automation_day_of_message: string | null;
+  automation_day_of_time: string;
   created_at: string;
   updated_at: string;
 }
