@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
@@ -11,9 +11,9 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
     // 0. Garante que a chave da OpenAI está configurada
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY não configurada no ambiente.');
-      return new Response('Assistente indisponível: chave da IA (OpenAI) não configurada.', { status: 503 });
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.error('GOOGLE_GENERATIVE_AI_API_KEY não configurada no ambiente.');
+      return new Response('Assistente indisponível: chave da IA (Gemini) não configurada.', { status: 503 });
     }
 
     // 1. Obter a sessão e o ID da profissional autenticada
@@ -73,7 +73,7 @@ Para agir sobre um agendamento existente (cancelar, remarcar, concluir), primeir
 Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
 
     const result = await streamText({
-      model: openai(process.env.OPENAI_MODEL || 'gpt-4o'),
+      model: google(process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
       system: systemPrompt,
       messages,
       tools: {
