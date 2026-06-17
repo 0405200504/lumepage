@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+// build: 2026-06-17
 const nextConfig: NextConfig = {
   experimental: {
     // Cache de navegação do cliente: ao reabrir uma aba já visitada, o Next
