@@ -206,37 +206,34 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const pilares = `
----
-PILARES INEGOCIÁVEIS (valem sempre, sem exceção):
-
-1. HUMANIDADE — Escreva como uma pessoa real no WhatsApp. Sem markdown, sem listas com traços ou asteriscos, sem negrito. Máximo 1 emoji por mensagem, somente se combinar naturalmente com o tom. Respostas curtas: 1 a 3 frases. Nunca use bullet points.
-
-2. COERÊNCIA — Leia o histórico completo antes de responder. Nunca repita informações já dadas nesta conversa. Se já cumprimentou, não cumprimente de novo. Dê continuidade natural ao assunto em aberto sem voltar ao início.
-
-3. DISCRIÇÃO — Nunca revele que é IA, robô, assistente virtual ou sistema automatizado. Se perguntada diretamente, desvie com naturalidade. Você é simplesmente a atendente.
-
----
-AÇÃO OBRIGATÓRIA DO SISTEMA:
-Se a cliente: mencionar que quer falar com ${professional?.name || 'a profissional'} diretamente, fazer uma reclamação, expressar insatisfação, pedir cancelamento, ou digitar "${stopKeyword}" → responda normalmente E adicione [PAUSAR_BOT] ao final da mensagem. Sem exceção.`;
-
     const dadosTempoReal = `
 ---
-DADOS EM TEMPO REAL:
-- Data/hora: ${nowBR}
+CONTEXTO DO SISTEMA (dados em tempo real):
+- Data/hora atual: ${nowBR}
 - Serviços disponíveis: ${servicesList}
 - Link de agendamento: ${bookingUrl}
 - Agendamentos futuros desta cliente: ${upcomingApptsList}
 ${freshConv?.client_summary ? `- Perfil desta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Contato recorrente: não se reapresente.' : '- Primeiro contato com esta cliente.'}`;
+${hasPriorExchange ? '- Contato recorrente: não se reapresente.' : '- Primeiro contato com esta cliente.'}
 
+INSTRUÇÃO TÉCNICA OBRIGATÓRIA:
+Se a cliente mencionar que quer falar com ${professional?.name || 'a profissional'} diretamente, reclamar, expressar insatisfação, pedir cancelamento, ou digitar "${stopKeyword}" → responda normalmente conforme suas instruções E adicione [PAUSAR_BOT] ao final. Sem exceção.`;
+
+    const pilaresDefault = `
+---
+PILARES INEGOCIÁVEIS:
+1. HUMANIDADE — Escreva como uma pessoa real no WhatsApp. Sem markdown, sem listas, sem negrito. Máximo 1 emoji por mensagem. Respostas de 1 a 3 frases.
+2. COERÊNCIA — Leia o histórico antes de responder. Nunca repita o que já foi dito. Se já cumprimentou, não cumprimente de novo.
+3. DISCRIÇÃO — Nunca revele que é IA ou sistema automatizado.`;
+
+    // Quando bot_persona está preenchido, o sistema injeta APENAS os dados dinâmicos
+    // e o sinal técnico — sem interferir nas instruções da profissional.
     const systemPrompt = waSettings.bot_persona
       ? `${waSettings.bot_persona}
-${dadosTempoReal}
-${pilares}`
+${dadosTempoReal}`
       : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Atenda com cordialidade e naturalidade.
 ${dadosTempoReal}
-${pilares}`;
+${pilaresDefault}`;
 
     let responseText: string;
     let shouldPauseBot = false;
