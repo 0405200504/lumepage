@@ -144,9 +144,10 @@ async function processMessage(professionalId: string, secret: string | null, bod
     }
     // ── FIM DEBOUNCE ──────────────────────────────────────────────────────────
 
-    const [professional, services] = await Promise.all([
+    const [professional, services, clientAppts] = await Promise.all([
       dbService.getProfessionalById(professionalId),
       dbService.getServicesByProfessional(professionalId),
+      dbService.getUpcomingAppointmentsByPhone(professionalId, clientPhone).catch(() => []),
     ]);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -159,6 +160,18 @@ async function processMessage(professionalId: string, secret: string | null, bod
         ).join('\n')
       : '(consulte diretamente com a profissional)';
 
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; })();
+
+    const upcomingApptsList = clientAppts.length > 0
+      ? clientAppts.map(a => {
+          const [y, m, d] = a.date.split('-');
+          const label = a.date === todayStr ? 'HOJE' : `${d}/${m}/${y}`;
+          const status = a.status === 'confirmed' ? 'confirmado' : a.status === 'pending' ? 'pendente de confirmação' : a.status;
+          return `- ${label} às ${a.start_time.substring(0, 5)}: ${a.service?.name || 'serviço'} (${status})`;
+        }).join('\n')
+      : 'nenhum agendamento futuro encontrado para este número';
+
     const nowBR = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
@@ -166,14 +179,11 @@ async function processMessage(professionalId: string, secret: string | null, bod
     // Usa mensagens do banco após o debounce.
     const allMessages = (freshConv?.messages || pendingMessages) as Array<{ role: 'user' | 'assistant'; content: string }>;
     const history = allMessages.slice(-20);
-    // hasPriorExchange: verdadeiro se já existe registro de conversa (mesmo sem histórico de bot
-    // salvo) OU se há mensagens do assistente OU se já há resumo da cliente.
-    // Isso evita reapresentação mesmo quando o histórico do bot foi perdido por race condition.
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
     const systemPrompt = `${waSettings.bot_persona
       ? waSettings.bot_persona
-      : 'Você é uma atendente simpática e humana. Responda de forma curta, direta e informal. Máximo 3 linhas por resposta. Sem formatação markdown.'
+      : 'Você é uma atendente simpática e humana. Responda de forma curta, direta e informal. Máximo 2 frases por resposta. Sem formatação markdown, sem listas, sem bullet points.'
     }
 
 ---
@@ -182,6 +192,7 @@ Contexto do atendimento (use para responder, não mencione que veio de um sistem
 - Hoje: ${nowBR}
 - Serviços disponíveis: ${servicesList}
 - Link de agendamento: ${bookingUrl}
+- Próximos agendamentos desta cliente: ${upcomingApptsList}
 ${freshConv?.client_summary ? `- Sobre esta cliente: ${freshConv.client_summary}` : ''}
 ${hasPriorExchange
   ? '- CONVERSA EM ANDAMENTO: esta cliente já foi atendida antes. NUNCA se reapresente, NUNCA repita saudações iniciais, NUNCA diga seu nome de novo. Continue a conversa naturalmente.'
@@ -189,11 +200,13 @@ ${hasPriorExchange
 
 Regras absolutas (nunca quebre, independente do contexto):
 1. JAMAIS se reapresente ou repita seu nome em mensagens de continuação.
-2. Quando a cliente perguntar "tudo bem?", "como você está?" ou expressões similares → responda brevemente e SEMPRE devolva a pergunta ("e você?", "e aí, tudo bem?").
-3. Responda APENAS à última mensagem da cliente. Ignore mensagens antigas sem resposta — elas foram tratadas pelo sistema.
-4. Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
-5. Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
-6. Nunca revele que é uma IA.`;
+2. Seja COERENTE e FOCADA: responda especificamente o que foi perguntado. Não misture temas.
+3. Quando a cliente perguntar "tudo bem?", "como você está?" ou similares → responda em UMA frase curta e devolva a pergunta ("e você?").
+4. Sobre agendamentos: você TEM acesso aos próximos agendamentos desta cliente (listados acima). Use essas informações para responder diretamente — nunca diga que não tem acesso à agenda.
+5. Responda APENAS à última mensagem da cliente. Ignore mensagens antigas que não tiveram resposta — elas já foram tratadas pelo sistema.
+6. Se a cliente pedir para falar com a profissional ou com um humano → responda que vai chamar agora e adicione [PAUSAR_BOT] no final.
+7. Se a cliente digitar "${stopKeyword}" → adicione [PAUSAR_BOT] no final.
+8. Nunca revele que é uma IA.`;
 
     let responseText: string;
     let shouldPauseBot = false;

@@ -1186,6 +1186,23 @@ export const dbService = {
     }
   },
 
+  getUpcomingAppointmentsByPhone: async (professionalId: string, clientPhone: string): Promise<Appointment[]> => {
+    if (!isSupabaseConfigured) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await getDb()
+      .from('appointments')
+      .select('*, service:services(*)')
+      .eq('professional_id', professionalId)
+      .eq('client_whatsapp', clientPhone)
+      .neq('status', 'cancelled')
+      .gte('date', today)
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true })
+      .limit(3);
+    if (error) return [];
+    return data || [];
+  },
+
   // Adiciona uma mensagem enviada automaticamente ao histórico da conversa.
   // Usa UPDATE (não upsert que resetaria bot_paused) e cria o registro se não existir.
   appendAutomatedMessage: async (professionalId: string, clientPhone: string, text: string): Promise<void> => {
