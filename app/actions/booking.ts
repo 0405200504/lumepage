@@ -178,6 +178,9 @@ export async function createManualAppointmentAction(input: {
     // Agendamento criado pela profissional já entra como confirmado
     try { await dbService.updateAppointmentStatus(appointment.id, 'confirmed'); } catch {}
 
+    // Garante que a cliente esteja na base de clientes (ignoreDuplicates = não sobrescreve)
+    dbService.upsertWhatsAppClient(professionalId, clientWhatsapp.replace(/\D/g, ''), clientName.trim()).catch(() => {});
+
     return { success: true, appointmentId: appointment.id };
   } catch (e: any) {
     console.error('Erro ao criar agendamento manual:', e);

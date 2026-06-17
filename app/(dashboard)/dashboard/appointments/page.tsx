@@ -12,10 +12,11 @@ export default async function DashboardAppointmentsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [appointments, settings, services] = await Promise.all([
+  const [appointments, settings, services, clients] = await Promise.all([
     dbService.getAppointmentsByProfessional(professionalId),
     dbService.getSettingsByProfessional(professionalId),
     dbService.getServicesByProfessional(professionalId),
+    dbService.getClientsByProfessional(professionalId),
   ]);
 
   return (
@@ -24,6 +25,7 @@ export default async function DashboardAppointmentsPage() {
       professionalId={professionalId}
       settings={settings}
       services={services}
+      clients={clients}
     />
   );
 }

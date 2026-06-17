@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Appointment, Setting, AppointmentStatus, Service } from '@/types/database';
+import { Appointment, Setting, AppointmentStatus, Service, Client } from '@/types/database';
 import {
   Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus
 } from 'lucide-react';
@@ -18,6 +18,7 @@ interface AppointmentsListProps {
   professionalId: string;
   settings: Setting | null;
   services?: Service[];
+  clients?: Client[];
 }
 
 // Duração real usada no agendamento (fim − início, em minutos)
@@ -40,6 +41,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   professionalId,
   settings,
   services = [],
+  clients = [],
 }) => {
   const router = useRouter();
   const { success, error, info } = useToast();
@@ -58,6 +60,14 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const [nTime, setNTime] = useState('');
   const [nDuration, setNDuration] = useState<number>(60);
   const [nNotes, setNNotes] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const clientSuggestions = nName.length >= 2
+    ? clients.filter(c =>
+        c.name.toLowerCase().includes(nName.toLowerCase()) ||
+        c.whatsapp.includes(nName.replace(/\D/g, ''))
+      ).slice(0, 8)
+    : [];
 
   const openNew = () => {
     const first = activeServices[0];
@@ -439,10 +449,32 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
               </p>
             ) : (
               <form onSubmit={createManual} className="space-y-3">
-                <div>
+                <div className="relative">
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
-                  <input required value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Nome da cliente"
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  <input
+                    required
+                    autoComplete="off"
+                    value={nName}
+                    onChange={(e) => { setNName(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="Nome da cliente"
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                  />
+                  {showSuggestions && clientSuggestions.length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-48 overflow-y-auto">
+                      {clientSuggestions.map(c => (
+                        <li
+                          key={c.id}
+                          onMouseDown={() => { setNName(c.name); setNPhone(c.whatsapp); setShowSuggestions(false); }}
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-cream cursor-pointer"
+                        >
+                          <span className="text-sm font-semibold text-ink">{c.name}</span>
+                          <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
