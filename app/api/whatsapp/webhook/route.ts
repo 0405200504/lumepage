@@ -178,7 +178,23 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     // Usa mensagens do banco após o debounce.
     const allMessages = (freshConv?.messages || pendingMessages) as Array<{ role: 'user' | 'assistant'; content: string }>;
-    const history = allMessages.slice(-20);
+
+    // Gemini exige que o histórico comece com 'user' e que os papéis se alternem.
+    // appendAutomatedMessage salva 'assistant' como primeira mensagem (antes de qualquer
+    // resposta da cliente), o que faz o Gemini retornar erro e cair no fallback.
+    const rawHistory = allMessages.slice(-20);
+    const firstUserIdx = rawHistory.findIndex(m => m.role === 'user');
+    const sanitized = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : rawHistory;
+    // Remove mensagens consecutivas do mesmo papel (merge: mantém a última de cada sequência)
+    const history = sanitized.reduce<typeof sanitized>((acc, msg) => {
+      if (acc.length > 0 && acc[acc.length - 1].role === msg.role) {
+        acc[acc.length - 1] = { ...acc[acc.length - 1], content: acc[acc.length - 1].content + '\n' + msg.content };
+      } else {
+        acc.push(msg);
+      }
+      return acc;
+    }, []);
+
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
     const defaultPersona = `Você é ${professional?.name ? `a atendente virtual da ${professional.brand_name || professional.name}` : 'uma atendente virtual'}. Fale como uma pessoa real respondendo no WhatsApp: informal, calorosa, direta. Nunca use markdown, listas ou bullets.`;
