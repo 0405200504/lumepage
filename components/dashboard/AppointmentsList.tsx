@@ -208,7 +208,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     window.open(buildWhatsappLink(app.client_whatsapp, msg), '_blank');
   };
 
-  const iconBtn = 'tap p-2 rounded-xl transition-all-custom disabled:opacity-40';
+  const iconBtn = 'tap flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all-custom disabled:opacity-40';
+  const iconLabel = 'text-[9px] font-bold leading-none';
 
   // Ações de um agendamento — reutilizadas na tabela (desktop) e nos cards (mobile)
   const AppointmentActions = ({ app }: { app: Appointment }) => (
@@ -216,33 +217,40 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {app.status === 'pending' && (
         <button onClick={() => handleUpdateStatus(app.id, 'confirmed')} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
           <Check className="h-4 w-4" />
+          <span className={iconLabel}>Confirmar</span>
         </button>
       )}
       {app.status === 'confirmed' && (
         <button onClick={() => handleUpdateStatus(app.id, 'completed')} disabled={updatingId === app.id} title="Marcar como finalizado" className={`${iconBtn} hover:bg-wine-700/8 text-wine-700`}>
           <CheckCircle className="h-4 w-4" />
+          <span className={iconLabel}>Finalizar</span>
         </button>
       )}
       {(app.status === 'confirmed' || app.status === 'pending') && (
         <button onClick={() => handleUpdateStatus(app.id, 'no_show')} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
           <Ban className="h-4 w-4" />
+          <span className={iconLabel}>Falta</span>
         </button>
       )}
       {['pending', 'confirmed'].includes(app.status) && (
         <button onClick={() => { setSelectedApp(app); setShowCancelDialog(true); }} disabled={updatingId === app.id} title="Cancelar" className={`${iconBtn} hover:bg-gray-150 text-gray-450`}>
           <X className="h-4 w-4" />
+          <span className={iconLabel}>Cancelar</span>
         </button>
       )}
       {app.status !== 'cancelled' && app.status !== 'no_show' && (
         <button onClick={() => handleReminder(app)} title="Enviar lembrete no WhatsApp" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045] border border-gray-150`}>
           <Bell className="h-4 w-4" />
+          <span className={iconLabel}>Lembrete</span>
         </button>
       )}
       <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-cream text-gray-450 border border-gray-150`}>
         <MessageCircle className="h-4 w-4" />
+        <span className={iconLabel}>WhatsApp</span>
       </button>
-      <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir Agendamento" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-[#b23a48] border border-gray-150`}>
+      <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-[#b23a48] border border-gray-150`}>
         <Trash2 className="h-4 w-4" />
+        <span className={iconLabel}>Excluir</span>
       </button>
     </>
   );
