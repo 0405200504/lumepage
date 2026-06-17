@@ -21,7 +21,7 @@ function isQuotaError(e: unknown): boolean {
   return msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429');
 }
 
-async function generateWithFallback(params: Parameters<typeof generateText>[0]): Promise<Awaited<ReturnType<typeof generateText>>> {
+async function generateWithFallback(params: Omit<Parameters<typeof generateText>[0], 'model'>): Promise<Awaited<ReturnType<typeof generateText>>> {
   for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
     const model = GEMINI_FALLBACK_MODELS[i];
     try {
