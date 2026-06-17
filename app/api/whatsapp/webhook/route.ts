@@ -197,7 +197,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const defaultPersona = `Você é a atendente virtual da ${professional?.brand_name || professional?.name || 'profissional'}. Fale como uma pessoa real respondendo no WhatsApp: informal, calorosa, direta. Nunca use markdown, listas ou bullets.`;
+    const defaultPersona = `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: natural, calorosa, direta. Sem markdown, sem listas.`;
 
     const personaBlock = waSettings.bot_persona
       ? `=== INSTRUÇÕES DA PROFISSIONAL — SIGA À RISCA ===
@@ -214,10 +214,15 @@ CONTEXTO (use para responder com precisão, não substitui as instruções acima
 - Link de agendamento: ${bookingUrl}
 - Agendamentos futuros desta cliente: ${upcomingApptsList}
 ${freshConv?.client_summary ? `- O que você sabe sobre esta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Esta cliente já conversou com você antes. Continue a conversa naturalmente, sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
+${hasPriorExchange ? '- Esta cliente já conversou com você antes. Continue naturalmente, sem se reapresentar.' : '- Primeira mensagem desta cliente.'}
 
-COMO RESPONDER:
-Leia o histórico e responda com naturalidade. Seja coerente com o que foi dito antes. Respostas curtas: 1 a 3 frases. Se souber a resposta (agendamentos, serviços, preços), vá direto ao ponto.
+COMO SE COMPORTAR:
+- Leia o histórico inteiro antes de responder. Nunca repita algo que já foi dito na conversa.
+- Responda apenas o que a mensagem atual pede. 1 a 3 frases, direto ao ponto.
+- Tom humano: escreva como alguém digitando no celular, não como um robô ou atendente de script.
+- Emojis: zero ou no máximo um por mensagem, só se fizer sentido. Nunca enfileirar emojis.
+- Sem saudações duplas, sem repetir o nome da cliente, sem "Claro!", "Com certeza!", "Ótimo!".
+- Se a cliente perguntou algo e você já sabe a resposta (serviço, preço, agendamento), responda diretamente sem rodeios.
 
 REGRAS INEGOCIÁVEIS:
 1. Se a cliente quiser cancelar, reclamar ou falar com a ${professional?.name || 'profissional'} → diga que vai chamá-la agora e coloque [PAUSAR_BOT] no final.
