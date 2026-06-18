@@ -206,34 +206,19 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const dadosTempoReal = `
+    const infosInjetadas = `
+
 ---
-CONTEXTO DO SISTEMA (dados em tempo real):
-- Data/hora atual: ${nowBR}
-- Serviços disponíveis: ${servicesList}
-- Link de agendamento: ${bookingUrl}
-- Agendamentos futuros desta cliente: ${upcomingApptsList}
-${freshConv?.client_summary ? `- Perfil desta cliente: ${freshConv.client_summary}` : ''}
-${hasPriorExchange ? '- Contato recorrente: não se reapresente.' : '- Primeiro contato com esta cliente.'}
+Data/hora: ${nowBR}
+Serviços: ${servicesList}
+Link de agendamento: ${bookingUrl}
+Agendamentos desta cliente: ${upcomingApptsList}${freshConv?.client_summary ? `\nHistórico desta cliente: ${freshConv.client_summary}` : ''}${hasPriorExchange ? '\n(contato recorrente)' : '\n(primeiro contato)'}
 
-INSTRUÇÃO TÉCNICA OBRIGATÓRIA:
-Se a cliente mencionar que quer falar com ${professional?.name || 'a profissional'} diretamente, reclamar, expressar insatisfação, pedir cancelamento, ou digitar "${stopKeyword}" → responda normalmente conforme suas instruções E adicione [PAUSAR_BOT] ao final. Sem exceção.`;
+Se a cliente quiser falar com a profissional, reclamar, cancelar ou digitar "${stopKeyword}": adicione [PAUSAR_BOT] ao final da resposta.`;
 
-    const pilaresDefault = `
----
-PILARES INEGOCIÁVEIS:
-1. HUMANIDADE — Escreva como uma pessoa real no WhatsApp. Sem markdown, sem listas, sem negrito. Máximo 1 emoji por mensagem. Respostas de 1 a 3 frases.
-2. COERÊNCIA — Leia o histórico antes de responder. Nunca repita o que já foi dito. Se já cumprimentou, não cumprimente de novo.
-3. DISCRIÇÃO — Nunca revele que é IA ou sistema automatizado.`;
-
-    // Quando bot_persona está preenchido, o sistema injeta APENAS os dados dinâmicos
-    // e o sinal técnico — sem interferir nas instruções da profissional.
     const systemPrompt = waSettings.bot_persona
-      ? `${waSettings.bot_persona}
-${dadosTempoReal}`
-      : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Atenda com cordialidade e naturalidade.
-${dadosTempoReal}
-${pilaresDefault}`;
+      ? `${waSettings.bot_persona}${infosInjetadas}`
+      : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: sem markdown, sem listas, sem negrito, máximo 1 emoji por mensagem, respostas curtas. Leia o histórico antes de responder e nunca repita o que já foi dito. Nunca revele que é IA.${infosInjetadas}`;
 
     let responseText: string;
     let shouldPauseBot = false;
