@@ -1231,6 +1231,42 @@ export const dbService = {
     return data || [];
   },
 
+  // Retorna TODOS os agendamentos da cliente (passado + futuro, qualquer status),
+  // para o bot conseguir responder qualquer pergunta da cliente sobre a agenda dela.
+  getAllAppointmentsByPhone: async (professionalId: string, clientPhone: string): Promise<Appointment[]> => {
+    if (!isSupabaseConfigured) return [];
+    const digits = clientPhone.replace(/\D/g, '');
+    const withDDI = digits.startsWith('55') ? digits : '55' + digits;
+    const withoutDDI = digits.startsWith('55') ? digits.slice(2) : digits;
+    const phones = Array.from(new Set([withDDI, withoutDDI]));
+    const { data, error } = await getDb()
+      .from('appointments')
+      .select('*, service:services(*)')
+      .eq('professional_id', professionalId)
+      .in('client_whatsapp', phones)
+      .order('date', { ascending: false })
+      .order('start_time', { ascending: false })
+      .limit(50);
+    if (error) return [];
+    return data || [];
+  },
+
+  // Apaga TODAS as conversas do WhatsApp da profissional (histórico, resumos, pausas e
+  // cooldowns), inclusive os registros de diagnóstico "_debug_". Usado para testar o bot do zero.
+  clearAllWhatsAppConversations: async (professionalId: string): Promise<number> => {
+    if (!isSupabaseConfigured) return 0;
+    const { data, error } = await getDb()
+      .from('whatsapp_conversations')
+      .delete()
+      .eq('professional_id', professionalId)
+      .select('id');
+    if (error) {
+      if (isMissingTable(error)) return 0;
+      throw error;
+    }
+    return data?.length ?? 0;
+  },
+
   // Adiciona uma mensagem enviada automaticamente ao histórico da conversa.
   // Usa UPDATE (não upsert que resetaria bot_paused) e cria o registro se não existir.
   appendAutomatedMessage: async (professionalId: string, clientPhone: string, text: string): Promise<void> => {

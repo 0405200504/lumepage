@@ -323,6 +323,17 @@ export async function getPendingConversationsAction() {
   }
 }
 
+export async function clearConversationsAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false as const, error: 'Não autenticado.' };
+    const deleted = await dbService.clearAllWhatsAppConversations(professionalId);
+    return { success: true as const, deleted };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao apagar conversas.' };
+  }
+}
+
 export async function toggleBotPauseAction(clientPhone: string, paused: boolean) {
   try {
     const professionalId = await getProfessionalId();

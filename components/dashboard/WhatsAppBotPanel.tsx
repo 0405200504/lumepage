@@ -20,6 +20,7 @@ import {
   getQRCodeAction,
   getConversationsAction,
   toggleBotPauseAction,
+  clearConversationsAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppBotPanelProps {
@@ -96,6 +97,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [convsLoading, setConvsLoading] = useState(false);
   const [convsOpen, setConvsOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   // ── QR Modal ──────────────────────────────────────────────────────────────
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -276,6 +278,21 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       }
       return !v;
     });
+  }
+
+  async function handleClearConversations() {
+    if (!window.confirm('Apagar TODO o histórico de conversas do bot? Isso remove mensagens, resumos e pausas de todas as clientes. Útil para testar o bot do zero. Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    setClearing(true);
+    const res = await clearConversationsAction().catch(() => ({ success: false as const, error: 'Erro inesperado.' }));
+    setClearing(false);
+    if (res.success) {
+      setConversations([]);
+      success('Histórico apagado', `${res.deleted} conversa(s) removida(s). O bot vai tratar todo mundo como primeiro contato.`);
+    } else {
+      error('Erro ao apagar', ('error' in res && res.error) || 'Tente novamente.');
+    }
   }
 
   async function handleTogglePause(clientPhone: string, paused: boolean) {
@@ -475,7 +492,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
             </label>
             <Toggle
               label="Responder clientes automaticamente (bot com IA)"
-              description="O Gemini responde mensagens das clientes com o link de agendamento e informações dos serviços"
+              description="A IA responde mensagens das clientes com o link de agendamento e informações dos serviços"
               checked={botEnabled}
               onChange={setBotEnabled}
             />
@@ -876,6 +893,23 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                   <p className="text-xs text-gray-500">
                     Assuma a conversa para atender manualmente. O bot para de responder aquela cliente.
                   </p>
+
+                  <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-red-700">Apagar histórico de conversas</p>
+                      <p className="text-[11px] text-red-600">Remove tudo para testar o bot como se nunca tivesse conversado.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearConversations}
+                      disabled={clearing}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {clearing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      {clearing ? 'Apagando...' : 'Apagar tudo'}
+                    </button>
+                  </div>
+
                   {convsLoading && (
                     <div className="flex items-center gap-2 py-4">
                       <Loader2 className="w-4 h-4 animate-spin text-gray-400" />

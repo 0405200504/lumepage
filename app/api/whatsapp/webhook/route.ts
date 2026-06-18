@@ -2,8 +2,17 @@ import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid, sendTypingPresence } from '@/lib/uazapi';
+import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
+import {
+  buildSystemPrompt,
+  sanitizeHistory,
+  parsePauseMarker,
+  buildHandoffMessage,
+  type BotContext,
+} from '@/lib/whatsapp/bot-core';
+import type { Appointment } from '@/types/database';
 
 export const maxDuration = 60;
 
@@ -84,6 +93,73 @@ async function updateClientSummary(
   }
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const WEEKDAY_NAMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+function isoInSaoPaulo(offsetDays = 0): string {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Formata os agendamentos da cliente (passado + futuro) para o bot. */
+function formatClientAppointments(appts: Appointment[], todayStr: string): string {
+  if (!appts.length) return 'nenhum agendamento encontrado para este número.';
+  const fmt = (a: Appointment) => {
+    const [y, m, d] = a.date.split('-');
+    const label = a.date === todayStr ? 'HOJE' : `${d}/${m}/${y}`;
+    const status =
+      a.status === 'confirmed' ? 'confirmado'
+      : a.status === 'pending' ? 'pendente de confirmação'
+      : a.status === 'cancelled' ? 'cancelado'
+      : a.status === 'completed' ? 'já realizado'
+      : a.status === 'no_show' ? 'faltou'
+      : a.status;
+    return `- ${label} às ${a.start_time.substring(0, 5)}: ${a.service?.name || 'serviço'} (${status})`;
+  };
+  const upcoming = appts.filter(a => a.date >= todayStr && a.status !== 'cancelled');
+  const past = appts.filter(a => a.date < todayStr || a.status === 'cancelled');
+  const parts: string[] = [];
+  if (upcoming.length) parts.push('Próximos:\n' + upcoming.slice().reverse().map(fmt).join('\n'));
+  if (past.length) parts.push('Anteriores:\n' + past.slice(0, 5).map(fmt).join('\n'));
+  return '\n' + parts.join('\n');
+}
+
+/** Monta o resumo da agenda da profissional: expediente semanal + horários livres dos próximos 7 dias. */
+async function buildAgendaText(professionalId: string, shortestDuration: number): Promise<string> {
+  try {
+    const rules = await dbService.getAvailabilityRulesByProfessional(professionalId);
+    const expediente = rules
+      .filter(r => r.is_active)
+      .sort((a, b) => a.weekday - b.weekday)
+      .map(r => {
+        const br = r.break_start && r.break_end ? ` (pausa ${r.break_start.substring(0, 5)}–${r.break_end.substring(0, 5)})` : '';
+        return `${WEEKDAY_NAMES[r.weekday]}: ${r.start_time.substring(0, 5)}–${r.end_time.substring(0, 5)}${br}`;
+      });
+
+    const freeByDay: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const dateStr = isoInSaoPaulo(i);
+      const slots = await getAvailableSlots(professionalId, dateStr, shortestDuration).catch(() => []);
+      const free = slots.filter(s => s.isAvailable).map(s => s.time);
+      if (free.length) {
+        const [y, mm, dd] = dateStr.split('-');
+        const wd = WEEKDAY_NAMES[new Date(Number(y), Number(mm) - 1, Number(dd)).getDay()];
+        const label = i === 0 ? 'hoje' : i === 1 ? 'amanhã' : `${dd}/${mm} (${wd})`;
+        freeByDay.push(`${label}: ${free.slice(0, 8).join(', ')}${free.length > 8 ? '…' : ''}`);
+      }
+    }
+
+    const expedienteText = expediente.length ? `Expediente: ${expediente.join('; ')}.` : 'Expediente não configurado.';
+    const livresText = freeByDay.length
+      ? `Horários livres nos próximos dias: ${freeByDay.join(' | ')}.`
+      : 'Sem horários livres nos próximos 7 dias.';
+    return `${expedienteText} ${livresText}`;
+  } catch {
+    return 'agenda indisponível no momento — oriente a cliente a usar o link de agendamento.';
+  }
+}
+
 async function processMessage(professionalId: string, secret: string | null, body: UazapiMessagePayload) {
   try {
     const msg = body.message;
@@ -110,7 +186,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
     if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
 
-    // Cooldown: após mensagem automática do sistema, o Gemini não responde por 30 min.
+    // Cooldown: após mensagem automática do sistema, o bot não responde por alguns minutos.
     if (conversation?.bot_cooldown_until && new Date(conversation.bot_cooldown_until) > new Date()) {
       console.log('[Bot] cooldown ativo até', conversation.bot_cooldown_until, '— ignorando de', clientPhone);
       return;
@@ -134,7 +210,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     // intervalo, ela sobrescreverá last_message_at e este processamento aborta,
     // cedendo o controle para a mensagem mais recente (que terá o contexto completo).
     const arrivalTime = Date.now();
-    const pendingMessages = [
+    const pendingForDb = [
       ...(conversation?.messages || []),
       { role: 'user' as const, content: messageText, at: arrivalTime },
     ];
@@ -142,7 +218,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     // Sem isso, last_message_at fica alguns ms APÓS arrivalTime e o debounce
     // aborta sempre, achando que chegou mensagem mais nova.
     // botPaused=false só na criação (quando conversation é null) — não sobrescreve pausas já ativas
-    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, pendingMessages, conversation?.client_summary ?? undefined, arrivalTime, conversation ? undefined : false);
+    await dbService.upsertWhatsAppConversation(professionalId, clientPhone, pendingForDb, conversation?.client_summary ?? undefined, arrivalTime, conversation ? undefined : false);
 
     await new Promise(r => setTimeout(r, 1500));
 
@@ -156,7 +232,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const [professional, services, clientAppts] = await Promise.all([
       dbService.getProfessionalById(professionalId),
       dbService.getServicesByProfessional(professionalId),
-      dbService.getUpcomingAppointmentsByPhone(professionalId, clientPhone).catch(() => []),
+      dbService.getAllAppointmentsByPhone(professionalId, clientPhone).catch(() => [] as Appointment[]),
     ]);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -169,80 +245,73 @@ async function processMessage(professionalId: string, secret: string | null, bod
         ).join('\n')
       : '(consulte diretamente com a profissional)';
 
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const todayStr = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; })();
+    const shortestDuration = activeServices.length
+      ? Math.min(...activeServices.map(s => s.duration_minutes))
+      : 30;
 
-    const upcomingApptsList = clientAppts.length > 0
-      ? clientAppts.map(a => {
-          const [y, m, d] = a.date.split('-');
-          const label = a.date === todayStr ? 'HOJE' : `${d}/${m}/${y}`;
-          const status = a.status === 'confirmed' ? 'confirmado' : a.status === 'pending' ? 'pendente de confirmação' : a.status;
-          return `- ${label} às ${a.start_time.substring(0, 5)}: ${a.service?.name || 'serviço'} (${status})`;
-        }).join('\n')
-      : 'nenhum agendamento futuro encontrado para este número';
+    const todayStr = isoInSaoPaulo(0);
+    const agendaText = await buildAgendaText(professionalId, shortestDuration);
+    const clientAppointmentsText = formatClientAppointments(clientAppts, todayStr);
 
     const nowBR = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
     // Usa mensagens do banco após o debounce.
-    const allMessages = (freshConv?.messages || pendingMessages) as Array<{ role: 'user' | 'assistant'; content: string }>;
-
-    // Gemini exige que o histórico comece com 'user' e que os papéis se alternem.
-    // appendAutomatedMessage salva 'assistant' como primeira mensagem (antes de qualquer
-    // resposta da cliente), o que faz o Gemini retornar erro e cair no fallback.
-    const rawHistory = allMessages.slice(-20);
-    const firstUserIdx = rawHistory.findIndex(m => m.role === 'user');
-    const sanitized = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : rawHistory;
-    // Remove mensagens consecutivas do mesmo papel (merge: mantém a última de cada sequência)
-    const history = sanitized.reduce<typeof sanitized>((acc, msg) => {
-      if (acc.length > 0 && acc[acc.length - 1].role === msg.role) {
-        acc[acc.length - 1] = { ...acc[acc.length - 1], content: acc[acc.length - 1].content + '\n' + msg.content };
-      } else {
-        acc.push(msg);
-      }
-      return acc;
-    }, []);
+    const allMessages = (freshConv?.messages || pendingForDb) as Array<{ role: 'user' | 'assistant'; content: string }>;
+    const history = sanitizeHistory(allMessages);
 
     const hasPriorExchange = isReturningClient || allMessages.some(m => m.role === 'assistant') || !!freshConv?.client_summary;
 
-    const infosInjetadas = `
+    const professionalName = professional?.brand_name || professional?.name || 'profissional';
+    const professionalFirstName = (professional?.name || '').trim().split(' ')[0] || 'a profissional';
 
----
-Data/hora: ${nowBR}
-Serviços: ${servicesList}
-Link de agendamento: ${bookingUrl}
-Agendamentos desta cliente: ${upcomingApptsList}${freshConv?.client_summary ? `\nHistórico desta cliente: ${freshConv.client_summary}` : ''}${hasPriorExchange ? '\n(contato recorrente)' : '\n(primeiro contato)'}
-
-Se a cliente quiser falar com a profissional, reclamar, cancelar ou digitar "${stopKeyword}": adicione [PAUSAR_BOT] ao final da resposta.`;
-
-    const systemPrompt = waSettings.bot_persona
-      ? `${waSettings.bot_persona}${infosInjetadas}`
-      : `Você é a atendente da ${professional?.brand_name || professional?.name || 'profissional'}. Responda como uma pessoa real no WhatsApp: sem markdown, sem listas, sem negrito, máximo 1 emoji por mensagem, respostas curtas. Leia o histórico antes de responder e nunca repita o que já foi dito. Nunca revele que é IA.${infosInjetadas}`;
+    const ctx: BotContext = {
+      professionalName,
+      professionalFirstName,
+      servicesList,
+      bookingUrl,
+      nowBR,
+      agendaText,
+      clientAppointmentsText,
+      clientSummary: freshConv?.client_summary,
+      hasPriorExchange,
+      stopKeyword,
+    };
+    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx);
 
     let responseText: string;
     let shouldPauseBot = false;
+    let usedFallback = false;
     try {
       const result = await generateWithModel({
         system: systemPrompt,
         messages: history,
         abortSignal: AbortSignal.timeout(25000),
       });
-      const raw = result.text.trim();
-      shouldPauseBot = raw.includes('[PAUSAR_BOT]');
-      responseText = raw.replace('[PAUSAR_BOT]', '').trim();
-      console.log('[Bot] Gemini respondeu:', responseText.slice(0, 80), shouldPauseBot ? '→ pausando' : '');
+      const parsed = parsePauseMarker(result.text.trim());
+      responseText = parsed.text;
+      shouldPauseBot = parsed.pause;
+      console.log('[Bot] IA respondeu:', responseText.slice(0, 80), shouldPauseBot ? '→ pausando' : '');
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
-      console.error('[Bot] Gemini falhou, usando fallback:', errMsg);
-      await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_gemini_error', [
+      console.error('[Bot] IA falhou, usando fallback:', errMsg);
+      await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_ai_error', [
         { role: 'user' as const, content: errMsg.slice(0, 500), at: Date.now() }
       ]).catch(() => {});
-      responseText = `Para agendar ou ver horários disponíveis, acesse: ${bookingUrl} 😊`;
+      // Fallback: responde UMA única vez que vai chamar a profissional e pausa (vira pendente).
+      responseText = buildHandoffMessage(professionalFirstName);
+      shouldPauseBot = true;
+      usedFallback = true;
+    }
+
+    if (!responseText) {
+      // Modelo respondeu vazio (só o marcador, por ex.) — usa o handoff padrão.
+      responseText = buildHandoffMessage(professionalFirstName);
     }
 
     // Pausa ANTES de enviar a mensagem: qualquer resposta imediata da cliente já
-    // encontra bot_paused=true no banco e é ignorada pelo webhook.
+    // encontra bot_paused=true no banco e é ignorada pelo webhook (vira pendente).
     if (shouldPauseBot) {
       await dbService.setBotPaused(professionalId, clientPhone, true);
       console.log('[Bot] pausado para', clientPhone, '— aguardando profissional retomar');
@@ -256,17 +325,22 @@ Se a cliente quiser falar com a profissional, reclamar, cancelar ou digitar "${s
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
     // Lê o estado mais recente do banco antes de salvar — evita sobrescrever mensagens
-    // que chegaram enquanto o Gemini estava gerando a resposta (race condition).
+    // que chegaram enquanto a IA estava gerando a resposta (race condition).
     const latestConv = await dbService.getWhatsAppConversation(professionalId, clientPhone).catch(() => null);
-    const baseMessages = latestConv?.messages || freshConv?.messages || pendingMessages;
+    const baseMessages = latestConv?.messages || freshConv?.messages || pendingForDb;
     const updatedMessages = [
       ...baseMessages,
       { role: 'assistant' as const, content: responseText, at: Date.now() },
     ];
 
-    updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText)
-      .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
-      .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
+    // No fallback não chamamos a IA de novo para resumir (ela acabou de falhar) — só salvamos.
+    if (usedFallback) {
+      await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {});
+    } else {
+      updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText)
+        .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
+        .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
+    }
 
   } catch (e) {
     console.error('[WhatsApp Webhook] erro:', e);
