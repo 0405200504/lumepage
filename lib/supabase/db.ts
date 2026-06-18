@@ -353,7 +353,10 @@ export const dbService = {
 
   upsertSettings: async (data: Partial<Setting> & { professional_id: string }): Promise<Setting> => {
     if (isSupabaseConfigured) {
-      // Campos opcionais que dependem de migração — gravados em separado (best-effort)
+      // Campos opcionais que dependem de migração — gravados SEPARADAMENTE, cada um em
+      // seu próprio comando best-effort. Assim, se UMA coluna não existir no banco (migração
+      // pendente), ela apenas não persiste e avisa no log — sem derrubar o salvamento das
+      // demais nem retornar erro para a profissional.
       const { requires_deposit, deposit_instructions, booking_theme, public_slots_limit, ...core } = data as Partial<Setting> & { professional_id: string };
       const { data: result, error } = await getDb()
         .from('settings')
@@ -362,32 +365,23 @@ export const dbService = {
         .single();
       if (error) throw error;
 
-      if (requires_deposit !== undefined || deposit_instructions !== undefined || booking_theme !== undefined) {
-        const extras: Record<string, unknown> = {};
-        if (requires_deposit !== undefined) extras.requires_deposit = requires_deposit;
-        if (deposit_instructions !== undefined) extras.deposit_instructions = deposit_instructions;
-        if (booking_theme !== undefined) extras.booking_theme = booking_theme;
-        const { error: extraErr } = await getDb()
+      // Cada campo opcional é aplicado isoladamente — um faltando não afeta os outros.
+      const optional: Array<{ key: keyof Setting; value: unknown; migration: string }> = [
+        { key: 'requires_deposit', value: requires_deposit, migration: 'migration_v2.sql' },
+        { key: 'deposit_instructions', value: deposit_instructions, migration: 'migration_v2.sql' },
+        { key: 'booking_theme', value: booking_theme, migration: 'migration_v4.sql' },
+        { key: 'public_slots_limit', value: public_slots_limit, migration: 'migration_v7.sql' },
+      ];
+      for (const { key, value, migration } of optional) {
+        if (value === undefined) continue;
+        const { error: optErr } = await getDb()
           .from('settings')
-          .update(extras)
+          .update({ [key]: value })
           .eq('professional_id', data.professional_id);
-        if (extraErr) {
-          console.warn('[settings] Colunas de sinal ausentes — rode supabase/migration_v2.sql:', extraErr.message);
+        if (optErr) {
+          console.warn(`[settings] Coluna "${String(key)}" ausente — rode supabase/${migration}:`, optErr.message);
         } else {
-          Object.assign(result as object, extras);
-        }
-      }
-
-      // Limite de horários públicos (migração v7) — best-effort separado
-      if (public_slots_limit !== undefined) {
-        const { error: limitErr } = await getDb()
-          .from('settings')
-          .update({ public_slots_limit })
-          .eq('professional_id', data.professional_id);
-        if (limitErr) {
-          console.warn('[settings] Coluna public_slots_limit ausente — rode supabase/migration_v7.sql:', limitErr.message);
-        } else {
-          (result as Record<string, unknown>).public_slots_limit = public_slots_limit;
+          (result as Record<string, unknown>)[key as string] = value;
         }
       }
 
