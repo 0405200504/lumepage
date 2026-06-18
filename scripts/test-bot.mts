@@ -114,7 +114,7 @@ function testPureLogic() {
   console.log(c.cyan('\nbuildSystemPrompt / buildInjectedInfo'));
   const withPersona = buildSystemPrompt(PERSONA, returningCtx);
   assert(withPersona.startsWith(PERSONA.trim()), 'persona ("Treinar a IA") vem primeiro');
-  assert(withPersona.includes('fonte PRINCIPAL e têm prioridade total'), 'declara que "Treinar a IA" é a fonte principal');
+  assert(withPersona.includes('fonte PRINCIPAL'), 'declara que "Treinar a IA" é a fonte principal');
   assert(withPersona.includes('REGRAS FIXAS'), 'injeta bloco de regras fixas (complementar)');
   assert(withPersona.includes('sair do roteiro'), 'regra: coerência mesmo fora do script (req 5)');
   assert(withPersona.includes('Analise TODO o histórico'), 'regra: sempre analisar o contexto (req 6)');
@@ -124,8 +124,8 @@ function testPureLogic() {
   assert(/texto puro|markdown/i.test(withPersona), 'trava de formatação sempre-ativa (sem markdown / links em texto puro)');
   const noPersona = buildSystemPrompt(null, baseCtx);
   assert(noPersona.includes('atendente da Amanda Costa Estética'), 'sem persona usa prompt padrão com a marca');
-  assert(buildInjectedInfo(baseCtx).includes('(primeiro contato)'), 'marca primeiro contato quando não há histórico');
-  assert(buildInjectedInfo(returningCtx).includes('(contato recorrente)'), 'marca contato recorrente');
+  assert(buildInjectedInfo(baseCtx).includes('PRIMEIRO CONTATO'), 'marca primeiro contato quando não há histórico');
+  assert(/CONVERSA JÁ EM ANDAMENTO|PROIBIDO se apresentar de novo/.test(buildInjectedInfo(returningCtx)), 'proíbe reapresentação em contato recorrente');
 }
 
 // ── Camada 2: conversas reais contra o modelo ─────────────────────────────────
@@ -275,6 +275,7 @@ const scenarios: Scenario[] = [
     ctx: returningCtx, persona: PERSONA, turns: ['oi de novo!'],
     check: r => {
       assert(!/sou a atendente|bem-vinda ao|prazer em te conhecer/.test(norm(r[0].text)), 'não se reapresenta para cliente recorrente', r[0].text);
+      assert(!/que alegria te ver/.test(norm(r[0].text)), 'NÃO repete a saudação de abertura da persona', r[0].text);
     },
   },
 ];

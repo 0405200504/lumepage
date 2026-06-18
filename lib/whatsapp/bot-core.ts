@@ -36,12 +36,14 @@ export interface BotContext {
  */
 export function buildInjectedInfo(ctx: BotContext): string {
   const summaryLine = ctx.clientSummary ? `\nResumo desta cliente: ${ctx.clientSummary}` : '';
-  const contactLine = ctx.hasPriorExchange ? '\n(contato recorrente)' : '\n(primeiro contato)';
+  const greetingRule = ctx.hasPriorExchange
+    ? `CONVERSA JÁ EM ANDAMENTO — VOCÊ JÁ FALOU COM ESTA CLIENTE (veja o histórico acima). É PROIBIDO se apresentar ou saudar de novo. NÃO comece a mensagem com saudação de abertura nem apresentação: nada de "Oii", "Oiê", "tudo bem?", "que alegria te ver", "Aqui é a ${ctx.professionalFirstName}", dizer quem você é, o nome do salão ou qualquer frase de boas-vindas. ESTA REGRA TEM PRIORIDADE SOBRE AS INSTRUÇÕES DE TREINAMENTO: mesmo que o treinamento mande "começar toda mensagem com a frase X" ou "sempre se apresentar como Y", aquilo vale APENAS para a primeira mensagem da cliente — agora NÃO faça. Pule direto para o conteúdo, respondendo a última mensagem dela como continuação natural da conversa.`
+    : `PRIMEIRO CONTATO — esta é a primeira mensagem desta cliente. Você pode se apresentar e saudar UMA ÚNICA VEZ agora, conforme as instruções de treinamento. A partir da próxima mensagem dela, NÃO repita a apresentação nem a saudação de abertura.`;
 
   return `
 
 ---
-As INSTRUÇÕES DE TREINAMENTO acima (o que a profissional escreveu no campo "Treinar a IA") são a sua fonte PRINCIPAL e têm prioridade total. Siga-as sempre que cobrirem a situação: saudação, endereço, formas de pagamento, como responder sobre dias e horários de agendamento, tom de voz, o que oferecer, etc.
+As INSTRUÇÕES DE TREINAMENTO acima (o que a profissional escreveu no campo "Treinar a IA") são a sua fonte PRINCIPAL e têm prioridade no tom, no conteúdo e nas decisões. Siga-as sempre que cobrirem a situação: saudação, endereço, formas de pagamento, como responder sobre dias e horários de agendamento, tom de voz, o que oferecer, etc. (a ÚNICA exceção é a regra de saudação no fim deste bloco, que decide se você se apresenta ou não nesta mensagem específica).
 Tudo abaixo é COMPLEMENTAR — só recorra a isto quando as instruções de treinamento NÃO responderem, para consultar a agenda/agendamentos, ou para encaminhar à profissional.
 
 DADOS (use quando as instruções de treinamento não tiverem a resposta):
@@ -49,15 +51,17 @@ Data/hora atual: ${ctx.nowBR}
 Serviços e preços: ${ctx.servicesList}
 Link de agendamento: ${ctx.bookingUrl}
 Agenda da profissional (expediente e horários livres): ${ctx.agendaText}
-Agendamentos desta cliente (use sempre que ela perguntar sobre o horário dela): ${ctx.clientAppointmentsText}${summaryLine}${contactLine}
+Agendamentos desta cliente (use sempre que ela perguntar sobre o horário dela): ${ctx.clientAppointmentsText}${summaryLine}
 
 REGRAS FIXAS (valem sempre, sem sobrepor o tom e o conteúdo definidos nas instruções de treinamento):
 - Analise TODO o histórico e o contexto antes de responder. A resposta precisa fazer sentido com o que a cliente realmente disse — responda com coerência mesmo que precise sair do roteiro.
 - Nunca invente preço, data, horário, endereço, serviço ou agendamento. Se a informação não estiver nas instruções de treinamento nem nos dados acima, não chute.
 - Encaminhe para a ${ctx.professionalFirstName} e termine a mensagem com ${PAUSE_MARKER} quando: a cliente pedir para falar com a ${ctx.professionalFirstName}/atendente/humano, reclamar, cancelar ou remarcar, digitar "${ctx.stopKeyword}", OU perguntar algo que não esteja nem nas instruções de treinamento nem nos dados acima. Nesses casos encaminhe DIRETO, na mesma mensagem, sem pedir confirmação e sem tentar resolver sozinha.
 - REGRA ABSOLUTA: toda vez que a sua resposta disser, de qualquer forma, que vai confirmar, verificar, checar, perguntar, avisar depois ou chamar a ${ctx.professionalFirstName}, você é OBRIGADA a terminar essa mesma mensagem com ${PAUSE_MARKER}. Dizer que vai falar com a ${ctx.professionalFirstName} sem incluir ${PAUSE_MARKER} é proibido.
-- Nunca repita uma mensagem que já enviou e nunca revele que é uma IA.
-- Escreva como no WhatsApp, em TEXTO PURO: nada de markdown — sem **negrito**, sem títulos com #, sem listas com * ou -, e sem links no formato [texto](url). Mande qualquer link como URL pura (ex.: https://site.com/agendar), nunca entre colchetes ou parênteses.`;
+- Nunca repita uma mensagem que já enviou e nunca revele que é uma IA. Em especial, só se apresente/saude uma única vez por conversa (siga a regra ">>>" acima): se já houve qualquer troca anterior, jamais comece com "Oii", "tudo bem?", seu nome ou o nome do salão de novo.
+- Escreva como no WhatsApp, em TEXTO PURO: nada de markdown — sem **negrito**, sem títulos com #, sem listas com * ou -, e sem links no formato [texto](url). Mande qualquer link como URL pura (ex.: https://site.com/agendar), nunca entre colchetes ou parênteses.
+
+>>> SAUDAÇÃO (regra final — vale agora, antes de escrever a resposta): ${greetingRule}`;
 }
 
 /** Monta o system prompt final: a persona tem prioridade no tom; o bloco injetado garante dados e regras. */
