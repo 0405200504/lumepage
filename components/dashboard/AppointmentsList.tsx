@@ -94,13 +94,18 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const apptServiceLabel = (app: Appointment) => formatServiceNames(apptServices(app)) || app.service?.name || 'Serviço';
   const apptTotalCents = (app: Appointment) => sumPriceCents(apptServices(app));
 
-  const getSuggestions = (query: string) =>
-    query.length >= 2
+  // Campo vazio → mostra TODAS as clientes cadastradas (a profissional só seleciona).
+  // Com texto → filtra por nome ou WhatsApp. Lista rolável, limitada para não pesar.
+  const getSuggestions = (query: string) => {
+    const q = query.trim().toLowerCase();
+    const base = q
       ? clients.filter(c =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.name.toLowerCase().includes(q) ||
           c.whatsapp.includes(query.replace(/\D/g, ''))
-        ).slice(0, 8)
-      : [];
+        )
+      : clients;
+    return base.slice(0, 50);
+  };
 
   const clientSuggestions = getSuggestions(nName);
 
@@ -648,7 +653,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                         onChange={(e) => { setNName(e.target.value); setShowSuggestions(true); }}
                         onFocus={() => setShowSuggestions(true)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                        placeholder="Nome da cliente"
+                        placeholder="Buscar cliente cadastrada ou digitar nome"
                         className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
                       />
                       {showSuggestions && clientSuggestions.length > 0 && (
