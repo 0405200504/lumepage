@@ -403,11 +403,27 @@ export const dbService = {
         .from('clients')
         .select('*')
         .eq('professional_id', profId)
+        .is('deleted_at', null)
         .order('name');
       if (error) throw error;
       return data || [];
     }
     return mockDb.getClientsByProfessional(profId);
+  },
+
+  // Clientes na lixeira (soft-deleted) — para a tela de Lixeira
+  getTrashedClients: async (profId: string): Promise<Client[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('clients')
+        .select('*')
+        .eq('professional_id', profId)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) { if (isMissingTable(error)) return []; throw error; }
+      return data || [];
+    }
+    return [];
   },
 
   getClientById: async (id: string): Promise<Client | null> => {
@@ -489,6 +505,7 @@ export const dbService = {
         .from('appointments')
         .select('*, service:services(*)')
         .eq('professional_id', profId)
+        .is('deleted_at', null)
         .order('date', { ascending: false })
         .order('start_time', { ascending: false });
       if (error) throw error;
@@ -497,12 +514,28 @@ export const dbService = {
     return mockDb.getAppointmentsByProfessional(profId);
   },
 
+  // Agendamentos na lixeira (soft-deleted) — para a tela de Lixeira
+  getTrashedAppointments: async (profId: string): Promise<Appointment[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .select('*, service:services(*)')
+        .eq('professional_id', profId)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) { if (isMissingTable(error)) return []; throw error; }
+      return data || [];
+    }
+    return [];
+  },
+
   getAppointmentsByClient: async (clientId: string): Promise<Appointment[]> => {
     if (isSupabaseConfigured) {
       const { data, error } = await getDb()
         .from('appointments')
         .select('*, service:services(*)')
         .eq('client_id', clientId)
+        .is('deleted_at', null)
         .order('date', { ascending: false });
       if (error) throw error;
       return data || [];
@@ -574,6 +607,7 @@ export const dbService = {
         .insert({
           professional_id: data.professional_id,
           service_id: data.service_id,
+          service_ids: data.service_ids && data.service_ids.length ? data.service_ids : null,
           client_id: client.id,
           client_name: data.client_name,
           client_whatsapp: data.client_whatsapp,
@@ -623,10 +657,14 @@ export const dbService = {
 
   updateAppointment: async (
     id: string,
-    patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'notes' | 'status'>>
+    patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'service_ids' | 'notes' | 'status' | 'payment_method'>>
   ): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
       const dbPatch: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+      // Normaliza multi-serviço: array vazio vira NULL (usa service_id)
+      if ('service_ids' in patch) {
+        dbPatch.service_ids = patch.service_ids && patch.service_ids.length ? patch.service_ids : null;
+      }
       // Remarcação: se data ou horário mudaram, zera automações para dispararem na nova data
       if (patch.date || patch.start_time || patch.end_time) {
         dbPatch.automation_booking_sent_at = null;
@@ -668,12 +706,39 @@ export const dbService = {
     return mockDb.updateAppointmentSchedule(id, date, startTime, endTime);
   },
 
+  // Soft-delete: manda o agendamento para a lixeira (não apaga de verdade) e
+  // remove a receita automática vinculada (se houver).
   deleteAppointment: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()
         .from('appointments')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
+      if (error) throw error;
+      await dbService.deleteTransactionsByAppointment(id).catch(() => {});
+      return true;
+    }
+    return mockDb.deleteAppointment(id);
+  },
+
+  restoreAppointment: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb()
+        .from('appointments')
+        .update({ deleted_at: null })
+        .eq('id', id);
+      if (error) throw error;
+      // Se voltar como concluído, recria a receita automática
+      await dbService.syncAppointmentRevenue(id).catch(() => {});
+      return true;
+    }
+    return true;
+  },
+
+  // Exclusão DEFINITIVA (esvaziar a lixeira)
+  purgeAppointment: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('appointments').delete().eq('id', id);
       if (error) throw error;
       return true;
     }
@@ -720,6 +785,64 @@ export const dbService = {
       return true;
     }
     return mockDb.deleteTransaction(id);
+  },
+
+  // Remove as entradas de receita automática vinculadas a um agendamento
+  deleteTransactionsByAppointment: async (appointmentId: string): Promise<void> => {
+    if (!isSupabaseConfigured) return;
+    const { error } = await getDb().from('transactions').delete().eq('appointment_id', appointmentId);
+    if (error && !isMissingTable(error)) console.warn('[financeiro] limpar receita do agendamento:', error.message);
+  },
+
+  // Sincroniza a receita automática do agendamento com seu status:
+  // status 'completed' → garante 1 entrada (soma dos serviços); outro status → remove a entrada.
+  syncAppointmentRevenue: async (appointmentId: string): Promise<void> => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const appt = await dbService.getAppointmentById(appointmentId);
+      if (!appt || appt.deleted_at) { await dbService.deleteTransactionsByAppointment(appointmentId); return; }
+
+      if (appt.status !== 'completed') {
+        await dbService.deleteTransactionsByAppointment(appointmentId);
+        return;
+      }
+
+      // Já existe receita para este agendamento? Então não duplica.
+      const { data: existing } = await getDb()
+        .from('transactions').select('id').eq('appointment_id', appointmentId).limit(1);
+      if (existing && existing.length) return;
+
+      const ids = appt.service_ids && appt.service_ids.length ? appt.service_ids : [appt.service_id];
+      const services = await dbService.getServicesByIds(ids);
+      const totalCents = services.reduce((sum, s) => sum + (s.price_cents || 0), 0);
+      if (totalCents <= 0) return;
+      const serviceNames = services.map(s => s.name).join(' + ') || 'Atendimento';
+
+      await dbService.createTransaction({
+        professional_id: appt.professional_id,
+        type: 'income',
+        amount_cents: totalCents,
+        category: 'Atendimento',
+        description: `${appt.client_name} — ${serviceNames}`,
+        date: appt.date,
+        appointment_id: appointmentId,
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('[financeiro] syncAppointmentRevenue falhou:', e instanceof Error ? e.message : e);
+    }
+  },
+
+  getServicesByIds: async (ids: string[]): Promise<Service[]> => {
+    if (!ids.length) return [];
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb().from('services').select('*').in('id', ids);
+      if (error) throw error;
+      // Preserva a ordem solicitada
+      const map = new Map((data || []).map((s: Service) => [s.id, s]));
+      return ids.map(id => map.get(id)).filter(Boolean) as Service[];
+    }
+    const all = mockDb.getServicesByProfessional('');
+    return ids.map(id => all.find(s => s.id === id)).filter(Boolean) as Service[];
   },
 
   // ===================== TASKS (NOTAS / TAREFAS) =====================
@@ -803,10 +926,10 @@ export const dbService = {
     return mockDb.deleteTask(id);
   },
 
-  // Exclusão de clientes (individual / lote / todos) — edição em lote
+  // Exclusão de clientes (individual / lote / todos) — agora SOFT-DELETE (vai para a lixeira)
   deleteClient: async (id: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').delete().eq('id', id);
+      const { error } = await getDb().from('clients').update({ deleted_at: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
       return true;
     }
@@ -816,7 +939,7 @@ export const dbService = {
   deleteClientsByIds: async (ids: string[]): Promise<boolean> => {
     if (!ids.length) return true;
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').delete().in('id', ids);
+      const { error } = await getDb().from('clients').update({ deleted_at: new Date().toISOString() }).in('id', ids);
       if (error) throw error;
       return true;
     }
@@ -825,11 +948,33 @@ export const dbService = {
 
   deleteAllClientsForProfessional: async (profId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').delete().eq('professional_id', profId);
+      const { error } = await getDb().from('clients').update({ deleted_at: new Date().toISOString() })
+        .eq('professional_id', profId).is('deleted_at', null);
       if (error) throw error;
       return true;
     }
     return mockDb.deleteAllClientsForProfessional(profId);
+  },
+
+  restoreClients: async (ids: string[]): Promise<boolean> => {
+    if (!ids.length) return true;
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('clients').update({ deleted_at: null }).in('id', ids);
+      if (error) throw error;
+      return true;
+    }
+    return true;
+  },
+
+  // Exclusão DEFINITIVA de clientes (esvaziar a lixeira)
+  purgeClients: async (ids: string[]): Promise<boolean> => {
+    if (!ids.length) return true;
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('clients').delete().in('id', ids);
+      if (error) throw error;
+      return true;
+    }
+    return mockDb.deleteClientsByIds(ids);
   },
 
   // ===================== FIXED EXPENSES (CONTAS FIXAS) =====================
@@ -880,6 +1025,7 @@ export const dbService = {
       const { data, error } = await getDb()
         .from('appointments')
         .select('*, service:services(*)')
+        .is('deleted_at', null)
         .order('date', { ascending: false })
         .order('start_time', { ascending: false });
       if (error) throw error;
@@ -890,7 +1036,7 @@ export const dbService = {
 
   getAllClients: async (): Promise<Client[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await getDb().from('clients').select('*').order('name');
+      const { data, error } = await getDb().from('clients').select('*').is('deleted_at', null).order('name');
       if (error) throw error;
       return data || [];
     }
@@ -1222,6 +1368,7 @@ export const dbService = {
       .select('*, service:services(*)')
       .eq('professional_id', professionalId)
       .in('client_whatsapp', phones)
+      .is('deleted_at', null)
       .neq('status', 'cancelled')
       .gte('date', today)
       .order('date', { ascending: true })
@@ -1244,6 +1391,7 @@ export const dbService = {
       .select('*, service:services(*)')
       .eq('professional_id', professionalId)
       .in('client_whatsapp', phones)
+      .is('deleted_at', null)
       .order('date', { ascending: false })
       .order('start_time', { ascending: false })
       .limit(50);

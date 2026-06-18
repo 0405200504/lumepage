@@ -1,21 +1,34 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { X, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Info, Undo2 } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastOptions {
+  /** Texto do botão de ação (ex.: "Desfazer"). */
+  actionLabel?: string;
+  /** Chamado ao clicar no botão de ação. */
+  onAction?: () => void;
+  /** Duração em ms (padrão 4000; 7000 quando há ação). */
+  duration?: number;
+}
 
 interface Toast {
   id: string;
   type: ToastType;
   title: string;
   message: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
+type ToastFn = (title: string, message: string, options?: ToastOptions) => void;
+
 interface ToastContextType {
-  success: (title: string, message: string) => void;
-  error: (title: string, message: string) => void;
-  info: (title: string, message: string) => void;
+  success: ToastFn;
+  error: ToastFn;
+  info: ToastFn;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -23,28 +36,28 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((type: ToastType, title: string, message: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    
-    // Auto-remove em 4 segundos
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  }, []);
-
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const success = useCallback((title: string, message: string) => addToast('success', title, message), [addToast]);
-  const error = useCallback((title: string, message: string) => addToast('error', title, message), [addToast]);
-  const info = useCallback((title: string, message: string) => addToast('info', title, message), [addToast]);
+  const addToast = useCallback((type: ToastType, title: string, message: string, options?: ToastOptions) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, message, actionLabel: options?.actionLabel, onAction: options?.onAction }]);
+
+    const duration = options?.duration ?? (options?.actionLabel ? 7000 : 4000);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, duration);
+  }, []);
+
+  const success = useCallback<ToastFn>((title, message, options) => addToast('success', title, message, options), [addToast]);
+  const error = useCallback<ToastFn>((title, message, options) => addToast('error', title, message, options), [addToast]);
+  const info = useCallback<ToastFn>((title, message, options) => addToast('info', title, message, options), [addToast]);
 
   return (
     <ToastContext.Provider value={{ success, error, info }}>
       {children}
-      
+
       {/* Toast Container */}
       <div className="fixed bottom-6 right-6 z-55 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => (
@@ -64,6 +77,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-gray-800 leading-tight">{toast.title}</p>
               <p className="text-[11px] text-gray-500 mt-1 leading-normal">{toast.message}</p>
+              {toast.actionLabel && toast.onAction && (
+                <button
+                  onClick={() => { toast.onAction?.(); removeToast(toast.id); }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#500b18] text-white text-[11px] font-bold hover:bg-[#3d0812] transition-colors"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  {toast.actionLabel}
+                </button>
+              )}
             </div>
 
             {/* Fechar */}

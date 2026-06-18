@@ -12,6 +12,7 @@ import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink } from '@/lib/whatsapp';
 import { createTaskAction, toggleTaskAction, deleteTaskAction, updateTaskAction } from '@/app/actions/crm';
 import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/professional';
+import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointments/services';
 import { AppointmentStatus } from '@/types/database';
 
 type View = 'year' | 'month' | 'week';
@@ -108,7 +109,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     else alert('Erro ao excluir agendamento.');
   };
 
-  const editAppt = async (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => {
+  const editAppt = async (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => {
     const res = await updateAppointmentAction(apptId, professionalId, patch);
     if (res.success) router.refresh();
     else alert('Erro ao atualizar agendamento.');
@@ -303,7 +304,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   <button key={a.id} onClick={() => onSelectDay(iso)} className={`w-full text-left rounded-xl border px-2 py-1.5 ${m.block}`}>
                     <p className="text-[10px] font-black">{a.start_time.substring(0, 5)}</p>
                     <p className="text-[11px] font-bold truncate">{a.client_name}</p>
-                    <p className="text-[9px] opacity-80 truncate">{a.service?.name}</p>
+                    <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>
                   </button>
                 );
               })}
@@ -369,7 +370,7 @@ const DayDetail: React.FC<{
   reminderTemplate?: string; services: Service[]; onClose: () => void;
   onAddTask: (iso: string, content: string, time: string) => Promise<{ success: boolean; error?: string }>;
   onToggleTask: (t: Task) => void; onRemoveTask: (t: Task) => void; onRemoveAppt: (id: string) => void;
-  onEditAppt: (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => Promise<boolean>;
+  onEditAppt: (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => Promise<boolean>;
 }> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, services, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt, onEditAppt }) => {
   const [y, mo, d] = iso.split('-').map(Number);
   const dateObj = new Date(y, mo - 1, d);
@@ -452,7 +453,7 @@ const DayDetail: React.FC<{
                   </div>
                   <div className="px-4 pb-3">
                     <h4 className="font-bold text-sm text-ink">{a.client_name}</h4>
-                    <p className="text-xs text-gray-450">{a.service?.name}</p>
+                    <p className="text-xs text-gray-450">{formatServiceNames(resolveAppointmentServices(a, services)) || a.service?.name}</p>
                   </div>
 
                   {/* Formulário de edição (inline) */}
@@ -492,7 +493,7 @@ const EditApptForm: React.FC<{
   appt: Appointment;
   services: Service[];
   saving: boolean;
-  onSave: (patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }) => void;
+  onSave: (patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => void;
   onCancel: () => void;
 }> = ({ appt, services, saving, onSave, onCancel }) => {
   const [date, setDate] = useState(appt.date);
@@ -511,7 +512,8 @@ const EditApptForm: React.FC<{
 
   const handleSave = () => {
     const endTime = computedEndTime(startTime, selectedService);
-    onSave({ date, startTime: startTime + ':00', endTime: endTime + ':00', serviceId, notes, status });
+    // serviceIds:[serviceId] mantém o multi-serviço consistente ao editar pela agenda
+    onSave({ date, startTime: startTime + ':00', endTime: endTime + ':00', serviceId, serviceIds: [serviceId], notes, status });
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { dbService } from '@/lib/supabase/db';
 import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
+import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { authService } from '@/lib/auth/auth';
 import { isDemo } from '@/lib/demo';
 import { sendWhatsAppText } from '@/lib/uazapi';
@@ -82,6 +83,31 @@ export async function getSlotsAction(professionalId: string, dateStr: string, se
 }
 
 /**
+ * Slots públicos para MÚLTIPLOS serviços: usa a soma das durações.
+ * Respeita o mesmo limite público de getSlotsAction.
+ */
+export async function getSlotsForServicesAction(professionalId: string, dateStr: string, serviceIds: string[]) {
+  try {
+    const ids = serviceIds?.length ? serviceIds : [];
+    if (!ids.length) return { success: false, error: 'Selecione ao menos um serviço.' };
+    const services = (await dbService.getServicesByIds(ids)).filter(s => s.is_active);
+    if (!services.length) return { success: false, error: 'Serviço indisponível.' };
+    const totalDuration = sumDurationMinutes(services);
+
+    const slots = await getAvailableSlots(professionalId, dateStr, totalDuration);
+    const settings = await dbService.getSettingsByProfessional(professionalId);
+    const limit = settings?.public_slots_limit ?? 0;
+    if (limit && limit > 0) {
+      const available = slots.filter(s => s.isAvailable);
+      return { success: true, slots: pickDistributed(available, limit) };
+    }
+    return { success: true, slots };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao calcular horários livres.' };
+  }
+}
+
+/**
  * Slots para uso INTERNO (painel da profissional): sempre TODOS os horários livres,
  * ignorando o limite público. Aceita duração personalizada (agendamento manual).
  */
@@ -108,6 +134,7 @@ export async function getSlotsInternalAction(professionalId: string, dateStr: st
 export async function createManualAppointmentAction(input: {
   professionalId: string;
   serviceId: string;
+  serviceIds?: string[];
   clientName: string;
   clientWhatsapp: string;
   date: string;
@@ -129,12 +156,16 @@ export async function createManualAppointmentAction(input: {
       return { success: false, error: 'Preencha serviço, cliente, data e horário.' };
     }
 
-    const service = await dbService.getServiceById(serviceId);
-    if (!service) return { success: false, error: 'Serviço inválido.' };
+    // Multi-serviço: serviceIds (todos) ou fallback no serviceId primário
+    const serviceIds = input.serviceIds && input.serviceIds.length ? input.serviceIds : [serviceId];
+    const services = await dbService.getServicesByIds(serviceIds);
+    if (!services.length) return { success: false, error: 'Serviço inválido.' };
+    const service = services[0];
 
+    // Duração = soma das durações dos serviços (a menos que venha override manual)
     const duration = input.durationMinutes && input.durationMinutes > 0
       ? Math.round(input.durationMinutes)
-      : service.duration_minutes;
+      : sumDurationMinutes(services);
 
     const startMin = timeToMinutes(startTime);
     const endMin = startMin + duration;
@@ -168,7 +199,8 @@ export async function createManualAppointmentAction(input: {
 
     const appointment = await dbService.createAppointment({
       professional_id: professionalId,
-      service_id: serviceId,
+      service_id: service.id,
+      service_ids: serviceIds.length > 1 ? serviceIds : null,
       client_id: null,
       client_name: clientName.trim(),
       client_whatsapp: normalizeWhatsapp(clientWhatsapp),
@@ -200,11 +232,11 @@ export async function createManualAppointmentAction(input: {
       ) {
         const msg = fillTemplate(waSettings.automation_booking_message, {
           nome: clientName.trim().split(' ')[0],
-          servico: service.name,
+          servico: formatServiceNames(services),
           data: formatDateBR(date),
           horario: startTime.substring(0, 5),
           profissional: '',
-          preco: formatPriceBRL(service.price_cents),
+          preco: formatPriceBRL(sumPriceCents(services)),
           forma_pagamento: input.paymentMethod || '',
         }, waSettings.custom_variables);
         const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
@@ -237,6 +269,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 interface CreateAppointmentInput {
   professionalId: string;
   serviceId: string;
+  serviceIds?: string[];
   clientName: string;
   clientWhatsapp: string;
   clientEmail?: string;
@@ -267,21 +300,25 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       return { success: false, error: 'Por favor, preencha todos os campos obrigatórios.' };
     }
 
-    // 2. Obter serviço e calcular horário final
-    const service = await dbService.getServiceById(serviceId);
-    if (!service || !service.is_active) {
+    // 2. Obter serviço(s) e calcular horário final. Multi-serviço soma a duração.
+    const serviceIds = input.serviceIds && input.serviceIds.length ? input.serviceIds : [serviceId];
+    const services = await dbService.getServicesByIds(serviceIds);
+    const activeServices = services.filter(s => s.is_active);
+    if (!activeServices.length) {
       return { success: false, error: 'O serviço selecionado é inválido ou foi inativado.' };
     }
+    const service = activeServices[0];
+    const totalDuration = sumDurationMinutes(activeServices);
 
     // 3. Validação preventiva de concorrência (Double Booking)
     // Calcula os slots disponíveis para o dia e verifica se o slot de interesse continua livre
-    const availableSlots = await getAvailableSlots(professionalId, date, service.duration_minutes);
+    const availableSlots = await getAvailableSlots(professionalId, date, totalDuration);
     const targetSlot = availableSlots.find(s => s.time === startTime && s.isAvailable);
 
     if (!targetSlot) {
-      return { 
-        success: false, 
-        error: 'O horário selecionado acabou de ser reservado por outro cliente. Por favor, escolha outro horário.' 
+      return {
+        success: false,
+        error: 'O horário selecionado acabou de ser reservado por outro cliente. Por favor, escolha outro horário.'
       };
     }
 
@@ -290,7 +327,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     const startHour = parseInt(parts[0], 10);
     const startMin = parseInt(parts[1], 10);
     const totalStartMinutes = startHour * 60 + startMin;
-    const totalEndMinutes = totalStartMinutes + service.duration_minutes;
+    const totalEndMinutes = totalStartMinutes + totalDuration;
     
     const endHour = Math.floor(totalEndMinutes / 60);
     const endMin = totalEndMinutes % 60;
@@ -300,7 +337,8 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     // 4. Salvar agendamento no banco
     const appointment = await dbService.createAppointment({
       professional_id: professionalId,
-      service_id: serviceId,
+      service_id: service.id,
+      service_ids: serviceIds.length > 1 ? serviceIds : null,
       client_id: null, // será vinculado internamente
       client_name: clientName,
       client_whatsapp: normalizeWhatsapp(clientWhatsapp), // apenas números
@@ -335,7 +373,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       if (subs && subs.length > 0 && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
         const payload = JSON.stringify({
           title: 'Novo Agendamento! 🎉',
-          body: `${clientName} marcou ${service.name} para ${date.split('-').reverse().join('/')} às ${startTime}.`,
+          body: `${clientName} marcou ${formatServiceNames(activeServices)} para ${date.split('-').reverse().join('/')} às ${startTime}.`,
           url: '/dashboard'
         });
 
@@ -385,11 +423,11 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
         const professional = await dbService.getProfessionalById(professionalId).catch(() => null);
         const msg = fillTemplate(waSettings.automation_booking_message, {
           nome: clientName.split(' ')[0],
-          servico: service.name,
+          servico: formatServiceNames(activeServices),
           data: formatDateBR(date),
           horario: startTime,
           profissional: professional?.name || '',
-          preco: formatPriceBRL(service.price_cents),
+          preco: formatPriceBRL(sumPriceCents(activeServices)),
           forma_pagamento: input.paymentMethod || '',
         }, waSettings.custom_variables);
         const ok = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, msg);
@@ -410,7 +448,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
             'Oi, {nome}! Seu agendamento de {servico} foi confirmado para o dia {data} às {horario}. Te esperamos! 💛',
           {
             nome: clientName.split(' ')[0],
-            servico: service.name,
+            servico: formatServiceNames(activeServices),
             data: formatDateBR(date),
             horario: startTime,
           }

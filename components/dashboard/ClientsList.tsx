@@ -11,8 +11,11 @@ import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
-import { createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction, updateClientNotesAction } from '@/app/actions/crm';
-import { Trash2 } from 'lucide-react';
+import {
+  createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction, updateClientNotesAction,
+  getTrashedClientsAction, restoreClientsAction, purgeClientsAction,
+} from '@/app/actions/crm';
+import { Trash2, RotateCcw } from 'lucide-react';
 
 interface ClientsListProps {
   professionalId: string;
@@ -123,11 +126,17 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
 
   const bulkDelete = async () => {
     if (selected.size === 0) return;
+    const ids = [...selected];
     setBulkBusy(true);
     try {
-      const res = await deleteClientsAction(professionalId, [...selected]);
-      if (res.success) { success('Excluídos', `${res.count} cliente(s) removido(s).`); clearSel(); router.refresh(); }
-      else error('Falha', res.error || 'Não foi possível excluir.');
+      const res = await deleteClientsAction(professionalId, ids);
+      if (res.success) {
+        success('Movido(s) para a lixeira', `${res.count} cliente(s) — pode restaurar.`, {
+          actionLabel: 'Desfazer',
+          onAction: async () => { await restoreClientsAction(professionalId, ids); router.refresh(); },
+        });
+        clearSel(); router.refresh();
+      } else error('Falha', res.error || 'Não foi possível excluir.');
     } finally { setBulkBusy(false); }
   };
 
@@ -135,9 +144,45 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
     setBulkBusy(true);
     try {
       const res = await deleteAllClientsAction(professionalId);
-      if (res.success) { success('Tudo limpo', 'Todos os clientes foram excluídos.'); clearSel(); setConfirmDeleteAll(false); router.refresh(); }
+      if (res.success) { success('Movidos para a lixeira', 'Todos os clientes foram para a lixeira (restaurável).'); clearSel(); setConfirmDeleteAll(false); router.refresh(); }
       else error('Falha', res.error || 'Não foi possível excluir.');
     } finally { setBulkBusy(false); }
+  };
+
+  // Lixeira de clientes
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashedClients, setTrashedClients] = useState<Client[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  const [trashBusyId, setTrashBusyId] = useState<string | null>(null);
+
+  const openTrash = async () => {
+    setShowTrash(true);
+    setTrashLoading(true);
+    const items = await getTrashedClientsAction(professionalId).catch(() => [] as Client[]);
+    setTrashedClients(items);
+    setTrashLoading(false);
+  };
+
+  const restoreOne = async (id: string) => {
+    setTrashBusyId(id);
+    const res = await restoreClientsAction(professionalId, [id]);
+    setTrashBusyId(null);
+    if (res.success) {
+      setTrashedClients(prev => prev.filter(c => c.id !== id));
+      success('Restaurada!', 'A cliente voltou para a lista.');
+      router.refresh();
+    } else error('Falha', res.error || 'Não foi possível restaurar.');
+  };
+
+  const purgeOne = async (id: string) => {
+    if (!confirm('Excluir DEFINITIVAMENTE esta cliente? Não dá pra desfazer.')) return;
+    setTrashBusyId(id);
+    const res = await purgeClientsAction(professionalId, [id]);
+    setTrashBusyId(null);
+    if (res.success) {
+      setTrashedClients(prev => prev.filter(c => c.id !== id));
+      success('Excluída', 'Removida definitivamente.');
+    } else error('Falha', res.error || 'Não foi possível excluir.');
   };
 
   // Cadastro manual
@@ -297,6 +342,9 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           </button>
         )}
         <div className="ml-auto flex gap-2">
+          <button onClick={openTrash} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-paper border border-gray-150 text-gray-600 text-xs font-bold rounded-xl hover:bg-cream transition-all-custom whitespace-nowrap">
+            <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Lixeira</span>
+          </button>
           <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-paper border border-gray-150 text-forest text-xs font-bold rounded-xl hover:bg-cream transition-all-custom whitespace-nowrap">
             <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Importar lista</span>
           </button>
@@ -679,6 +727,48 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal: Lixeira de clientes */}
+      {showTrash && (
+        <Portal>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
+          <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-ink tracking-tight">Lixeira de clientes</h3>
+              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+            </div>
+
+            {trashLoading ? (
+              <p className="text-sm text-gray-450 py-8 text-center">Carregando…</p>
+            ) : trashedClients.length === 0 ? (
+              <p className="text-sm text-gray-450 py-8 text-center">A lixeira está vazia.</p>
+            ) : (
+              <div className="space-y-2">
+                {trashedClients.map(c => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 bg-cream/50 border border-gray-150 rounded-xl px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-ink truncate">{c.name}</p>
+                      <p className="text-[11px] text-gray-450 truncate">{c.whatsapp}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button onClick={() => restoreOne(c.id)} disabled={trashBusyId === c.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#226045] text-white text-[11px] font-bold hover:opacity-95 disabled:opacity-50">
+                        <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                      </button>
+                      <button onClick={() => purgeOne(c.id)} disabled={trashBusyId === c.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-150 text-[#b23a48] text-[11px] font-bold hover:bg-white disabled:opacity-50">
+                        <Trash2 className="h-3.5 w-3.5" /> Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        </Portal>
       )}
     </div>
   );

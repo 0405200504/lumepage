@@ -255,3 +255,37 @@ export async function deleteAllClientsAction(professionalId: string) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir clientes.' };
   }
 }
+
+// ===================== LIXEIRA DE CLIENTES =====================
+export async function getTrashedClientsAction(professionalId: string) {
+  try {
+    if (!await authorize(professionalId)) return [];
+    return await dbService.getTrashedClients(professionalId);
+  } catch {
+    return [];
+  }
+}
+
+export async function restoreClientsAction(professionalId: string, ids: string[]) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
+    await dbService.restoreClients(ids);
+    return { success: true, count: ids.length };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao restaurar clientes.' };
+  }
+}
+
+export async function purgeClientsAction(professionalId: string, ids: string[]) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
+    if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
+    await dbService.purgeClients(ids);
+    return { success: true, count: ids.length };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir definitivamente.' };
+  }
+}

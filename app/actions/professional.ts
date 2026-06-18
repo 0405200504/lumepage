@@ -184,7 +184,7 @@ export async function deleteTimeBlockAction(professionalId: string, blockId: str
 export async function updateAppointmentAction(
   appointmentId: string,
   professionalId: string,
-  patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; notes?: string; status?: AppointmentStatus }
+  patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus; paymentMethod?: string }
 ) {
   try {
     if (isDemo(professionalId)) return { success: true };
@@ -195,9 +195,13 @@ export async function updateAppointmentAction(
       ...(patch.startTime && { start_time: patch.startTime }),
       ...(patch.endTime && { end_time: patch.endTime }),
       ...(patch.serviceId && { service_id: patch.serviceId }),
+      ...(patch.serviceIds && { service_ids: patch.serviceIds.length > 1 ? patch.serviceIds : null }),
       ...('notes' in patch && { notes: patch.notes ?? null }),
+      ...('paymentMethod' in patch && { payment_method: patch.paymentMethod ?? null }),
       ...(patch.status && { status: patch.status }),
     });
+    // Mantém a receita automática em sincronia com o status atual
+    await dbService.syncAppointmentRevenue(appointmentId).catch(() => {});
     return { success: true, appointment: result };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar agendamento.' };
@@ -216,6 +220,8 @@ export async function updateAppointmentStatusAction(appointmentId: string, profe
     if (!result) {
       return { success: false, error: 'Agendamento não encontrado.' };
     }
+    // Concluído → lança receita automática; outro status → remove a entrada vinculada
+    await dbService.syncAppointmentRevenue(appointmentId).catch(() => {});
 
     return { success: true, appointment: result };
   } catch (e: any) {
@@ -234,6 +240,38 @@ export async function deleteAppointmentAction(appointmentId: string, professiona
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao excluir agendamento.' };
+  }
+}
+
+// Lixeira de agendamentos
+export async function getTrashedAppointmentsAction(professionalId: string) {
+  try {
+    if (!await authorizeAction(professionalId)) return [];
+    return await dbService.getTrashedAppointments(professionalId);
+  } catch {
+    return [];
+  }
+}
+
+export async function restoreAppointmentAction(appointmentId: string, professionalId: string) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorizeAction(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.restoreAppointment(appointmentId);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao restaurar agendamento.' };
+  }
+}
+
+export async function purgeAppointmentAction(appointmentId: string, professionalId: string) {
+  try {
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorizeAction(professionalId)) return { success: false, error: 'Não autorizado.' };
+    await dbService.purgeAppointment(appointmentId);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao excluir definitivamente.' };
   }
 }
 

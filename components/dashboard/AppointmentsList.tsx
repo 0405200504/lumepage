@@ -4,14 +4,20 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Appointment, Setting, AppointmentStatus, Service, Client } from '@/types/database';
 import {
-  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus
+  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus, Pencil, RotateCcw
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
-import { updateAppointmentStatusAction, deleteAppointmentAction } from '@/app/actions/professional';
+import {
+  updateAppointmentStatusAction, deleteAppointmentAction, updateAppointmentAction,
+  getTrashedAppointmentsAction, restoreAppointmentAction, purgeAppointmentAction,
+} from '@/app/actions/professional';
 import { createManualAppointmentAction } from '@/app/actions/booking';
 import { statusMeta } from '@/lib/appointments/status';
-import { buildReminderLink, buildWhatsappLink, fillTemplate, formatDateBR } from '@/lib/whatsapp';
+import { resolveAppointmentServices, sumPriceCents, sumDurationMinutes, formatServiceNames, serviceIdsOf } from '@/lib/appointments/services';
+import { buildReminderLink, buildWhatsappLink, fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
+
+const PAYMENT_METHODS = ['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito', 'Não sei ainda'];
 
 interface AppointmentsListProps {
   initialAppointments: Appointment[];
@@ -55,16 +61,38 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const [savingNew, setSavingNew] = useState(false);
   const [nName, setNName] = useState('');
   const [nPhone, setNPhone] = useState('');
-  const [nServiceId, setNServiceId] = useState('');
+  const [nServiceIds, setNServiceIds] = useState<string[]>([]);
   const [nDate, setNDate] = useState('');
   const [nTime, setNTime] = useState('');
   const [nDuration, setNDuration] = useState<number>(60);
+  const [nDurationTouched, setNDurationTouched] = useState(false);
   const [nNotes, setNNotes] = useState('');
   const [nAllowOverlap, setNAllowOverlap] = useState(false);
   const [nClients, setNClients] = useState<Array<{ name: string; phone: string }>>([]);
   const [nPaymentMethod, setNPaymentMethod] = useState('');
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Edição de agendamento
+  const [editApp, setEditApp] = useState<Appointment | null>(null);
+  const [eServiceIds, setEServiceIds] = useState<string[]>([]);
+  const [eDate, setEDate] = useState('');
+  const [eTime, setETime] = useState('');
+  const [eDuration, setEDuration] = useState<number>(60);
+  const [eNotes, setENotes] = useState('');
+  const [ePaymentMethod, setEPaymentMethod] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Lixeira de agendamentos
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashedAppts, setTrashedAppts] = useState<Appointment[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  const [trashBusyId, setTrashBusyId] = useState<string | null>(null);
+
+  // Serviços resolvidos / rótulo / total de um agendamento (multi-serviço)
+  const apptServices = (app: Appointment) => resolveAppointmentServices(app, services);
+  const apptServiceLabel = (app: Appointment) => formatServiceNames(apptServices(app)) || app.service?.name || 'Serviço';
+  const apptTotalCents = (app: Appointment) => sumPriceCents(apptServices(app));
 
   const getSuggestions = (query: string) =>
     query.length >= 2
@@ -78,22 +106,35 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
   const openNew = () => {
     const first = activeServices[0];
-    setNName(''); setNPhone(''); setNServiceId(first?.id || '');
-    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNNotes('');
+    setNName(''); setNPhone(''); setNServiceIds(first ? [first.id] : []);
+    setNDate(''); setNTime(''); setNDuration(first?.duration_minutes || 60); setNDurationTouched(false); setNNotes('');
     setNAllowOverlap(false); setNClients([]); setActiveSuggestionIdx(null); setNPaymentMethod('');
     setShowNew(true);
   };
 
-  const onSelectService = (id: string) => {
-    setNServiceId(id);
-    const svc = activeServices.find(s => s.id === id);
-    if (svc) setNDuration(svc.duration_minutes);
+  // Multi-serviço: alterna a seleção e recalcula a duração (soma) enquanto não for editada à mão
+  const toggleService = (id: string) => {
+    setNServiceIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (!nDurationTouched) {
+        const sum = sumDurationMinutes(activeServices.filter(s => next.includes(s.id)));
+        if (sum > 0) setNDuration(sum);
+      }
+      return next;
+    });
   };
+
+  const nTotalCents = sumPriceCents(activeServices.filter(s => nServiceIds.includes(s.id)));
 
   const createManual = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingNew(true);
     try {
+      if (nServiceIds.length === 0) {
+        error('Atenção', 'Selecione ao menos um serviço.');
+        return;
+      }
+
       const clientList = nAllowOverlap
         ? nClients.filter(c => c.name.trim() && c.phone.trim())
         : [{ name: nName, phone: nPhone }];
@@ -107,7 +148,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       for (const client of clientList) {
         const res = await createManualAppointmentAction({
           professionalId,
-          serviceId: nServiceId,
+          serviceId: nServiceIds[0],
+          serviceIds: nServiceIds,
           clientName: client.name,
           clientWhatsapp: client.phone,
           date: nDate,
@@ -152,12 +194,23 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const handleUpdateStatus = async (id: string, status: AppointmentStatus, reason?: string) => {
+  const handleUpdateStatus = async (id: string, status: AppointmentStatus, reason?: string, prevStatus?: AppointmentStatus) => {
     setUpdatingId(id);
     try {
       const res = await updateAppointmentStatusAction(id, professionalId, status, reason);
       if (res.success) {
-        success('Atualizado!', 'Status do agendamento alterado com sucesso.');
+        // Oferece desfazer: volta ao status anterior
+        if (prevStatus && prevStatus !== status) {
+          success('Atualizado!', 'Status do agendamento alterado.', {
+            actionLabel: 'Desfazer',
+            onAction: async () => {
+              await updateAppointmentStatusAction(id, professionalId, prevStatus);
+              router.refresh();
+            },
+          });
+        } else {
+          success('Atualizado!', 'Status do agendamento alterado com sucesso.');
+        }
         router.refresh();
       } else {
         error('Falha', res.error || 'Ocorreu um erro ao atualizar status.');
@@ -172,13 +225,103 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     }
   };
 
+  // ── Edição de agendamento ───────────────────────────────────────────────
+  const openEdit = (app: Appointment) => {
+    setEditApp(app);
+    setEServiceIds(serviceIdsOf(app));
+    setEDate(app.date);
+    setETime(app.start_time.substring(0, 5));
+    setEDuration(realDurationMin(app) || 60);
+    setENotes(app.notes || '');
+    setEPaymentMethod(app.payment_method || '');
+  };
+
+  const toggleEditService = (id: string) => {
+    setEServiceIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      const sum = sumDurationMinutes(activeServices.filter(s => next.includes(s.id)));
+      if (sum > 0) setEDuration(sum);
+      return next;
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editApp) return;
+    if (eServiceIds.length === 0) { error('Atenção', 'Selecione ao menos um serviço.'); return; }
+    setSavingEdit(true);
+    try {
+      const endTime = `${addMinutes(eTime, eDuration)}:00`;
+      const res = await updateAppointmentAction(editApp.id, professionalId, {
+        serviceId: eServiceIds[0],
+        serviceIds: eServiceIds,
+        date: eDate,
+        startTime: `${eTime}:00`,
+        endTime,
+        notes: eNotes || '',
+        paymentMethod: ePaymentMethod,
+      });
+      if (res.success) {
+        success('Agendamento atualizado!', 'As alterações foram salvas.');
+        setEditApp(null);
+        router.refresh();
+      } else {
+        error('Falha', res.error || 'Não foi possível salvar as alterações.');
+      }
+    } catch {
+      error('Erro', 'Falha ao salvar o agendamento.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+  const eTotalCents = sumPriceCents(activeServices.filter(s => eServiceIds.includes(s.id)));
+
+  // ── Lixeira de agendamentos ─────────────────────────────────────────────
+  const openTrash = async () => {
+    setShowTrash(true);
+    setTrashLoading(true);
+    const items = await getTrashedAppointmentsAction(professionalId).catch(() => [] as Appointment[]);
+    setTrashedAppts(items);
+    setTrashLoading(false);
+  };
+
+  const handleRestore = async (id: string) => {
+    setTrashBusyId(id);
+    const res = await restoreAppointmentAction(id, professionalId);
+    setTrashBusyId(null);
+    if (res.success) {
+      setTrashedAppts(prev => prev.filter(a => a.id !== id));
+      success('Restaurado!', 'O agendamento voltou para a agenda.');
+      router.refresh();
+    } else {
+      error('Falha', res.error || 'Não foi possível restaurar.');
+    }
+  };
+
+  const handlePurge = async (id: string) => {
+    if (!confirm('Excluir DEFINITIVAMENTE este agendamento? Não dá pra desfazer.')) return;
+    setTrashBusyId(id);
+    const res = await purgeAppointmentAction(id, professionalId);
+    setTrashBusyId(null);
+    if (res.success) {
+      setTrashedAppts(prev => prev.filter(a => a.id !== id));
+      success('Excluído', 'Removido definitivamente.');
+    } else {
+      error('Falha', res.error || 'Não foi possível excluir.');
+    }
+  };
+
   const handleDeleteAppt = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
     setUpdatingId(id);
     try {
       const res = await deleteAppointmentAction(id, professionalId);
       if (res.success) {
-        success('Excluído!', 'Agendamento removido com sucesso.');
+        success('Movido para a lixeira', 'O agendamento pode ser restaurado.', {
+          actionLabel: 'Desfazer',
+          onAction: async () => {
+            await restoreAppointmentAction(id, professionalId);
+            router.refresh();
+          },
+        });
         router.refresh();
       } else {
         error('Falha', res.error || 'Ocorreu um erro ao excluir o agendamento.');
@@ -217,19 +360,19 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const AppointmentActions = ({ app }: { app: Appointment }) => (
     <>
       {app.status === 'pending' && (
-        <button onClick={() => handleUpdateStatus(app.id, 'confirmed')} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
+        <button onClick={() => handleUpdateStatus(app.id, 'confirmed', undefined, app.status)} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
           <Check className="h-4 w-4" />
           <span className={iconLabel}>Confirmar</span>
         </button>
       )}
       {app.status === 'confirmed' && (
-        <button onClick={() => handleUpdateStatus(app.id, 'completed')} disabled={updatingId === app.id} title="Marcar como finalizado" className={`${iconBtn} hover:bg-wine-700/8 text-wine-700`}>
+        <button onClick={() => handleUpdateStatus(app.id, 'completed', undefined, app.status)} disabled={updatingId === app.id} title="Marcar como finalizado" className={`${iconBtn} hover:bg-wine-700/8 text-wine-700`}>
           <CheckCircle className="h-4 w-4" />
           <span className={iconLabel}>Finalizar</span>
         </button>
       )}
       {(app.status === 'confirmed' || app.status === 'pending') && (
-        <button onClick={() => handleUpdateStatus(app.id, 'no_show')} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
+        <button onClick={() => handleUpdateStatus(app.id, 'no_show', undefined, app.status)} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
           <Ban className="h-4 w-4" />
           <span className={iconLabel}>Falta</span>
         </button>
@@ -250,6 +393,10 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         <MessageCircle className="h-4 w-4" />
         <span className={iconLabel}>WhatsApp</span>
       </button>
+      <button onClick={() => openEdit(app)} title="Editar agendamento" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-wine-700 border border-gray-150`}>
+        <Pencil className="h-4 w-4" />
+        <span className={iconLabel}>Editar</span>
+      </button>
       <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-[#b23a48] border border-gray-150`}>
         <Trash2 className="h-4 w-4" />
         <span className={iconLabel}>Excluir</span>
@@ -259,8 +406,14 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* Ação: novo agendamento manual */}
-      <div className="flex justify-end">
+      {/* Ações: lixeira + novo agendamento manual */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={openTrash}
+          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-150 text-gray-600 text-xs font-bold rounded-xl hover:bg-cream transition-all-custom"
+        >
+          <Trash2 className="h-4 w-4" /> Lixeira
+        </button>
         <button
           onClick={openNew}
           className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom"
@@ -335,7 +488,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                       </span>
                     </div>
                     <h4 className="font-bold text-ink mt-2 truncate">{app.client_name}</h4>
-                    <p className="text-xs text-gray-450 mt-0.5 truncate">{app.service?.name} · {realDurationMin(app)} min</p>
+                    <p className="text-xs text-gray-450 mt-0.5 truncate">{apptServiceLabel(app)} · {realDurationMin(app)} min{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
                     <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-xs text-gray-450 mt-0.5 inline-block">{app.client_whatsapp}</a>
                   </div>
                   <span className={`shrink-0 text-[10px] font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
@@ -399,8 +552,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                       </td>
 
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-ink">{app.service?.name}</p>
-                        <p className="text-xs text-gray-450 mt-0.5">{realDurationMin(app)} minutos</p>
+                        <p className="font-semibold text-ink">{apptServiceLabel(app)}</p>
+                        <p className="text-xs text-gray-450 mt-0.5">{realDurationMin(app)} minutos{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
                       </td>
 
                       <td className="px-6 py-4">
@@ -593,13 +746,26 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   </div>
                 )}
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviço *</label>
-                  <select required value={nServiceId} onChange={(e) => onSelectService(e.target.value)}
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700">
-                    {activeServices.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes} min</option>
-                    ))}
-                  </select>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviços * <span className="text-gray-400 normal-case font-medium">(pode escolher mais de um)</span></label>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {activeServices.map(s => {
+                      const sel = nServiceIds.includes(s.id);
+                      return (
+                        <button key={s.id} type="button" onClick={() => toggleService(s.id)}
+                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                            sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                          }`}>
+                          <span>{s.name} · {s.duration_minutes} min</span>
+                          <span className={sel ? 'text-white/90' : 'text-gray-400'}>{formatPriceBRL(s.price_cents)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {nServiceIds.length > 0 && (
+                    <p className="text-[11px] font-bold text-wine-700 mt-1.5">
+                      Total: {formatPriceBRL(nTotalCents)} · {nServiceIds.length} serviço{nServiceIds.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -616,7 +782,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 <div>
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Duração deste atendimento (min) *</label>
                   <input required type="number" min={5} step={5} value={nDuration}
-                    onChange={(e) => setNDuration(Math.max(5, parseInt(e.target.value, 10) || 0))}
+                    onChange={(e) => { setNDurationTouched(true); setNDuration(Math.max(5, parseInt(e.target.value, 10) || 0)); }}
                     className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
                   <span className="text-[10px] text-gray-400 mt-1 block">
                     Vale só para este agendamento — não altera a duração padrão do serviço.
@@ -628,7 +794,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 <div>
                   <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito'].map(method => (
+                    {PAYMENT_METHODS.map(method => (
                       <button
                         key={method}
                         type="button"
@@ -678,6 +844,133 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   </button>
                 </div>
               </form>
+            )}
+          </div>
+        </div>
+        </Portal>
+      )}
+
+      {/* Modal: Editar agendamento */}
+      {editApp && (
+        <Portal>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setEditApp(null)} />
+          <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-ink tracking-tight">Editar agendamento</h3>
+              <button onClick={() => setEditApp(null)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="text-xs text-gray-450 mb-4">Cliente: <strong className="text-ink">{editApp.client_name}</strong></p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviços * <span className="text-gray-400 normal-case font-medium">(pode escolher mais de um)</span></label>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {activeServices.map(s => {
+                    const sel = eServiceIds.includes(s.id);
+                    return (
+                      <button key={s.id} type="button" onClick={() => toggleEditService(s.id)}
+                        className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                          sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                        }`}>
+                        <span>{s.name} · {s.duration_minutes} min</span>
+                        <span className={sel ? 'text-white/90' : 'text-gray-400'}>{formatPriceBRL(s.price_cents)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {eServiceIds.length > 0 && (
+                  <p className="text-[11px] font-bold text-wine-700 mt-1.5">Total: {formatPriceBRL(eTotalCents)}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Data *</label>
+                  <input type="date" value={eDate} onChange={(e) => setEDate(e.target.value)}
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Início *</label>
+                  <input type="time" value={eTime} onChange={(e) => setETime(e.target.value)}
+                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Duração (min) *</label>
+                <input type="number" min={5} step={5} value={eDuration}
+                  onChange={(e) => setEDuration(Math.max(5, parseInt(e.target.value, 10) || 0))}
+                  className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                {eTime && eDuration > 0 && (
+                  <span className="text-[10px] text-gray-400 mt-1 block">Ocupa <strong className="text-ink">{eTime}</strong> → <strong className="text-ink">{addMinutes(eTime, eDuration)}</strong>.</span>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHODS.map(method => (
+                    <button key={method} type="button"
+                      onClick={() => setEPaymentMethod(ePaymentMethod === method ? '' : method)}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                        ePaymentMethod === method ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                      }`}>
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Observações</label>
+                <textarea value={eNotes} onChange={(e) => setENotes(e.target.value)} rows={2} placeholder="Opcional"
+                  className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
+              </div>
+              <div className="flex justify-end gap-2.5 pt-1">
+                <button type="button" onClick={() => setEditApp(null)} className="px-4 py-2.5 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
+                <button type="button" onClick={saveEdit} disabled={savingEdit} className="tap px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                  {savingEdit ? 'Salvando…' : 'Salvar alterações'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </Portal>
+      )}
+
+      {/* Modal: Lixeira de agendamentos */}
+      {showTrash && (
+        <Portal>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
+          <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-ink tracking-tight">Lixeira de agendamentos</h3>
+              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+            </div>
+
+            {trashLoading ? (
+              <p className="text-sm text-gray-450 py-8 text-center">Carregando…</p>
+            ) : trashedAppts.length === 0 ? (
+              <p className="text-sm text-gray-450 py-8 text-center">A lixeira está vazia.</p>
+            ) : (
+              <div className="space-y-2">
+                {trashedAppts.map(app => (
+                  <div key={app.id} className="flex items-center justify-between gap-3 bg-cream/50 border border-gray-150 rounded-xl px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-ink truncate">{app.client_name}</p>
+                      <p className="text-[11px] text-gray-450 truncate">{formatDateBR(app.date)} {app.start_time.substring(0, 5)} · {apptServiceLabel(app)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button onClick={() => handleRestore(app.id)} disabled={trashBusyId === app.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#226045] text-white text-[11px] font-bold hover:opacity-95 disabled:opacity-50">
+                        <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                      </button>
+                      <button onClick={() => handlePurge(app.id)} disabled={trashBusyId === app.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-150 text-[#b23a48] text-[11px] font-bold hover:bg-white disabled:opacity-50">
+                        <Trash2 className="h-3.5 w-3.5" /> Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

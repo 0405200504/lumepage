@@ -116,6 +116,7 @@ export interface Client {
   notes?: string | null; // ficha técnica / observações gerais da cliente (requer migração v7)
   total_appointments: number;
   last_appointment_at: string | null;
+  deleted_at?: string | null; // lixeira (soft-delete)
   created_at: string;
   updated_at?: string;
 }
@@ -147,6 +148,7 @@ export interface Transaction {
   category: string;
   description: string | null;
   date: string; // "YYYY-MM-DD"
+  appointment_id?: string | null; // entrada automática vinculada a um agendamento concluído
   created_at: string;
 }
 
@@ -173,6 +175,7 @@ export interface Appointment {
   id: string;
   professional_id: string;
   service_id: string;
+  service_ids?: string[] | null; // multi-serviço (NULL = usa service_id). service_id = service_ids[0]
   client_id: string | null;
   client_name: string;
   client_whatsapp: string;
@@ -184,12 +187,14 @@ export interface Appointment {
   notes: string | null;
   cancellation_reason: string | null;
   payment_method?: string | null;
+  deleted_at?: string | null; // lixeira (soft-delete)
   created_at: string;
   updated_at: string;
   automation_booking_sent_at?: string | null;
   automation_day_before_sent_at?: string | null;
   automation_day_of_sent_at?: string | null;
-  service?: Service; // Relacionamento incluído em SELECTs
+  service?: Service; // Relacionamento (serviço primário) incluído em SELECTs
+  services?: Service[]; // Todos os serviços do agendamento (multi-serviço)
   professional?: Professional;
 }
 

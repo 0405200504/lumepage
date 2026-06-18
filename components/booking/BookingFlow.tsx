@@ -6,10 +6,13 @@ import {
   Calendar as CalendarIcon, Clock, User, MessageSquare,
   ChevronRight, ArrowLeft, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
 } from 'lucide-react';
-import { getSlotsAction, createAppointmentAction } from '@/app/actions/booking';
+import { getSlotsForServicesAction, createAppointmentAction } from '@/app/actions/booking';
 import { addToWaitlistAction } from '@/app/actions/waitlist';
+import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { useToast } from '../ui/Toast';
 import { BookingDecor } from './BookingDecor';
+
+const PAYMENT_METHODS = ['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito', 'Não sei ainda'];
 
 interface BookingFlowProps {
   professional: Professional;
@@ -33,8 +36,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   // Etapa Atual: 1 = Serviços, 2 = Data, 3 = Horário, 4 = Identificação, 5 = Revisão, 6 = Sucesso
   const [step, setStep] = useState(1);
   
-  // Seleções
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  // Seleções (multi-serviço)
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const selectedService = selectedServices[0] || null; // serviço primário (compatibilidade de exibição)
+  const servicesLabel = formatServiceNames(selectedServices);
+  const totalCents = sumPriceCents(selectedServices);
+  const totalDuration = sumDurationMinutes(selectedServices);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   
@@ -138,14 +145,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     setAvailableDays(days);
   }, [settings]);
 
-  // Carregar slots quando mudar de data
+  // Carregar slots quando mudar de data (usa a soma das durações dos serviços escolhidos)
   useEffect(() => {
-    if (selectedService && selectedDate) {
+    if (selectedServices.length > 0 && selectedDate) {
       const fetchSlots = async () => {
         setIsLoadingSlots(true);
         setSelectedTime('');
         try {
-          const res = await getSlotsAction(professional.id, selectedDate, selectedService.id);
+          const res = await getSlotsForServicesAction(professional.id, selectedDate, selectedServices.map(s => s.id));
           if (res.success && res.slots) {
             setSlots(res.slots);
           } else {
@@ -160,16 +167,25 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       };
       fetchSlots();
     }
-  }, [selectedDate, selectedService, professional.id, error]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedServices.map(s => s.id).join(','), professional.id]);
 
-  // Ações do fluxo
-  const handleSelectService = (service: Service) => {
-    setSelectedService(service);
+  // Ações do fluxo — multi-serviço: alterna a seleção (não avança sozinho)
+  const toggleService = (service: Service) => {
+    setSelectedServices(prev =>
+      prev.some(s => s.id === service.id) ? prev.filter(s => s.id !== service.id) : [...prev, service]
+    );
+  };
+
+  const continueFromServices = () => {
+    if (selectedServices.length === 0) {
+      error('Escolha um serviço', 'Selecione ao menos um serviço para continuar.');
+      return;
+    }
     if (onAnalyticsEvent) {
-      onAnalyticsEvent('service_selected', { service_id: service.id, service_name: service.name });
+      onAnalyticsEvent('service_selected', { service_ids: selectedServices.map(s => s.id) });
     }
     setStep(2);
-    // Auto-selecionar o primeiro dia da lista se não houver selecionado
     if (availableDays.length > 0 && !selectedDate) {
       setSelectedDate(availableDays[0].dateStr);
     }
@@ -217,7 +233,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     try {
       const res = await createAppointmentAction({
         professionalId: professional.id,
-        serviceId: selectedService!.id,
+        serviceId: selectedServices[0].id,
+        serviceIds: selectedServices.map(s => s.id),
         clientName,
         clientWhatsapp,
         clientEmail: clientEmail || undefined,
@@ -267,7 +284,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     if (!selectedService || !selectedDate || !selectedTime) return '#';
     const dateObj = new Date(`${selectedDate}T12:00:00`);
     const formattedDate = dateObj.toLocaleDateString('pt-BR');
-    const message = `Oi, ${professional.name}! Acabei de solicitar um agendamento de ${selectedService.name} para o dia ${formattedDate} às ${selectedTime.substring(0, 5)} pelo Lume Agenda.`;
+    const message = `Oi, ${professional.name}! Acabei de solicitar um agendamento de ${servicesLabel} para o dia ${formattedDate} às ${selectedTime.substring(0, 5)} pelo Lume Agenda.`;
     const cleanPhone = professional.whatsapp.replace(/\D/g, '') || '';
     return `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
@@ -334,45 +351,67 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-base font-bold text-gray-800 tracking-tight">Escolha o serviço desejado</h2>
-              <p className="text-xs text-gray-450 mt-1">Selecione uma das opções abaixo para prosseguir.</p>
+              <h2 className="text-base font-bold text-gray-800 tracking-tight">Escolha os serviços desejados</h2>
+              <p className="text-xs text-gray-450 mt-1">Você pode selecionar mais de um serviço para o mesmo horário.</p>
             </div>
 
             <div className="space-y-3">
               {services.length > 0 ? (
-                services.map((service) => (
-                  <button
-                    key={service.id}
-                    onClick={() => handleSelectService(service)}
-                    className="w-full text-left bg-white border border-gray-200 hover:border-[var(--brand)] p-4 rounded-2xl transition-all flex justify-between items-center gap-4 group cursor-pointer hover:shadow-xs"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-800 group-hover:text-[var(--brand)] transition-colors">
-                        {service.name}
-                      </p>
-                      {service.description && (
-                        <p className="text-xs text-gray-450 mt-1 line-clamp-2 leading-relaxed">{service.description}</p>
-                      )}
-                      <div className="flex items-center gap-1 text-[11px] text-gray-400 font-semibold mt-2.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{service.duration_minutes} minutos</span>
+                services.map((service) => {
+                  const sel = selectedServices.some(s => s.id === service.id);
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => toggleService(service)}
+                      className={`w-full text-left p-4 rounded-2xl transition-all flex justify-between items-center gap-4 group cursor-pointer hover:shadow-xs border ${
+                        sel ? 'bg-[var(--brand)]/5 border-[var(--brand)]' : 'bg-white border-gray-200 hover:border-[var(--brand)]'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold transition-colors ${sel ? 'text-[var(--brand)]' : 'text-gray-800 group-hover:text-[var(--brand)]'}`}>
+                          {service.name}
+                        </p>
+                        {service.description && (
+                          <p className="text-xs text-gray-450 mt-1 line-clamp-2 leading-relaxed">{service.description}</p>
+                        )}
+                        <div className="flex items-center gap-1 text-[11px] text-gray-400 font-semibold mt-2.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{service.duration_minutes} minutos</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="shrink-0 text-right flex items-center gap-3">
-                      {settings?.show_price_public && (
-                        <span className="text-sm font-black text-gray-900">{formatPrice(service.price_cents)}</span>
-                      )}
-                      <div className="h-8 w-8 bg-gray-50 group-hover:bg-[var(--brand)] group-hover:text-[var(--brand-2)] rounded-xl flex items-center justify-center text-gray-450 transition-colors">
-                        <ChevronRight className="h-4 w-4" />
+                      <div className="shrink-0 text-right flex items-center gap-3">
+                        {settings?.show_price_public && (
+                          <span className="text-sm font-black text-gray-900">{formatPrice(service.price_cents)}</span>
+                        )}
+                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center transition-colors ${
+                          sel ? 'bg-[var(--brand)] text-[var(--brand-2)]' : 'bg-gray-50 text-gray-450'
+                        }`}>
+                          <Check className="h-4 w-4" />
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               ) : (
                 <p className="text-center text-xs text-gray-400 py-8">Nenhum serviço ativo no momento.</p>
               )}
             </div>
+
+            {selectedServices.length > 0 && (
+              <div className="sticky bottom-0 bg-white/90 backdrop-blur pt-2">
+                <div className="flex items-center justify-between mb-2 text-xs">
+                  <span className="text-gray-450">{selectedServices.length} serviço{selectedServices.length !== 1 ? 's' : ''} · {totalDuration} min</span>
+                  {settings?.show_price_public && <span className="font-black text-gray-900">{formatPrice(totalCents)}</span>}
+                </div>
+                <button
+                  onClick={continueFromServices}
+                  className="w-full py-3 rounded-2xl bg-[var(--brand)] text-[var(--brand-2)] text-sm font-bold hover:opacity-95 transition-opacity flex items-center justify-center gap-2"
+                >
+                  Continuar <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -389,7 +428,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
             <div>
               <h2 className="text-base font-bold text-gray-800 tracking-tight">
-                {selectedService.name}
+                {servicesLabel}
               </h2>
               <p className="text-xs text-gray-450 mt-1">Selecione o dia em que deseja realizar seu atendimento:</p>
             </div>
@@ -589,7 +628,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   Forma de Pagamento (Opcional)
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito'].map(method => (
+                  {PAYMENT_METHODS.map(method => (
                     <button
                       key={method}
                       type="button"
@@ -638,9 +677,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <span className="text-[10px] text-gray-450 block font-bold">PROFISSIONAL</span>
                   <span className="font-bold text-gray-800">{professional.name}</span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-gray-450 block font-bold">SERVIÇO</span>
-                  <span className="font-bold text-gray-800">{selectedService.name}</span>
+                <div className="col-span-2">
+                  <span className="text-[10px] text-gray-450 block font-bold">{selectedServices.length > 1 ? 'SERVIÇOS' : 'SERVIÇO'}</span>
+                  <span className="font-bold text-gray-800">{servicesLabel} · {totalDuration} min</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-450 block font-bold">DATA</span>
@@ -671,7 +710,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               {settings?.show_price_public && (
                 <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
                   <span className="text-[10px] text-gray-450 font-bold uppercase">VALOR DO ATENDIMENTO</span>
-                  <span className="text-sm font-black text-gray-900">{formatPrice(selectedService.price_cents)}</span>
+                  <span className="text-sm font-black text-gray-900">{formatPrice(totalCents)}</span>
                 </div>
               )}
             </div>
@@ -740,8 +779,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 <span className="font-bold text-gray-800">{professional.brand_name}</span>
               </div>
               <div>
-                <span className="text-[9px] text-gray-400 block font-bold">SERVIÇO</span>
-                <span className="font-bold text-gray-800">{selectedService.name}</span>
+                <span className="text-[9px] text-gray-400 block font-bold">{selectedServices.length > 1 ? 'SERVIÇOS' : 'SERVIÇO'}</span>
+                <span className="font-bold text-gray-800">{servicesLabel}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-150">
                 <div>
@@ -823,8 +862,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
                 <input required inputMode="tel" value={wlPhone} onChange={(e) => setWlPhone(e.target.value)} placeholder="WhatsApp (com DDD) *"
                   className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
-                {selectedService && (
-                  <p className="text-[11px] text-gray-450">Serviço: <strong className="text-gray-700">{selectedService.name}</strong></p>
+                {selectedServices.length > 0 && (
+                  <p className="text-[11px] text-gray-450">Serviço: <strong className="text-gray-700">{servicesLabel}</strong></p>
                 )}
                 <input value={wlPeriod} onChange={(e) => setWlPeriod(e.target.value)} placeholder="Dia ou período desejado (ex.: sábado, manhã)"
                   className="block w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[var(--brand)]" />
