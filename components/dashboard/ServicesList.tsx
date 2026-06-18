@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Service } from '@/types/database';
-import { 
-  Plus, Edit, Trash2, Clock, DollarSign, Sparkles, X, Save 
+import {
+  Plus, Edit, Trash2, Clock, DollarSign, Sparkles, X, Save, Eye, EyeOff
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -38,7 +38,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [priceStr, setPriceStr] = useState('0,00');
   const [isActive, setIsActive] = useState(true);
-  
+  const [clientVisible, setClientVisible] = useState(true);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Abrir modal de criação
@@ -49,6 +50,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     setDurationMinutes(60);
     setPriceStr('0,00');
     setIsActive(true);
+    setClientVisible(true);
     setIsEditModalOpen(true);
   };
 
@@ -63,6 +65,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     const priceFormatted = (service.price_cents / 100).toFixed(2).replace('.', ',');
     setPriceStr(priceFormatted);
     setIsActive(service.is_active);
+    setClientVisible(service.client_visible !== false);
     setIsEditModalOpen(true);
   };
 
@@ -87,7 +90,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           description: description || null,
           duration_minutes: durationMinutes,
           price_cents: priceCents,
-          is_active: isActive
+          is_active: isActive,
+          client_visible: clientVisible
         });
         if (res.success) {
           success('Serviço Atualizado', 'As alterações foram salvas com sucesso.');
@@ -103,7 +107,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           description: description || null,
           duration_minutes: durationMinutes,
           price_cents: priceCents,
-          is_active: isActive
+          is_active: isActive,
+          client_visible: clientVisible
         });
         if (res.success) {
           success('Serviço Criado', 'Novo procedimento adicionado com sucesso.');
@@ -176,13 +181,24 @@ export const ServicesList: React.FC<ServicesListProps> = ({
                   <h4 className="font-bold text-gray-800 text-sm truncate" title={service.name}>
                     {service.name}
                   </h4>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                    service.is_active 
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                      : 'bg-gray-100 text-gray-400 border border-gray-150'
-                  }`}>
-                    {service.is_active ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {service.client_visible === false && (
+                      <span
+                        title="Visível apenas para você — não aparece para a cliente agendar"
+                        className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100"
+                      >
+                        <EyeOff className="h-2.5 w-2.5" />
+                        Só no painel
+                      </span>
+                    )}
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      service.is_active
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        : 'bg-gray-100 text-gray-400 border border-gray-150'
+                    }`}>
+                      {service.is_active ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
                 </div>
                 
                 {service.description && (
@@ -328,8 +344,30 @@ export const ServicesList: React.FC<ServicesListProps> = ({
                   className="h-4 w-4 rounded-sm border-gray-200 text-forest focus:ring-forest/20"
                 />
                 <label htmlFor="serviceActive" className="text-xs text-gray-700 font-bold cursor-pointer">
-                  Disponível para agendamento público
+                  Serviço ativo
                 </label>
+              </div>
+
+              <div className="rounded-xl border border-gray-150 bg-gray-50/60 p-3">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="serviceClientVisible"
+                    checked={clientVisible}
+                    onChange={(e) => setClientVisible(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded-sm border-gray-200 text-forest focus:ring-forest/20"
+                  />
+                  <div>
+                    <label htmlFor="serviceClientVisible" className="flex items-center gap-1.5 text-xs text-gray-700 font-bold cursor-pointer">
+                      {clientVisible ? <Eye className="h-3.5 w-3.5 text-forest" /> : <EyeOff className="h-3.5 w-3.5 text-amber-600" />}
+                      Mostrar para a cliente no agendamento
+                    </label>
+                    <p className="text-[10px] text-gray-450 mt-1 leading-relaxed">
+                      Desmarque para deixar o serviço só no seu painel (uso interno e agendamento manual).
+                      Assim ele não aparece no site para a cliente agendar nem na lista que o bot oferece.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 

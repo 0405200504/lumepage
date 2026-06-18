@@ -87,6 +87,7 @@ if (!globalThis.__mockDb) {
         price_cents: 15000, // R$ 150,00
         image_url: null,
         is_active: true,
+        client_visible: true,
         created_at: nowStr,
         updated_at: nowStr
       },
@@ -99,6 +100,7 @@ if (!globalThis.__mockDb) {
         price_cents: 8000, // R$ 80,00
         image_url: null,
         is_active: true,
+        client_visible: true,
         created_at: nowStr,
         updated_at: nowStr
       },
@@ -111,6 +113,7 @@ if (!globalThis.__mockDb) {
         price_cents: 12000, // R$ 120,00
         image_url: null,
         is_active: true,
+        client_visible: true,
         created_at: nowStr,
         updated_at: nowStr
       }

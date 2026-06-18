@@ -238,7 +238,8 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const bookingUrl = waSettings.booking_url || `${appUrl}/agendar/${professional?.slug}`;
 
-    const activeServices = services.filter(s => s.is_active);
+    // Lista oferecida à cliente: só serviços ativos E visíveis para a cliente (client_visible).
+    const activeServices = services.filter(s => s.is_active && s.client_visible !== false);
     const servicesList = activeServices.length
       ? activeServices.map(s =>
           `- ${s.name}: ${s.duration_minutes}min, R$ ${(s.price_cents / 100).toFixed(2).replace('.', ',')}`

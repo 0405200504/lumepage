@@ -19,7 +19,8 @@ export async function getBookingData(slug: string) {
     }
 
     const services = await dbService.getServicesByProfessional(professional.id);
-    const activeServices = services.filter(s => s.is_active);
+    // Público: só serviços ativos E visíveis para a cliente (client_visible).
+    const activeServices = services.filter(s => s.is_active && s.client_visible !== false);
 
     const settings = await dbService.getSettingsByProfessional(professional.id);
 
@@ -62,7 +63,7 @@ function pickDistributed<T>(arr: T[], n: number): T[] {
 export async function getSlotsAction(professionalId: string, dateStr: string, serviceId: string) {
   try {
     const service = await dbService.getServiceById(serviceId);
-    if (!service || !service.is_active) {
+    if (!service || !service.is_active || service.client_visible === false) {
       return { success: false, error: 'Serviço indisponível.' };
     }
 
@@ -90,7 +91,7 @@ export async function getSlotsForServicesAction(professionalId: string, dateStr:
   try {
     const ids = serviceIds?.length ? serviceIds : [];
     if (!ids.length) return { success: false, error: 'Selecione ao menos um serviço.' };
-    const services = (await dbService.getServicesByIds(ids)).filter(s => s.is_active);
+    const services = (await dbService.getServicesByIds(ids)).filter(s => s.is_active && s.client_visible !== false);
     if (!services.length) return { success: false, error: 'Serviço indisponível.' };
     const totalDuration = sumDurationMinutes(services);
 
@@ -303,7 +304,8 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     // 2. Obter serviço(s) e calcular horário final. Multi-serviço soma a duração.
     const serviceIds = input.serviceIds && input.serviceIds.length ? input.serviceIds : [serviceId];
     const services = await dbService.getServicesByIds(serviceIds);
-    const activeServices = services.filter(s => s.is_active);
+    // Agendamento público: só serviços ativos E visíveis para a cliente.
+    const activeServices = services.filter(s => s.is_active && s.client_visible !== false);
     if (!activeServices.length) {
       return { success: false, error: 'O serviço selecionado é inválido ou foi inativado.' };
     }

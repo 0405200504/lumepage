@@ -56,6 +56,9 @@ export interface Service {
   price_cents: number;
   image_url?: string | null;
   is_active: boolean;
+  /** Aparece no agendamento público da cliente (site) e na lista que o bot oferece.
+   *  false = serviço só para uso interno da profissional (não aparece para a cliente). */
+  client_visible: boolean;
   created_at: string;
   updated_at: string;
 }
