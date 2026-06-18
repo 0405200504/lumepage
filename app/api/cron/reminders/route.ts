@@ -81,9 +81,18 @@ export async function GET(req: NextRequest) {
       if (settings.automation_day_before_enabled && settings.automation_day_before_message) {
         const [rh, rm] = (settings.automation_day_before_time || '10:00').split(':').map(Number);
         if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
-          const eligible = activeAppts.filter(a =>
-            a.date === tomorrowISO && !a.automation_day_before_sent_at
-          );
+          const eligible = activeAppts.filter(a => {
+            if (a.date !== tomorrowISO || a.automation_day_before_sent_at) return false;
+            // Conflito a evitar: se a cliente agendou na própria véspera (hoje, para amanhã),
+            // o lembrete "1 dia antes" cairia no MESMO dia da confirmação — redundante.
+            // Nesse caso anulamos o "1 dia antes"; ela recebe só confirmação + lembrete do dia.
+            // Só suprimimos quando a confirmação está ativa (senão ela ficaria sem aviso antecedente).
+            if (settings.automation_booking_enabled) {
+              const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
+              if (createdBR >= todayISO) return false; // criado hoje (véspera) → anula o "1 dia antes"
+            }
+            return true;
+          });
           for (const appt of eligible) {
             const msg = fillTemplate(settings.automation_day_before_message, {
               nome: appt.client_name.split(' ')[0],
