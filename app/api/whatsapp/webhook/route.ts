@@ -334,13 +334,23 @@ async function processMessage(professionalId: string, secret: string | null, bod
       { role: 'assistant' as const, content: responseText, at: Date.now() },
     ];
 
+    // IMPORTANTE: ao salvar a resposta do bot, NÃO avance last_message_at para "agora".
+    // last_message_at marca a chegada da última mensagem DA CLIENTE e é a base do debounce.
+    // Se uma nova mensagem da cliente chegou enquanto a IA gerava (e está no próprio debounce),
+    // empurrar last_message_at para now() faria essa nova mensagem se achar "antiga" e abortar —
+    // ela ficaria sem resposta (a cliente precisava reenviar). Preservamos o timestamp do último
+    // inbound conhecido (o do latestConv, ou o desta mensagem como fallback).
+    const preserveTs = latestConv?.last_message_at
+      ? new Date(latestConv.last_message_at).getTime()
+      : arrivalTime;
+
     // No fallback não chamamos a IA de novo para resumir (ela acabou de falhar) — só salvamos.
     if (usedFallback) {
-      await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {});
+      await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, undefined, preserveTs).catch(() => {});
     } else {
       updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText)
-        .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined))
-        .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages).catch(() => {}));
+        .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined, preserveTs))
+        .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, undefined, preserveTs).catch(() => {}));
     }
 
   } catch (e) {
