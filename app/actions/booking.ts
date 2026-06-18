@@ -436,28 +436,10 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
           await dbService.setBotCooldown(professionalId, cleanPhone, 3);
           dbService.appendAutomatedMessage(professionalId, cleanPhone, msg).catch(() => {});
         }
-      // Sistema legado: confirmation_enabled sem automação ativa
-      } else if (
-        waSettings?.confirmation_enabled &&
-        !waSettings?.automation_booking_enabled &&
-        waSettings.uazapi_url &&
-        waSettings.uazapi_token
-      ) {
-        const confirmMsg = fillTemplate(
-          agendaSettings?.whatsapp_confirmation_message ||
-            'Oi, {nome}! Seu agendamento de {servico} foi confirmado para o dia {data} às {horario}. Te esperamos! 💛',
-          {
-            nome: clientName.split(' ')[0],
-            servico: formatServiceNames(activeServices),
-            data: formatDateBR(date),
-            horario: startTime,
-          }
-        );
-        const okLegacy = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, cleanPhone, confirmMsg);
-        if (okLegacy) {
-          await dbService.setBotCooldown(professionalId, cleanPhone, 3);
-          dbService.appendAutomatedMessage(professionalId, cleanPhone, confirmMsg).catch(() => {});
-        }
+      // Nota: o sistema legado (confirmation_enabled) foi removido.
+      // Apenas a automação (automation_booking_enabled) controla o envio de
+      // confirmação. Se a profissional desativou as automações, nenhuma
+      // mensagem de booking é enviada.
       }
     } catch (waErr) {
       console.error('Falha ao enviar confirmação WhatsApp:', waErr);
