@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import { Appointment, Service } from '@/types/database';
-import { Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ExternalLink, ArrowRight, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { statusMeta } from '@/lib/appointments/status';
 import { serviceRevenueCents } from '@/lib/finance';
@@ -22,10 +21,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   appointments,
   services,
 }) => {
-  const router = useRouter();
-  const [isRefreshing, startRefresh] = useTransition();
-  const handleRefresh = () => startRefresh(() => router.refresh());
-
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const activeApps = appointments.filter(a => a.status !== 'cancelled');
@@ -63,16 +58,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </p>
         </div>
         <div className="flex gap-2 shrink-0 z-10 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            title="Atualizar dados sem recarregar a página"
-            className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 text-white text-xs font-bold rounded-2xl border border-white/20 hover:bg-white/15 transition-all-custom disabled:opacity-60"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Atualizando…' : 'Atualizar'}
-          </button>
           <Link
             href={bookingHref}
             target="_blank"

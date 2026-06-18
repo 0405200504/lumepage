@@ -95,16 +95,17 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const apptTotalCents = (app: Appointment) => sumPriceCents(apptServices(app));
 
   // Campo vazio → mostra TODAS as clientes cadastradas (a profissional só seleciona).
-  // Com texto → filtra por nome ou WhatsApp. Lista rolável, limitada para não pesar.
+  // Com texto → filtra por nome; se digitou números, também casa pelo WhatsApp.
+  // (Importante: só filtra por WhatsApp quando há dígitos — senão includes('') casaria
+  //  com todas e a lista nunca estreitaria ao digitar letras.)
   const getSuggestions = (query: string) => {
     const q = query.trim().toLowerCase();
-    const base = q
-      ? clients.filter(c =>
-          c.name.toLowerCase().includes(q) ||
-          c.whatsapp.includes(query.replace(/\D/g, ''))
-        )
-      : clients;
-    return base.slice(0, 50);
+    if (!q) return clients.slice(0, 50);
+    const digits = query.replace(/\D/g, '');
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      (digits.length > 0 && c.whatsapp.includes(digits))
+    ).slice(0, 50);
   };
 
   const clientSuggestions = getSuggestions(nName);

@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
-import { User, ShieldAlert } from 'lucide-react';
+import React, { useTransition } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { User, ShieldAlert, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   /** Opcionais: se omitidos, o título é derivado da rota atual (usado no app do profissional).
@@ -70,6 +70,9 @@ export const Header: React.FC<HeaderProps> = ({
   role,
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
+  const handleRefresh = () => startRefresh(() => router.refresh());
   const meta = ROUTE_META[pathname];
   const resolvedTitle = title ?? meta?.title ?? 'Lume';
   const resolvedSubtitle = subtitle ?? meta?.subtitle;
@@ -81,6 +84,19 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Subtítulo descritivo só no desktop — no celular o header fica enxuto, cara de app */}
         {resolvedSubtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{resolvedSubtitle}</p>}
       </div>
+
+      {/* Botão de atualizar — recarrega os dados sem recarregar a página (router.refresh) */}
+      <button
+        type="button"
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        title="Atualizar dados sem recarregar a página"
+        aria-label="Atualizar"
+        className="shrink-0 ml-auto inline-flex items-center justify-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-full sm:rounded-xl bg-paper/70 border border-gray-150 text-forest shadow-soft hover:bg-cream transition-colors disabled:opacity-60"
+      >
+        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        <span className="hidden sm:inline text-xs font-bold">{isRefreshing ? 'Atualizando…' : 'Atualizar'}</span>
+      </button>
 
       {/* No mobile: só o avatar limpo (estilo app). No desktop: caixa com nome/email. */}
       <div className="flex items-center gap-0 sm:gap-3 shrink-0 sm:bg-paper/70 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2.5 sm:shadow-soft">
