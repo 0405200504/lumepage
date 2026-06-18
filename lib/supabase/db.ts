@@ -74,9 +74,15 @@ export const dbService = {
 
   upsertProfessional: async (data: Partial<Professional> & { id: string }): Promise<Professional> => {
     if (isSupabaseConfigured) {
+      // UPDATE por id (não upsert): a profissional sempre já existe aqui. Um .upsert()
+      // vira INSERT ... ON CONFLICT no Postgres e monta um candidato a inserção sem os
+      // campos NOT NULL não enviados (ex.: slug) — o que viola a constraint e quebra a
+      // edição. A criação tem caminho próprio (createProfessional).
+      const { id, ...patch } = data;
       const { data: result, error } = await getDb()
         .from('professionals')
-        .upsert({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq('id', id)
         .select()
         .single();
       if (error) throw error;
