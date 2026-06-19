@@ -359,14 +359,20 @@ async function processMessage(professionalId: string, secret: string | null, bod
       ? new Date(latestConv.last_message_at).getTime()
       : arrivalTime;
 
-    // No fallback não chamamos a IA de novo para resumir (ela acabou de falhar) — só salvamos.
+    // Salva a resposta no histórico. IMPORTANTE: aguardar (await) — no serverless,
+    // promessas não aguardadas são suspensas quando o handler retorna, e a gravação
+    // nunca acontecia (a resposta era enviada, mas sumia do histórico → o bot perdia
+    // contexto e se reapresentava). No fallback não resumimos (a IA acabou de falhar).
     if (usedFallback) {
       await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, undefined, preserveTs).catch(() => {});
     } else {
-      updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText)
-        .then(newSummary => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined, preserveTs))
-        .catch(() => dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, undefined, preserveTs).catch(() => {}));
+      let newSummary: string | null = null;
+      try {
+        newSummary = await updateClientSummary(latestConv?.client_summary ?? freshConv?.client_summary, messageText, responseText);
+      } catch { /* resumo é best-effort */ }
+      await dbService.upsertWhatsAppConversation(professionalId, clientPhone, updatedMessages, newSummary ?? undefined, preserveTs).catch(() => {});
     }
+    await mark('done');
 
   } catch (e) {
     console.error('[WhatsApp Webhook] erro:', e);
