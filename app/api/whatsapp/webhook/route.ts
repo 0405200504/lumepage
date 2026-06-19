@@ -355,5 +355,10 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
   } catch (e) {
     console.error('[WhatsApp Webhook] erro:', e);
+    // Persiste o erro para diagnóstico (o catch externo não deixava rastro no banco).
+    const detail = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e);
+    await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_processing_error', [
+      { role: 'user' as const, content: detail.slice(0, 1500), at: Date.now() }
+    ]).catch(() => {});
   }
 }
