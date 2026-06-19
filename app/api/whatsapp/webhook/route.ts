@@ -229,11 +229,21 @@ async function processMessage(professionalId: string, secret: string | null, bod
     }
     // ── FIM DEBOUNCE ──────────────────────────────────────────────────────────
 
+    // Diagnóstico temporário: marca o estágio + tempo decorrido. O último estágio
+    // gravado antes de a função morrer (timeout) revela o gargalo.
+    const t0 = Date.now();
+    const mark = (stage: string) => dbService.upsertWhatsAppConversation(
+      professionalId, '_debug_progress',
+      [{ role: 'user' as const, content: `${stage} @ ${Date.now() - t0}ms`, at: Date.now() }]
+    ).catch(() => {});
+    await mark('inicio');
+
     const [professional, services, clientAppts] = await Promise.all([
       dbService.getProfessionalById(professionalId),
       dbService.getServicesByProfessional(professionalId),
       dbService.getAllAppointmentsByPhone(professionalId, clientPhone).catch(() => [] as Appointment[]),
     ]);
+    await mark('apos-queries');
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const bookingUrl = waSettings.booking_url || `${appUrl}/agendar/${professional?.slug}`;
@@ -252,6 +262,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const todayStr = isoInSaoPaulo(0);
     const agendaText = await buildAgendaText(professionalId, shortestDuration);
+    await mark('apos-agenda');
     const clientAppointmentsText = formatClientAppointments(clientAppts, todayStr);
 
     const nowBR = new Intl.DateTimeFormat('pt-BR', {
@@ -284,12 +295,14 @@ async function processMessage(professionalId: string, secret: string | null, bod
     let responseText: string;
     let shouldPauseBot = false;
     let usedFallback = false;
+    await mark('pre-ia');
     try {
       const result = await generateWithModel({
         system: systemPrompt,
         messages: history,
         abortSignal: AbortSignal.timeout(25000),
       });
+      await mark('pos-ia');
       const parsed = parsePauseMarker(result.text.trim());
       responseText = parsed.text;
       shouldPauseBot = parsed.pause;
@@ -321,6 +334,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
     const typingDelay = Math.min(Math.max(responseText.length * 35, 1500), 5000);
     await sendTypingPresence(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, typingDelay);
 
+    await mark('pre-send');
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     console.log('[Bot] enviado:', sent);
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
