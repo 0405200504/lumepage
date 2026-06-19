@@ -4,12 +4,9 @@ import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid, sendTypingPresence } from '@/lib/uazapi';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
-import { createAppointmentAction } from '@/app/actions/booking';
+import { generateText } from 'ai';
 import {
   buildSystemPrompt,
-  buildBookingInstructions,
   sanitizeHistory,
   parsePauseMarker,
   buildHandoffMessage,
@@ -282,63 +279,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
       hasPriorExchange,
       stopKeyword,
     };
-    // ── Ferramentas de agendamento autônomo ──────────────────────────────────
-    // O bot pode agendar SOZINHO (sem depender da profissional). A criação usa
-    // createAppointmentAction (fluxo público): ela revalida os horários livres e
-    // RECUSA se o slot já estiver ocupado — ou seja, uma cliente nunca consegue
-    // marcar em cima de outra. Só a profissional (caminho manual) pode encaixar
-    // duas no mesmo horário. Só agenda serviços ativos E visíveis (activeServices).
-    const serviceById = new Map(activeServices.map(s => [s.id, s]));
-
-    const bookingTools = {
-      verHorariosLivres: tool({
-        description:
-          'Retorna os horários livres de um dia para um serviço. Use SEMPRE antes de oferecer horários ou agendar. Só ofereça à cliente horários que vierem daqui.',
-        parameters: z.object({
-          data: z.string().describe('Data no formato YYYY-MM-DD'),
-          serviceId: z.string().describe('Código do serviço (da tabela de uso interno)'),
-        }),
-        execute: async ({ data, serviceId }: { data: string; serviceId: string }) => {
-          const svc = serviceById.get(serviceId);
-          if (!svc) return { success: false, error: 'Serviço inválido.' };
-          try {
-            const slots = await getAvailableSlots(professionalId, data, svc.duration_minutes);
-            const livres = slots.filter(s => s.isAvailable).map(s => s.time);
-            return { success: true, data, servico: svc.name, horarios_livres: livres };
-          } catch {
-            return { success: false, error: 'Não consegui consultar a agenda agora.' };
-          }
-        },
-      }),
-      agendar: tool({
-        description:
-          'Cria o agendamento da cliente na agenda. Valida conflito e RECUSA se o horário já estiver ocupado por outra cliente. Use só depois de confirmar serviço, dia, horário e nome com a cliente.',
-        parameters: z.object({
-          serviceId: z.string().describe('Código do serviço (da tabela de uso interno)'),
-          data: z.string().describe('Data no formato YYYY-MM-DD'),
-          horario: z.string().describe('Hora de início no formato HH:MM'),
-          nomeCliente: z.string().describe('Nome da cliente'),
-        }),
-        execute: async ({ serviceId, data, horario, nomeCliente }: { serviceId: string; data: string; horario: string; nomeCliente: string }) => {
-          const svc = serviceById.get(serviceId);
-          if (!svc) return { success: false, error: 'Serviço inválido.' };
-          const res = await createAppointmentAction({
-            professionalId,
-            serviceId,
-            clientName: nomeCliente?.trim() || msg.senderName || 'Cliente',
-            clientWhatsapp: clientPhone,
-            date: data,
-            startTime: horario,
-          });
-          if (!res.success) return { success: false, error: res.error || 'Não foi possível agendar.' };
-          console.log('[Bot] agendou via WhatsApp:', svc.name, data, horario, 'para', clientPhone);
-          return { success: true, servico: svc.name, data, horario };
-        },
-      }),
-    };
-
-    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx)
-      + buildBookingInstructions(activeServices, todayStr);
+    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx);
 
     let responseText: string;
     let shouldPauseBot = false;
@@ -347,9 +288,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
       const result = await generateWithModel({
         system: systemPrompt,
         messages: history,
-        tools: bookingTools,
-        maxSteps: 5,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(25000),
       });
       const parsed = parsePauseMarker(result.text.trim());
       responseText = parsed.text;
