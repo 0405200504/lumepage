@@ -34,10 +34,13 @@ export async function sendWhatsAppText(
   text: string
 ): Promise<boolean> {
   try {
+    // Timeout obrigatório: sem ele, um /send/text lento ou travado da uazapi pendura
+    // o fetch indefinidamente e o Vercel mata a função (60s) antes de salvar/concluir.
     const res = await fetch(`${baseUrl}/send/text`, {
       method: 'POST',
       headers: { token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ number: phone, text }),
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) {
       console.error('[uazapi] sendText falhou:', res.status, await res.text());

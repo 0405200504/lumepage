@@ -336,6 +336,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     await mark('pre-send');
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
+    await mark(`pos-send sent=${sent}`);
     console.log('[Bot] enviado:', sent);
     dbService.upsertWhatsAppClient(professionalId, clientPhone, msg.senderName || '').catch(() => {});
 
