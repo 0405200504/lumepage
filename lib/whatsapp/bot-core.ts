@@ -64,6 +64,43 @@ REGRAS FIXAS (valem sempre, sem sobrepor o tom e o conteúdo definidos nas instr
 >>> SAUDAÇÃO (regra final — vale agora, antes de escrever a resposta): ${greetingRule}`;
 }
 
+/** Serviço agendável (subconjunto usado para montar a tabela interna do agendamento autônomo). */
+export interface BookableService {
+  id: string;
+  name: string;
+  duration_minutes: number;
+}
+
+/**
+ * Bloco de USO INTERNO anexado ao system prompt para o agendamento autônomo pelo WhatsApp.
+ * Dá ao modelo a tabela código→serviço e o passo a passo para usar as ferramentas
+ * (verHorariosLivres e agendar). Os códigos são internos — a cliente nunca os vê.
+ */
+export function buildBookingInstructions(services: BookableService[], todayStr: string): string {
+  const table = services.length
+    ? services.map(s => `- ${s.id} → ${s.name} (${s.duration_minutes}min)`).join('\n')
+    : '(nenhum serviço disponível para agendar)';
+
+  return `
+
+---
+USO INTERNO PARA AGENDAR POR AQUI (NUNCA mostre estes códigos nem fale deles à cliente):
+Hoje é ${todayStr}. Converta "amanhã", "sexta", "dia 20" etc. para a data real no formato YYYY-MM-DD.
+Serviços que você PODE agendar (código → nome):
+${table}
+
+Quando a cliente quiser agendar com a sua ajuda por aqui:
+1) Identifique o serviço (use o código da tabela acima) e o dia que ela quer.
+2) Chame a ferramenta verHorariosLivres com a data (YYYY-MM-DD) e o código do serviço.
+3) Ofereça à cliente NO MÁXIMO 3 dos horários retornados. NUNCA ofereça horário que não veio da ferramenta.
+4) Quando ela escolher, confirme numa frase: serviço, dia, horário e o nome dela (peça o nome se não souber).
+5) Só então chame a ferramenta agendar com serviceId, data, horario e nomeCliente.
+6) Se agendar retornar sucesso, avise que ficou tudo certo e confirmado. Se retornar erro/horário ocupado,
+   peça desculpa, diga que esse horário acabou de ser preenchido e ofereça outro horário livre.
+Uma cliente NUNCA pode marcar num horário já ocupado por outra — a ferramenta agendar já garante isso e
+recusa automaticamente. Não tente forçar. Só a profissional pode encaixar mais de uma cliente no mesmo horário.`;
+}
+
 /** Monta o system prompt final: a persona tem prioridade no tom; o bloco injetado garante dados e regras. */
 export function buildSystemPrompt(persona: string | null | undefined, ctx: BotContext): string {
   const injected = buildInjectedInfo(ctx);

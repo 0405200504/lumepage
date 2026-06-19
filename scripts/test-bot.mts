@@ -8,9 +8,11 @@
 //   node --env-file=.env scripts/test-bot.mts
 //
 import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai';
+import { z } from 'zod';
 import {
   buildSystemPrompt,
+  buildBookingInstructions,
   buildInjectedInfo,
   sanitizeHistory,
   parsePauseMarker,
@@ -18,6 +20,7 @@ import {
   PAUSE_MARKER,
   type BotContext,
   type ChatMsg,
+  type BookableService,
 } from '../lib/whatsapp/bot-core.ts';
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
@@ -310,9 +313,158 @@ async function testLiveConversations() {
   return true;
 }
 
+// ── Camada 3: fluxo de agendamento autônomo (tools mockadas, sem tocar no banco) ──
+const BOOKABLE: BookableService[] = [
+  { id: 'svc_limpeza', name: 'Limpeza de Pele Profunda', duration_minutes: 60 },
+  { id: 'svc_massagem', name: 'Massagem Relaxante', duration_minutes: 50 },
+  { id: 'svc_design', name: 'Design de Sobrancelhas', duration_minutes: 30 },
+];
+
+type ToolCall = { tool: string; args: Record<string, unknown>; result: Record<string, unknown> };
+
+// Monta o mesmo conjunto de ferramentas do webhook, mas mockado: verHorariosLivres
+// devolve `freeTimes`; agendar SÓ aceita horário que esteja em freeTimes (espelha a
+// trava real de conflito do createAppointmentAction). Registra todas as chamadas.
+function makeMockBookingTools(freeTimes: string[], calls: ToolCall[]) {
+  return {
+    verHorariosLivres: tool({
+      description: 'Retorna os horários livres de um dia para um serviço.',
+      parameters: z.object({ data: z.string(), serviceId: z.string() }),
+      execute: async ({ data, serviceId }: { data: string; serviceId: string }) => {
+        const svc = BOOKABLE.find(s => s.id === serviceId);
+        const result = svc
+          ? { success: true, data, servico: svc.name, horarios_livres: freeTimes }
+          : { success: false, error: 'Serviço inválido.' };
+        calls.push({ tool: 'verHorariosLivres', args: { data, serviceId }, result });
+        return result;
+      },
+    }),
+    agendar: tool({
+      description: 'Cria o agendamento. Recusa se o horário já estiver ocupado.',
+      parameters: z.object({ serviceId: z.string(), data: z.string(), horario: z.string(), nomeCliente: z.string() }),
+      execute: async ({ serviceId, data, horario, nomeCliente }: { serviceId: string; data: string; horario: string; nomeCliente: string }) => {
+        const svc = BOOKABLE.find(s => s.id === serviceId);
+        let result: Record<string, unknown>;
+        if (!svc) result = { success: false, error: 'Serviço inválido.' };
+        else if (!freeTimes.includes(horario)) result = { success: false, error: 'O horário selecionado acabou de ser reservado por outro cliente.' };
+        else result = { success: true, servico: svc.name, data, horario };
+        calls.push({ tool: 'agendar', args: { serviceId, data, horario, nomeCliente }, result });
+        return result;
+      },
+    }),
+  };
+}
+
+const TIME_RE = /\b([01]?\d|2[0-3])(?:[:h]([0-5]\d)?)\b/g;
+function timesMentioned(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(TIME_RE)) {
+    const hh = m[1].padStart(2, '0');
+    const mm = m[2] ?? '00';
+    out.push(`${hh}:${mm}`);
+  }
+  return out;
+}
+
+async function bookingTurn(systemPrompt: string, history: ChatMsg[], userText: string, tools: ReturnType<typeof makeMockBookingTools>) {
+  history.push({ role: 'user', content: userText });
+  const result = await generateText({
+    model: openai(MODEL),
+    system: systemPrompt,
+    messages: sanitizeHistory(history),
+    tools,
+    maxSteps: 5,
+    abortSignal: AbortSignal.timeout(30000),
+  });
+  const text = result.text.trim();
+  history.push({ role: 'assistant', content: text || '(usou ferramenta)' });
+  return text;
+}
+
+async function testBookingFlow() {
+  console.log(c.bold('\n━━━ 3. AGENDAMENTO AUTÔNOMO (tools mockadas) ━━━'));
+  if (!process.env.OPENAI_API_KEY) {
+    console.log(c.yellow('\n⚠  OPENAI_API_KEY não encontrada — pulando o fluxo de agendamento.'));
+    return;
+  }
+
+  const bookingPrompt = buildSystemPrompt(PERSONA, baseCtx) + buildBookingInstructions(BOOKABLE, '2026-06-18');
+
+  // ── Cenário A: agenda de verdade num horário livre ──────────────────────────
+  console.log(c.cyan('\n▸ Agenda a limpeza de pele num horário livre'));
+  {
+    const free = ['09:00', '14:00', '16:00', '17:00'];
+    const calls: ToolCall[] = [];
+    const tools = makeMockBookingTools(free, calls);
+    const history: ChatMsg[] = [];
+    const allBotText: string[] = [];
+    try {
+      for (const turn of [
+        'oi, queria agendar a limpeza de pele aqui com você mesmo',
+        'pode ser amanhã',
+        'as 14h tá ótimo',
+        'meu nome é Joana Prado',
+      ]) {
+        const t = await bookingTurn(bookingPrompt, history, turn, tools);
+        allBotText.push(t);
+        console.log(c.gray(`    cliente: ${turn}`));
+        console.log(`    bot: ${t}`);
+      }
+      const viu = calls.filter(c2 => c2.tool === 'verHorariosLivres');
+      const agendou = calls.filter(c2 => c2.tool === 'agendar' && (c2.result as { success?: boolean }).success);
+      assert(viu.length >= 1, 'consultou horários livres antes de agendar');
+      assert(viu.every(c2 => c2.args.serviceId === 'svc_limpeza'), 'consultou o serviço certo (limpeza)', JSON.stringify(viu.map(c2 => c2.args.serviceId)));
+      assert(agendou.length === 1, 'agendou exatamente uma vez', `agendou=${agendou.length}`);
+      const ag = agendou[0]?.args as { horario?: string; serviceId?: string; nomeCliente?: string } | undefined;
+      assert(!!ag && ag.horario === '14:00', 'agendou no horário escolhido (14:00)', String(ag?.horario));
+      assert(!!ag && ag.serviceId === 'svc_limpeza', 'agendou o serviço certo', String(ag?.serviceId));
+      assert(!!ag && /joana/i.test(ag.nomeCliente || ''), 'passou o nome da cliente', String(ag?.nomeCliente));
+      // Nunca pode ter oferecido horário que não estava livre
+      const ofertados = allBotText.flatMap(timesMentioned).filter(t => /^\d{2}:\d{2}$/.test(t));
+      const inventados = ofertados.filter(t => !free.includes(t));
+      assert(inventados.length === 0, 'nunca ofereceu horário fora da lista de livres', `inventados: ${inventados.join(', ')}`);
+    } catch (e) {
+      failed++;
+      const m = e instanceof Error ? e.message : String(e);
+      failures.push(`Agendamento (livre) — erro: ${m}`);
+      console.log(`  ${c.red('✗ erro')} ${c.gray(m)}`);
+    }
+  }
+
+  // ── Cenário B: cliente insiste num horário ocupado → NÃO agenda em cima ──────
+  console.log(c.cyan('\n▸ Recusa horário ocupado (sem conflito)'));
+  {
+    const free = ['09:00', '16:00']; // 14:00 NÃO está livre
+    const calls: ToolCall[] = [];
+    const tools = makeMockBookingTools(free, calls);
+    const history: ChatMsg[] = [];
+    try {
+      for (const turn of [
+        'quero agendar a massagem amanhã aqui com você',
+        'queria as 14h',
+        'então tá, qual horário você tem?',
+      ]) {
+        const t = await bookingTurn(bookingPrompt, history, turn, tools);
+        console.log(c.gray(`    cliente: ${turn}`));
+        console.log(`    bot: ${t}`);
+      }
+      const agendadosSucesso = calls.filter(c2 => c2.tool === 'agendar' && (c2.result as { success?: boolean }).success);
+      const agendou14 = agendadosSucesso.some(c2 => (c2.args as { horario?: string }).horario === '14:00');
+      assert(!agendou14, 'NÃO confirmou agendamento às 14h (horário ocupado)');
+      assert(agendadosSucesso.every(c2 => free.includes((c2.args as { horario?: string }).horario || '')), 'qualquer agendamento feito foi em horário livre', JSON.stringify(agendadosSucesso.map(c2 => (c2.args as { horario?: string }).horario)));
+    } catch (e) {
+      failed++;
+      const m = e instanceof Error ? e.message : String(e);
+      failures.push(`Agendamento (ocupado) — erro: ${m}`);
+      console.log(`  ${c.red('✗ erro')} ${c.gray(m)}`);
+    }
+  }
+}
+
 async function main() {
   testPureLogic();
   const ran = await testLiveConversations();
+  await testBookingFlow();
 
   console.log(c.bold('\n━━━ RESUMO ━━━'));
   console.log(`${c.green(`${passed} passou`)}  ${failed ? c.red(`${failed} falhou`) : c.gray('0 falhou')}`);

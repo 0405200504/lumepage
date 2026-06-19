@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { createAppointmentAction } from '@/app/actions/booking';
 import {
   buildSystemPrompt,
+  buildBookingInstructions,
   sanitizeHistory,
   parsePauseMarker,
   buildHandoffMessage,
@@ -336,30 +337,8 @@ async function processMessage(professionalId: string, secret: string | null, bod
       }),
     };
 
-    const internalServiceTable = activeServices.length
-      ? activeServices.map(s => `- ${s.id} → ${s.name} (${s.duration_minutes}min)`).join('\n')
-      : '(nenhum serviço disponível para agendar)';
-
-    const bookingToolNote = `
-
----
-USO INTERNO PARA AGENDAR POR AQUI (NUNCA mostre estes códigos nem fale deles à cliente):
-Hoje é ${todayStr}. Converta "amanhã", "sexta", "dia 20" etc. para a data real no formato YYYY-MM-DD.
-Serviços que você PODE agendar (código → nome):
-${internalServiceTable}
-
-Quando a cliente quiser agendar com a sua ajuda por aqui:
-1) Identifique o serviço (use o código da tabela acima) e o dia que ela quer.
-2) Chame a ferramenta verHorariosLivres com a data (YYYY-MM-DD) e o código do serviço.
-3) Ofereça à cliente NO MÁXIMO 3 dos horários retornados. NUNCA ofereça horário que não veio da ferramenta.
-4) Quando ela escolher, confirme numa frase: serviço, dia, horário e o nome dela (peça o nome se não souber).
-5) Só então chame a ferramenta agendar com serviceId, data, horario e nomeCliente.
-6) Se agendar retornar sucesso, avise que ficou tudo certo e confirmado. Se retornar erro/horário ocupado,
-   peça desculpa, diga que esse horário acabou de ser preenchido e ofereça outro horário livre.
-Uma cliente NUNCA pode marcar num horário já ocupado por outra — a ferramenta agendar já garante isso e
-recusa automaticamente. Não tente forçar. Só a profissional pode encaixar mais de uma cliente no mesmo horário.`;
-
-    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx) + bookingToolNote;
+    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx)
+      + buildBookingInstructions(activeServices, todayStr);
 
     let responseText: string;
     let shouldPauseBot = false;
