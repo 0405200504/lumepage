@@ -300,21 +300,68 @@ async function processMessage(professionalId: string, secret: string | null, bod
       stopKeyword,
     };
 
-    // Monta as tools de agendamento (verHorariosLivres + agendar) para o bot criar agendamentos de verdade.
+    // Monta as tools de agendamento para o bot criar agendamentos de verdade.
+    // NOTA: as tools do bot usam getAvailableSlots diretamente (sem public_slots_limit)
+    // para que o bot veja TODOS os horários reais, não a versão limitada da página pública.
     const bookableServices: BookableService[] = activeServices.map(s => ({ id: s.id, name: s.name, duration_minutes: s.duration_minutes }));
+    const DIAS_SEMANA_TOOL = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
     const bookingTools = {
       verHorariosLivres: tool({
-        description: 'Retorna os horários livres de um dia para um serviço.',
+        description: 'Retorna TODOS os horários livres de um dia para um serviço específico. Use quando a cliente já escolheu um dia.',
         parameters: z.object({
           data: z.string().describe('Data no formato YYYY-MM-DD'),
           serviceId: z.string().describe('ID do serviço (da tabela interna)'),
         }),
         execute: async ({ data, serviceId }: { data: string; serviceId: string }) => {
           console.log('[Bot Tool] verHorariosLivres:', data, serviceId);
-          const res = await getSlotsAction(professionalId, data, serviceId);
-          if (!res.success) return { success: false, error: res.error };
-          const livres = (res.slots || []).filter((s: { isAvailable: boolean }) => s.isAvailable).map((s: { time: string }) => s.time);
-          return { success: true, data, horarios_livres: livres };
+          const svc = bookableServices.find(s => s.id === serviceId);
+          if (!svc) return { success: false, error: 'Serviço não encontrado.' };
+          try {
+            const slots = await getAvailableSlots(professionalId, data, svc.duration_minutes);
+            const livres = slots.filter(s => s.isAvailable).map(s => s.time);
+            return { success: true, data, diaSemana: DIAS_SEMANA_TOOL[new Date(data + 'T12:00:00').getDay()], horarios_livres: livres, totalLivres: livres.length };
+          } catch {
+            return { success: false, error: 'Erro ao consultar horários.' };
+          }
+        },
+      }),
+      buscarHorariosProximos: tool({
+        description: 'Busca horários livres em VÁRIOS dias consecutivos a partir de uma data. Use quando: a cliente quer "qualquer dia", "de manhã em qualquer dia", quando o dia preferido não tem horário, ou quando precisa oferecer alternativas. Retorna os próximos dias com disponibilidade.',
+        parameters: z.object({
+          dataInicio: z.string().describe('Data de início da busca (YYYY-MM-DD). Use a data de hoje ou a data que a cliente mencionou.'),
+          serviceId: z.string().describe('ID do serviço'),
+          quantidadeDias: z.number().optional().describe('Quantidade de dias para buscar (padrão: 7, máximo: 14)'),
+          periodo: z.enum(['qualquer', 'manha', 'tarde']).optional().describe('Filtrar por período: manha (até 12h), tarde (12h em diante), qualquer (padrão)'),
+        }),
+        execute: async ({ dataInicio, serviceId, quantidadeDias, periodo }: { dataInicio: string; serviceId: string; quantidadeDias?: number; periodo?: string }) => {
+          console.log('[Bot Tool] buscarHorariosProximos:', dataInicio, serviceId, quantidadeDias, periodo);
+          const svc = bookableServices.find(s => s.id === serviceId);
+          if (!svc) return { success: false, error: 'Serviço não encontrado.' };
+          const dias = Math.min(quantidadeDias || 7, 14);
+          const [y, m, d] = dataInicio.split('-').map(Number);
+          const results: { data: string; diaSemana: string; horarios: string[] }[] = [];
+
+          for (let i = 0; i < dias; i++) {
+            const date = new Date(y, m - 1, d + i);
+            const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            try {
+              const slots = await getAvailableSlots(professionalId, iso, svc.duration_minutes);
+              let livres = slots.filter(s => s.isAvailable).map(s => s.time);
+              if (periodo === 'manha') livres = livres.filter(t => t < '12:00');
+              else if (periodo === 'tarde') livres = livres.filter(t => t >= '12:00');
+              if (livres.length > 0) {
+                results.push({ data: iso, diaSemana: DIAS_SEMANA_TOOL[date.getDay()], horarios: livres });
+              }
+            } catch {}
+          }
+
+          return {
+            success: true,
+            diasComHorario: results.slice(0, 7),
+            totalDiasVerificados: dias,
+            totalDiasComVaga: results.length,
+          };
         },
       }),
       agendar: tool({
@@ -358,8 +405,8 @@ async function processMessage(professionalId: string, secret: string | null, bod
         system: systemPrompt,
         messages: history,
         tools: bookingTools,
-        maxSteps: 5,
-        abortSignal: AbortSignal.timeout(25000),
+        maxSteps: 10,
+        abortSignal: AbortSignal.timeout(40000),
       });
       await mark('pos-ia');
       const parsed = parsePauseMarker(result.text.trim());
