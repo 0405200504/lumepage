@@ -4,14 +4,18 @@ import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai';
+import { z } from 'zod';
 import {
   buildSystemPrompt,
+  buildBookingInstructions,
   sanitizeHistory,
   parsePauseMarker,
   buildHandoffMessage,
   type BotContext,
+  type BookableService,
 } from '@/lib/whatsapp/bot-core';
+import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
 import type { Appointment } from '@/types/database';
 
 export const maxDuration = 60;
@@ -295,7 +299,55 @@ async function processMessage(professionalId: string, secret: string | null, bod
       hasPriorExchange,
       stopKeyword,
     };
-    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx);
+
+    // Monta as tools de agendamento (verHorariosLivres + agendar) para o bot criar agendamentos de verdade.
+    const bookableServices: BookableService[] = activeServices.map(s => ({ id: s.id, name: s.name, duration_minutes: s.duration_minutes }));
+    const bookingTools = {
+      verHorariosLivres: tool({
+        description: 'Retorna os horários livres de um dia para um serviço.',
+        parameters: z.object({
+          data: z.string().describe('Data no formato YYYY-MM-DD'),
+          serviceId: z.string().describe('ID do serviço (da tabela interna)'),
+        }),
+        execute: async ({ data, serviceId }: { data: string; serviceId: string }) => {
+          console.log('[Bot Tool] verHorariosLivres:', data, serviceId);
+          const res = await getSlotsAction(professionalId, data, serviceId);
+          if (!res.success) return { success: false, error: res.error };
+          const livres = (res.slots || []).filter((s: { isAvailable: boolean }) => s.isAvailable).map((s: { time: string }) => s.time);
+          return { success: true, data, horarios_livres: livres };
+        },
+      }),
+      agendar: tool({
+        description: 'Cria o agendamento. Recusa se o horário já estiver ocupado.',
+        parameters: z.object({
+          serviceId: z.string().describe('ID do serviço'),
+          data: z.string().describe('Data no formato YYYY-MM-DD'),
+          horario: z.string().describe('Horário de início no formato HH:MM'),
+          nomeCliente: z.string().describe('Nome da cliente'),
+        }),
+        execute: async ({ serviceId, data, horario, nomeCliente }: { serviceId: string; data: string; horario: string; nomeCliente: string }) => {
+          console.log('[Bot Tool] agendar:', serviceId, data, horario, nomeCliente);
+          const res = await createAppointmentAction({
+            professionalId,
+            serviceId,
+            clientName: nomeCliente,
+            clientWhatsapp: clientPhone,
+            date: data,
+            startTime: horario,
+            notes: 'Agendado via WhatsApp (bot)',
+          });
+          if (res.success) {
+            console.log('[Bot Tool] agendamento criado:', res.appointmentId);
+          } else {
+            console.log('[Bot Tool] falha ao agendar:', res.error);
+          }
+          return res;
+        },
+      }),
+    };
+
+    const systemPrompt = buildSystemPrompt(waSettings.bot_persona, ctx)
+      + buildBookingInstructions(bookableServices, todayStr);
 
     let responseText: string;
     let shouldPauseBot = false;
@@ -305,6 +357,8 @@ async function processMessage(professionalId: string, secret: string | null, bod
       const result = await generateWithModel({
         system: systemPrompt,
         messages: history,
+        tools: bookingTools,
+        maxSteps: 5,
         abortSignal: AbortSignal.timeout(25000),
       });
       await mark('pos-ia');
