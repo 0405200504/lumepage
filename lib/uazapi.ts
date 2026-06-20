@@ -78,14 +78,18 @@ export async function configureUazapiWebhook(
     logs.push(`GET /webhook → exception: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // 2. Payload completo — addUrlEvents:true é o que manda eventos para a URL
+  // 2. Payload completo — addUrlEvents:true é o que manda eventos para a URL.
+  // `events` inclui 'messages' (plural) porque é o EventType realmente entregue
+  // por esta instância (fork uazapiGO); manter só 'message' já levou a uazapi a
+  // parar de chamar o webhook. Reenviar este POST também reseta o estado de
+  // entrega quando a uazapi entra em circuit-breaker após falhas (ex.: deploys).
   const payload = {
     url: webhookUrl,
     webhookUrl,
     enabled: true,
     addUrlEvents: true,
     addUrlTypesMessages: true,
-    events: ['message'],
+    events: ['messages', 'message'],
     excludeMessages: [],
   };
 
