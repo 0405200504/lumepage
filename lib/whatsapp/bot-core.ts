@@ -50,7 +50,7 @@ DADOS (use quando as instruções de treinamento não tiverem a resposta):
 Data/hora atual: ${ctx.nowBR}
 Serviços e preços: ${ctx.servicesList}
 Link de agendamento: ${ctx.bookingUrl}
-Agenda da profissional (expediente e horários livres): ${ctx.agendaText}
+Agenda da profissional (expediente e visão geral — APENAS referência para conversa, NÃO use estes horários para agendar; ao agendar use SEMPRE a ferramenta verHorariosLivres): ${ctx.agendaText}
 Agendamentos desta cliente (use sempre que ela perguntar sobre o horário dela): ${ctx.clientAppointmentsText}${summaryLine}
 
 REGRAS FIXAS (valem sempre, sem sobrepor o tom e o conteúdo definidos nas instruções de treinamento):
@@ -81,24 +81,54 @@ export function buildBookingInstructions(services: BookableService[], todayStr: 
     ? services.map(s => `- ${s.id} → ${s.name} (${s.duration_minutes}min)`).join('\n')
     : '(nenhum serviço disponível para agendar)';
 
+  // Monta um calendário de referência com os próximos 14 dias para o modelo converter
+  // "segunda", "amanhã", "semana que vem" etc. para datas reais YYYY-MM-DD.
+  const DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const calendarLines: string[] = [];
+  const [ty, tm, td] = todayStr.split('-').map(Number);
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(ty, tm - 1, td + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const wd = DIAS_SEMANA[d.getDay()];
+    const label = i === 0 ? 'HOJE' : i === 1 ? 'amanhã' : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    calendarLines.push(`${label} (${wd}) = ${iso}`);
+  }
+
   return `
 
 ---
 USO INTERNO PARA AGENDAR POR AQUI (NUNCA mostre estes códigos nem fale deles à cliente):
-Hoje é ${todayStr}. Converta "amanhã", "sexta", "dia 20" etc. para a data real no formato YYYY-MM-DD.
+
+CALENDÁRIO DE REFERÊNCIA (use para converter "amanhã", "segunda", "dia 25" etc.):
+${calendarLines.join('\n')}
+
 Serviços que você PODE agendar (código → nome):
 ${table}
 
+IMPORTANTE: Os horários que aparecem na seção "Agenda da profissional" no prompt são apenas uma visão geral
+baseada no serviço mais curto. Eles NÃO servem para agendar — serviços mais longos (como Lash Lifting)
+precisam de blocos maiores e podem ter horários diferentes. SEMPRE use a ferramenta verHorariosLivres para
+ver os horários REAIS disponíveis para o serviço específico que a cliente quer.
+
 Quando a cliente quiser agendar com a sua ajuda por aqui:
 1) Identifique o serviço (use o código da tabela acima) e o dia que ela quer.
-2) Chame a ferramenta verHorariosLivres com a data (YYYY-MM-DD) e o código do serviço.
-3) Ofereça à cliente NO MÁXIMO 3 dos horários retornados. NUNCA ofereça horário que não veio da ferramenta.
-4) Quando ela escolher, confirme numa frase: serviço, dia, horário e o nome dela (peça o nome se não souber).
-5) Só então chame a ferramenta agendar com serviceId, data, horario e nomeCliente.
-6) Se agendar retornar sucesso, avise que ficou tudo certo e confirmado. Se retornar erro/horário ocupado,
+2) Converta o dia para YYYY-MM-DD usando o calendário acima. Se ela disser "segunda", veja qual é a
+   próxima segunda no calendário. Se disser "de manhã" sem especificar o dia, pergunte qual dia.
+3) Chame a ferramenta verHorariosLivres com a data (YYYY-MM-DD) e o código do serviço.
+4) Se a ferramenta retornar horários livres, ofereça NO MÁXIMO 3. NUNCA ofereça um horário que não veio da ferramenta.
+5) Se a ferramenta retornar lista vazia (sem horários), tente o próximo dia útil chamando verHorariosLivres de novo.
+   Faça isso para até 3 dias seguintes antes de dizer que não tem horário na semana.
+6) Quando a cliente escolher, confirme tudo numa frase: serviço, dia, horário e o nome dela (peça o nome se
+   ainda não souber).
+7) Só então chame a ferramenta agendar com serviceId, data, horario e nomeCliente.
+8) Se agendar retornar sucesso, avise que ficou tudo certo e confirmado. Se retornar erro/horário ocupado,
    peça desculpa, diga que esse horário acabou de ser preenchido e ofereça outro horário livre.
-Uma cliente NUNCA pode marcar num horário já ocupado por outra — a ferramenta agendar já garante isso e
-recusa automaticamente. Não tente forçar. Só a profissional pode encaixar mais de uma cliente no mesmo horário.`;
+
+REGRAS DE SEGURANÇA:
+- Uma cliente NUNCA pode marcar num horário já ocupado por outra — a ferramenta agendar já garante isso.
+- Só a profissional pode encaixar mais de uma cliente no mesmo horário.
+- Ao procurar dias disponíveis, avance SEMPRE para frente (hoje → amanhã → depois). NUNCA volte para um dia anterior.
+- Se a cliente pedir "de manhã", procure horários até as 12:00. Se pedir "de tarde", procure a partir das 12:00.`;
 }
 
 /** Monta o system prompt final: a persona tem prioridade no tom; o bloco injetado garante dados e regras. */
