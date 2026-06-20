@@ -44,7 +44,12 @@ interface UazapiMessagePayload {
 
 export async function POST(req: NextRequest) {
   const pid = req.nextUrl.searchParams.get('pid');
-  const secret = req.nextUrl.searchParams.get('secret');
+  // A uazapi (addUrlEvents/addUrlTypesMessages) ANEXA o tipo do evento ao final da
+  // URL, ex.: "…&secret=<uuid>/messages/text". Como `secret` é o último parâmetro,
+  // o sufixo "/messages/text" gruda no valor e quebra a comparação com o secret do
+  // banco — rejeitando TODAS as mensagens. O secret é um UUID (sem "/"), então
+  // recuperamos o valor limpo cortando a partir da primeira barra.
+  const secret = req.nextUrl.searchParams.get('secret')?.split('/')[0] || null;
 
   console.log('[WhatsApp Webhook] recebido — pid:', pid);
 
