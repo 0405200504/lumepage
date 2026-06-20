@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
-import { sendWhatsAppText, phoneFromJid, sendTypingPresence } from '@/lib/uazapi';
+import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
@@ -331,9 +331,11 @@ async function processMessage(professionalId: string, secret: string | null, bod
       console.log('[Bot] pausado para', clientPhone, '— aguardando profissional retomar');
     }
 
-    const typingDelay = Math.min(Math.max(responseText.length * 35, 1500), 5000);
-    await sendTypingPresence(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, typingDelay);
-
+    // Antes havia uma espera de até 5s aqui (simulação de "digitando…") via
+    // sendTypingPresence. Nesta instância (fork uazapiGO) o endpoint /chat/presence
+    // responde 405 — o indicador nunca aparece e a espera só queimava orçamento da
+    // função serverless ANTES do envio, arriscando a função morrer sem responder.
+    // Removido: a resposta agora é enviada imediatamente após a IA.
     await mark('pre-send');
     const sent = await sendWhatsAppText(waSettings.uazapi_url, waSettings.uazapi_token, clientPhone, responseText);
     await mark(`pos-send sent=${sent}`);
