@@ -322,10 +322,15 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
   const fullDayBlock = blocks.find(b => b.block_type === 'full_day');
   const timedBlocks = blocks.filter(b => b.block_type === 'custom_time' && b.start_time && b.end_time);
 
+  // Separa tarefas com e sem horário
+  const untimedTasks = dayTasks.filter(t => !t.due_time);
+  const timedTasks = dayTasks.filter(t => !!t.due_time);
+
   // Faixa de horas: 7h–21h por padrão, expandida para caber tudo do dia.
   const startsEnds = [
     ...appts.flatMap(a => [tmin(a.start_time), tmin(a.end_time)]),
     ...timedBlocks.flatMap(b => [tmin(b.start_time!), tmin(b.end_time!)]),
+    ...timedTasks.map(t => tmin(t.due_time!)),
   ];
   let startHour = 7, endHour = 21;
   if (startsEnds.length) {
@@ -380,10 +385,10 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
         {holiday && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600 bg-wine-50 px-2 py-1 rounded-lg"><PartyPopper className="h-3 w-3" /> {holiday.name}</span>}
       </div>
 
-      {/* Tarefas (sem horário) */}
-      {dayTasks.length > 0 && (
+      {/* Tarefas sem horário */}
+      {untimedTasks.length > 0 && (
         <div className="px-4 py-2.5 border-b border-gray-150 space-y-1.5 bg-paper/60">
-          {dayTasks.map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} />)}
+          {untimedTasks.map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} />)}
         </div>
       )}
 
@@ -470,10 +475,30 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                   </button>
                 );
               })}
+
+              {/* Tarefas com horário — posicionadas na timeline */}
+              {timedTasks.map((t) => {
+                const taskMin = tmin(t.due_time!);
+                return (
+                  <div
+                    key={`task-${t.id}`}
+                    onClick={(e) => { e.stopPropagation(); onSelectDay(iso); }}
+                    className={`absolute z-10 left-1 right-1 flex items-center gap-1.5 rounded-lg border px-2 py-1 cursor-pointer shadow-soft bg-wine-700/8 border-wine-700/25 text-wine-800 ${t.done ? 'opacity-50 line-through' : ''}`}
+                    style={{
+                      top: yOf(taskMin),
+                      height: Math.max(HOUR_H * 0.4, 22),
+                    }}
+                  >
+                    <NotebookPen className="h-3 w-3 shrink-0 text-wine-600" />
+                    <span className="text-[10px] font-black tabular-nums shrink-0">{t.due_time!.substring(0, 5)}</span>
+                    <span className="text-[11px] font-bold truncate">{t.content}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {appts.length === 0 && timedBlocks.length === 0 && (
+          {appts.length === 0 && timedBlocks.length === 0 && timedTasks.length === 0 && (
             <div className="px-4 py-3 text-center border-t border-gray-150">
               <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿 — toque num horário para encaixar uma cliente.</p>
             </div>
