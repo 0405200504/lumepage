@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, CalendarDays, CalendarRange, LayoutGrid,
@@ -175,7 +175,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           </button>
           <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
             {([{ k: 'day', label: 'Dia', icon: Clock }, { k: 'week', label: 'Semana', icon: CalendarRange }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'year', label: 'Ano', icon: LayoutGrid }] as const).map(({ k, label, icon: Icon }) => (
-              <button key={k} onClick={() => setView(k)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
+              <button key={k} onClick={() => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
                 <Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span>
               </button>
             ))}
@@ -307,8 +307,10 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
   );
 };
 
-/* ---------------- DIA (timeline por hora) ---------------- */
+/* ---------------- DIA (timeline por hora, estilo Google Agenda) ---------------- */
 const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const HOUR_H = 56;          // altura de 1 hora em px
+const PXM = HOUR_H / 60;    // px por minuto
 
 const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, activeOf, onSelectDay, onQuickBook }) => {
   const iso = isoOf(cursor);
@@ -330,15 +332,15 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
     startHour = Math.min(startHour, Math.floor(Math.min(...startsEnds) / 60));
     endHour = Math.max(endHour, Math.ceil(Math.max(...startsEnds) / 60));
   }
-  // Escala: 1px por minuto.
   const rangeStartMin = startHour * 60;
-  const totalMin = (endHour - startHour) * 60;
-  const top = (min: number) => (min - rangeStartMin);
+  const hours = endHour - startHour;
+  const totalH = hours * HOUR_H;
+  const yOf = (min: number) => (min - rangeStartMin) * PXM; // px a partir do topo da coluna
 
-  // Distribui agendamentos sobrepostos em colunas (lanes).
+  // Distribui agendamentos sobrepostos em colunas (lanes), em % puro da coluna de eventos.
   const laneEnds: number[] = [];
   const placed = appts.map(a => {
-    const s = tmin(a.start_time), e = Math.max(tmin(a.end_time), s + 20);
+    const s = tmin(a.start_time), e = Math.max(tmin(a.end_time), s + 15);
     let lane = laneEnds.findIndex(end => end <= s);
     if (lane === -1) { lane = laneEnds.length; laneEnds.push(e); } else { laneEnds[lane] = e; }
     return { a, s, e, lane };
@@ -347,6 +349,22 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
   const nowMin = isToday ? (today.getHours() * 60 + today.getMinutes()) : -1;
   const nowInRange = nowMin >= rangeStartMin && nowMin <= endHour * 60;
+
+  // Rola para perto do horário atual (ou do primeiro agendamento) ao abrir o dia.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const targetMin = nowInRange ? nowMin : (appts.length ? tmin(appts[0].start_time) : 8 * 60);
+    el.scrollTop = Math.max(0, yOf(targetMin) - 80);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iso]);
+
+  const bookAtY = (clientY: number, rectTop: number) => {
+    let min = rangeStartMin + Math.round(((clientY - rectTop) / PXM) / 15) * 15;
+    min = Math.max(rangeStartMin, Math.min(min, endHour * 60 - 5));
+    onQuickBook(iso, `${pad(Math.floor(min / 60))}:${pad(min % 60)}`);
+  };
 
   return (
     <div className="card p-0 overflow-hidden">
@@ -375,77 +393,89 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
         </div>
       )}
 
-      {/* Timeline */}
+      {/* Timeline rolável: régua de horas (esquerda) + coluna de eventos (direita) */}
       {!fullDayBlock && (
-        <div className="relative px-3 py-2" style={{ height: totalMin }}>
-          {/* Camada de clique: encaixa cliente no horário tocado (slots vazios) */}
-          <button
-            type="button"
-            aria-label="Encaixar cliente neste horário"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const y = e.clientY - rect.top;
-              let min = rangeStartMin + Math.round(y / 15) * 15;
-              min = Math.max(rangeStartMin, Math.min(min, endHour * 60 - 5));
-              onQuickBook(iso, `${pad(Math.floor(min / 60))}:${pad(min % 60)}`);
-            }}
-            className="absolute inset-0 w-full cursor-pointer"
-          />
-          {/* Linhas de hora */}
-          {Array.from({ length: endHour - startHour + 1 }, (_, i) => {
-            const h = startHour + i;
-            return (
-              <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none" style={{ top: top(h * 60) }}>
-                <span className="w-12 -mt-2 pr-2 text-right text-[10px] font-bold text-gray-450 tabular-nums">{pad(h)}:00</span>
-                <div className="flex-1 border-t border-gray-150/80" />
-              </div>
-            );
-          })}
-
-          {/* Bloqueios de horário */}
-          {timedBlocks.map((b, i) => (
-            <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-14 right-2 px-2 py-1 overflow-hidden pointer-events-none"
-              style={{ top: top(tmin(b.start_time!)), height: Math.max(tmin(b.end_time!) - tmin(b.start_time!), 20) }}>
-              <p className="text-[10px] font-bold text-gray-500 truncate">🔒 {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}</p>
+        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: '68vh' }}>
+          <div className="flex" style={{ height: totalH }}>
+            {/* Régua de horas */}
+            <div className="relative w-14 shrink-0 select-none">
+              {Array.from({ length: hours + 1 }, (_, i) => {
+                const h = startHour + i;
+                return (
+                  <div key={h} className="absolute right-2 -translate-y-1/2 text-[10px] font-bold text-gray-450 tabular-nums" style={{ top: yOf(h * 60) }}>
+                    {pad(h)}:00
+                  </div>
+                );
+              })}
             </div>
-          ))}
 
-          {/* Linha do "agora" */}
-          {nowInRange && (
-            <div className="absolute left-12 right-2 z-20 flex items-center pointer-events-none" style={{ top: top(nowMin) }}>
-              <span className="h-2.5 w-2.5 rounded-full bg-[#b23a48] -ml-1 shadow" />
-              <div className="flex-1 border-t-2 border-[#b23a48]" />
-            </div>
-          )}
-
-          {/* Agendamentos */}
-          {placed.map(({ a, s, e, lane }) => {
-            const m = statusMeta(a.status);
-            const widthPct = 100 / laneCount;
-            const height = Math.max(e - s, 28);
-            return (
+            {/* Coluna de eventos */}
+            <div className="relative flex-1 border-l border-gray-150">
+              {/* Camada de clique (encaixa no horário tocado) */}
               <button
-                key={a.id}
-                onClick={() => onSelectDay(iso)}
-                className={`absolute z-10 text-left rounded-xl border px-2.5 py-1.5 overflow-hidden shadow-soft transition-transform active:scale-[0.99] ${m.block}`}
-                style={{
-                  top: top(s) + 1,
-                  height: height - 2,
-                  left: `calc(3.5rem + ${lane * widthPct}% )`,
-                  width: `calc(${widthPct}% - 3.75rem / ${laneCount} - 0.5rem)`,
-                }}
-              >
-                <p className="text-[10px] font-black tabular-nums">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
-                <p className="text-[11px] font-bold truncate leading-tight">{a.client_name}</p>
-                {height > 44 && <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
-              </button>
-            );
-          })}
+                type="button"
+                aria-label="Encaixar cliente neste horário"
+                onClick={(e) => bookAtY(e.clientY, e.currentTarget.getBoundingClientRect().top)}
+                className="absolute inset-0 w-full cursor-pointer"
+              />
+
+              {/* Linhas de hora (cheia) + meia-hora (fraca) */}
+              {Array.from({ length: hours }, (_, i) => {
+                const h = startHour + i;
+                return (
+                  <React.Fragment key={h}>
+                    <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(h * 60) }} />
+                    <div className="absolute left-0 right-0 border-t border-dashed border-gray-150/45 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
+                  </React.Fragment>
+                );
+              })}
+              <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(endHour * 60) }} />
+
+              {/* Bloqueios de horário */}
+              {timedBlocks.map((b, i) => (
+                <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-1 right-1 px-2 py-0.5 overflow-hidden pointer-events-none"
+                  style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 16) }}>
+                  <p className="text-[10px] font-bold text-gray-500 truncate">🔒 {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}</p>
+                </div>
+              ))}
+
+              {/* Linha do "agora" */}
+              {nowInRange && (
+                <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#b23a48] -ml-1.5 shadow" />
+                  <div className="flex-1 border-t-2 border-[#b23a48]" />
+                </div>
+              )}
+
+              {/* Agendamentos */}
+              {placed.map(({ a, s, e, lane }) => {
+                const m = statusMeta(a.status);
+                const widthPct = 100 / laneCount;
+                const height = Math.max((e - s) * PXM, 22);
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => onSelectDay(iso)}
+                    className={`absolute z-10 text-left rounded-lg border px-2 py-1 overflow-hidden shadow-soft transition-transform active:scale-[0.99] ${m.block}`}
+                    style={{
+                      top: yOf(s) + 1,
+                      height: height - 2,
+                      left: `calc(${lane * widthPct}% + 4px)`,
+                      width: `calc(${widthPct}% - 8px)`,
+                    }}
+                  >
+                    <p className="text-[10px] font-black tabular-nums leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
+                    <p className="text-[11px] font-bold truncate leading-tight">{a.client_name}</p>
+                    {height > 46 && <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {appts.length === 0 && timedBlocks.length === 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
-              <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿</p>
-              <p className="text-[11px] text-gray-450/60">Toque num horário para encaixar uma cliente</p>
+            <div className="px-4 py-3 text-center border-t border-gray-150">
+              <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿 — toque num horário para encaixar uma cliente.</p>
             </div>
           )}
         </div>
