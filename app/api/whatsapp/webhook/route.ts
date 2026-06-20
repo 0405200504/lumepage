@@ -67,10 +67,9 @@ export async function POST(req: NextRequest) {
 
   console.log('[WhatsApp Webhook] evento:', body.EventType, '| tipo:', body.message?.type, '| fromMe:', body.message?.fromMe, '| de:', body.message?.chatid);
 
-  // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel).
-  // DIAGNÓSTICO TEMPORÁRIO: grava a URL crua (pid+secret recebidos) e o corpo cru.
+  // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel)
   await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
-    { role: 'user' as const, content: `URL pid=${pid} secret=${secret} | BODY ${JSON.stringify(body).slice(0, 1500)}`, at: Date.now() }
+    { role: 'user' as const, content: JSON.stringify({ EventType: body.EventType, fromMe: body.message?.fromMe, isGroup: body.message?.isGroup, type: body.message?.type, chatid: body.message?.chatid }), at: Date.now() }
   ]).catch(() => {});
 
   // after() responde à uazapi IMEDIATAMENTE (< 200ms) e continua o processamento
@@ -167,43 +166,34 @@ async function buildAgendaText(professionalId: string, shortestDuration: number)
 }
 
 async function processMessage(professionalId: string, secret: string | null, body: UazapiMessagePayload) {
-  // DIAGNÓSTICO TEMPORÁRIO: confirma que after() executou processMessage e
-  // registra o motivo de qualquer retorno antecipado (o último motivo gravado
-  // revela por que o bot não respondeu).
-  const dbg = (reason: string) => dbService.upsertWhatsAppConversation(
-    professionalId, '_debug_proc',
-    [{ role: 'user' as const, content: reason, at: Date.now() }]
-  ).catch(() => {});
   try {
     const msg = body.message;
-    await dbg('entrou');
 
-    if (!msg) { await dbg('return: sem message'); return; }
-    if (msg.fromMe) { await dbg('return: fromMe'); return; }
-    if (msg.isGroup) { await dbg('return: grupo'); return; }
-    if (msg.type && msg.type !== 'text') { await dbg(`return: tipo=${msg.type}`); return; }
+    if (!msg) { console.log('[Bot] sem message no payload'); return; }
+    if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
+    if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
+    if (msg.type && msg.type !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type); return; }
 
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
-    if (!waSettings) { await dbg('return: sem settings'); return; }
-    if (!waSettings.bot_enabled) { await dbg('return: bot desativado'); return; }
-    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { await dbg('return: creds'); return; }
-    if (secret && waSettings.webhook_secret !== secret) { await dbg('return: secret'); return; }
+    if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
+    if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
+    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
+    if (secret && waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido'); return; }
 
     const clientPhone = phoneFromJid(msg.chatid || '');
-    if (!clientPhone) { await dbg(`return: phone invalido (${msg.chatid})`); return; }
+    if (!clientPhone) { console.warn('[Bot] número inválido:', msg.chatid); return; }
 
     const messageText = (msg.text || '').trim();
-    if (!messageText) { await dbg(`return: texto vazio (msg.text=${JSON.stringify(msg.text)})`); return; }
-    await dbg(`ok: "${messageText.slice(0,30)}" de ${clientPhone}`);
+    if (!messageText) { console.log('[Bot] mensagem vazia'); return; }
 
     console.log('[Bot] mensagem de', clientPhone, ':', messageText.slice(0, 50));
 
     const conversation = await dbService.getWhatsAppConversation(professionalId, clientPhone);
-    if (conversation?.bot_paused) { await dbg('return: bot_paused'); return; }
+    if (conversation?.bot_paused) { console.log('[Bot] pausado para', clientPhone); return; }
 
     // Cooldown: após mensagem automática do sistema, o bot não responde por alguns minutos.
     if (conversation?.bot_cooldown_until && new Date(conversation.bot_cooldown_until) > new Date()) {
-      await dbg(`return: cooldown ate ${conversation.bot_cooldown_until}`);
+      console.log('[Bot] cooldown ativo até', conversation.bot_cooldown_until, '— ignorando de', clientPhone);
       return;
     }
 
@@ -239,7 +229,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const freshConv = await dbService.getWhatsAppConversation(professionalId, clientPhone);
     if (freshConv && new Date(freshConv.last_message_at).getTime() > arrivalTime) {
-      await dbg(`return: debounce (fresh=${new Date(freshConv.last_message_at).getTime()} > arrival=${arrivalTime})`);
+      console.log('[Bot] mensagem mais nova detectada — abortando esta para evitar resposta dupla');
       return;
     }
     // ── FIM DEBOUNCE ──────────────────────────────────────────────────────────
