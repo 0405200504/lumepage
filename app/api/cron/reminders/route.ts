@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
+import { runWhatsAppHealthCheck } from '@/lib/whatsapp/health';
 
 export const maxDuration = 60;
 
@@ -147,6 +148,15 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Monitor de saúde do bot (auto-cura do webhook + alerta push), aproveitando a
+  // cadência já existente deste cron. Best-effort: nunca interrompe os lembretes.
+  let health: unknown = null;
+  try {
+    health = await runWhatsAppHealthCheck();
+  } catch (e) {
+    console.error('[cron/reminders] health-check falhou:', e);
+  }
+
   console.log(`[cron/reminders] enviados: ${sent}, erros: ${errors}`);
-  return NextResponse.json({ ok: true, sent, errors });
+  return NextResponse.json({ ok: true, sent, errors, health });
 }
