@@ -14,6 +14,8 @@ import { createTaskAction, toggleTaskAction, deleteTaskAction, updateTaskAction 
 import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/professional';
 import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointments/services';
 import { AppointmentStatus } from '@/types/database';
+import { QuickAppointmentModal } from './QuickAppointmentModal';
+import { CalendarPlus } from 'lucide-react';
 
 type View = 'year' | 'month' | 'week' | 'day';
 
@@ -58,6 +60,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [dragOverISO, setDragOverISO] = useState<string | null>(null);
+  const [quickBook, setQuickBook] = useState<{ date: string; time?: string } | null>(null);
 
   useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
 
@@ -164,6 +167,9 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
         </div>
 
         <div className="flex items-center gap-2 self-start">
+          <button onClick={() => setQuickBook({ date: isoOf(view === 'day' ? cursor : today) })} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-forest text-white rounded-2xl text-xs font-bold shadow-soft hover:bg-forest-hover transition-all-custom">
+            <CalendarPlus className="h-3.5 w-3.5" /> Encaixar cliente
+          </button>
           <button onClick={() => setSelectedISO(isoOf(today))} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 surface-wine text-white rounded-2xl text-xs font-bold shadow-soft hover:opacity-95 transition-all-custom">
             <Plus className="h-3.5 w-3.5" /> Nova tarefa
           </button>
@@ -188,7 +194,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
       </div>
 
       {view === 'day' && (
-        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} />
+        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} />
       )}
       {view === 'month' && (
         <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
@@ -215,6 +221,18 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           onRemoveTask={removeT}
           onRemoveAppt={removeAppt}
           onEditAppt={editAppt}
+          onQuickBook={(iso: string) => { setSelectedISO(null); setQuickBook({ date: iso }); }}
+        />
+      )}
+
+      {quickBook && (
+        <QuickAppointmentModal
+          professionalId={professionalId}
+          services={services}
+          initialDate={quickBook.date}
+          initialTime={quickBook.time}
+          onClose={() => setQuickBook(null)}
+          onCreated={() => { setQuickBook(null); router.refresh(); }}
         />
       )}
     </div>
@@ -292,7 +310,7 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
 /* ---------------- DIA (timeline por hora) ---------------- */
 const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
 
-const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, activeOf, onSelectDay }) => {
+const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, activeOf, onSelectDay, onQuickBook }) => {
   const iso = isoOf(cursor);
   const isToday = sameDay(cursor, today);
   const holiday = holidayMap[iso];
@@ -360,11 +378,24 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
       {/* Timeline */}
       {!fullDayBlock && (
         <div className="relative px-3 py-2" style={{ height: totalMin }}>
+          {/* Camada de clique: encaixa cliente no horário tocado (slots vazios) */}
+          <button
+            type="button"
+            aria-label="Encaixar cliente neste horário"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const y = e.clientY - rect.top;
+              let min = rangeStartMin + Math.round(y / 15) * 15;
+              min = Math.max(rangeStartMin, Math.min(min, endHour * 60 - 5));
+              onQuickBook(iso, `${pad(Math.floor(min / 60))}:${pad(min % 60)}`);
+            }}
+            className="absolute inset-0 w-full cursor-pointer"
+          />
           {/* Linhas de hora */}
           {Array.from({ length: endHour - startHour + 1 }, (_, i) => {
             const h = startHour + i;
             return (
-              <div key={h} className="absolute left-0 right-0 flex items-start" style={{ top: top(h * 60) }}>
+              <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none" style={{ top: top(h * 60) }}>
                 <span className="w-12 -mt-2 pr-2 text-right text-[10px] font-bold text-gray-450 tabular-nums">{pad(h)}:00</span>
                 <div className="flex-1 border-t border-gray-150/80" />
               </div>
@@ -373,7 +404,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
           {/* Bloqueios de horário */}
           {timedBlocks.map((b, i) => (
-            <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-14 right-2 px-2 py-1 overflow-hidden"
+            <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-14 right-2 px-2 py-1 overflow-hidden pointer-events-none"
               style={{ top: top(tmin(b.start_time!)), height: Math.max(tmin(b.end_time!) - tmin(b.start_time!), 20) }}>
               <p className="text-[10px] font-bold text-gray-500 truncate">🔒 {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}</p>
             </div>
@@ -381,7 +412,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
           {/* Linha do "agora" */}
           {nowInRange && (
-            <div className="absolute left-12 right-2 z-20 flex items-center" style={{ top: top(nowMin) }}>
+            <div className="absolute left-12 right-2 z-20 flex items-center pointer-events-none" style={{ top: top(nowMin) }}>
               <span className="h-2.5 w-2.5 rounded-full bg-[#b23a48] -ml-1 shadow" />
               <div className="flex-1 border-t-2 border-[#b23a48]" />
             </div>
@@ -412,8 +443,9 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
           })}
 
           {appts.length === 0 && timedBlocks.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
               <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿</p>
+              <p className="text-[11px] text-gray-450/60">Toque num horário para encaixar uma cliente</p>
             </div>
           )}
         </div>
@@ -519,7 +551,8 @@ const DayDetail: React.FC<{
   onAddTask: (iso: string, content: string, time: string) => Promise<{ success: boolean; error?: string }>;
   onToggleTask: (t: Task) => void; onRemoveTask: (t: Task) => void; onRemoveAppt: (id: string) => void;
   onEditAppt: (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => Promise<boolean>;
-}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, services, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt, onEditAppt }) => {
+  onQuickBook: (iso: string) => void;
+}> = ({ iso, appts, tasks, holiday, blocks, reminderTemplate, services, onClose, onAddTask, onToggleTask, onRemoveTask, onRemoveAppt, onEditAppt, onQuickBook }) => {
   const [y, mo, d] = iso.split('-').map(Number);
   const dateObj = new Date(y, mo - 1, d);
   const longLabel = `${WEEKDAYS_SHORT[dateObj.getDay()]}, ${d} de ${MONTHS[mo - 1]} de ${y}`;
@@ -548,6 +581,9 @@ const DayDetail: React.FC<{
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Detalhes do dia</p>
             <h3 className="text-lg font-black mt-1 capitalize">{longLabel}</h3>
             {holiday && <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/12 rounded-full px-2.5 py-1"><PartyPopper className="h-3 w-3" /> {holiday.name}</span>}
+            <button onClick={() => onQuickBook(iso)} className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-[11px] font-bold transition-colors">
+              <CalendarPlus className="h-3.5 w-3.5" /> Encaixar cliente neste dia
+            </button>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors"><X className="h-5 w-5" /></button>
         </div>
