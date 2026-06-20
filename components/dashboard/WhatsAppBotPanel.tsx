@@ -70,6 +70,19 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
     initialSettings?.automation_day_of_message || 'Bom dia, {nome}! 🌸 Hoje é o dia do seu {servico} às {horario}. Te esperamos!'
   );
   const [autoDayOfTime, setAutoDayOfTime] = useState((initialSettings?.automation_day_of_time || '08:00').substring(0, 5));
+  // Lembrete 5 dias antes
+  const [auto5daysEnabled, setAuto5daysEnabled] = useState(initialSettings?.automation_5days_enabled ?? false);
+  const [auto5daysMessage, setAuto5daysMessage] = useState(
+    initialSettings?.automation_5days_message || 'Oi, {nome}! 😊 Faltam 5 dias para o seu {servico} no dia {data} às {horario}. Já está reservado pra você! Qualquer imprevisto, é só me avisar. 💛'
+  );
+  const [auto5daysTime, setAuto5daysTime] = useState((initialSettings?.automation_5days_time || '10:00').substring(0, 5));
+  // Follow-up de cliente sem retorno
+  const [autoFollowupEnabled, setAutoFollowupEnabled] = useState(initialSettings?.automation_followup_enabled ?? false);
+  const [autoFollowupDays, setAutoFollowupDays] = useState(initialSettings?.automation_followup_days ?? 30);
+  const [autoFollowupMessage, setAutoFollowupMessage] = useState(
+    initialSettings?.automation_followup_message || 'Oi, {nome}! 💛 Senti sua falta por aqui. Já faz um tempinho desde o seu último {servico} — que tal agendar um horário pra se cuidar? Estou à disposição!'
+  );
+  const [autoFollowupTime, setAutoFollowupTime] = useState((initialSettings?.automation_followup_time || '10:00').substring(0, 5));
 
   // Variáveis personalizadas
   const [varRows, setVarRows] = useState<{ key: string; value: string }[]>(
@@ -149,6 +162,13 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       automation_day_of_enabled: autoDayOfEnabled,
       automation_day_of_message: autoDayOfMessage,
       automation_day_of_time: autoDayOfTime,
+      automation_5days_enabled: auto5daysEnabled,
+      automation_5days_message: auto5daysMessage,
+      automation_5days_time: auto5daysTime,
+      automation_followup_enabled: autoFollowupEnabled,
+      automation_followup_days: autoFollowupDays,
+      automation_followup_message: autoFollowupMessage,
+      automation_followup_time: autoFollowupTime,
       custom_variables: customVars,
     };
   }
@@ -331,7 +351,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
 
   const s = statusLabel[status] ?? statusLabel['error'];
   const isConfigured = !!(uazapiUrl && uazapiToken);
-  const activeAutomations = [autoBookingEnabled, autoDayBeforeEnabled, autoDayOfEnabled].filter(Boolean).length;
+  const activeAutomations = [autoBookingEnabled, auto5daysEnabled, autoDayBeforeEnabled, autoDayOfEnabled, autoFollowupEnabled].filter(Boolean).length;
   const builtinVars = ['nome', 'servico', 'data', 'horario', 'profissional', 'preco', 'forma_pagamento'];
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
 
@@ -689,6 +709,27 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
             </AutomationCard>
 
             <AutomationCard
+              icon="🗓️"
+              title="Lembrete — 5 dias antes"
+              description="Enviada 5 dias antes do agendamento"
+              enabled={auto5daysEnabled}
+              onToggle={setAuto5daysEnabled}
+            >
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem</label>
+                  <textarea rows={3} value={auto5daysMessage} onChange={e => setAuto5daysMessage(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-600 shrink-0">Horário de envio</label>
+                  <input type="time" value={auto5daysTime} onChange={e => setAuto5daysTime(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                </div>
+              </div>
+            </AutomationCard>
+
+            <AutomationCard
               icon="🔔"
               title="Lembrete — dia anterior"
               description="Enviada no dia anterior ao agendamento"
@@ -726,6 +767,37 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                   <label className="text-xs font-medium text-gray-600 shrink-0">Horário de envio</label>
                   <input type="time" value={autoDayOfTime} onChange={e => setAutoDayOfTime(e.target.value)}
                     className="px-3 py-1.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                </div>
+              </div>
+            </AutomationCard>
+
+            <AutomationCard
+              icon="💌"
+              title="Follow-up — cliente sem retorno"
+              description="Reengaja a cliente que não volta há um tempo"
+              enabled={autoFollowupEnabled}
+              onToggle={setAutoFollowupEnabled}
+            >
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem</label>
+                  <textarea rows={3} value={autoFollowupMessage} onChange={e => setAutoFollowupMessage(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white resize-none" />
+                  <p className="text-[11px] text-gray-400 mt-1">Variáveis: {'{nome}'}, {'{servico}'} (último atendimento), {'{profissional}'}.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600 shrink-0">Enviar após</label>
+                    <input type="number" min={1} max={365} value={autoFollowupDays}
+                      onChange={e => setAutoFollowupDays(Math.max(1, parseInt(e.target.value) || 30))}
+                      className="w-20 px-2 py-1.5 rounded-xl border border-[#efe9e6] text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                    <span className="text-xs text-gray-400">dias sem retornar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600 shrink-0">Horário</label>
+                    <input type="time" value={autoFollowupTime} onChange={e => setAutoFollowupTime(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-white" />
+                  </div>
                 </div>
               </div>
             </AutomationCard>

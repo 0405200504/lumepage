@@ -1218,16 +1218,27 @@ export const dbService = {
     return data || [];
   },
 
-  markReminderSent: async (appointmentId: string, type: 'booking' | 'day_before' | 'day_of'): Promise<void> => {
+  markReminderSent: async (appointmentId: string, type: 'booking' | 'day_before' | 'day_of' | '5days'): Promise<void> => {
     const col = type === 'booking'
       ? 'automation_booking_sent_at'
       : type === 'day_before'
         ? 'automation_day_before_sent_at'
-        : 'automation_day_of_sent_at';
+        : type === '5days'
+          ? 'automation_5days_sent_at'
+          : 'automation_day_of_sent_at';
     await getDb()
       .from('appointments')
       .update({ [col]: new Date().toISOString() })
       .eq('id', appointmentId);
+  },
+
+  /** Marca que o follow-up de "cliente sem retorno" foi enviado para este número. */
+  markFollowupSent: async (professionalId: string, clientWhatsapp: string): Promise<void> => {
+    await getDb()
+      .from('clients')
+      .update({ followup_sent_at: new Date().toISOString() })
+      .eq('professional_id', professionalId)
+      .eq('whatsapp', clientWhatsapp);
   },
 
   getWhatsAppSettings: async (professionalId: string): Promise<WhatsAppSettings | null> => {
@@ -1258,6 +1269,7 @@ export const dbService = {
       .single();
     if (error) {
       if (isMissingTable(error)) throw new Error('Rode supabase/migration_v8.sql no Supabase para ativar o bot WhatsApp.');
+      if (error.code === '42703') throw new Error('Rode supabase/migration_v16.sql no Supabase para ativar as novas automações (lembrete 5 dias e follow-up).');
       throw error;
     }
     return data;

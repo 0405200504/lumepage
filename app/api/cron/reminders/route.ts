@@ -30,6 +30,9 @@ export async function GET(req: NextRequest) {
   const tomorrowDate = new Date(nowBR);
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   const tomorrowISO = `${tomorrowDate.getFullYear()}-${pad(tomorrowDate.getMonth() + 1)}-${pad(tomorrowDate.getDate())}`;
+  const in5DaysDate = new Date(nowBR);
+  in5DaysDate.setDate(in5DaysDate.getDate() + 5);
+  const in5DaysISO = `${in5DaysDate.getFullYear()}-${pad(in5DaysDate.getMonth() + 1)}-${pad(in5DaysDate.getDate())}`;
 
   let sent = 0;
   let errors = 0;
@@ -115,6 +118,39 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      // ── Automação 4: Lembrete 5 dias antes ───────────────────────────────
+      if (settings.automation_5days_enabled && settings.automation_5days_message) {
+        const [rh, rm] = (settings.automation_5days_time || '10:00').split(':').map(Number);
+        if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
+          const eligible = activeAppts.filter(a => {
+            if (a.date !== in5DaysISO || a.automation_5days_sent_at) return false;
+            // Se a cliente agendou faltando ≤5 dias, este lembrete não faz sentido
+            // (cairia junto/antes da confirmação) — suprime quando criado a partir de hoje.
+            const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
+            if (createdBR >= todayISO) return false;
+            return true;
+          });
+          for (const appt of eligible) {
+            const msg = fillTemplate(settings.automation_5days_message, {
+              nome: appt.client_name.split(' ')[0],
+              servico: appt.service?.name || '',
+              data: formatDateBR(appt.date),
+              horario: appt.start_time.substring(0, 5),
+              profissional: professional?.name || '',
+              preco: formatPriceBRL(appt.service?.price_cents),
+              forma_pagamento: appt.payment_method || '',
+            }, settings.custom_variables);
+            const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
+            if (ok) {
+              await dbService.markReminderSent(appt.id, '5days');
+              dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 3).catch(() => {});
+              dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
+              sent++;
+            }
+          }
+        }
+      }
+
       // ── Automação 3: Lembrete no dia ─────────────────────────────────────
       if (settings.automation_day_of_enabled && settings.automation_day_of_message) {
         const [rh, rm] = (settings.automation_day_of_time || '08:00').split(':').map(Number);
@@ -137,6 +173,53 @@ export async function GET(req: NextRequest) {
               await dbService.markReminderSent(appt.id, 'day_of');
               dbService.setBotCooldown(settings.professional_id, appt.client_whatsapp, 3).catch(() => {});
               dbService.appendAutomatedMessage(settings.professional_id, appt.client_whatsapp, msg).catch(() => {});
+              sent++;
+            }
+          }
+        }
+      }
+
+      // ── Automação 5: Follow-up de cliente sem retorno há N dias ───────────
+      // Para cada cliente cujo ÚLTIMO atendimento foi há >= N dias (padrão 30) e
+      // que NÃO tem horário futuro marcado, envia uma mensagem de reengajamento.
+      // Janela de captura (N..N+30 dias) evita disparo em massa para clientes que
+      // sumiram há muito tempo ao ativar a automação. Dedupe por followup_sent_at.
+      if (settings.automation_followup_enabled && settings.automation_followup_message) {
+        const [fh, fm] = (settings.automation_followup_time || '10:00').split(':').map(Number);
+        if (currentHour > fh || (currentHour === fh && currentMin >= fm)) {
+          const thresholdDays = settings.automation_followup_days || 30;
+          const clients = await dbService.getClientsByProfessional(settings.professional_id);
+
+          // Mapa por telefone: último atendimento passado + se tem horário futuro.
+          const byPhone = new Map<string, { lastPast: string | null; hasUpcoming: boolean; lastPastAppt: typeof activeAppts[number] | null }>();
+          for (const a of activeAppts) {
+            const entry = byPhone.get(a.client_whatsapp) || { lastPast: null, hasUpcoming: false, lastPastAppt: null };
+            if (a.date < todayISO) {
+              if (!entry.lastPast || a.date > entry.lastPast) { entry.lastPast = a.date; entry.lastPastAppt = a; }
+            } else {
+              entry.hasUpcoming = true; // hoje ou futuro
+            }
+            byPhone.set(a.client_whatsapp, entry);
+          }
+
+          for (const client of clients) {
+            const entry = byPhone.get(client.whatsapp);
+            if (!entry || !entry.lastPast || entry.hasUpcoming) continue;
+            const daysSince = Math.floor((Date.parse(`${todayISO}T00:00:00`) - Date.parse(`${entry.lastPast}T00:00:00`)) / 86400000);
+            if (daysSince < thresholdDays || daysSince > thresholdDays + 30) continue;
+            // Já enviou follow-up depois do último atendimento? (zera quando ela volta a agendar)
+            if (client.followup_sent_at && Date.parse(client.followup_sent_at) >= Date.parse(`${entry.lastPast}T00:00:00`)) continue;
+
+            const msg = fillTemplate(settings.automation_followup_message, {
+              nome: (client.name || '').split(' ')[0],
+              servico: entry.lastPastAppt?.service?.name || 'atendimento',
+              profissional: professional?.name || '',
+            }, settings.custom_variables);
+            const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, client.whatsapp, msg);
+            if (ok) {
+              await dbService.markFollowupSent(settings.professional_id, client.whatsapp);
+              dbService.setBotCooldown(settings.professional_id, client.whatsapp, 3).catch(() => {});
+              dbService.appendAutomatedMessage(settings.professional_id, client.whatsapp, msg).catch(() => {});
               sent++;
             }
           }

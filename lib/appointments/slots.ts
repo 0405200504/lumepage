@@ -57,7 +57,9 @@ export async function getAvailableSlots(
     // 3. Carregar Configurações e Bloqueios
     const settings = await dbService.getSettingsByProfessional(professionalId);
     const minNoticeHours = settings?.min_notice_hours ?? 3;
-    const bufferMinutes = settings?.default_buffer_minutes ?? 15;
+    // Buffer por dia (definido na aba Disponibilidade) tem prioridade; cai no
+    // default global de settings só se a regra do dia não tiver valor.
+    const bufferMinutes = rule.buffer_minutes ?? settings?.default_buffer_minutes ?? 15;
 
     const timeBlocks = await dbService.getTimeBlocksByProfessional(professionalId);
     const dayBlocks = timeBlocks.filter(b => b.date === dateStr);

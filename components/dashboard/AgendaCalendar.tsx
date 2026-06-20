@@ -15,7 +15,7 @@ import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/
 import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointments/services';
 import { AppointmentStatus } from '@/types/database';
 
-type View = 'year' | 'month' | 'week';
+type View = 'year' | 'month' | 'week' | 'day';
 
 interface AgendaCalendarProps {
   appointments: Appointment[];
@@ -45,6 +45,16 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const today = new Date();
   const [view, setView] = useState<View>('month');
   const [cursor, setCursor] = useState<Date>(startOfMonth(today));
+
+  // No celular, abre direto na visão diária (mais fácil de acompanhar o dia).
+  // Inicia 'month' no SSR e ajusta no cliente para evitar mismatch de hidratação.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
+      setView('day');
+      setCursor(today);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [dragOverISO, setDragOverISO] = useState<string | null>(null);
@@ -116,16 +126,18 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     return res.success;
   };
 
-  const goToday = () => setCursor(startOfMonth(today));
+  const goToday = () => setCursor(view === 'day' || view === 'week' ? today : startOfMonth(today));
   const step = (dir: 1 | -1) => {
     if (view === 'year') setCursor(new Date(cursor.getFullYear() + dir, 0, 1));
     else if (view === 'month') setCursor(addMonths(cursor, dir));
+    else if (view === 'day') setCursor(addDays(cursor, dir));
     else setCursor(addDays(cursor, dir * 7));
   };
 
   const title = useMemo(() => {
     if (view === 'year') return `${cursor.getFullYear()}`;
     if (view === 'month') return `${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`;
+    if (view === 'day') return `${WEEKDAYS_SHORT[cursor.getDay()]}, ${cursor.getDate()} de ${MONTHS[cursor.getMonth()]}`;
     const ws = startOfWeek(cursor); const we = addDays(ws, 6);
     return ws.getMonth() === we.getMonth()
       ? `${ws.getDate()}–${we.getDate()} de ${MONTHS[ws.getMonth()]} ${ws.getFullYear()}`
@@ -156,7 +168,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
             <Plus className="h-3.5 w-3.5" /> Nova tarefa
           </button>
           <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
-            {([{ k: 'year', label: 'Ano', icon: LayoutGrid }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'week', label: 'Semana', icon: CalendarRange }] as const).map(({ k, label, icon: Icon }) => (
+            {([{ k: 'day', label: 'Dia', icon: Clock }, { k: 'week', label: 'Semana', icon: CalendarRange }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'year', label: 'Ano', icon: LayoutGrid }] as const).map(({ k, label, icon: Icon }) => (
               <button key={k} onClick={() => setView(k)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
                 <Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span>
               </button>
@@ -175,6 +187,9 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
         <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-3 w-3 text-wine-500" /> Feriado</span>
       </div>
 
+      {view === 'day' && (
+        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} />
+      )}
       {view === 'month' && (
         <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
       )}
@@ -270,6 +285,139 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
           );
         })}
       </div>
+    </div>
+  );
+};
+
+/* ---------------- DIA (timeline por hora) ---------------- */
+const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+
+const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, activeOf, onSelectDay }) => {
+  const iso = isoOf(cursor);
+  const isToday = sameDay(cursor, today);
+  const holiday = holidayMap[iso];
+  const appts: Appointment[] = activeOf(apptByDate[iso]).slice().sort((a: Appointment, b: Appointment) => a.start_time.localeCompare(b.start_time));
+  const dayTasks: Task[] = taskByDate[iso] || [];
+  const blocks: TimeBlock[] = blockByDate[iso] || [];
+  const fullDayBlock = blocks.find(b => b.block_type === 'full_day');
+  const timedBlocks = blocks.filter(b => b.block_type === 'custom_time' && b.start_time && b.end_time);
+
+  // Faixa de horas: 7h–21h por padrão, expandida para caber tudo do dia.
+  const startsEnds = [
+    ...appts.flatMap(a => [tmin(a.start_time), tmin(a.end_time)]),
+    ...timedBlocks.flatMap(b => [tmin(b.start_time!), tmin(b.end_time!)]),
+  ];
+  let startHour = 7, endHour = 21;
+  if (startsEnds.length) {
+    startHour = Math.min(startHour, Math.floor(Math.min(...startsEnds) / 60));
+    endHour = Math.max(endHour, Math.ceil(Math.max(...startsEnds) / 60));
+  }
+  // Escala: 1px por minuto.
+  const rangeStartMin = startHour * 60;
+  const totalMin = (endHour - startHour) * 60;
+  const top = (min: number) => (min - rangeStartMin);
+
+  // Distribui agendamentos sobrepostos em colunas (lanes).
+  const laneEnds: number[] = [];
+  const placed = appts.map(a => {
+    const s = tmin(a.start_time), e = Math.max(tmin(a.end_time), s + 20);
+    let lane = laneEnds.findIndex(end => end <= s);
+    if (lane === -1) { lane = laneEnds.length; laneEnds.push(e); } else { laneEnds[lane] = e; }
+    return { a, s, e, lane };
+  });
+  const laneCount = Math.max(1, laneEnds.length);
+
+  const nowMin = isToday ? (today.getHours() * 60 + today.getMinutes()) : -1;
+  const nowInRange = nowMin >= rangeStartMin && nowMin <= endHour * 60;
+
+  return (
+    <div className="card p-0 overflow-hidden">
+      {/* Cabeçalho do dia */}
+      <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-150 ${isToday ? 'bg-wine-50/60' : 'bg-paper'}`}>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center justify-center h-9 w-9 rounded-full text-sm font-black ${isToday ? 'surface-wine text-white' : 'text-forest bg-cream'}`}>{cursor.getDate()}</span>
+          <div>
+            <p className="text-xs font-black text-forest capitalize">{WEEKDAYS_SHORT[cursor.getDay()]}{isToday ? ' · Hoje' : ''}</p>
+            <p className="text-[11px] font-semibold text-gray-450">{appts.length} agendamento{appts.length === 1 ? '' : 's'}</p>
+          </div>
+        </div>
+        {holiday && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600 bg-wine-50 px-2 py-1 rounded-lg"><PartyPopper className="h-3 w-3" /> {holiday.name}</span>}
+      </div>
+
+      {/* Tarefas (sem horário) */}
+      {dayTasks.length > 0 && (
+        <div className="px-4 py-2.5 border-b border-gray-150 space-y-1.5 bg-paper/60">
+          {dayTasks.map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} />)}
+        </div>
+      )}
+
+      {fullDayBlock && (
+        <div className="mx-4 my-3 flex items-center gap-2 text-xs font-bold text-[#b23a48] bg-[#b23a48]/8 border border-[#b23a48]/20 rounded-xl px-3 py-2.5">
+          <Clock className="h-4 w-4" /> Dia bloqueado{fullDayBlock.reason ? ` — ${fullDayBlock.reason}` : ' (dia inteiro)'}
+        </div>
+      )}
+
+      {/* Timeline */}
+      {!fullDayBlock && (
+        <div className="relative px-3 py-2" style={{ height: totalMin }}>
+          {/* Linhas de hora */}
+          {Array.from({ length: endHour - startHour + 1 }, (_, i) => {
+            const h = startHour + i;
+            return (
+              <div key={h} className="absolute left-0 right-0 flex items-start" style={{ top: top(h * 60) }}>
+                <span className="w-12 -mt-2 pr-2 text-right text-[10px] font-bold text-gray-450 tabular-nums">{pad(h)}:00</span>
+                <div className="flex-1 border-t border-gray-150/80" />
+              </div>
+            );
+          })}
+
+          {/* Bloqueios de horário */}
+          {timedBlocks.map((b, i) => (
+            <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-14 right-2 px-2 py-1 overflow-hidden"
+              style={{ top: top(tmin(b.start_time!)), height: Math.max(tmin(b.end_time!) - tmin(b.start_time!), 20) }}>
+              <p className="text-[10px] font-bold text-gray-500 truncate">🔒 {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}</p>
+            </div>
+          ))}
+
+          {/* Linha do "agora" */}
+          {nowInRange && (
+            <div className="absolute left-12 right-2 z-20 flex items-center" style={{ top: top(nowMin) }}>
+              <span className="h-2.5 w-2.5 rounded-full bg-[#b23a48] -ml-1 shadow" />
+              <div className="flex-1 border-t-2 border-[#b23a48]" />
+            </div>
+          )}
+
+          {/* Agendamentos */}
+          {placed.map(({ a, s, e, lane }) => {
+            const m = statusMeta(a.status);
+            const widthPct = 100 / laneCount;
+            const height = Math.max(e - s, 28);
+            return (
+              <button
+                key={a.id}
+                onClick={() => onSelectDay(iso)}
+                className={`absolute z-10 text-left rounded-xl border px-2.5 py-1.5 overflow-hidden shadow-soft transition-transform active:scale-[0.99] ${m.block}`}
+                style={{
+                  top: top(s) + 1,
+                  height: height - 2,
+                  left: `calc(3.5rem + ${lane * widthPct}% )`,
+                  width: `calc(${widthPct}% - 3.75rem / ${laneCount} - 0.5rem)`,
+                }}
+              >
+                <p className="text-[10px] font-black tabular-nums">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
+                <p className="text-[11px] font-bold truncate leading-tight">{a.client_name}</p>
+                {height > 44 && <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
+              </button>
+            );
+          })}
+
+          {appts.length === 0 && timedBlocks.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

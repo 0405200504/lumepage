@@ -119,6 +119,7 @@ export interface Client {
   notes?: string | null; // ficha técnica / observações gerais da cliente (requer migração v7)
   total_appointments: number;
   last_appointment_at: string | null;
+  followup_sent_at?: string | null; // último follow-up de "cliente sem retorno" enviado (requer migração v16)
   deleted_at?: string | null; // lixeira (soft-delete)
   created_at: string;
   updated_at?: string;
@@ -196,6 +197,7 @@ export interface Appointment {
   automation_booking_sent_at?: string | null;
   automation_day_before_sent_at?: string | null;
   automation_day_of_sent_at?: string | null;
+  automation_5days_sent_at?: string | null;
   service?: Service; // Relacionamento (serviço primário) incluído em SELECTs
   services?: Service[]; // Todos os serviços do agendamento (multi-serviço)
   professional?: Professional;
@@ -230,6 +232,15 @@ export interface WhatsAppSettings {
   automation_day_of_enabled: boolean;
   automation_day_of_message: string | null;
   automation_day_of_time: string;
+  // Lembrete 5 dias antes do agendamento
+  automation_5days_enabled: boolean;
+  automation_5days_message: string | null;
+  automation_5days_time: string;
+  // Follow-up de cliente sem retorno há N dias (padrão 30)
+  automation_followup_enabled: boolean;
+  automation_followup_days: number;
+  automation_followup_message: string | null;
+  automation_followup_time: string;
   custom_variables?: Record<string, string> | null;
   created_at: string;
   updated_at: string;

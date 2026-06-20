@@ -182,7 +182,11 @@ export async function createManualAppointmentAction(input: {
     // allowOverlap=true permite que a profissional agende múltiplas clientes no mesmo horário
     if (!input.allowOverlap) {
       const settings = await dbService.getSettingsByProfessional(professionalId);
-      const buffer = settings?.default_buffer_minutes ?? 0;
+      // Buffer por dia (aba Disponibilidade) tem prioridade sobre o default global.
+      const weekday = new Date(`${date}T12:00:00`).getDay();
+      const rules = await dbService.getAvailabilityRulesByProfessional(professionalId);
+      const dayRule = rules.find(r => r.weekday === weekday && r.is_active);
+      const buffer = dayRule?.buffer_minutes ?? settings?.default_buffer_minutes ?? 0;
       const dayAppts = (await dbService.getAppointmentsByProfessional(professionalId))
         .filter(a => a.date === date && a.status !== 'cancelled');
       const conflict = dayAppts.some(a => {

@@ -30,6 +30,13 @@ export async function saveWhatsAppSettingsAction(input: {
   automation_day_of_enabled?: boolean;
   automation_day_of_message?: string;
   automation_day_of_time?: string;
+  automation_5days_enabled?: boolean;
+  automation_5days_message?: string;
+  automation_5days_time?: string;
+  automation_followup_enabled?: boolean;
+  automation_followup_days?: number;
+  automation_followup_message?: string;
+  automation_followup_time?: string;
   custom_variables?: Record<string, string>;
 }) {
   try {
@@ -53,6 +60,13 @@ export async function saveWhatsAppSettingsAction(input: {
       automation_day_of_enabled: input.automation_day_of_enabled ?? false,
       automation_day_of_message: input.automation_day_of_message?.trim() || null,
       automation_day_of_time: input.automation_day_of_time || '08:00',
+      automation_5days_enabled: input.automation_5days_enabled ?? false,
+      automation_5days_message: input.automation_5days_message?.trim() || null,
+      automation_5days_time: input.automation_5days_time || '10:00',
+      automation_followup_enabled: input.automation_followup_enabled ?? false,
+      automation_followup_days: input.automation_followup_days ?? 30,
+      automation_followup_message: input.automation_followup_message?.trim() || null,
+      automation_followup_time: input.automation_followup_time || '10:00',
       custom_variables: input.custom_variables ?? {},
     });
     return { success: true as const, settings };
