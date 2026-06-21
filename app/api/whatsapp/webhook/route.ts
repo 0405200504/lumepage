@@ -370,14 +370,21 @@ async function processMessage(professionalId: string, secret: string | null, bod
           serviceId: z.string().describe('ID do serviço'),
           data: z.string().describe('Data no formato YYYY-MM-DD'),
           horario: z.string().describe('Horário de início no formato HH:MM'),
-          nomeCliente: z.string().describe('Nome da cliente'),
+          nomeCliente: z.string().describe('Nome real da cliente, coletado explicitamente NESTA conversa. NUNCA invente, suponha ou use um placeholder como "Cliente". Se você ainda não perguntou o nome, pergunte antes de chamar esta ferramenta.'),
         }),
         execute: async ({ serviceId, data, horario, nomeCliente }: { serviceId: string; data: string; horario: string; nomeCliente: string }) => {
           console.log('[Bot Tool] agendar:', serviceId, data, horario, nomeCliente);
+          // Trava de segurança: não agenda com nome vazio/placeholder — devolve erro
+          // para a IA pedir o nome à cliente em vez de criar agendamento sem nome.
+          const nome = (nomeCliente || '').trim();
+          const nomeInvalido = nome.length < 2 || /^(cliente|cliente whatsapp|n[ãa]o informado|sem nome)$/i.test(nome);
+          if (nomeInvalido) {
+            return { success: false, error: 'NOME_AUSENTE: pergunte o nome da cliente antes de agendar e chame a ferramenta novamente com o nome real.' };
+          }
           const res = await createAppointmentAction({
             professionalId,
             serviceId,
-            clientName: nomeCliente,
+            clientName: nome,
             clientWhatsapp: clientPhone,
             date: data,
             startTime: horario,
