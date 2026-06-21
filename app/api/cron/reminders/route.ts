@@ -43,7 +43,9 @@ export async function GET(req: NextRequest) {
     const anyEnabled =
       settings.automation_booking_enabled ||
       settings.automation_day_before_enabled ||
-      settings.automation_day_of_enabled;
+      settings.automation_day_of_enabled ||
+      settings.automation_5days_enabled ||
+      settings.automation_followup_enabled;
     if (!anyEnabled) continue;
 
     try {
