@@ -241,6 +241,8 @@ export interface WhatsAppSettings {
   automation_followup_days: number;
   automation_followup_message: string | null;
   automation_followup_time: string;
+  // Números (somente dígitos, DDI 55) que o bot deve IGNORAR — não responde a eles
+  bot_blocked_numbers?: string[] | null;
   custom_variables?: Record<string, string> | null;
   created_at: string;
   updated_at: string;

@@ -2,6 +2,7 @@ import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
+import { normalizeWhatsapp } from '@/lib/whatsapp';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
 import { generateText, tool } from 'ai';
@@ -186,6 +187,13 @@ async function processMessage(professionalId: string, secret: string | null, bod
 
     const clientPhone = phoneFromJid(msg.chatid || '');
     if (!clientPhone) { console.warn('[Bot] número inválido:', msg.chatid); return; }
+
+    // Lista de números que a profissional bloqueou: o bot NÃO responde a eles.
+    const blockedNumbers = (waSettings.bot_blocked_numbers || []).map(normalizeWhatsapp).filter(Boolean);
+    if (blockedNumbers.includes(normalizeWhatsapp(clientPhone))) {
+      console.log('[Bot] número bloqueado pela profissional — ignorando', clientPhone);
+      return;
+    }
 
     const messageText = (msg.text || '').trim();
     if (!messageText) { console.log('[Bot] mensagem vazia'); return; }

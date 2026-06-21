@@ -53,6 +53,8 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [botPersona, setBotPersona] = useState(initialSettings?.bot_persona || '');
   const [stopKeyword, setStopKeyword] = useState(initialSettings?.stop_keyword || '#humano');
   const [bookingUrl, setBookingUrl] = useState(initialSettings?.booking_url || '');
+  // Números que o bot deve ignorar (um por linha)
+  const [blockedNumbersText, setBlockedNumbersText] = useState((initialSettings?.bot_blocked_numbers || []).join('\n'));
 
   // Automações
   const [autoBookingEnabled, setAutoBookingEnabled] = useState(initialSettings?.automation_booking_enabled ?? false);
@@ -153,6 +155,7 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       bot_persona: botPersona,
       stop_keyword: stopKeyword,
       booking_url: bookingUrl,
+      bot_blocked_numbers: blockedNumbersText.split('\n').map(s => s.trim()).filter(Boolean),
       automation_booking_enabled: autoBookingEnabled,
       automation_booking_message: autoBookingMessage,
       automation_booking_delay_minutes: autoBookingDelay,
@@ -582,6 +585,22 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Quando a cliente digitar essa palavra, o bot para e você assume a conversa.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Números que o bot deve ignorar
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder={'Um número por linha. Ex.:\n5515999999999\n5511988887777'}
+                    value={blockedNumbersText}
+                    onChange={e => setBlockedNumbersText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#efe9e6] text-sm focus:outline-none focus:ring-2 focus:ring-[#500b18]/20 bg-[#faf8f7] resize-none font-mono"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Um número por linha (com DDD). O bot nunca responde a esses contatos — útil para números pessoais, fornecedores ou parceiros. Pode digitar com ou sem o 55.
                   </p>
                 </div>
               </div>

@@ -1269,7 +1269,7 @@ export const dbService = {
       .single();
     if (error) {
       if (isMissingTable(error)) throw new Error('Rode supabase/migration_v8.sql no Supabase para ativar o bot WhatsApp.');
-      if (error.code === '42703') throw new Error('Rode supabase/migration_v16.sql no Supabase para ativar as novas automações (lembrete 5 dias e follow-up).');
+      if (error.code === '42703') throw new Error('Falta rodar uma migração no Supabase (migration_v16.sql para as automações 5 dias/follow-up; migration_v18.sql para a lista de números bloqueados).');
       throw error;
     }
     return data;

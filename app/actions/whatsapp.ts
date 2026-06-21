@@ -3,6 +3,7 @@
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
 import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode } from '@/lib/uazapi';
+import { normalizeWhatsapp } from '@/lib/whatsapp';
 
 async function getProfessionalId(): Promise<string | null> {
   try {
@@ -37,6 +38,7 @@ export async function saveWhatsAppSettingsAction(input: {
   automation_followup_days?: number;
   automation_followup_message?: string;
   automation_followup_time?: string;
+  bot_blocked_numbers?: string[];
   custom_variables?: Record<string, string>;
 }) {
   try {
@@ -67,6 +69,8 @@ export async function saveWhatsAppSettingsAction(input: {
       automation_followup_days: input.automation_followup_days ?? 30,
       automation_followup_message: input.automation_followup_message?.trim() || null,
       automation_followup_time: input.automation_followup_time || '10:00',
+      // Normaliza (só dígitos, DDI 55) e remove vazios/duplicados
+      bot_blocked_numbers: Array.from(new Set((input.bot_blocked_numbers ?? []).map(normalizeWhatsapp).filter(Boolean))),
       custom_variables: input.custom_variables ?? {},
     });
     return { success: true as const, settings };
