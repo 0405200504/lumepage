@@ -9,6 +9,9 @@ type PendingConv = WhatsAppConversation & { client_name?: string };
 
 interface Props {
   initialConversations: PendingConv[];
+  /** Quando true, exibe um estado vazio amigável em vez de não renderizar nada.
+      Usado na aba dedicada "Conversas"; na Início o widget some quando vazio. */
+  showEmptyState?: boolean;
 }
 
 function formatPhone(phone: string): string {
@@ -33,12 +36,27 @@ function lastClientMessage(messages: WhatsAppConversation['messages']): string {
   return clientMsgs.length > 0 ? clientMsgs[clientMsgs.length - 1].content : '';
 }
 
-export function PendingConversationsWidget({ initialConversations }: Props) {
+export function PendingConversationsWidget({ initialConversations, showEmptyState = false }: Props) {
   const [conversations, setConversations] = useState(initialConversations);
   const [isPending, startTransition] = useTransition();
   const [resuming, setResuming] = useState<string | null>(null);
 
-  if (conversations.length === 0) return null;
+  if (conversations.length === 0) {
+    if (!showEmptyState) return null;
+    return (
+      <div className="bg-white rounded-3xl border border-[#efe9e6] shadow-sm overflow-hidden">
+        <div className="flex flex-col items-center justify-center text-center px-6 py-14">
+          <div className="w-12 h-12 rounded-2xl bg-[#f7f3ee] flex items-center justify-center mb-4">
+            <MessageCircle className="h-5 w-5 text-gray-400" />
+          </div>
+          <h2 className="text-sm font-bold text-gray-900">Nenhuma conversa pendente</h2>
+          <p className="text-xs text-gray-400 mt-1 max-w-xs">
+            Quando o bot pausar um atendimento e a cliente precisar de você, a conversa aparece aqui.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleResume = (phone: string) => {
     setResuming(phone);

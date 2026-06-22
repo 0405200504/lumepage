@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot, MessageCircle
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -62,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
       { href: '/dashboard/blocks', label: 'Bloqueios', icon: Lock },
       { href: '/dashboard/clients', label: 'Clientes', icon: Users },
       { href: '/dashboard/finance', label: 'Contas', icon: Wallet },
+      { href: '/dashboard/pending', label: 'Conversas', icon: MessageCircle },
       { href: '/dashboard/whatsapp', label: 'Bot WhatsApp', icon: Bot },
       { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
     ];
@@ -106,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
             const Icon = link.icon;
             const isActive = pathname === link.href || (link.href !== '/dashboard' && link.href !== '/admin' && pathname.startsWith(link.href));
 
-            const badge = link.href === '/dashboard/whatsapp' && pendingConversations && pendingConversations > 0
+            const badge = link.href === '/dashboard/pending' && pendingConversations && pendingConversations > 0
               ? pendingConversations
               : null;
 
