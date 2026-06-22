@@ -116,7 +116,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const secondaryColor = professional.secondary_color || '#eccbd2';
 
   // Gerar os próximos 15 dias para seleção
-  const [availableDays, setAvailableDays] = useState<{ dateStr: string; label: string; weekdayLabel: string }[]>([]);
+  const [availableDays, setAvailableDays] = useState<{ dateStr: string; label: string; weekdayLabel: string; monthLabel: string }[]>([]);
 
   // Disparar evento de abertura do fluxo
   useEffect(() => {
@@ -127,15 +127,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   useEffect(() => {
     const days = [];
-    const maxDays = settings?.max_days_ahead || 30;
+    // Respeita a antecedência máxima configurada pela profissional (antes ficava
+    // travado em 15 dias, ignorando o ajuste). Teto de segurança de 365 dias para
+    // não gerar uma lista infinita por engano.
+    const maxDays = Math.min(settings?.max_days_ahead || 30, 365);
     const today = new Date();
-    
-    // Gerar até 15 dias livres respeitando o limite máximo definido
-    const limit = Math.min(15, maxDays);
-    for (let i = 0; i < limit; i++) {
+
+    for (let i = 0; i < maxDays; i++) {
       const current = new Date();
       current.setDate(today.getDate() + i);
-      
+
       const year = current.getFullYear();
       const month = (current.getMonth() + 1).toString().padStart(2, '0');
       const day = current.getDate().toString().padStart(2, '0');
@@ -143,11 +144,26 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
       const label = current.getDate().toString();
       const weekdayLabel = current.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').substring(0, 3);
-      
-      days.push({ dateStr, label, weekdayLabel });
+      // Rótulo do mês (capitalizado) para agrupar a lista quando há muitos dias.
+      const rawMonth = current.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const monthLabel = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+
+      days.push({ dateStr, label, weekdayLabel, monthLabel });
     }
     setAvailableDays(days);
   }, [settings]);
+
+  // Agrupa os dias por mês (a lista já vem em ordem cronológica) para renderizar
+  // com cabeçalho de mês — essencial quando a antecedência é longa (ex.: 300 dias).
+  const groupedDays = React.useMemo(() => {
+    const groups: { monthLabel: string; days: typeof availableDays }[] = [];
+    for (const day of availableDays) {
+      const last = groups[groups.length - 1];
+      if (last && last.monthLabel === day.monthLabel) last.days.push(day);
+      else groups.push({ monthLabel: day.monthLabel, days: [day] });
+    }
+    return groups;
+  }, [availableDays]);
 
   // Carregar slots quando mudar de data (usa a soma das durações dos serviços escolhidos)
   useEffect(() => {
@@ -443,26 +459,37 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               <p className="text-xs text-gray-450 mt-1">Selecione o dia em que deseja realizar seu atendimento:</p>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
-              {availableDays.map((day) => {
-                const isSelected = selectedDate === day.dateStr;
-                return (
-                  <button
-                    key={day.dateStr}
-                    onClick={() => handleSelectDate(day.dateStr)}
-                    className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border cursor-pointer ${
-                      isSelected
-                        ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-md'
-                        : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    <span className="text-[9px] uppercase font-bold tracking-wider leading-none opacity-80 mb-1">
-                      {day.weekdayLabel}
-                    </span>
-                    <span className="text-sm font-black leading-none">{day.label}</span>
-                  </button>
-                );
-              })}
+            {/* Área rolável: com antecedência longa (ex.: 300 dias) a lista é grande,
+                então limitamos a altura e agrupamos por mês para facilitar a navegação. */}
+            <div className="max-h-[22rem] overflow-y-auto pr-1 -mr-1 space-y-4">
+              {groupedDays.map((group) => (
+                <div key={group.monthLabel} className="space-y-2.5">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide sticky top-0 bg-white/95 py-1 z-10">
+                    {group.monthLabel}
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
+                    {group.days.map((day) => {
+                      const isSelected = selectedDate === day.dateStr;
+                      return (
+                        <button
+                          key={day.dateStr}
+                          onClick={() => handleSelectDate(day.dateStr)}
+                          className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border cursor-pointer ${
+                            isSelected
+                              ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-md'
+                              : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          <span className="text-[9px] uppercase font-bold tracking-wider leading-none opacity-80 mb-1">
+                            {day.weekdayLabel}
+                          </span>
+                          <span className="text-sm font-black leading-none">{day.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
