@@ -558,6 +558,25 @@ export const dbService = {
     return mockDb.getAppointmentsByProfessional(profId).filter(a => a.date === dateStr && a.status !== 'cancelled');
   },
 
+  // Agendamentos de um INTERVALO de datas (uma consulta só). Usado para marcar de
+  // uma vez os dias sem horário na página pública. Já vem sem cancelados/lixeira.
+  getAppointmentsByProfessionalInRange: async (profId: string, startDate: string, endDate: string): Promise<Appointment[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .select('id, date, start_time, end_time, status')
+        .eq('professional_id', profId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .is('deleted_at', null)
+        .neq('status', 'cancelled');
+      if (error) throw error;
+      return (data || []) as Appointment[];
+    }
+    return mockDb.getAppointmentsByProfessional(profId)
+      .filter(a => a.date >= startDate && a.date <= endDate && a.status !== 'cancelled');
+  },
+
   // Agendamentos na lixeira (soft-deleted) — para a tela de Lixeira
   getTrashedAppointments: async (profId: string): Promise<Appointment[]> => {
     if (isSupabaseConfigured) {

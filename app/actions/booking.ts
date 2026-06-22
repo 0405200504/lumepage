@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
-import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
+import { getAvailableSlots, getDaysAvailability, timeToMinutes } from '@/lib/appointments/slots';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
@@ -108,6 +108,24 @@ export async function getSlotsForServicesAction(professionalId: string, dateStr:
     return { success: true, slots };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao calcular horários livres.' };
+  }
+}
+
+/**
+ * Para a lista de dias da página pública: indica quais datas NÃO têm horário livre,
+ * para a interface riscar essas datas. Calcula em lote (eficiente) com a duração
+ * somada dos serviços escolhidos.
+ */
+export async function getDaysAvailabilityAction(professionalId: string, dateStrs: string[], serviceIds: string[]) {
+  try {
+    if (!dateStrs?.length) return { success: true, availability: {} as Record<string, boolean> };
+    const services = (await dbService.getServicesByIds(serviceIds)).filter(s => s.is_active && s.client_visible !== false);
+    if (!services.length) return { success: false, error: 'Serviço indisponível.' };
+    const duration = sumDurationMinutes(services);
+    const availability = await getDaysAvailability(professionalId, dateStrs, duration);
+    return { success: true, availability };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao calcular disponibilidade dos dias.' };
   }
 }
 
