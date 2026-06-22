@@ -14,6 +14,7 @@ export default async function AdminDashboardPage() {
   const professionals = await dbService.getProfessionals();
   const appointments = await dbService.getAllAppointments();
   const clients = await dbService.getAllClients();
+  const storage = await dbService.getDatabaseStats();
 
   const now = new Date();
   const todayISO = now.toISOString().split('T')[0];
@@ -57,6 +58,7 @@ export default async function AdminDashboardPage() {
         series={series}
         status={status}
         recent={recent}
+        storage={storage}
       />
     </LayoutAdmin>
   );
