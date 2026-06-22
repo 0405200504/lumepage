@@ -6,7 +6,7 @@ import {
   Calendar as CalendarIcon, Clock, User, MessageSquare,
   ChevronRight, ArrowLeft, Check, MessageCircle, CheckCircle2, AlertTriangle, Wallet
 } from 'lucide-react';
-import { getSlotsForServicesAction, createAppointmentAction } from '@/app/actions/booking';
+import { getSlotsForServicesAction, createAppointmentAction, getDaysAvailabilityAction } from '@/app/actions/booking';
 import { addToWaitlistAction } from '@/app/actions/waitlist';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { useToast } from '../ui/Toast';
@@ -116,7 +116,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const secondaryColor = professional.secondary_color || '#eccbd2';
 
   // Gerar os próximos 15 dias para seleção
-  const [availableDays, setAvailableDays] = useState<{ dateStr: string; label: string; weekdayLabel: string }[]>([]);
+  const [availableDays, setAvailableDays] = useState<{ dateStr: string; label: string; weekdayLabel: string; monthLabel: string }[]>([]);
 
   // Disparar evento de abertura do fluxo
   useEffect(() => {
@@ -127,15 +127,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   useEffect(() => {
     const days = [];
-    const maxDays = settings?.max_days_ahead || 30;
+    // Respeita a antecedência máxima configurada pela profissional (antes ficava
+    // travado em 15 dias, ignorando o ajuste). Teto de segurança de 365 dias para
+    // não gerar uma lista infinita por engano.
+    const maxDays = Math.min(settings?.max_days_ahead || 30, 365);
     const today = new Date();
-    
-    // Gerar até 15 dias livres respeitando o limite máximo definido
-    const limit = Math.min(15, maxDays);
-    for (let i = 0; i < limit; i++) {
+
+    for (let i = 0; i < maxDays; i++) {
       const current = new Date();
       current.setDate(today.getDate() + i);
-      
+
       const year = current.getFullYear();
       const month = (current.getMonth() + 1).toString().padStart(2, '0');
       const day = current.getDate().toString().padStart(2, '0');
@@ -143,11 +144,55 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
       const label = current.getDate().toString();
       const weekdayLabel = current.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').substring(0, 3);
-      
-      days.push({ dateStr, label, weekdayLabel });
+      // Rótulo do mês (capitalizado) para agrupar a lista quando há muitos dias.
+      const rawMonth = current.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const monthLabel = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+
+      days.push({ dateStr, label, weekdayLabel, monthLabel });
     }
     setAvailableDays(days);
   }, [settings]);
+
+  // Datas SEM horário livre (para riscar na lista). Recalculado quando muda a
+  // seleção de serviços (a duração afeta a disponibilidade) ou a lista de dias.
+  const [unavailableDays, setUnavailableDays] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (selectedServices.length === 0 || availableDays.length === 0) {
+      setUnavailableDays(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getDaysAvailabilityAction(
+          professional.id,
+          availableDays.map(d => d.dateStr),
+          selectedServices.map(s => s.id),
+        );
+        if (cancelled || !res.success || !res.availability) return;
+        const closed = new Set<string>();
+        for (const [dateStr, hasSlot] of Object.entries(res.availability)) {
+          if (!hasSlot) closed.add(dateStr);
+        }
+        setUnavailableDays(closed);
+      } catch { /* silencioso: em erro, nenhum dia é riscado */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableDays, selectedServices.map(s => s.id).join(','), professional.id]);
+
+  // Agrupa os dias por mês (a lista já vem em ordem cronológica) para renderizar
+  // com cabeçalho de mês — essencial quando a antecedência é longa (ex.: 300 dias).
+  const groupedDays = React.useMemo(() => {
+    const groups: { monthLabel: string; days: typeof availableDays }[] = [];
+    for (const day of availableDays) {
+      const last = groups[groups.length - 1];
+      if (last && last.monthLabel === day.monthLabel) last.days.push(day);
+      else groups.push({ monthLabel: day.monthLabel, days: [day] });
+    }
+    return groups;
+  }, [availableDays]);
 
   // Carregar slots quando mudar de data (usa a soma das durações dos serviços escolhidos)
   useEffect(() => {
@@ -194,6 +239,17 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       setSelectedDate(availableDays[0].dateStr);
     }
   };
+
+  // Quando a disponibilidade dos dias carrega: se o dia atualmente selecionado não
+  // tem horário (ou nenhum está selecionado), move a seleção para o primeiro dia livre.
+  useEffect(() => {
+    if (availableDays.length === 0) return;
+    const currentIsBad = !selectedDate || unavailableDays.has(selectedDate);
+    if (!currentIsBad) return;
+    const firstFree = availableDays.find(d => !unavailableDays.has(d.dateStr));
+    setSelectedDate(firstFree ? firstFree.dateStr : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unavailableDays, availableDays]);
 
   const handleSelectDate = (dateStr: string) => {
     setSelectedDate(dateStr);
@@ -443,27 +499,51 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               <p className="text-xs text-gray-450 mt-1">Selecione o dia em que deseja realizar seu atendimento:</p>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
-              {availableDays.map((day) => {
-                const isSelected = selectedDate === day.dateStr;
-                return (
-                  <button
-                    key={day.dateStr}
-                    onClick={() => handleSelectDate(day.dateStr)}
-                    className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border cursor-pointer ${
-                      isSelected
-                        ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-md'
-                        : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    <span className="text-[9px] uppercase font-bold tracking-wider leading-none opacity-80 mb-1">
-                      {day.weekdayLabel}
-                    </span>
-                    <span className="text-sm font-black leading-none">{day.label}</span>
-                  </button>
-                );
-              })}
+            {/* Área rolável: com antecedência longa (ex.: 300 dias) a lista é grande,
+                então limitamos a altura e agrupamos por mês para facilitar a navegação. */}
+            <div className="max-h-[22rem] overflow-y-auto pr-1 -mr-1 space-y-4">
+              {groupedDays.map((group) => (
+                <div key={group.monthLabel} className="space-y-2.5">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide sticky top-0 bg-white/95 py-1 z-10">
+                    {group.monthLabel}
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
+                    {group.days.map((day) => {
+                      const isSelected = selectedDate === day.dateStr;
+                      const isUnavailable = unavailableDays.has(day.dateStr);
+                      return (
+                        <button
+                          key={day.dateStr}
+                          onClick={() => !isUnavailable && handleSelectDate(day.dateStr)}
+                          disabled={isUnavailable}
+                          title={isUnavailable ? 'Sem horários disponíveis neste dia' : undefined}
+                          className={`flex flex-col items-center justify-center py-3.5 px-2.5 rounded-xl text-center transition-all border ${
+                            isUnavailable
+                              ? 'bg-gray-50 border-gray-100 text-gray-300 line-through cursor-not-allowed'
+                              : isSelected
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-md cursor-pointer'
+                                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200 cursor-pointer'
+                          }`}
+                        >
+                          <span className="text-[9px] uppercase font-bold tracking-wider leading-none opacity-80 mb-1">
+                            {day.weekdayLabel}
+                          </span>
+                          <span className="text-sm font-black leading-none">{day.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {/* Legenda: explica o que são as datas riscadas (só aparece se houver alguma) */}
+            {unavailableDays.size > 0 && (
+              <p className="text-[11px] text-gray-450 flex items-center gap-1.5">
+                <span className="text-gray-300 line-through font-bold">00</span>
+                <span>As datas riscadas não têm horários disponíveis para o serviço escolhido.</span>
+              </p>
+            )}
           </div>
         )}
 
