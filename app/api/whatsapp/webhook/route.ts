@@ -16,8 +16,9 @@ import {
   type BotContext,
   type BookableService,
 } from '@/lib/whatsapp/bot-core';
-import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
+import { createAppointmentAction } from '@/app/actions/booking';
 import type { Appointment } from '@/types/database';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 
@@ -63,6 +64,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Sem secret na URL não há como autenticar a chamada — rejeita sem tocar no banco.
+  // (Antes, a ausência de secret ainda processava a mensagem e gravava no banco,
+  // permitindo a qualquer um queimar OpenAI/uazapi e inflar linhas só com o pid.)
+  if (!secret) {
+    console.warn('[WhatsApp Webhook] secret ausente na URL — recusado');
+    return NextResponse.json({ ok: true });
+  }
+
+  // Rate limit por instância (pid): teto de chamadas processadas por minuto. Corta
+  // enxurrada de webhooks que dispararia muitas chamadas de IA. O secret ainda é
+  // validado dentro de processMessage; isto é uma barreira adicional barata.
+  const rl = rateLimit(`wh:${pid}`, 40, 60 * 1000);
+  if (!rl.ok) {
+    console.warn('[WhatsApp Webhook] rate limit atingido para pid', pid);
+    return NextResponse.json({ ok: true });
+  }
+
   let body: UazapiMessagePayload;
   try {
     body = await req.json();
@@ -72,10 +90,8 @@ export async function POST(req: NextRequest) {
 
   console.log('[WhatsApp Webhook] evento:', body.EventType, '| tipo:', body.message?.type, '| fromMe:', body.message?.fromMe, '| de:', body.message?.chatid);
 
-  // Registra que a uazapi chamou nosso webhook (para diagnóstico no painel)
-  await dbService.upsertWhatsAppConversation(pid, '_debug_last_call', [
-    { role: 'user' as const, content: JSON.stringify({ EventType: body.EventType, fromMe: body.message?.fromMe, isGroup: body.message?.isGroup, type: body.message?.type, chatid: body.message?.chatid }), at: Date.now() }
-  ]).catch(() => {});
+  // O registro de diagnóstico (_debug_last_call) só é gravado DEPOIS de validar o
+  // secret, dentro de processMessage — evita escrita não autenticada no banco.
 
   // after() responde à uazapi IMEDIATAMENTE (< 200ms) e continua o processamento
   // em background — elimina qualquer risco de timeout da uazapi.
@@ -183,7 +199,14 @@ async function processMessage(professionalId: string, secret: string | null, bod
     if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
     if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
     if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
-    if (secret && waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido'); return; }
+    // Fail-closed: exige webhook_secret configurado E igual ao recebido. Sem secret
+    // configurado, ninguém consegue acionar o bot desta profissional.
+    if (!waSettings.webhook_secret || waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido ou não configurado'); return; }
+
+    // Diagnóstico: registra a chamada DEPOIS de validar o secret (escrita autenticada).
+    await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_call', [
+      { role: 'user' as const, content: JSON.stringify({ EventType: body.EventType, fromMe: body.message?.fromMe, isGroup: body.message?.isGroup, type: body.message?.type, chatid: body.message?.chatid }), at: Date.now() }
+    ]).catch(() => {});
 
     const clientPhone = phoneFromJid(msg.chatid || '');
     if (!clientPhone) { console.warn('[Bot] número inválido:', msg.chatid); return; }

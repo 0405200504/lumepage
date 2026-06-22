@@ -251,12 +251,24 @@ export const dbService = {
 
   upsertService: async (data: Partial<Service> & { id: string; professional_id: string }): Promise<Service> => {
     if (isSupabaseConfigured) {
-      // Proteção: se o id não for um UUID válido, remove para o banco gerar (evita erro 22P02)
-      const payload: Record<string, unknown> = { ...data, updated_at: new Date().toISOString() };
-      if (!isUuid(data.id)) delete payload.id;
+      const { id, professional_id, ...patch } = data;
+      // UPDATE escopado por id + professional_id: garante que a profissional só
+      // edita os PRÓPRIOS serviços (um id de outra profissional não casa nenhuma linha).
+      // Se o id não for um UUID válido, é criação → insere deixando o banco gerar o id.
+      if (isUuid(id)) {
+        const { data: result, error } = await getDb()
+          .from('services')
+          .update({ ...patch, professional_id, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .eq('professional_id', professional_id)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
       const { data: result, error } = await getDb()
         .from('services')
-        .upsert(payload)
+        .insert({ ...patch, professional_id })
         .select()
         .single();
       if (error) throw error;
@@ -265,12 +277,13 @@ export const dbService = {
     return mockDb.upsertService(data);
   },
 
-  deleteService: async (id: string): Promise<boolean> => {
+  deleteService: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()
         .from('services')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -331,12 +344,13 @@ export const dbService = {
     return mockDb.createTimeBlock(data);
   },
 
-  deleteTimeBlock: async (id: string): Promise<boolean> => {
+  deleteTimeBlock: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()
         .from('time_blocks')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -482,15 +496,14 @@ export const dbService = {
   },
 
   // Ficha técnica / observações da cliente (requer migração v7). Retorna false se a coluna não existir.
-  updateClientNotes: async (id: string, notes: string): Promise<boolean> => {
+  updateClientNotes: async (id: string, notes: string, professionalId?: string): Promise<boolean> => {
     if (!isSupabaseConfigured) {
       mockDb.updateClient(id, { notes });
       return true;
     }
-    const { error } = await getDb()
-      .from('clients')
-      .update({ notes })
-      .eq('id', id);
+    let q = getDb().from('clients').update({ notes }).eq('id', id);
+    if (professionalId) q = q.eq('professional_id', professionalId);
+    const { error } = await q;
     if (error) {
       console.warn('[clients] Coluna notes ausente — rode supabase/migration_v7.sql:', error.message);
       return false;
@@ -512,6 +525,24 @@ export const dbService = {
       return data || [];
     }
     return mockDb.getAppointmentsByProfessional(profId);
+  },
+
+  // Agendamentos de UM dia específico (filtro no banco, não em JS). Usado pelo
+  // cálculo de horários livres — evita carregar todo o histórico a cada consulta
+  // (o bot chama isto várias vezes por mensagem). Requer índice (professional_id, date).
+  getAppointmentsByProfessionalAndDate: async (profId: string, dateStr: string): Promise<Appointment[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .select('*, service:services(*)')
+        .eq('professional_id', profId)
+        .eq('date', dateStr)
+        .is('deleted_at', null)
+        .neq('status', 'cancelled');
+      if (error) throw error;
+      return data || [];
+    }
+    return mockDb.getAppointmentsByProfessional(profId).filter(a => a.date === dateStr && a.status !== 'cancelled');
   },
 
   // Agendamentos na lixeira (soft-deleted) — para a tela de Lixeira
@@ -629,7 +660,7 @@ export const dbService = {
     return mockDb.createAppointment(data);
   },
 
-  updateAppointmentStatus: async (id: string, status: AppointmentStatus, cancellationReason?: string): Promise<Appointment | null> => {
+  updateAppointmentStatus: async (id: string, status: AppointmentStatus, cancellationReason?: string, professionalId?: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
       const patch: Record<string, unknown> = {
         status,
@@ -643,12 +674,11 @@ export const dbService = {
         patch.automation_day_before_sent_at = null;
         patch.automation_day_of_sent_at = null;
       }
-      const { data, error } = await getDb()
-        .from('appointments')
-        .update(patch)
-        .eq('id', id)
-        .select()
-        .single();
+      let q = getDb().from('appointments').update(patch).eq('id', id);
+      // Escopo por dono quando informado (chamadas de painel): impede alterar
+      // agendamento de outra profissional via id arbitrário.
+      if (professionalId) q = q.eq('professional_id', professionalId);
+      const { data, error } = await q.select().maybeSingle();
       if (error) throw error;
       return data;
     }
@@ -657,7 +687,8 @@ export const dbService = {
 
   updateAppointment: async (
     id: string,
-    patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'service_ids' | 'notes' | 'status' | 'payment_method'>>
+    patch: Partial<Pick<Appointment, 'date' | 'start_time' | 'end_time' | 'service_id' | 'service_ids' | 'notes' | 'status' | 'payment_method'>>,
+    professionalId?: string
   ): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
       const dbPatch: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
@@ -671,21 +702,18 @@ export const dbService = {
         dbPatch.automation_day_before_sent_at = null;
         dbPatch.automation_day_of_sent_at = null;
       }
-      const { data, error } = await getDb()
-        .from('appointments')
-        .update(dbPatch)
-        .eq('id', id)
-        .select('*, service:services(*)')
-        .single();
+      let q = getDb().from('appointments').update(dbPatch).eq('id', id);
+      if (professionalId) q = q.eq('professional_id', professionalId);
+      const { data, error } = await q.select('*, service:services(*)').maybeSingle();
       if (error) throw error;
       return data;
     }
     return null;
   },
 
-  updateAppointmentSchedule: async (id: string, date: string, startTime: string, endTime: string): Promise<Appointment | null> => {
+  updateAppointmentSchedule: async (id: string, date: string, startTime: string, endTime: string, professionalId?: string): Promise<Appointment | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await getDb()
+      let q = getDb()
         .from('appointments')
         .update({
           date,
@@ -697,9 +725,9 @@ export const dbService = {
           automation_day_of_sent_at: null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
-        .select()
-        .single();
+        .eq('id', id);
+      if (professionalId) q = q.eq('professional_id', professionalId);
+      const { data, error } = await q.select().maybeSingle();
       if (error) throw error;
       return data;
     }
@@ -708,12 +736,13 @@ export const dbService = {
 
   // Soft-delete: manda o agendamento para a lixeira (não apaga de verdade) e
   // remove a receita automática vinculada (se houver).
-  deleteAppointment: async (id: string): Promise<boolean> => {
+  deleteAppointment: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()
         .from('appointments')
         .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('professional_id', professionalId);
       if (error) throw error;
       await dbService.deleteTransactionsByAppointment(id).catch(() => {});
       return true;
@@ -721,12 +750,13 @@ export const dbService = {
     return mockDb.deleteAppointment(id);
   },
 
-  restoreAppointment: async (id: string): Promise<boolean> => {
+  restoreAppointment: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { error } = await getDb()
         .from('appointments')
         .update({ deleted_at: null })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('professional_id', professionalId);
       if (error) throw error;
       // Se voltar como concluído, recria a receita automática
       await dbService.syncAppointmentRevenue(id).catch(() => {});
@@ -736,9 +766,9 @@ export const dbService = {
   },
 
   // Exclusão DEFINITIVA (esvaziar a lixeira)
-  purgeAppointment: async (id: string): Promise<boolean> => {
+  purgeAppointment: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('appointments').delete().eq('id', id);
+      const { error } = await getDb().from('appointments').delete().eq('id', id).eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -778,9 +808,9 @@ export const dbService = {
     return mockDb.createTransaction(data);
   },
 
-  deleteTransaction: async (id: string): Promise<boolean> => {
+  deleteTransaction: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('transactions').delete().eq('id', id);
+      const { error } = await getDb().from('transactions').delete().eq('id', id).eq('professional_id', professionalId);
       if (error && !isMissingTable(error)) throw error;
       return true;
     }
@@ -888,9 +918,11 @@ export const dbService = {
     return mockDb.createTask(data);
   },
 
-  toggleTask: async (id: string, done: boolean): Promise<Task | null> => {
+  toggleTask: async (id: string, done: boolean, professionalId?: string): Promise<Task | null> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await getDb().from('tasks').update({ done }).eq('id', id).select().single();
+      let q = getDb().from('tasks').update({ done }).eq('id', id);
+      if (professionalId) q = q.eq('professional_id', professionalId);
+      const { data, error } = await q.select().maybeSingle();
       if (error) { if (isMissingTable(error)) return null; throw error; }
       return data;
     }
@@ -898,18 +930,22 @@ export const dbService = {
   },
 
   // Atualiza conteúdo/horário da tarefa (due_date/due_time best-effort — migração v5)
-  updateTask: async (id: string, fields: Partial<Pick<Task, 'content' | 'done' | 'due_date' | 'due_time'>>): Promise<boolean> => {
+  updateTask: async (id: string, fields: Partial<Pick<Task, 'content' | 'done' | 'due_date' | 'due_time'>>, professionalId?: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
       const { due_date, due_time, ...core } = fields;
       if (Object.keys(core).length) {
-        const { error } = await getDb().from('tasks').update(core).eq('id', id);
+        let q = getDb().from('tasks').update(core).eq('id', id);
+        if (professionalId) q = q.eq('professional_id', professionalId);
+        const { error } = await q;
         if (error && !isMissingTable(error)) throw error;
       }
       if (due_date !== undefined || due_time !== undefined) {
         const extra: Record<string, unknown> = {};
         if (due_date !== undefined) extra.due_date = due_date;
         if (due_time !== undefined) extra.due_time = due_time;
-        const { error } = await getDb().from('tasks').update(extra).eq('id', id);
+        let q = getDb().from('tasks').update(extra).eq('id', id);
+        if (professionalId) q = q.eq('professional_id', professionalId);
+        const { error } = await q;
         if (error && !isMissingTable(error)) console.warn('[tasks] due fields ausentes — rode supabase/migration_v5.sql:', error.message);
       }
       return true;
@@ -917,9 +953,9 @@ export const dbService = {
     return mockDb.updateTask(id, fields);
   },
 
-  deleteTask: async (id: string): Promise<boolean> => {
+  deleteTask: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('tasks').delete().eq('id', id);
+      const { error } = await getDb().from('tasks').delete().eq('id', id).eq('professional_id', professionalId);
       if (error && !isMissingTable(error)) throw error;
       return true;
     }
@@ -936,10 +972,11 @@ export const dbService = {
     return mockDb.deleteClient(id);
   },
 
-  deleteClientsByIds: async (ids: string[]): Promise<boolean> => {
+  deleteClientsByIds: async (ids: string[], professionalId: string): Promise<boolean> => {
     if (!ids.length) return true;
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').update({ deleted_at: new Date().toISOString() }).in('id', ids);
+      const { error } = await getDb().from('clients').update({ deleted_at: new Date().toISOString() })
+        .in('id', ids).eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -956,10 +993,11 @@ export const dbService = {
     return mockDb.deleteAllClientsForProfessional(profId);
   },
 
-  restoreClients: async (ids: string[]): Promise<boolean> => {
+  restoreClients: async (ids: string[], professionalId: string): Promise<boolean> => {
     if (!ids.length) return true;
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').update({ deleted_at: null }).in('id', ids);
+      const { error } = await getDb().from('clients').update({ deleted_at: null })
+        .in('id', ids).eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -967,10 +1005,10 @@ export const dbService = {
   },
 
   // Exclusão DEFINITIVA de clientes (esvaziar a lixeira)
-  purgeClients: async (ids: string[]): Promise<boolean> => {
+  purgeClients: async (ids: string[], professionalId: string): Promise<boolean> => {
     if (!ids.length) return true;
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('clients').delete().in('id', ids);
+      const { error } = await getDb().from('clients').delete().in('id', ids).eq('professional_id', professionalId);
       if (error) throw error;
       return true;
     }
@@ -1010,9 +1048,9 @@ export const dbService = {
     return mockDb.createFixedExpense(data);
   },
 
-  deleteFixedExpense: async (id: string): Promise<boolean> => {
+  deleteFixedExpense: async (id: string, professionalId: string): Promise<boolean> => {
     if (isSupabaseConfigured) {
-      const { error } = await getDb().from('fixed_expenses').delete().eq('id', id);
+      const { error } = await getDb().from('fixed_expenses').delete().eq('id', id).eq('professional_id', professionalId);
       if (error && !isMissingTable(error)) throw error;
       return true;
     }

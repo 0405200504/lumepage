@@ -3,8 +3,17 @@ import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { dbService } from '../supabase/db';
 import { Profile } from '@/types/database';
 import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
+import { signSession, verifySession } from './cookie';
 
 const SESSION_COOKIE_NAME = 'lume_session';
+
+const SESSION_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 60 * 60 * 24 * 7, // 7 dias
+  path: '/',
+};
 
 export interface SessionData {
   profile_id: string;
@@ -60,13 +69,7 @@ export const authService = {
           const sessionData: SessionData = buildSession(profile, authData.user.id);
 
           const cookieStore = await cookies();
-          cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7, // 7 dias
-            path: '/'
-          });
+          cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
 
           return { success: true, profile };
         }
@@ -86,13 +89,7 @@ export const authService = {
     const sessionData: SessionData = buildSession(profile, null);
 
     const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-      path: '/'
-    });
+    cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
 
     return { success: true, profile };
   },
@@ -110,13 +107,7 @@ export const authService = {
       is_salon_manager: false,
     };
     const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, Buffer.from(JSON.stringify(sessionData)).toString('base64'), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
     return true;
   },
 
@@ -164,9 +155,10 @@ export const authService = {
         return null;
       }
 
-      // Decodificar dados do cookie em base64
-      const decoded = Buffer.from(cookie.value, 'base64').toString('utf8');
-      const sessionData = JSON.parse(decoded) as SessionData;
+      // Valida a assinatura HMAC do cookie. Cookie forjado/adulterado → null
+      // (cai como não autenticado), em vez de ser aceito como antes.
+      const sessionData = verifySession<SessionData>(cookie.value);
+      if (!sessionData) return null;
       return sessionData;
     } catch (e: any) {
       if (e.digest === 'DYNAMIC_SERVER_USAGE' || (e.message && e.message.includes('Dynamic server usage'))) {

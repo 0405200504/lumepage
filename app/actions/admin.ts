@@ -1,5 +1,6 @@
 'use server';
 
+import { randomBytes } from 'crypto';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
@@ -57,7 +58,9 @@ export async function createProfessionalAction(input: CreateProfessionalInput) {
     const isSupabase = isSupabaseConfigured;
     const finalProfId = isSupabase ? crypto.randomUUID() : (Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 9));
     let finalOwnerId: string | null = null;
-    const tempPassword = 'Lume' + whatsapp.substring(0, 4) + '!';
+    // Senha temporária ALEATÓRIA e forte (antes era 'Lume'+telefone[0:4]+'!', adivinhável
+    // por quem soubesse o telefone). O admin compartilha esta senha e a profissional troca.
+    const tempPassword = 'Lm-' + randomBytes(9).toString('base64url');
 
     // 2. Criar profissional no banco de dados primeiro
     const newProf = await dbService.createProfessional({

@@ -69,9 +69,9 @@ export async function getAvailableSlots(
       return [];
     }
 
-    // 4. Carregar Agendamentos do dia (não cancelados)
-    const appointments = await dbService.getAppointmentsByProfessional(professionalId);
-    const dayAppointments = appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
+    // 4. Carregar Agendamentos do dia (filtro por data feito no banco — não carrega
+    // o histórico inteiro a cada chamada; já vem sem cancelados/lixeira).
+    const dayAppointments = await dbService.getAppointmentsByProfessionalAndDate(professionalId, dateStr);
 
     // 5. Definir janelas de horários em minutos
     const workStart = timeToMinutes(rule.start_time);

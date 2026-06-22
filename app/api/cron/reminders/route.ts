@@ -11,11 +11,16 @@ export const maxDuration = 60;
 // com header Authorization: Bearer <CRON_SECRET>
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization')?.replace('Bearer ', '');
-    if (auth !== secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Fail-closed: sem CRON_SECRET configurado, o endpoint é recusado. Antes, a
+  // ausência da env deixava o endpoint PÚBLICO — qualquer um disparava o envio
+  // em massa de WhatsApp (e custo). Agora exige o segredo sempre.
+  if (!secret) {
+    console.error('[cron/reminders] CRON_SECRET não configurado — endpoint desabilitado.');
+    return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
+  }
+  const auth = req.headers.get('authorization')?.replace('Bearer ', '');
+  if (auth !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Hora atual no fuso de Brasília

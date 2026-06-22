@@ -1,10 +1,12 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { AppointmentStatus, Service, AvailabilityRule, Professional, Setting, BlockType } from '@/types/database';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
+import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
@@ -136,7 +138,7 @@ export async function deleteServiceAction(professionalId: string, serviceId: str
       return { success: false, error: 'Não autorizado.' };
     }
 
-    await dbService.deleteService(serviceId);
+    await dbService.deleteService(serviceId, professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao excluir serviço.' };
@@ -173,7 +175,7 @@ export async function deleteTimeBlockAction(professionalId: string, blockId: str
       return { success: false, error: 'Não autorizado.' };
     }
 
-    await dbService.deleteTimeBlock(blockId);
+    await dbService.deleteTimeBlock(blockId, professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao excluir bloqueio.' };
@@ -199,7 +201,8 @@ export async function updateAppointmentAction(
       ...('notes' in patch && { notes: patch.notes ?? null }),
       ...('paymentMethod' in patch && { payment_method: patch.paymentMethod ?? null }),
       ...(patch.status && { status: patch.status }),
-    });
+    }, professionalId);
+    if (!result) return { success: false, error: 'Agendamento não encontrado.' };
     // Mantém a receita automática em sincronia com o status atual
     await dbService.syncAppointmentRevenue(appointmentId).catch(() => {});
     return { success: true, appointment: result };
@@ -216,7 +219,7 @@ export async function updateAppointmentStatusAction(appointmentId: string, profe
       return { success: false, error: 'Não autorizado.' };
     }
 
-    const result = await dbService.updateAppointmentStatus(appointmentId, status, cancellationReason);
+    const result = await dbService.updateAppointmentStatus(appointmentId, status, cancellationReason, professionalId);
     if (!result) {
       return { success: false, error: 'Agendamento não encontrado.' };
     }
@@ -236,7 +239,7 @@ export async function deleteAppointmentAction(appointmentId: string, professiona
       return { success: false, error: 'Não autorizado.' };
     }
 
-    await dbService.deleteAppointment(appointmentId);
+    await dbService.deleteAppointment(appointmentId, professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao excluir agendamento.' };
@@ -257,7 +260,7 @@ export async function restoreAppointmentAction(appointmentId: string, profession
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.restoreAppointment(appointmentId);
+    await dbService.restoreAppointment(appointmentId, professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao restaurar agendamento.' };
@@ -268,7 +271,7 @@ export async function purgeAppointmentAction(appointmentId: string, professional
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorizeAction(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.purgeAppointment(appointmentId);
+    await dbService.purgeAppointment(appointmentId, professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao excluir definitivamente.' };
@@ -289,11 +292,14 @@ export async function loginDemoAction() {
 
 // 8. Login no sistema
 export async function loginAction(email: string, password?: string) {
-  console.log('[ACTIONS_LOGIN] loginAction chamada com:', { email, password: password ? '********' : 'não fornecido' });
-  console.log('[ACTIONS_LOGIN] isSupabaseConfigured:', isSupabaseConfigured);
-  const result = await authService.login(email, password);
-  console.log('[ACTIONS_LOGIN] Resultado do login:', result);
-  return result;
+  // Rate limit por IP: corta brute force de senha (best-effort por instância).
+  const ip = ipFromHeaders(await headers());
+  const rl = rateLimit(`login:${ip}`, 10, 5 * 60 * 1000); // 10 tentativas / 5 min
+  if (!rl.ok) {
+    return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
+  }
+  // Não logar e-mail, senha nem o resultado do login (PII/credenciais nos logs da Vercel).
+  return authService.login(email, password);
 }
 
 // 9. Cadastro de profissional
@@ -305,7 +311,20 @@ export async function registerProfessionalAction(data: {
   password?: string;
 }) {
   const cleanEmail = data.email.trim().toLowerCase();
-  
+
+  // Rate limit por IP: evita criação em massa de contas (lixo no banco / abuso).
+  const ip = ipFromHeaders(await headers());
+  const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000); // 5 cadastros / hora
+  if (!rl.ok) {
+    return { success: false, error: `Muitas tentativas de cadastro. Tente novamente em ${Math.ceil(rl.retryAfterSeconds / 60)} min.` };
+  }
+
+  // Exige senha forte no cadastro — sem mais fallback fixo ('lume123456') que deixava
+  // contas com senha pública e adivinhável.
+  if (!data.password || data.password.length < 8) {
+    return { success: false, error: 'Crie uma senha de pelo menos 8 caracteres.' };
+  }
+
   if (isSupabaseConfigured) {
     try {
       // 1. Gerar um ID de profissional
@@ -346,7 +365,7 @@ export async function registerProfessionalAction(data: {
         // Fallback: usar signUp normal se não tiver service_role key
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: cleanEmail,
-          password: data.password || 'lume123456',
+          password: data.password,
           options: {
             data: {
               name: data.name,
@@ -377,7 +396,7 @@ export async function registerProfessionalAction(data: {
       // Caminho preferencial: API Admin (sem email, sem rate limit, já confirmado)
       const { data: authData, error: authError } = await clientAdmin.auth.admin.createUser({
         email: cleanEmail,
-        password: data.password || 'lume123456',
+        password: data.password,
         email_confirm: true,
         user_metadata: {
           name: data.name,

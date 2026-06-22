@@ -51,7 +51,7 @@ export async function deleteTransactionAction(professionalId: string, id: string
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.deleteTransaction(id);
+    await dbService.deleteTransaction(id, professionalId);
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir lançamento.' };
@@ -92,7 +92,7 @@ export async function updateTaskAction(
     if (fields.done !== undefined) payload.done = fields.done;
     if (fields.dueDate !== undefined) payload.due_date = fields.dueDate;
     if (fields.dueTime !== undefined) payload.due_time = fields.dueTime;
-    await dbService.updateTask(id, payload);
+    await dbService.updateTask(id, payload, professionalId);
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar tarefa.' };
@@ -103,7 +103,7 @@ export async function toggleTaskAction(professionalId: string, id: string, done:
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.toggleTask(id, done);
+    await dbService.toggleTask(id, done, professionalId);
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar tarefa.' };
@@ -114,7 +114,7 @@ export async function deleteTaskAction(professionalId: string, id: string) {
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.deleteTask(id);
+    await dbService.deleteTask(id, professionalId);
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir tarefa.' };
@@ -139,7 +139,7 @@ export async function deleteFixedExpenseAction(professionalId: string, id: strin
   try {
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    await dbService.deleteFixedExpense(id);
+    await dbService.deleteFixedExpense(id, professionalId);
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir conta fixa.' };
@@ -190,7 +190,7 @@ export async function updateClientNotesAction(professionalId: string, clientId: 
     if (!client || client.professional_id !== professionalId) {
       return { success: false, error: 'Cliente não encontrada.' };
     }
-    const ok = await dbService.updateClientNotes(clientId, notes);
+    const ok = await dbService.updateClientNotes(clientId, notes, professionalId);
     if (!ok) return { success: false, error: 'Não foi possível salvar. Rode a migração v7 no Supabase.' };
     return { success: true };
   } catch (e: unknown) {
@@ -238,7 +238,7 @@ export async function deleteClientsAction(professionalId: string, ids: string[])
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
-    await dbService.deleteClientsByIds(ids);
+    await dbService.deleteClientsByIds(ids, professionalId);
     return { success: true, count: ids.length };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir clientes.' };
@@ -271,7 +271,7 @@ export async function restoreClientsAction(professionalId: string, ids: string[]
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
-    await dbService.restoreClients(ids);
+    await dbService.restoreClients(ids, professionalId);
     return { success: true, count: ids.length };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao restaurar clientes.' };
@@ -283,7 +283,7 @@ export async function purgeClientsAction(professionalId: string, ids: string[]) 
     if (isDemo(professionalId)) return { success: true };
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
     if (!ids?.length) return { success: false, error: 'Nenhum cliente selecionado.' };
-    await dbService.purgeClients(ids);
+    await dbService.purgeClients(ids, professionalId);
     return { success: true, count: ids.length };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir definitivamente.' };
