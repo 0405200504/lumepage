@@ -1090,6 +1090,23 @@ export const dbService = {
   },
 
   // ===================== ADMIN (LEITURAS GLOBAIS DA PLATAFORMA) =====================
+  // Estatísticas de armazenamento do banco (tamanho total + maiores tabelas).
+  // Retorna null se a função get_db_stats não existir (rode migration_v21).
+  getDatabaseStats: async (): Promise<{ dbSizeBytes: number; tables: { name: string; bytes: number }[] } | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb().rpc('get_db_stats');
+    if (error) {
+      console.warn('[admin] get_db_stats indisponível — rode supabase/migration_v21_admin_stats.sql:', error.message);
+      return null;
+    }
+    if (!data) return null;
+    const d = data as { db_size_bytes?: number | string; tables?: { name: string; bytes: number | string }[] };
+    return {
+      dbSizeBytes: Number(d.db_size_bytes) || 0,
+      tables: (d.tables || []).map(t => ({ name: t.name, bytes: Number(t.bytes) || 0 })),
+    };
+  },
+
   getAllAppointments: async (): Promise<Appointment[]> => {
     if (isSupabaseConfigured) {
       const { data, error } = await getDb()

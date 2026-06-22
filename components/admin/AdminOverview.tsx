@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import {
   DollarSign, Calendar, Users, Activity, Clock, UserPlus, ArrowRight,
-  TrendingUp, Crown, BarChart3
+  TrendingUp, Crown, BarChart3, Database, AlertTriangle
 } from 'lucide-react';
 import { ProfMetric, MonthPoint, StatusCounts, moneyBR } from '@/lib/admin';
 import { statusMeta } from '@/lib/appointments/status';
@@ -16,6 +16,7 @@ interface Totals {
   clients: number; professionals: number; activeProfessionals: number; pending: number;
 }
 interface RecentItem { id: string; client: string; service: string; date: string; time: string; status: AppointmentStatus; professional: string; }
+interface StorageStats { dbSizeBytes: number; tables: { name: string; bytes: number }[]; }
 
 interface AdminOverviewProps {
   adminName: string;
@@ -24,16 +25,32 @@ interface AdminOverviewProps {
   series: MonthPoint[];
   status: StatusCounts;
   recent: RecentItem[];
+  storage?: StorageStats | null;
+}
+
+// Limite do plano Free do Supabase (500 MB).
+const SUPABASE_FREE_LIMIT_BYTES = 500 * 1024 * 1024;
+function formatBytes(b: number): string {
+  if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+  if (b >= 1024) return `${(b / 1024).toFixed(0)} KB`;
+  return `${b} B`;
 }
 
 const STATUS_LABEL: Record<keyof StatusCounts, string> = {
   pending: 'Pendentes', confirmed: 'Confirmados', completed: 'Finalizados', cancelled: 'Cancelados', no_show: 'Faltas',
 };
 
-export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent }) => {
+export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent, storage }) => {
   const maxCount = Math.max(1, ...series.map(s => s.count));
   const maxRevenue = Math.max(1, ...metrics.map(m => m.revenueCents));
   const totalStatus = Object.values(status).reduce((a, b) => a + b, 0) || 1;
+
+  // Armazenamento do banco (% do plano Free de 500 MB).
+  const storagePct = storage ? Math.min(100, (storage.dbSizeBytes / SUPABASE_FREE_LIMIT_BYTES) * 100) : 0;
+  const storageLevel = storagePct >= 90 ? 'crit' : storagePct >= 75 ? 'warn' : 'ok';
+  const storageBar = storageLevel === 'crit' ? 'bg-red-500' : storageLevel === 'warn' ? 'bg-amber-500' : 'bg-emerald-500';
+  const storageText = storageLevel === 'crit' ? 'text-red-600' : storageLevel === 'warn' ? 'text-amber-600' : 'text-emerald-600';
+  const maxTableBytes = storage ? Math.max(1, ...storage.tables.map(t => t.bytes)) : 1;
 
   const kpis = [
     { label: 'Faturamento total', value: moneyBR(totals.revenueCents), icon: DollarSign, hint: 'Toda a rede (confirmados + concluídos)' },
@@ -75,6 +92,66 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals,
           );
         })}
       </div>
+
+      {/* Armazenamento do banco (Supabase) */}
+      {storage ? (
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="inline-flex p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Database className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-base font-black text-ink tracking-tight">Armazenamento do banco</h3>
+                <p className="text-xs text-gray-450 mt-0.5">Plano Free do Supabase · limite de 500 MB</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className={`text-xl font-black leading-none ${storageText}`}>{storagePct.toFixed(1)}%</p>
+              <p className="text-[10px] text-gray-450 font-semibold mt-1">{formatBytes(storage.dbSizeBytes)} de 500 MB</p>
+            </div>
+          </div>
+
+          {/* Barra de progresso */}
+          <div className="h-3 rounded-full bg-cream overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${storageBar}`} style={{ width: `${Math.max(1.5, storagePct)}%` }} />
+          </div>
+
+          {storageLevel !== 'ok' && (
+            <div className={`flex items-start gap-2 text-xs rounded-2xl p-3 ${storageLevel === 'crit' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                {storageLevel === 'crit'
+                  ? 'Espaço quase no limite! Faça o upgrade para o Supabase Pro (8 GB) o quanto antes para o sistema não parar.'
+                  : 'O banco já passou de 75% do limite gratuito. Comece a planejar o upgrade para o Supabase Pro.'}
+              </p>
+            </div>
+          )}
+
+          {/* Maiores tabelas (o que mais ocupa espaço) */}
+          {storage.tables.length > 0 && (
+            <div className="pt-1 space-y-2">
+              <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">O que mais ocupa espaço</p>
+              {storage.tables.slice(0, 5).map((t) => (
+                <div key={t.name}>
+                  <div className="flex justify-between text-[11px] font-semibold mb-1">
+                    <span className="text-ink truncate">{t.name}</span>
+                    <span className="text-gray-450 shrink-0">{formatBytes(t.bytes)}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-cream overflow-hidden">
+                    <div className="h-full rounded-full bg-wine-400" style={{ width: `${Math.max(3, (t.bytes / maxTableBytes) * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="card p-5 flex items-start gap-2.5 text-xs text-gray-500">
+          <Database className="h-4 w-4 shrink-0 mt-0.5 text-wine-400" />
+          <p className="leading-relaxed">
+            Para ver o uso de armazenamento do banco, rode <span className="font-bold">supabase/migration_v21_admin_stats.sql</span> no Supabase.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico de agendamentos por mês */}
