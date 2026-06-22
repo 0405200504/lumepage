@@ -294,7 +294,7 @@ export async function loginDemoAction() {
 export async function loginAction(email: string, password?: string) {
   // Rate limit por IP: corta brute force de senha (best-effort por instância).
   const ip = ipFromHeaders(await headers());
-  const rl = rateLimit(`login:${ip}`, 10, 5 * 60 * 1000); // 10 tentativas / 5 min
+  const rl = await rateLimit(`login:${ip}`, 10, 5 * 60 * 1000); // 10 tentativas / 5 min
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
   }
@@ -314,7 +314,7 @@ export async function registerProfessionalAction(data: {
 
   // Rate limit por IP: evita criação em massa de contas (lixo no banco / abuso).
   const ip = ipFromHeaders(await headers());
-  const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000); // 5 cadastros / hora
+  const rl = await rateLimit(`register:${ip}`, 5, 60 * 60 * 1000); // 5 cadastros / hora
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas de cadastro. Tente novamente em ${Math.ceil(rl.retryAfterSeconds / 60)} min.` };
   }

@@ -32,6 +32,19 @@ function isUuid(v: unknown): boolean {
   return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+/**
+ * Máximo de mensagens guardadas por conversa do WhatsApp. O histórico inteiro
+ * em JSON é o que mais incha o banco no plano Free; o contexto antigo já é
+ * preservado em client_summary, então mantemos só as últimas N trocas.
+ */
+const MAX_CONVERSATION_MESSAGES = 40;
+function capMessages<T>(messages: T[] | undefined | null): T[] {
+  if (!Array.isArray(messages)) return [];
+  return messages.length > MAX_CONVERSATION_MESSAGES
+    ? messages.slice(messages.length - MAX_CONVERSATION_MESSAGES)
+    : messages;
+}
+
 export const dbService = {
   // Professionals
   getProfessionals: async (): Promise<Professional[]> => {
@@ -1342,7 +1355,7 @@ export const dbService = {
     const payload: Record<string, unknown> = {
       professional_id: professionalId,
       client_phone: clientPhone,
-      messages,
+      messages: capMessages(messages),
       last_message_at: lastMessageAt ? new Date(lastMessageAt).toISOString() : new Date().toISOString(),
     };
     // bot_paused só é sobrescrito quando explicitamente passado.
@@ -1471,10 +1484,10 @@ export const dbService = {
     if (!isSupabaseConfigured) return;
     try {
       const conv = await dbService.getWhatsAppConversation(professionalId, clientPhone);
-      const messages = [
+      const messages = capMessages([
         ...(conv?.messages || []),
         { role: 'assistant' as const, content: text, at: Date.now() },
-      ];
+      ]);
       const now = new Date().toISOString();
       if (conv) {
         await getDb()

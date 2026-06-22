@@ -21,8 +21,12 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      # Usamos `npm install` em vez de `npm ci` porque o package-lock.json foi gerado
+      # no macOS e não inclui dependências opcionais específicas de Linux (ex.: @emnapi/*,
+      # binários do tailwind/lightningcss), o que faz o `npm ci` (estrito) falhar no runner
+      # Linux. O `npm install` resolve essas dependências de plataforma normalmente.
       - name: Instalar dependências
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       # Lint não-bloqueante por ora: o código tem dívida legada de `any`/`require`.
       # Mantém visibilidade sem travar todos os PRs. Tornar bloqueante após limpeza.

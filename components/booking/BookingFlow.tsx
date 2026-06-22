@@ -11,6 +11,7 @@ import { addToWaitlistAction } from '@/app/actions/waitlist';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { useToast } from '../ui/Toast';
 import { BookingDecor } from './BookingDecor';
+import TurnstileWidget, { turnstileConfigured } from './TurnstileWidget';
 
 const PAYMENT_METHODS = ['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito', 'Não sei ainda'];
 
@@ -61,6 +62,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   // Forma de pagamento
   const [paymentMethod, setPaymentMethod] = useState('');
+
+  // Captcha (Turnstile) — só relevante quando configurado (NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+  const [captchaToken, setCaptchaToken] = useState('');
 
   // Lista de espera (cliente)
   const [showWaitlist, setShowWaitlist] = useState(false);
@@ -228,6 +232,11 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   // Confirmar e criar agendamento no Supabase
   const handleConfirmBooking = async () => {
+    // Se o captcha está ativo mas ainda não foi resolvido, não deixa enviar.
+    if (turnstileConfigured && !captchaToken) {
+      setSubmitError('Aguarde a verificação de segurança terminar e tente de novo.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -243,6 +252,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         startTime: selectedTime,
         notes: notes || undefined,
         paymentMethod: paymentMethod || undefined,
+        captchaToken: captchaToken || undefined,
       });
 
       if (res.success && res.appointmentId) {
@@ -736,6 +746,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Captcha invisível (só aparece se NEXT_PUBLIC_TURNSTILE_SITE_KEY estiver configurada) */}
+            <TurnstileWidget onVerify={setCaptchaToken} />
 
             <button
               onClick={handleConfirmBooking}
