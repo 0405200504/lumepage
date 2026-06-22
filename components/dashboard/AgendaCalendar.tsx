@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, CalendarRange, LayoutGrid,
   X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
 } from 'lucide-react';
-import { Appointment, Service, TimeBlock, Task } from '@/types/database';
+import { Appointment, Service, TimeBlock, Task, Client } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink } from '@/lib/whatsapp';
@@ -26,6 +26,7 @@ interface AgendaCalendarProps {
   professionalId: string;
   initialTasks: Task[];
   services: Service[];
+  clients: Client[];
 }
 
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -41,7 +42,7 @@ const sameDay = (a: Date, b: Date) => isoOf(a) === isoOf(b);
 const TASK_DND = 'application/lume-task';
 
 export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
-  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services,
+  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients,
 }) => {
   const router = useRouter();
   const today = new Date();
@@ -229,6 +230,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
         <QuickAppointmentModal
           professionalId={professionalId}
           services={services}
+          clients={clients}
           initialDate={quickBook.date}
           initialTime={quickBook.time}
           onClose={() => setQuickBook(null)}

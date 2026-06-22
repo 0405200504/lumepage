@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Service } from '@/types/database';
-import { X, Save, CalendarPlus, Clock, Layers } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { Service, Client } from '@/types/database';
+import { X, Save, CalendarPlus, Clock, Layers, UserCheck } from 'lucide-react';
 import { Portal } from '../ui/Portal';
 import { useToast } from '../ui/Toast';
 import { createManualAppointmentAction } from '@/app/actions/booking';
@@ -14,10 +14,18 @@ const PAYMENT_METHODS = ['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de d
 interface QuickAppointmentModalProps {
   professionalId: string;
   services: Service[];
+  clients: Client[];
   initialDate: string;        // "YYYY-MM-DD"
   initialTime?: string;       // "HH:MM"
   onClose: () => void;
   onCreated: () => void;
+}
+
+function formatPhone(phone: string): string {
+  const d = (phone || '').replace(/\D/g, '').replace(/^55/, '');
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return phone;
 }
 
 /**
@@ -25,13 +33,47 @@ interface QuickAppointmentModalProps {
  * sem ir à aba de Agendamentos. Reaproveita createManualAppointmentAction.
  */
 export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
-  professionalId, services, initialDate, initialTime, onClose, onCreated,
+  professionalId, services, clients, initialDate, initialTime, onClose, onCreated,
 }) => {
   const { success, error } = useToast();
   const activeServices = useMemo(() => services.filter(s => s.is_active), [services]);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [pickedClientId, setPickedClientId] = useState<string | null>(null);
+  const nameFieldRef = useRef<HTMLDivElement>(null);
+
+  // Clientes que batem com o que foi digitado (nome ou WhatsApp). Sem busca, mostra as mais recentes.
+  const suggestions = useMemo(() => {
+    const q = name.trim().toLowerCase();
+    const digits = q.replace(/\D/g, '');
+    const base = q
+      ? clients.filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          (digits.length >= 3 && c.whatsapp.replace(/\D/g, '').includes(digits)))
+      : clients;
+    return base.slice(0, 6);
+  }, [clients, name]);
+
+  // Fecha o dropdown ao clicar fora do campo de nome.
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (nameFieldRef.current && !nameFieldRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showSuggestions]);
+
+  const pickClient = (c: Client) => {
+    setName(c.name);
+    setPhone(c.whatsapp);
+    setPickedClientId(c.id);
+    setShowSuggestions(false);
+  };
   const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime || '');
@@ -108,10 +150,31 @@ export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
 
           {/* Cliente */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="relative" ref={nameFieldRef}>
               <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da cliente"
+              <input
+                value={name}
+                onChange={e => { setName(e.target.value); setPickedClientId(null); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                placeholder="Buscar ou digitar nome"
+                autoComplete="off"
                 className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
+              {pickedClientId && (
+                <UserCheck className="absolute right-2.5 top-[30px] h-4 w-4 text-forest pointer-events-none" />
+              )}
+              {showSuggestions && suggestions.length > 0 && (
+                <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto py-1">
+                  {suggestions.map(c => (
+                    <li key={c.id}>
+                      <button type="button" onClick={() => pickClient(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-forest/5 transition-colors">
+                        <p className="text-xs font-bold text-gray-900 truncate">{c.name}</p>
+                        <p className="text-[11px] text-gray-400">{formatPhone(c.whatsapp)}</p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>

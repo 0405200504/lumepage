@@ -12,12 +12,13 @@ export default async function AgendaPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [appointments, settings, timeBlocks, tasks, services] = await Promise.all([
+  const [appointments, settings, timeBlocks, tasks, services, clients] = await Promise.all([
     dbService.getAppointmentsByProfessional(professionalId),
     dbService.getSettingsByProfessional(professionalId),
     dbService.getTimeBlocksByProfessional(professionalId),
     dbService.getTasksByProfessional(professionalId),
     dbService.getServicesByProfessional(professionalId),
+    dbService.getClientsByProfessional(professionalId).catch(() => []),
   ]);
 
   return (
@@ -28,6 +29,7 @@ export default async function AgendaPage() {
       professionalId={professionalId}
       initialTasks={tasks}
       services={services}
+      clients={clients}
     />
   );
 }
