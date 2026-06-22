@@ -49,7 +49,9 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
   const [uazapiUrl, setUazapiUrl] = useState(initialSettings?.uazapi_url || '');
   const [uazapiToken, setUazapiToken] = useState(initialSettings?.uazapi_token || '');
   const [botEnabled, setBotEnabled] = useState(initialSettings?.bot_enabled ?? false);
-  const [confirmationEnabled, setConfirmationEnabled] = useState(initialSettings?.confirmation_enabled ?? true);
+  // Legado: o envio de confirmação agora é a automação "Confirmação de agendamento".
+  // Mantido no payload só para preservar o valor já gravado.
+  const confirmationEnabled = initialSettings?.confirmation_enabled ?? true;
   const [botPersona, setBotPersona] = useState(initialSettings?.bot_persona || '');
   const [stopKeyword, setStopKeyword] = useState(initialSettings?.stop_keyword || '#humano');
   const [bookingUrl, setBookingUrl] = useState(initialSettings?.booking_url || '');
@@ -184,6 +186,23 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         success('Salvo!', 'Configurações atualizadas.');
         getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null)).catch(() => {});
       } else {
+        error('Erro ao salvar', res.error || 'Tente novamente.');
+      }
+    });
+  }
+
+  // Interruptor principal do bot: salva na hora (sem precisar clicar em "Salvar").
+  // As mensagens automáticas são independentes e continuam funcionando com o bot desligado.
+  function handleToggleBot(v: boolean) {
+    setBotEnabled(v);
+    startTransition(async () => {
+      const res = await saveWhatsAppSettingsAction({ ...buildPayload(), bot_enabled: v });
+      if (res.success) {
+        success(v ? 'Bot ativado' : 'Bot desativado', v
+          ? 'O bot voltará a responder as clientes.'
+          : 'O bot não responde mais — só as mensagens automáticas que estiverem ativas.');
+      } else {
+        setBotEnabled(!v); // desfaz visualmente em caso de erro
         error('Erro ao salvar', res.error || 'Tente novamente.');
       }
     });
@@ -402,6 +421,39 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
         </div>
       )}
 
+      {/* Interruptor principal do bot — sempre visível, salva na hora */}
+      <div className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${
+        botEnabled ? 'bg-green-50/60 border-green-200' : 'bg-[#faf8f7] border-[#efe9e6]'
+      }`}>
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${botEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+            <Bot className={`w-4.5 h-4.5 ${botEnabled ? 'text-green-600' : 'text-gray-400'}`} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-800">
+              Bot de IA {botEnabled ? 'ativado' : 'desativado'}
+            </p>
+            <p className="text-xs text-gray-500">
+              {botEnabled
+                ? 'Respondendo as clientes automaticamente no WhatsApp.'
+                : 'O bot não responde mensagens. As mensagens automáticas (lembretes e confirmações) continuam funcionando normalmente.'}
+            </p>
+          </div>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+          <input
+            type="checkbox"
+            className="sr-only"
+            checked={botEnabled}
+            disabled={isPending}
+            onChange={e => handleToggleBot(e.target.checked)}
+          />
+          <div className={`w-11 h-6 rounded-full transition-colors ${botEnabled ? 'bg-green-500' : 'bg-gray-300'} ${isPending ? 'opacity-60' : ''}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${botEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </div>
+        </label>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 bg-[#faf8f7] rounded-2xl p-1">
         {(
@@ -509,23 +561,15 @@ export function WhatsAppBotPanel({ initialSettings }: WhatsAppBotPanelProps) {
       {/* ── TAB: Bot IA ───────────────────────────────────────────────────── */}
       {activeTab === 'bot' && (
         <form onSubmit={handleSave} className="space-y-5">
-          <div className="space-y-3">
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-              Funções ativas
-            </label>
-            <Toggle
-              label="Responder clientes automaticamente (bot com IA)"
-              description="A IA responde mensagens das clientes com o link de agendamento e informações dos serviços"
-              checked={botEnabled}
-              onChange={setBotEnabled}
-            />
-            <Toggle
-              label="Enviar confirmação após agendamento"
-              description="A cliente recebe uma mensagem assim que o agendamento é criado"
-              checked={confirmationEnabled}
-              onChange={setConfirmationEnabled}
-            />
-          </div>
+          {!botEnabled && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">
+                O bot está <strong>desativado</strong> — estas configurações só têm efeito quando você liga o interruptor lá em cima.
+                As mensagens automáticas (aba Automações) funcionam de qualquer jeito.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
@@ -1128,32 +1172,6 @@ function formatPhone(phone: string): string {
   if (d.length === 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
   if (d.length === 12) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
   return phone;
-}
-
-function Toggle({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-start gap-3 cursor-pointer">
-      <div className="relative mt-0.5 shrink-0">
-        <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
-        <div className={`w-10 h-6 rounded-full transition-colors ${checked ? 'bg-[#500b18]' : 'bg-gray-200'}`} />
-        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : ''}`} />
-      </div>
-      <div>
-        <p className="text-sm font-medium text-gray-800">{label}</p>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
-    </label>
-  );
 }
 
 function AutomationCard({
