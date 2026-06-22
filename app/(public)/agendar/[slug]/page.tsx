@@ -76,12 +76,11 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
         />
       </div>
 
-      {/* Rodapé com links legais (LGPD) */}
-      <footer className="mt-6 text-[11px] text-gray-400 flex items-center gap-3">
-        <Link href="/termos" className="hover:text-forest transition-colors">Termos de Uso</Link>
-        <span aria-hidden>·</span>
-        <Link href="/privacidade" className="hover:text-forest transition-colors">Política de Privacidade</Link>
-      </footer>
+      {/* Rodapé legal (Termos/Privacidade) oculto até ter CNPJ — basta reativar
+          este bloco quando os documentos forem preenchidos:
+          <footer className="mt-6 text-[11px] text-gray-400 flex items-center gap-3">
+            <Link href="/termos">Termos de Uso</Link> · <Link href="/privacidade">Política de Privacidade</Link>
+          </footer> */}
     </div>
   );
 }
