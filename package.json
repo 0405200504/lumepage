@@ -32,5 +32,11 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "nanoid": "^3.3.8",
+    "postcss": "^8.5.10",
+    "jsondiffpatch": "^0.7.2",
+    "svelte": "^5.55.7"
   }
 }
