@@ -1,0 +1,43 @@
+name: CI
+
+# Roda em PRs e em pushes para main: lint + typecheck + build.
+# Combine com branch protection em "main" exigindo este check para impedir que
+# código quebrado vá direto para produção.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # Lint não-bloqueante por ora: o código tem dívida legada de `any`/`require`.
+      # Mantém visibilidade sem travar todos os PRs. Tornar bloqueante após limpeza.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build não deve depender de segredos reais; valores placeholder bastam.
+          # (O código trata Supabase ausente como "não configurado".)
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
+          SESSION_SECRET: "ci-build-placeholder-secret-please-ignore-32b"
