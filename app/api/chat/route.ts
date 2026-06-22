@@ -228,7 +228,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
               if (!appt || appt.professional_id !== professionalId) {
                 return { success: false, error: 'Agendamento não encontrado.' };
               }
-              await dbService.updateAppointmentStatus(appointment_id, 'cancelled', reason);
+              await dbService.updateAppointmentStatus(appointment_id, 'cancelled', reason, professionalId);
               return { success: true };
             } catch (e: unknown) {
               return { success: false, error: e instanceof Error ? e.message : 'Falha ao cancelar.' };
@@ -246,7 +246,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
               if (!appt || appt.professional_id !== professionalId) {
                 return { success: false, error: 'Agendamento não encontrado.' };
               }
-              await dbService.updateAppointmentStatus(appointment_id, 'completed');
+              await dbService.updateAppointmentStatus(appointment_id, 'completed', undefined, professionalId);
               return { success: true };
             } catch (e: unknown) {
               return { success: false, error: e instanceof Error ? e.message : 'Falha ao concluir.' };
@@ -276,7 +276,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
               const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00`;
               const startTime = `${new_start_time}:00`;
 
-              await dbService.updateAppointmentSchedule(appointment_id, new_date, startTime, endTime);
+              await dbService.updateAppointmentSchedule(appointment_id, new_date, startTime, endTime, professionalId);
               return { success: true, new_date, new_start_time };
             } catch (e: unknown) {
               return { success: false, error: e instanceof Error ? e.message : 'Falha ao remarcar.' };
@@ -291,7 +291,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
           }),
           execute: async ({ task_id, done }) => {
             try {
-              await dbService.toggleTask(task_id, done ?? true);
+              await dbService.toggleTask(task_id, done ?? true, professionalId);
               return { success: true };
             } catch (e: unknown) {
               return { success: false, error: e instanceof Error ? e.message : 'Falha ao atualizar tarefa.' };

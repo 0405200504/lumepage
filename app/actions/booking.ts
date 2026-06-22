@@ -1,7 +1,9 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
 import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
+import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { authService } from '@/lib/auth/auth';
 import { isDemo } from '@/lib/demo';
@@ -298,6 +300,13 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     // Conta demo: não persiste agendamentos (reseta ao atualizar)
     if (isDemo(professionalId)) {
       return { success: true, appointmentId: 'demo' };
+    }
+
+    // Rate limit do agendamento público por IP: corta spam que enche a agenda e o banco.
+    const ip = ipFromHeaders(await headers());
+    const rl = rateLimit(`booking:${ip}`, 8, 10 * 60 * 1000); // 8 agendamentos / 10 min
+    if (!rl.ok) {
+      return { success: false, error: `Muitas tentativas. Aguarde ${rl.retryAfterSeconds}s e tente de novo.` };
     }
 
     // 1. Validar inputs básicos
