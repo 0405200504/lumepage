@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   // Rate limit por instância (pid): teto de chamadas processadas por minuto. Corta
   // enxurrada de webhooks que dispararia muitas chamadas de IA. O secret ainda é
   // validado dentro de processMessage; isto é uma barreira adicional barata.
-  const rl = rateLimit(`wh:${pid}`, 40, 60 * 1000);
+  const rl = await rateLimit(`wh:${pid}`, 40, 60 * 1000);
   if (!rl.ok) {
     console.warn('[WhatsApp Webhook] rate limit atingido para pid', pid);
     return NextResponse.json({ ok: true });
@@ -269,13 +269,17 @@ async function processMessage(professionalId: string, secret: string | null, bod
     }
     // ── FIM DEBOUNCE ──────────────────────────────────────────────────────────
 
-    // Diagnóstico temporário: marca o estágio + tempo decorrido. O último estágio
-    // gravado antes de a função morrer (timeout) revela o gargalo.
+    // Diagnóstico de estágio: grava no banco a cada etapa para achar gargalo/timeout.
+    // Gravava ~6x por mensagem — custo desnecessário no dia a dia. Agora só liga com
+    // a env BOT_DEBUG=1 (use ao investigar; deixe desligado em produção).
     const t0 = Date.now();
-    const mark = (stage: string) => dbService.upsertWhatsAppConversation(
-      professionalId, '_debug_progress',
-      [{ role: 'user' as const, content: `${stage} @ ${Date.now() - t0}ms`, at: Date.now() }]
-    ).catch(() => {});
+    const debugEnabled = process.env.BOT_DEBUG === '1' || process.env.BOT_DEBUG === 'true';
+    const mark = (stage: string) => debugEnabled
+      ? dbService.upsertWhatsAppConversation(
+          professionalId, '_debug_progress',
+          [{ role: 'user' as const, content: `${stage} @ ${Date.now() - t0}ms`, at: Date.now() }]
+        ).catch(() => {})
+      : Promise.resolve();
     await mark('inicio');
 
     const [professional, services, clientAppts] = await Promise.all([
@@ -420,6 +424,7 @@ async function processMessage(professionalId: string, secret: string | null, bod
             date: data,
             startTime: horario,
             notes: 'Agendado via WhatsApp (bot)',
+            captchaToken: process.env.INTERNAL_BOOKING_TOKEN, // chamada interna confiável (pula captcha)
           });
           if (res.success) {
             console.log('[Bot Tool] agendamento criado:', res.appointmentId);

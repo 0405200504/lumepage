@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
 import { getAvailableSlots, timeToMinutes } from '@/lib/appointments/slots';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { authService } from '@/lib/auth/auth';
 import { isDemo } from '@/lib/demo';
@@ -285,6 +286,7 @@ interface CreateAppointmentInput {
   notes?: string;
   clientBirthday?: string;
   paymentMethod?: string;
+  captchaToken?: string; // token do Turnstile (só exigido se o captcha estiver configurado)
 }
 
 /**
@@ -304,9 +306,21 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
 
     // Rate limit do agendamento público por IP: corta spam que enche a agenda e o banco.
     const ip = ipFromHeaders(await headers());
-    const rl = rateLimit(`booking:${ip}`, 8, 10 * 60 * 1000); // 8 agendamentos / 10 min
+    const rl = await rateLimit(`booking:${ip}`, 8, 10 * 60 * 1000); // 8 agendamentos / 10 min
     if (!rl.ok) {
       return { success: false, error: `Muitas tentativas. Aguarde ${rl.retryAfterSeconds}s e tente de novo.` };
+    }
+
+    // Captcha (Turnstile): exigido só quando configurado. Chamadas internas confiáveis
+    // (bot do WhatsApp / assistente) passam o INTERNAL_BOOKING_TOKEN e pulam o captcha.
+    const isInternalCall = !!input.captchaToken
+      && !!process.env.INTERNAL_BOOKING_TOKEN
+      && input.captchaToken === process.env.INTERNAL_BOOKING_TOKEN;
+    if (!isInternalCall) {
+      const captchaOk = await verifyTurnstile(input.captchaToken, ip);
+      if (!captchaOk) {
+        return { success: false, error: 'Não foi possível confirmar que você não é um robô. Recarregue a página e tente novamente.' };
+      }
     }
 
     // 1. Validar inputs básicos

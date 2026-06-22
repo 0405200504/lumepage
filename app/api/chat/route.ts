@@ -191,6 +191,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
               date,
               startTime: start_time,
               notes,
+              captchaToken: process.env.INTERNAL_BOOKING_TOKEN, // chamada interna confiável (pula captcha)
             });
             return res;
           },
