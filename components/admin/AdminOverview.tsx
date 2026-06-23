@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { purgeNetworkTrashAction } from '@/app/actions/admin';
+import { useToast } from '../ui/Toast';
 import {
   DollarSign, Calendar, Users, Activity, Clock, UserPlus, ArrowRight,
   TrendingUp, TrendingDown, Crown, BarChart3, Database, AlertTriangle,
-  Bot, MessageSquareWarning, Wifi, WifiOff, Sparkles
+  Bot, MessageSquareWarning, Wifi, WifiOff, Sparkles, Trash2, RefreshCw
 } from 'lucide-react';
 import { ProfMetric, MonthPoint, StatusCounts, NetworkOps, moneyBR } from '@/lib/admin';
 import { statusMeta } from '@/lib/appointments/status';
@@ -28,6 +31,7 @@ interface AdminOverviewProps {
   recent: RecentItem[];
   storage?: StorageStats | null;
   ops?: NetworkOps | null;
+  trash?: { appointments: number; clients: number } | null;
 }
 
 /** Variação percentual entre dois períodos (para as setas de crescimento). */
@@ -60,7 +64,30 @@ const STATUS_LABEL: Record<keyof StatusCounts, string> = {
   pending: 'Pendentes', confirmed: 'Confirmados', completed: 'Finalizados', cancelled: 'Cancelados', no_show: 'Faltas',
 };
 
-export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent, storage, ops }) => {
+export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent, storage, ops, trash }) => {
+  const router = useRouter();
+  const { success, error } = useToast();
+  const [confirmTrash, setConfirmTrash] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const trashTotal = (trash?.appointments || 0) + (trash?.clients || 0);
+
+  const emptyNetworkTrash = async () => {
+    setPurging(true);
+    try {
+      const res = await purgeNetworkTrashAction() as { success: boolean; appointments?: number; clients?: number; error?: string };
+      if (res.success) {
+        success('Lixeira esvaziada', `${(res.appointments || 0)} agendamentos e ${(res.clients || 0)} clientes removidos definitivamente.`);
+        setConfirmTrash(false);
+        router.refresh();
+      } else {
+        error('Falha', res.error || 'Não foi possível esvaziar a lixeira.');
+      }
+    } catch {
+      error('Erro', 'Ocorreu um erro ao esvaziar a lixeira.');
+    } finally {
+      setPurging(false);
+    }
+  };
   const maxCount = Math.max(1, ...series.map(s => s.count));
   const maxRevenue = Math.max(1, ...metrics.map(m => m.revenueCents));
   const totalStatus = Object.values(status).reduce((a, b) => a + b, 0) || 1;
@@ -170,6 +197,38 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals,
           <p className="leading-relaxed">
             Para ver o uso de armazenamento do banco, rode <span className="font-bold">supabase/migration_v21_admin_stats.sql</span> no Supabase.
           </p>
+        </div>
+      )}
+
+      {/* Lixeira da rede (registros soft-deleted ocupando espaço) */}
+      {trash && (
+        <div className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`inline-flex p-2.5 rounded-2xl ${trashTotal > 0 ? 'bg-amber-500/15 text-amber-600' : 'bg-gray-100 text-gray-400'}`}><Trash2 className="h-5 w-5" /></div>
+            <div>
+              <h3 className="text-sm font-black text-ink tracking-tight">Lixeira da rede</h3>
+              <p className="text-[11px] text-gray-450 mt-0.5">
+                {trashTotal === 0
+                  ? 'Nada na lixeira — nenhum espaço desperdiçado.'
+                  : `${trash.appointments} agendamentos e ${trash.clients} clientes apagados ainda ocupam espaço no banco.`}
+              </p>
+            </div>
+          </div>
+          {trashTotal > 0 && (
+            confirmTrash ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] font-bold text-[#b23a48]">Apagar de vez? Não tem volta.</span>
+                <button onClick={() => setConfirmTrash(false)} disabled={purging} className="px-3 py-2 border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+                <button onClick={emptyNetworkTrash} disabled={purging} className="px-3 py-2 bg-[#b23a48] text-white rounded-xl text-[11px] font-bold inline-flex items-center gap-1.5 disabled:opacity-50">
+                  {purging ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Confirmar
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmTrash(true)} className="shrink-0 px-4 py-2 border border-[#b23a48]/30 text-[#b23a48] hover:bg-[#b23a48]/5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+                <Trash2 className="h-4 w-4" /> Esvaziar lixeira
+              </button>
+            )
+          )}
         </div>
       )}
 
