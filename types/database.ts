@@ -30,6 +30,7 @@ export interface Professional {
   description: string | null;
   public_bio: string | null;
   status: ProfessionalStatus;
+  deleted_at?: string | null; // lixeira (soft-delete) — requer migração v23
   created_at: string;
   updated_at: string;
 }
