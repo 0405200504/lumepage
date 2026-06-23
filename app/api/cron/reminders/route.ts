@@ -59,7 +59,12 @@ export async function GET(req: NextRequest) {
         dbService.getAppointmentsByProfessional(settings.professional_id),
       ]);
 
-      const activeAppts = appointments.filter(a => a.status !== 'cancelled');
+      // Só dispara automações de lembrete para agendamentos PENDENTES ou CONFIRMADOS.
+      // Agendamentos finalizados (completed), no_show ou cancelados NÃO recebem lembretes.
+      const activeAppts = appointments.filter(a => a.status === 'pending' || a.status === 'confirmed');
+      // Para o follow-up, precisamos do histórico completo (inclusive completed) para saber
+      // quando foi o último atendimento de cada cliente.
+      const allNonCancelled = appointments.filter(a => a.status !== 'cancelled');
 
       // ── Automação 1: Confirmação após agendamento ──────────────────────────
       if (settings.automation_booking_enabled && settings.automation_booking_message) {
@@ -94,14 +99,11 @@ export async function GET(req: NextRequest) {
         if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
           const eligible = activeAppts.filter(a => {
             if (a.date !== tomorrowISO || a.automation_day_before_sent_at) return false;
-            // Conflito a evitar: se a cliente agendou na própria véspera (hoje, para amanhã),
-            // o lembrete "1 dia antes" cairia no MESMO dia da confirmação — redundante.
-            // Nesse caso anulamos o "1 dia antes"; ela recebe só confirmação + lembrete do dia.
-            // Só suprimimos quando a confirmação está ativa (senão ela ficaria sem aviso antecedente).
-            if (settings.automation_booking_enabled) {
-              const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
-              if (createdBR >= todayISO) return false; // criado hoje (véspera) → anula o "1 dia antes"
-            }
+            // Se a cliente agendou faltando ≤1 dia (hoje ou depois), o lembrete "1 dia antes"
+            // é redundante — ela já recebeu (ou vai receber) a confirmação.
+            // Suprime para evitar mensagem duplicada no mesmo dia.
+            const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
+            if (createdBR >= todayISO) return false;
             return true;
           });
           for (const appt of eligible) {
@@ -129,12 +131,15 @@ export async function GET(req: NextRequest) {
       if (settings.automation_5days_enabled && settings.automation_5days_message) {
         const [rh, rm] = (settings.automation_5days_time || '10:00').split(':').map(Number);
         if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
+          // Data de 5 dias atrás: se o agendamento foi criado de lá pra cá (faltando ≤5 dias),
+          // o lembrete de "5 dias antes" é redundante — a cliente já recebeu confirmação recente.
+          const fiveDaysAgoDate = new Date(nowBR);
+          fiveDaysAgoDate.setDate(fiveDaysAgoDate.getDate() - 5);
+          const fiveDaysAgoISO = `${fiveDaysAgoDate.getFullYear()}-${pad(fiveDaysAgoDate.getMonth() + 1)}-${pad(fiveDaysAgoDate.getDate())}`;
           const eligible = activeAppts.filter(a => {
             if (a.date !== in5DaysISO || a.automation_5days_sent_at) return false;
-            // Se a cliente agendou faltando ≤5 dias, este lembrete não faz sentido
-            // (cairia junto/antes da confirmação) — suprime quando criado a partir de hoje.
             const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
-            if (createdBR >= todayISO) return false;
+            if (createdBR > fiveDaysAgoISO) return false; // criado faltando ≤5 dias → suprime
             return true;
           });
           for (const appt of eligible) {
@@ -162,9 +167,14 @@ export async function GET(req: NextRequest) {
       if (settings.automation_day_of_enabled && settings.automation_day_of_message) {
         const [rh, rm] = (settings.automation_day_of_time || '08:00').split(':').map(Number);
         if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
-          const eligible = activeAppts.filter(a =>
-            a.date === todayISO && !a.automation_day_of_sent_at
-          );
+          const eligible = activeAppts.filter(a => {
+            if (a.date !== todayISO || a.automation_day_of_sent_at) return false;
+            // Se a cliente agendou pro MESMO dia (hoje), o lembrete do dia é redundante
+            // — ela acabou de receber (ou vai receber) a confirmação.
+            const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
+            if (createdBR >= todayISO) return false;
+            return true;
+          });
           for (const appt of eligible) {
             const msg = fillTemplate(settings.automation_day_of_message, {
               nome: appt.client_name.split(' ')[0],
@@ -198,8 +208,8 @@ export async function GET(req: NextRequest) {
           const clients = await dbService.getClientsByProfessional(settings.professional_id);
 
           // Mapa por telefone: último atendimento passado + se tem horário futuro.
-          const byPhone = new Map<string, { lastPast: string | null; hasUpcoming: boolean; lastPastAppt: typeof activeAppts[number] | null }>();
-          for (const a of activeAppts) {
+          const byPhone = new Map<string, { lastPast: string | null; hasUpcoming: boolean; lastPastAppt: typeof allNonCancelled[number] | null }>();
+          for (const a of allNonCancelled) {
             const entry = byPhone.get(a.client_whatsapp) || { lastPast: null, hasUpcoming: false, lastPastAppt: null };
             if (a.date < todayISO) {
               if (!entry.lastPast || a.date > entry.lastPast) { entry.lastPast = a.date; entry.lastPastAppt = a; }
