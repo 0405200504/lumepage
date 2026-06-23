@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, CalendarRange, LayoutGrid,
   X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
 } from 'lucide-react';
-import { Appointment, Service, TimeBlock, Task, Client } from '@/types/database';
+import { Appointment, Service, TimeBlock, Task, Client, AvailabilityRule } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildReminderLink } from '@/lib/whatsapp';
@@ -27,6 +27,7 @@ interface AgendaCalendarProps {
   initialTasks: Task[];
   services: Service[];
   clients: Client[];
+  availabilityRules?: AvailabilityRule[];
 }
 
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -42,7 +43,7 @@ const sameDay = (a: Date, b: Date) => isoOf(a) === isoOf(b);
 const TASK_DND = 'application/lume-task';
 
 export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
-  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients,
+  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients, availabilityRules = [],
 }) => {
   const router = useRouter();
   const today = new Date();
@@ -84,6 +85,19 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     for (const b of timeBlocks) (map[b.date] ||= []).push(b);
     return map;
   }, [timeBlocks]);
+
+  // Horário de almoço por dia da semana (0=Dom..6=Sáb), a partir das regras de
+  // disponibilidade ativas que tenham pausa definida. Usado para desenhar o
+  // almoço cinza na agenda do dia.
+  const lunchByWeekday = useMemo(() => {
+    const map: Record<number, { start: string; end: string }> = {};
+    for (const r of availabilityRules) {
+      if (r.is_active && r.break_start && r.break_end) {
+        map[r.weekday] = { start: r.break_start, end: r.break_end };
+      }
+    }
+    return map;
+  }, [availabilityRules]);
 
   const holidayMap = useMemo<Record<string, Holiday>>(() => {
     const y = cursor.getFullYear();
@@ -195,7 +209,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
       </div>
 
       {view === 'day' && (
-        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} />
+        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} />
       )}
       {view === 'month' && (
         <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
@@ -314,7 +328,7 @@ const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number)
 const HOUR_H = 56;          // altura de 1 hora em px
 const PXM = HOUR_H / 60;    // px por minuto
 
-const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, activeOf, onSelectDay, onQuickBook }) => {
+const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook }) => {
   const iso = isoOf(cursor);
   const isToday = sameDay(cursor, today);
   const holiday = holidayMap[iso];
@@ -323,6 +337,9 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
   const blocks: TimeBlock[] = blockByDate[iso] || [];
   const fullDayBlock = blocks.find(b => b.block_type === 'full_day');
   const timedBlocks = blocks.filter(b => b.block_type === 'custom_time' && b.start_time && b.end_time);
+
+  // Horário de almoço deste dia da semana (se configurado na aba Disponibilidade).
+  const lunch: { start: string; end: string } | undefined = (lunchByWeekday || {})[cursor.getDay()];
 
   // Separa tarefas com e sem horário
   const untimedTasks = dayTasks.filter(t => !t.due_time);
@@ -333,6 +350,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
     ...appts.flatMap(a => [tmin(a.start_time), tmin(a.end_time)]),
     ...timedBlocks.flatMap(b => [tmin(b.start_time!), tmin(b.end_time!)]),
     ...timedTasks.map(t => tmin(t.due_time!)),
+    ...(lunch ? [tmin(lunch.start), tmin(lunch.end)] : []),
   ];
   let startHour = 7, endHour = 21;
   if (startsEnds.length) {
@@ -437,6 +455,16 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 );
               })}
               <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(endHour * 60) }} />
+
+              {/* Horário de almoço (cinza claro) — sempre visível, atrás dos agendamentos */}
+              {lunch && (
+                <div
+                  className="absolute left-1 right-1 rounded-lg bg-gray-100 border border-gray-200/80 px-2 py-0.5 overflow-hidden pointer-events-none"
+                  style={{ top: yOf(tmin(lunch.start)), height: Math.max((tmin(lunch.end) - tmin(lunch.start)) * PXM, 16) }}
+                >
+                  <p className="text-[10px] font-bold text-gray-400 truncate">🍽️ Almoço · {lunch.start.substring(0, 5)}–{lunch.end.substring(0, 5)}</p>
+                </div>
+              )}
 
               {/* Bloqueios de horário */}
               {timedBlocks.map((b, i) => (
