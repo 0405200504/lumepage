@@ -1,0 +1,33 @@
+name: Lume · Disparar automações (cron)
+
+# Aciona /api/cron/reminders periodicamente, que envia as mensagens automáticas
+# (confirmação, 5 dias antes, dia anterior, no dia, follow-up) e roda o monitor de
+# saúde do bot. Independe do plano da Vercel.
+#
+# Observação: o GitHub pode atrasar alguns minutos o agendamento em horários de
+# pico — é normal e suficiente para estas automações.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # a cada 5 minutos
+  workflow_dispatch: {}       # permite acionar manualmente na aba Actions
+
+# Evita execuções sobrepostas
+concurrency:
+  group: lume-reminders
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acionar /api/cron/reminders
+        run: |
+          code=$(curl -sS -m 150 -o /tmp/resp.txt -w "%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lume-agendamentos.vercel.app/api/cron/reminders" || echo "000")
+          echo "HTTP status: $code"
+          echo "Resposta: $(cat /tmp/resp.txt 2>/dev/null)"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Cron retornou $code (esperado 200). Confira se o CRON_SECRET do GitHub é igual ao da Vercel."
+          fi
