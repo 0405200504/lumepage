@@ -49,14 +49,36 @@ export const dbService = {
   // Professionals
   getProfessionals: async (): Promise<Professional[]> => {
     if (isSupabaseConfigured) {
-      const { data, error } = await getDb()
-        .from('professionals')
-        .select('*')
-        .order('name');
-      if (error) throw error;
+      // Lista ATIVA: ignora as profissionais na lixeira (deleted_at não nulo).
+      // .is('deleted_at', null) com OR para bancos sem a coluna ainda (pré-v23):
+      // se a coluna não existir, o filtro falha — então usamos try/fallback.
+      const q = getDb().from('professionals').select('*').order('name');
+      const { data, error } = await q.is('deleted_at', null);
+      if (error) {
+        if (error.code === '42703') { // coluna deleted_at ausente (migração v23 pendente)
+          const { data: d2, error: e2 } = await getDb().from('professionals').select('*').order('name');
+          if (e2) throw e2;
+          return d2 || [];
+        }
+        throw error;
+      }
       return data || [];
     }
     return mockDb.getProfessionals();
+  },
+
+  // Profissionais na LIXEIRA (soft-deleted) — para a tela de lixeira do admin.
+  getTrashedProfessionals: async (): Promise<Professional[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('professionals')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) { if (error.code === '42703') return []; throw error; }
+      return data || [];
+    }
+    return [];
   },
 
   getProfessionalBySlug: async (slug: string): Promise<Professional | null> => {
@@ -67,6 +89,8 @@ export const dbService = {
         .eq('slug', slug)
         .maybeSingle();
       if (error) throw error;
+      // Profissional na lixeira não tem página pública (some do ar).
+      if (data && data.deleted_at) return null;
       return data;
     }
     return mockDb.getProfessionalBySlug(slug);
@@ -1177,6 +1201,30 @@ export const dbService = {
       return true;
     }
     return mockDb.setProfessionalSalon(professionalId, salonId);
+  },
+
+  // Move a profissional para a LIXEIRA (soft-delete): preserva todos os dados e o
+  // login; só some das listas ativas e da página pública. Reversível com restore.
+  softDeleteProfessional: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('professionals').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      if (error) {
+        if (error.code === '42703') throw new Error('Rode supabase/migration_v23_prof_trash.sql no Supabase para ativar a lixeira.');
+        throw error;
+      }
+      return true;
+    }
+    return true;
+  },
+
+  // Restaura uma profissional da lixeira.
+  restoreProfessional: async (id: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      const { error } = await getDb().from('professionals').update({ deleted_at: null }).eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    return true;
   },
 
   // Exclui a profissional e TODOS os dados vinculados (cascade) + perfis de login

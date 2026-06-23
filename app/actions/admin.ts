@@ -243,10 +243,48 @@ export async function createSalonManagerAction(input: { name: string; email: str
 }
 
 /**
- * Exclui DEFINITIVAMENTE uma profissional: remove o usuário do Auth, os perfis de
- * login e todos os dados vinculados (cascade). Ação irreversível — apenas Super Admin.
+ * Move a profissional para a LIXEIRA (soft-delete). Reversível: preserva login e
+ * todos os dados; só some das listas ativas e da página pública. Apenas Super Admin.
  */
 export async function deleteProfessionalAction(professionalId: string) {
+  try {
+    if (!await authorizeAdmin()) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+    await dbService.softDeleteProfessional(professionalId);
+    return { success: true };
+  } catch (e: any) {
+    console.error('Erro ao mover profissional para a lixeira:', e);
+    return { success: false, error: e.message || 'Erro ao mover para a lixeira.' };
+  }
+}
+
+/** Lista as profissionais na lixeira (apenas Super Admin). */
+export async function getTrashedProfessionalsAction() {
+  if (!await authorizeAdmin()) return [];
+  try {
+    return await dbService.getTrashedProfessionals();
+  } catch {
+    return [];
+  }
+}
+
+/** Restaura uma profissional da lixeira (apenas Super Admin). */
+export async function restoreProfessionalAction(professionalId: string) {
+  try {
+    if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    await dbService.restoreProfessional(professionalId);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao restaurar profissional.' };
+  }
+}
+
+/**
+ * Exclui DEFINITIVAMENTE uma profissional (da lixeira): remove o usuário do Auth, os
+ * perfis de login e todos os dados vinculados (cascade). IRREVERSÍVEL — Super Admin.
+ */
+export async function purgeProfessionalAction(professionalId: string) {
   try {
     if (!await authorizeAdmin()) {
       return { success: false, error: 'Não autorizado.' };
@@ -264,7 +302,7 @@ export async function deleteProfessionalAction(professionalId: string) {
 
         for (const uid of uids) {
           const { error: delErr } = await clientAdmin.auth.admin.deleteUser(uid);
-          if (delErr) console.warn('[deleteProfessional] falha ao remover usuário do Auth:', delErr.message);
+          if (delErr) console.warn('[purgeProfessional] falha ao remover usuário do Auth:', delErr.message);
         }
       }
     }
@@ -272,7 +310,7 @@ export async function deleteProfessionalAction(professionalId: string) {
     await dbService.deleteProfessional(professionalId);
     return { success: true };
   } catch (e: any) {
-    console.error('Erro ao excluir profissional:', e);
+    console.error('Erro ao excluir profissional definitivamente:', e);
     return { success: false, error: e.message || 'Erro ao excluir profissional.' };
   }
 }

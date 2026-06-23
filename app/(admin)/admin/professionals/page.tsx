@@ -13,7 +13,10 @@ export const metadata = {
 
 export default async function AdminProfessionalsPage() {
   const session = await requireAdmin();
-  const professionals = await dbService.getProfessionals();
+  const [professionals, trashed] = await Promise.all([
+    dbService.getProfessionals(),
+    dbService.getTrashedProfessionals().catch(() => []),
+  ]);
 
   return (
     <LayoutAdmin 
@@ -38,7 +41,7 @@ export default async function AdminProfessionalsPage() {
         </div>
 
         {/* Tabela de Dados */}
-        <ProfessionalsTable initialProfessionals={professionals} />
+        <ProfessionalsTable initialProfessionals={professionals} initialTrashed={trashed} />
       </div>
     </LayoutAdmin>
   );
