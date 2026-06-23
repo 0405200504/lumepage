@@ -3,13 +3,18 @@ import { requireAdmin } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { AdminAppointments } from '@/components/admin/AdminAppointments';
+import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 
 export const metadata = { title: 'Agendamentos | Lume Admin' };
 
 export default async function AdminAppointmentsPage() {
   const session = await requireAdmin();
-  const professionals = await dbService.getProfessionals();
-  const appointments = await dbService.getAllAppointments();
+  const allProfessionals = await dbService.getProfessionals();
+  const allAppointments = await dbService.getAllAppointments();
+
+  // Exclui a conta teste (Amanda) dos dados do super admin
+  const professionals = allProfessionals.filter(p => p.id !== DEMO_PROFESSIONAL_ID);
+  const appointments = allAppointments.filter(a => a.professional_id !== DEMO_PROFESSIONAL_ID);
 
   const profName: Record<string, string> = {};
   professionals.forEach(p => { profName[p.id] = p.brand_name || p.name; });

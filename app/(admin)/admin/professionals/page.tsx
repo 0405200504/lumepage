@@ -5,6 +5,7 @@ import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { ProfessionalsTable } from '@/components/admin/ProfessionalsTable';
 import { Users, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 
 export const metadata = {
   title: 'Gerenciar Profissionais | Lume Agenda Admin',
@@ -13,10 +14,13 @@ export const metadata = {
 
 export default async function AdminProfessionalsPage() {
   const session = await requireAdmin();
-  const [professionals, trashed] = await Promise.all([
+  const [allProfessionals, trashed] = await Promise.all([
     dbService.getProfessionals(),
     dbService.getTrashedProfessionals().catch(() => []),
   ]);
+
+  // Exclui a conta teste (Amanda) dos dados do super admin
+  const professionals = allProfessionals.filter(p => p.id !== DEMO_PROFESSIONAL_ID);
 
   return (
     <LayoutAdmin 

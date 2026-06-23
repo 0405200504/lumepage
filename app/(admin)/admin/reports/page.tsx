@@ -4,6 +4,7 @@ import { dbService } from '@/lib/supabase/db';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { AdminReports } from '@/components/admin/AdminReports';
 import { professionalMetrics, monthlySeries, statusCounts, topServices } from '@/lib/admin';
+import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 
 export const metadata = { title: 'Relatórios | Lume Admin' };
 
@@ -11,9 +12,14 @@ const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 
 export default async function AdminReportsPage() {
   const session = await requireAdmin();
-  const professionals = await dbService.getProfessionals();
-  const appointments = await dbService.getAllAppointments();
-  const clients = await dbService.getAllClients();
+  const allProfessionals = await dbService.getProfessionals();
+  const allAppointments = await dbService.getAllAppointments();
+  const allClients = await dbService.getAllClients();
+
+  // Exclui a conta teste (Amanda) dos dados do super admin
+  const professionals = allProfessionals.filter(p => p.id !== DEMO_PROFESSIONAL_ID);
+  const appointments = allAppointments.filter(a => a.professional_id !== DEMO_PROFESSIONAL_ID);
+  const clients = allClients.filter(c => c.professional_id !== DEMO_PROFESSIONAL_ID);
 
   const now = new Date();
   const todayISO = now.toISOString().split('T')[0];

@@ -5,15 +5,21 @@ import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { professionalMetrics, monthlySeries, statusCounts, networkOps } from '@/lib/admin';
 import { serviceRevenueCents } from '@/lib/finance';
+import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 
 export const metadata = { title: 'Visão Geral | Lume Admin' };
 
 export default async function AdminDashboardPage() {
   const session = await requireAdmin();
 
-  const professionals = await dbService.getProfessionals();
-  const appointments = await dbService.getAllAppointments();
-  const clients = await dbService.getAllClients();
+  const allProfessionals = await dbService.getProfessionals();
+  const allAppointments = await dbService.getAllAppointments();
+  const allClients = await dbService.getAllClients();
+
+  // Exclui a conta teste (Amanda) dos dados do super admin
+  const professionals = allProfessionals.filter(p => p.id !== DEMO_PROFESSIONAL_ID);
+  const appointments = allAppointments.filter(a => a.professional_id !== DEMO_PROFESSIONAL_ID);
+  const clients = allClients.filter(c => c.professional_id !== DEMO_PROFESSIONAL_ID);
   const storage = await dbService.getDatabaseStats();
   const [waSettings, pendingConversations, networkTrash] = await Promise.all([
     dbService.getAllWhatsAppSettings(),
