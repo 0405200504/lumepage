@@ -4,9 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import {
   DollarSign, Calendar, Users, Activity, Clock, UserPlus, ArrowRight,
-  TrendingUp, Crown, BarChart3, Database, AlertTriangle
+  TrendingUp, TrendingDown, Crown, BarChart3, Database, AlertTriangle,
+  Bot, MessageSquareWarning, Wifi, WifiOff, Sparkles
 } from 'lucide-react';
-import { ProfMetric, MonthPoint, StatusCounts, moneyBR } from '@/lib/admin';
+import { ProfMetric, MonthPoint, StatusCounts, NetworkOps, moneyBR } from '@/lib/admin';
 import { statusMeta } from '@/lib/appointments/status';
 import { formatDateBR } from '@/lib/whatsapp';
 import { AppointmentStatus } from '@/types/database';
@@ -26,6 +27,25 @@ interface AdminOverviewProps {
   status: StatusCounts;
   recent: RecentItem[];
   storage?: StorageStats | null;
+  ops?: NetworkOps | null;
+}
+
+/** Variação percentual entre dois períodos (para as setas de crescimento). */
+function pctDelta(current: number, previous: number): { pct: number; up: boolean } {
+  if (previous === 0) return { pct: current > 0 ? 100 : 0, up: current >= 0 };
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return { pct: Math.abs(pct), up: pct >= 0 };
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return 'nunca';
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'agora';
+  if (min < 60) return `há ${min}min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h`;
+  return `há ${Math.floor(h / 24)}d`;
 }
 
 // Limite do plano Free do Supabase (500 MB).
@@ -40,7 +60,7 @@ const STATUS_LABEL: Record<keyof StatusCounts, string> = {
   pending: 'Pendentes', confirmed: 'Confirmados', completed: 'Finalizados', cancelled: 'Cancelados', no_show: 'Faltas',
 };
 
-export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent, storage }) => {
+export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals, metrics, series, status, recent, storage, ops }) => {
   const maxCount = Math.max(1, ...series.map(s => s.count));
   const maxRevenue = Math.max(1, ...metrics.map(m => m.revenueCents));
   const totalStatus = Object.values(status).reduce((a, b) => a + b, 0) || 1;
@@ -153,6 +173,79 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals,
         </div>
       )}
 
+      {/* ===== Operação & Saúde da Rede ===== */}
+      {ops && (() => {
+        const profDelta = pctDelta(ops.newProfsThisMonth, ops.newProfsLastMonth);
+        const apptDelta = pctDelta(ops.apptsThisMonth, ops.apptsLastMonth);
+        const opCards = [
+          { label: 'Novas profissionais (mês)', value: ops.newProfsThisMonth, delta: profDelta, icon: UserPlus, hint: `${ops.newProfsLastMonth} no mês passado` },
+          { label: 'Agendamentos (mês)', value: ops.apptsThisMonth, delta: apptDelta, icon: Calendar, hint: `${ops.apptsLastMonth} no mês passado` },
+          { label: 'Conversas pendentes', value: ops.pendingConversations, delta: null, icon: MessageSquareWarning, hint: 'Clientes esperando atendimento humano', alert: ops.pendingConversations > 0 },
+          { label: 'Automáticas hoje', value: ops.automatedSentToday, delta: null, icon: Bot, hint: `${ops.automatedSentMonth} no mês` },
+          { label: 'Mensagens de IA (mês)', value: ops.automatedSentMonth, delta: null, icon: Sparkles, hint: 'Proxy de uso/custo OpenAI' },
+          { label: 'Bot configurado', value: `${ops.withBotConfigured}/${ops.totalProfessionals}`, delta: null, icon: Wifi, hint: `${ops.withAutomationsOn} com automações ligadas` },
+        ];
+        return (
+          <div className="space-y-4">
+            <h3 className="text-base font-black text-ink tracking-tight">Operação & saúde da rede</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+              {opCards.map((c) => {
+                const Icon = c.icon;
+                return (
+                  <div key={c.label} className={`card p-4 ${c.alert ? 'ring-1 ring-amber-300 bg-amber-50/40' : ''}`}>
+                    <div className={`inline-flex p-2.5 rounded-2xl mb-3 ${c.alert ? 'bg-amber-500/15 text-amber-600' : 'bg-wine-700/8 text-wine-700'}`}><Icon className="h-5 w-5" /></div>
+                    <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{c.label}</p>
+                    <div className="flex items-end gap-1.5 mt-1">
+                      <p className="text-lg sm:text-xl font-black text-ink leading-none">{c.value}</p>
+                      {c.delta && (
+                        <span className={`inline-flex items-center text-[10px] font-bold ${c.delta.up ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {c.delta.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}{c.delta.pct}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-450 font-semibold mt-1.5 hidden sm:block leading-tight">{c.hint}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Saúde do bot por profissional */}
+            <div className="card p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-ink tracking-tight">Automações por profissional</h3>
+                <span className="text-[10px] text-gray-450 font-semibold">{ops.botHealth.filter(b => !b.configured).length} sem bot configurado</span>
+              </div>
+              {ops.botHealth.length === 0 ? (
+                <p className="text-xs text-gray-450 py-4 text-center">Nenhuma profissional cadastrada.</p>
+              ) : (
+                <div className="divide-y divide-gray-150 max-h-80 overflow-y-auto -mx-2">
+                  {ops.botHealth.map((b) => (
+                    <div key={b.id} className="flex items-center justify-between gap-3 px-2 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {b.configured
+                          ? <Wifi className="h-4 w-4 text-emerald-500 shrink-0" />
+                          : <WifiOff className="h-4 w-4 text-gray-300 shrink-0" />}
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-ink truncate">{b.brandName}</p>
+                          <p className="text-[10px] text-gray-450">
+                            {b.configured ? (b.automationsOn ? 'automações ligadas' : 'automações desligadas') : 'WhatsApp não configurado'}
+                            {' · '}última: {timeAgo(b.lastFiredAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-wine-700 leading-none">{b.sentToday}</p>
+                        <p className="text-[9px] text-gray-450 font-semibold uppercase tracking-wide">hoje</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico de agendamentos por mês */}
         <div className="card p-6 lg:col-span-2 space-y-5">
@@ -221,7 +314,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ adminName, totals,
                   <div className="h-2 rounded-full bg-cream overflow-hidden">
                     <div className="h-full rounded-full surface-wine group-hover:opacity-90" style={{ width: `${Math.max(4, (m.revenueCents / maxRevenue) * 100)}%` }} />
                   </div>
-                  <p className="text-[10px] text-gray-450 mt-1">{m.total} agend. · {m.clients} clientes · {m.noShow} faltas</p>
+                  <p className="text-[10px] text-gray-450 mt-1">{m.total} agend. · {m.clients} clientes · último: {m.lastAppointmentDate ? formatDateBR(m.lastAppointmentDate) : '—'}</p>
                 </Link>
               ))}
             </div>

@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { AdminOverview } from '@/components/admin/AdminOverview';
-import { professionalMetrics, monthlySeries, statusCounts } from '@/lib/admin';
+import { professionalMetrics, monthlySeries, statusCounts, networkOps } from '@/lib/admin';
 import { serviceRevenueCents } from '@/lib/finance';
 
 export const metadata = { title: 'Visão Geral | Lume Admin' };
@@ -15,6 +15,11 @@ export default async function AdminDashboardPage() {
   const appointments = await dbService.getAllAppointments();
   const clients = await dbService.getAllClients();
   const storage = await dbService.getDatabaseStats();
+  const [waSettings, pendingConversations] = await Promise.all([
+    dbService.getAllWhatsAppSettings(),
+    dbService.getNetworkPendingConversationsCount(),
+  ]);
+  const ops = networkOps(professionals, appointments, waSettings, pendingConversations, new Date());
 
   const now = new Date();
   const todayISO = now.toISOString().split('T')[0];
@@ -59,6 +64,7 @@ export default async function AdminDashboardPage() {
         status={status}
         recent={recent}
         storage={storage}
+        ops={ops}
       />
     </LayoutAdmin>
   );
