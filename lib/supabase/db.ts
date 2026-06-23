@@ -1362,6 +1362,37 @@ export const dbService = {
     return data || [];
   },
 
+  // Registros na lixeira (soft-deleted) em TODA a rede — ocupam espaço no banco
+  // até serem apagados de vez. Usado pelo card "Lixeira da rede" do admin.
+  getNetworkTrashStats: async (): Promise<{ appointments: number; clients: number }> => {
+    if (!isSupabaseConfigured) return { appointments: 0, clients: 0 };
+    const countTrashed = async (table: string): Promise<number> => {
+      const { count, error } = await getDb()
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .not('deleted_at', 'is', null);
+      if (error) return 0;
+      return count || 0;
+    };
+    const [appointments, clients] = await Promise.all([countTrashed('appointments'), countTrashed('clients')]);
+    return { appointments, clients };
+  },
+
+  // Esvazia a lixeira da rede: apaga DEFINITIVAMENTE os registros soft-deleted
+  // (libera espaço). Irreversível. Retorna quantos foram removidos.
+  purgeNetworkTrash: async (): Promise<{ appointments: number; clients: number }> => {
+    if (!isSupabaseConfigured) return { appointments: 0, clients: 0 };
+    const purge = async (table: string): Promise<number> => {
+      const { data, error } = await getDb().from(table).delete().not('deleted_at', 'is', null).select('id');
+      if (error) { console.warn(`[admin] purgeNetworkTrash ${table}:`, error.message); return 0; }
+      return data?.length ?? 0;
+    };
+    // Agendamentos primeiro (podem referenciar clients); depois clientes.
+    const appointments = await purge('appointments');
+    const clients = await purge('clients');
+    return { appointments, clients };
+  },
+
   // Total de conversas pausadas (clientes esperando atendimento humano) em TODA a
   // rede — usado no painel admin. Ignora os registros de diagnóstico (_debug_).
   getNetworkPendingConversationsCount: async (): Promise<number> => {

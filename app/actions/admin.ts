@@ -315,6 +315,17 @@ export async function purgeProfessionalAction(professionalId: string) {
   }
 }
 
+/** Esvazia a lixeira da rede (apaga definitivamente os registros soft-deleted). Super Admin. */
+export async function purgeNetworkTrashAction() {
+  try {
+    if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    const result = await dbService.purgeNetworkTrash();
+    return { success: true, ...result };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao esvaziar a lixeira da rede.' };
+  }
+}
+
 /**
  * Coleta estatísticas consolidadas para o painel de administração da Lume.
  */

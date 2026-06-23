@@ -15,9 +15,10 @@ export default async function AdminDashboardPage() {
   const appointments = await dbService.getAllAppointments();
   const clients = await dbService.getAllClients();
   const storage = await dbService.getDatabaseStats();
-  const [waSettings, pendingConversations] = await Promise.all([
+  const [waSettings, pendingConversations, networkTrash] = await Promise.all([
     dbService.getAllWhatsAppSettings(),
     dbService.getNetworkPendingConversationsCount(),
+    dbService.getNetworkTrashStats(),
   ]);
   const ops = networkOps(professionals, appointments, waSettings, pendingConversations, new Date());
 
@@ -65,6 +66,7 @@ export default async function AdminDashboardPage() {
         recent={recent}
         storage={storage}
         ops={ops}
+        trash={networkTrash}
       />
     </LayoutAdmin>
   );
