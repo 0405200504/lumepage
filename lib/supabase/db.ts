@@ -1305,6 +1305,28 @@ export const dbService = {
     return data || [];
   },
 
+  // TODAS as configurações de WhatsApp (inclusive não configuradas) — para o
+  // painel admin medir a saúde do bot/automações por profissional.
+  getAllWhatsAppSettings: async (): Promise<WhatsAppSettings[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb().from('whatsapp_settings').select('*');
+    if (error) return [];
+    return data || [];
+  },
+
+  // Total de conversas pausadas (clientes esperando atendimento humano) em TODA a
+  // rede — usado no painel admin. Ignora os registros de diagnóstico (_debug_).
+  getNetworkPendingConversationsCount: async (): Promise<number> => {
+    if (!isSupabaseConfigured) return 0;
+    const { count, error } = await getDb()
+      .from('whatsapp_conversations')
+      .select('id', { count: 'exact', head: true })
+      .eq('bot_paused', true)
+      .not('client_phone', 'like', '_debug_%');
+    if (error) return 0;
+    return count || 0;
+  },
+
   markReminderSent: async (appointmentId: string, type: 'booking' | 'day_before' | 'day_of' | '5days'): Promise<void> => {
     const col = type === 'booking'
       ? 'automation_booking_sent_at'
