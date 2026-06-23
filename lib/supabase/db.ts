@@ -724,11 +724,12 @@ export const dbService = {
         updated_at: new Date().toISOString(),
       };
       // Cancelamento: zera flags para não disparar se o agendamento for reativado
-      // Reativação (saindo de cancelled): zera flags para as automações voltarem a disparar
+      // Reativação / confirmação: zera flags para as automações voltarem a disparar
       if (status === 'cancelled' || status === 'pending' || status === 'confirmed') {
         patch.automation_booking_sent_at = null;
         patch.automation_day_before_sent_at = null;
         patch.automation_day_of_sent_at = null;
+        patch.automation_5days_sent_at = null;
       }
       let q = getDb().from('appointments').update(patch).eq('id', id);
       // Escopo por dono quando informado (chamadas de painel): impede alterar
@@ -757,6 +758,7 @@ export const dbService = {
         dbPatch.automation_booking_sent_at = null;
         dbPatch.automation_day_before_sent_at = null;
         dbPatch.automation_day_of_sent_at = null;
+        dbPatch.automation_5days_sent_at = null;
       }
       let q = getDb().from('appointments').update(dbPatch).eq('id', id);
       if (professionalId) q = q.eq('professional_id', professionalId);
@@ -775,10 +777,11 @@ export const dbService = {
           date,
           start_time: startTime,
           end_time: endTime,
-          // Remarcação: zera as três flags para que as automações disparem na nova data
+          // Remarcação: zera todas as flags para que as automações disparem na nova data
           automation_booking_sent_at: null,
           automation_day_before_sent_at: null,
           automation_day_of_sent_at: null,
+          automation_5days_sent_at: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id);

@@ -59,9 +59,9 @@ export async function GET(req: NextRequest) {
         dbService.getAppointmentsByProfessional(settings.professional_id),
       ]);
 
-      // Só dispara automações de lembrete para agendamentos PENDENTES ou CONFIRMADOS.
-      // Agendamentos finalizados (completed), no_show ou cancelados NÃO recebem lembretes.
-      const activeAppts = appointments.filter(a => a.status === 'pending' || a.status === 'confirmed');
+      // Só dispara automações para agendamentos CONFIRMADOS pela profissional.
+      // Pendentes, finalizados (completed), no_show ou cancelados NÃO recebem lembretes.
+      const activeAppts = appointments.filter(a => a.status === 'confirmed');
       // Para o follow-up, precisamos do histórico completo (inclusive completed) para saber
       // quando foi o último atendimento de cada cliente.
       const allNonCancelled = appointments.filter(a => a.status !== 'cancelled');
@@ -131,15 +131,13 @@ export async function GET(req: NextRequest) {
       if (settings.automation_5days_enabled && settings.automation_5days_message) {
         const [rh, rm] = (settings.automation_5days_time || '10:00').split(':').map(Number);
         if (currentHour > rh || (currentHour === rh && currentMin >= rm)) {
-          // Data de 5 dias atrás: se o agendamento foi criado de lá pra cá (faltando ≤5 dias),
-          // o lembrete de "5 dias antes" é redundante — a cliente já recebeu confirmação recente.
-          const fiveDaysAgoDate = new Date(nowBR);
-          fiveDaysAgoDate.setDate(fiveDaysAgoDate.getDate() - 5);
-          const fiveDaysAgoISO = `${fiveDaysAgoDate.getFullYear()}-${pad(fiveDaysAgoDate.getMonth() + 1)}-${pad(fiveDaysAgoDate.getDate())}`;
           const eligible = activeAppts.filter(a => {
             if (a.date !== in5DaysISO || a.automation_5days_sent_at) return false;
+            // Se a cliente agendou faltando ≤5 dias (ou seja, criou o agendamento hoje ou depois
+            // do dia em que faltam 5 dias), o lembrete é redundante — ela já recebeu confirmação.
+            // Ela vai receber normalmente: véspera + dia do agendamento.
             const createdBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(a.created_at));
-            if (createdBR > fiveDaysAgoISO) return false; // criado faltando ≤5 dias → suprime
+            if (createdBR >= todayISO) return false;
             return true;
           });
           for (const appt of eligible) {
