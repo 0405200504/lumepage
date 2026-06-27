@@ -3,6 +3,7 @@ import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
 import { runWhatsAppHealthCheck } from '@/lib/whatsapp/health';
+import { resolveAppointmentServices, formatServiceNames, sumPriceCents } from '@/lib/appointments/services';
 
 export const maxDuration = 60;
 
@@ -54,10 +55,18 @@ export async function GET(req: NextRequest) {
     if (!anyEnabled) continue;
 
     try {
-      const [professional, appointments] = await Promise.all([
+      const [professional, appointments, allServices] = await Promise.all([
         dbService.getProfessionalById(settings.professional_id),
         dbService.getAppointmentsByProfessional(settings.professional_id),
+        dbService.getServicesByProfessional(settings.professional_id),
       ]);
+
+      // Resolve TODOS os serviços de um agendamento (multi-serviço) para montar o
+      // nome composto ("Serviço A + Serviço B") e o preço TOTAL na mensagem.
+      // Antes usávamos apenas `appt.service` (o serviço primário), o que omitia os
+      // demais serviços e cobrava só o preço de um deles.
+      const apptServices = (appt: typeof appointments[number]) =>
+        resolveAppointmentServices(appt, allServices);
 
       // Só dispara automações para agendamentos CONFIRMADOS pela profissional.
       // Pendentes, finalizados (completed), no_show ou cancelados NÃO recebem lembretes.
@@ -76,11 +85,11 @@ export async function GET(req: NextRequest) {
         for (const appt of eligible) {
           const msg = fillTemplate(settings.automation_booking_message, {
             nome: appt.client_name.split(' ')[0],
-            servico: appt.service?.name || '',
+            servico: formatServiceNames(apptServices(appt)) || appt.service?.name || '',
             data: formatDateBR(appt.date),
             horario: appt.start_time.substring(0, 5),
             profissional: professional?.name || '',
-            preco: formatPriceBRL(appt.service?.price_cents),
+            preco: formatPriceBRL(sumPriceCents(apptServices(appt)) || appt.service?.price_cents),
             forma_pagamento: appt.payment_method || '',
           }, settings.custom_variables);
           const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
@@ -109,11 +118,11 @@ export async function GET(req: NextRequest) {
           for (const appt of eligible) {
             const msg = fillTemplate(settings.automation_day_before_message, {
               nome: appt.client_name.split(' ')[0],
-              servico: appt.service?.name || '',
+              servico: formatServiceNames(apptServices(appt)) || appt.service?.name || '',
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
-              preco: formatPriceBRL(appt.service?.price_cents),
+              preco: formatPriceBRL(sumPriceCents(apptServices(appt)) || appt.service?.price_cents),
               forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
@@ -143,11 +152,11 @@ export async function GET(req: NextRequest) {
           for (const appt of eligible) {
             const msg = fillTemplate(settings.automation_5days_message, {
               nome: appt.client_name.split(' ')[0],
-              servico: appt.service?.name || '',
+              servico: formatServiceNames(apptServices(appt)) || appt.service?.name || '',
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
-              preco: formatPriceBRL(appt.service?.price_cents),
+              preco: formatPriceBRL(sumPriceCents(apptServices(appt)) || appt.service?.price_cents),
               forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
@@ -176,11 +185,11 @@ export async function GET(req: NextRequest) {
           for (const appt of eligible) {
             const msg = fillTemplate(settings.automation_day_of_message, {
               nome: appt.client_name.split(' ')[0],
-              servico: appt.service?.name || '',
+              servico: formatServiceNames(apptServices(appt)) || appt.service?.name || '',
               data: formatDateBR(appt.date),
               horario: appt.start_time.substring(0, 5),
               profissional: professional?.name || '',
-              preco: formatPriceBRL(appt.service?.price_cents),
+              preco: formatPriceBRL(sumPriceCents(apptServices(appt)) || appt.service?.price_cents),
               forma_pagamento: appt.payment_method || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, appt.client_whatsapp, msg);
@@ -227,7 +236,7 @@ export async function GET(req: NextRequest) {
 
             const msg = fillTemplate(settings.automation_followup_message, {
               nome: (client.name || '').split(' ')[0],
-              servico: entry.lastPastAppt?.service?.name || 'atendimento',
+              servico: (entry.lastPastAppt && formatServiceNames(apptServices(entry.lastPastAppt))) || entry.lastPastAppt?.service?.name || 'atendimento',
               profissional: professional?.name || '',
             }, settings.custom_variables);
             const ok = await sendWhatsAppText(settings.uazapi_url, settings.uazapi_token, client.whatsapp, msg);
