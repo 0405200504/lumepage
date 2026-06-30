@@ -32,6 +32,19 @@ function isUuid(v: unknown): boolean {
   return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+/** Erro do Postgres "coluna não existe" (42703) — usado p/ fallback gracioso
+ *  quando uma migração opcional (ex.: v24 cost_cents) ainda não foi rodada. */
+function isMissingColumnError(error: unknown, column: string): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return !!e && (e.code === '42703' || (typeof e.message === 'string' && e.message.includes(column)));
+}
+
+/** Remove uma chave de um objeto (cópia rasa). */
+function omitKey<T extends Record<string, unknown>>(obj: T, key: string): Omit<T, string> {
+  const { [key]: _drop, ...rest } = obj;
+  return rest;
+}
+
 /**
  * Máximo de mensagens guardadas por conversa do WhatsApp. O histórico inteiro
  * em JSON é o que mais incha o banco no plano Free; o contexto antigo já é
@@ -280,6 +293,13 @@ export const dbService = {
         .insert(data)
         .select()
         .single();
+      // Fallback: coluna cost_cents ainda não existe (migração v24 não rodada).
+      if (error && isMissingColumnError(error, 'cost_cents')) {
+        const { data: retry, error: retryErr } = await getDb()
+          .from('services').insert(omitKey(data as Record<string, unknown>, 'cost_cents')).select().single();
+        if (retryErr) throw retryErr;
+        return retry;
+      }
       if (error) throw error;
       return result;
     }
@@ -293,21 +313,27 @@ export const dbService = {
       // edita os PRÓPRIOS serviços (um id de outra profissional não casa nenhuma linha).
       // Se o id não for um UUID válido, é criação → insere deixando o banco gerar o id.
       if (isUuid(id)) {
+        const payload = { ...patch, professional_id, updated_at: new Date().toISOString() };
         const { data: result, error } = await getDb()
-          .from('services')
-          .update({ ...patch, professional_id, updated_at: new Date().toISOString() })
-          .eq('id', id)
-          .eq('professional_id', professional_id)
-          .select()
-          .single();
+          .from('services').update(payload).eq('id', id).eq('professional_id', professional_id).select().single();
+        if (error && isMissingColumnError(error, 'cost_cents')) {
+          const { data: retry, error: retryErr } = await getDb()
+            .from('services').update(omitKey(payload, 'cost_cents')).eq('id', id).eq('professional_id', professional_id).select().single();
+          if (retryErr) throw retryErr;
+          return retry;
+        }
         if (error) throw error;
         return result;
       }
+      const insertPayload = { ...patch, professional_id };
       const { data: result, error } = await getDb()
-        .from('services')
-        .insert({ ...patch, professional_id })
-        .select()
-        .single();
+        .from('services').insert(insertPayload).select().single();
+      if (error && isMissingColumnError(error, 'cost_cents')) {
+        const { data: retry, error: retryErr } = await getDb()
+          .from('services').insert(omitKey(insertPayload, 'cost_cents')).select().single();
+        if (retryErr) throw retryErr;
+        return retry;
+      }
       if (error) throw error;
       return result;
     }

@@ -37,6 +37,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
   const [description, setDescription] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [priceStr, setPriceStr] = useState('0,00');
+  const [costStr, setCostStr] = useState('0,00');
   const [isActive, setIsActive] = useState(true);
   const [clientVisible, setClientVisible] = useState(true);
 
@@ -49,6 +50,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     setDescription('');
     setDurationMinutes(60);
     setPriceStr('0,00');
+    setCostStr('0,00');
     setIsActive(true);
     setClientVisible(true);
     setIsEditModalOpen(true);
@@ -64,6 +66,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     // Converte centavos para string formatada "150,00"
     const priceFormatted = (service.price_cents / 100).toFixed(2).replace('.', ',');
     setPriceStr(priceFormatted);
+    setCostStr(((service.cost_cents ?? 0) / 100).toFixed(2).replace('.', ','));
     setIsActive(service.is_active);
     setClientVisible(service.client_visible !== false);
     setIsEditModalOpen(true);
@@ -80,6 +83,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     // Converter string de preço "150,00" para centavos (inteiro 15000)
     const normalizedPrice = priceStr.replace(/\D/g, ''); // remove tudo que não for dígito
     const priceCents = parseInt(normalizedPrice, 10) || 0;
+    const costCents = parseInt(costStr.replace(/\D/g, ''), 10) || 0;
 
     setIsSubmitting(true);
     try {
@@ -90,6 +94,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           description: description || null,
           duration_minutes: durationMinutes,
           price_cents: priceCents,
+          cost_cents: costCents,
           is_active: isActive,
           client_visible: clientVisible
         });
@@ -107,6 +112,7 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           description: description || null,
           duration_minutes: durationMinutes,
           price_cents: priceCents,
+          cost_cents: costCents,
           is_active: isActive,
           client_visible: clientVisible
         });
@@ -320,6 +326,24 @@ export const ServicesList: React.FC<ServicesListProps> = ({
                     className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest font-semibold text-gray-800"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                  Custo de insumos (R$)
+                </label>
+                <input
+                  type="text"
+                  value={costStr}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val === '') val = '0';
+                    const cents = parseInt(val, 10);
+                    setCostStr((cents / 100).toFixed(2).replace('.', ','));
+                  }}
+                  className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest font-semibold text-gray-800"
+                />
+                <p className="text-[10px] text-gray-450 mt-1">Material gasto por atendimento. Usado no DRE do Financeiro para calcular o lucro líquido. Opcional.</p>
               </div>
 
               <div>

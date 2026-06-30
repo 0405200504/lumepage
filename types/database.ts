@@ -55,6 +55,9 @@ export interface Service {
   description: string | null;
   duration_minutes: number;
   price_cents: number;
+  /** Custo variável (insumos) por atendimento, em centavos. Alimenta o DRE.
+   *  Requer migração v24; default 0 (fallback gracioso se a coluna não existe). */
+  cost_cents?: number;
   image_url?: string | null;
   is_active: boolean;
   /** Aparece no agendamento público da cliente (site) e na lista que o bot oferece.

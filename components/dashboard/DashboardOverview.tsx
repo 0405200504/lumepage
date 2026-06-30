@@ -5,7 +5,7 @@ import { Appointment, Service } from '@/types/database';
 import { Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { statusMeta } from '@/lib/appointments/status';
-import { serviceRevenueCents } from '@/lib/finance';
+import { serviceRevenueCents, indexServices } from '@/lib/finance';
 
 interface DashboardOverviewProps {
   professionalName: string;
@@ -28,8 +28,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const sortedTodayApps = [...todayApps].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const pendingApps = activeApps.filter(a => a.status === 'pending');
   const uniqueClients = new Set(activeApps.map(a => a.client_whatsapp)).size;
-  // Faturamento do mês — MESMA regra da aba Contas (lib/finance)
-  const monthlyRevenueCents = serviceRevenueCents(appointments, today.getFullYear(), today.getMonth());
+  // Faturamento do mês — MESMA regra da aba Contas (lib/finance).
+  // Passa o índice de serviços p/ resolver multi-serviço igual à aba Contas (números batem).
+  const monthlyRevenueCents = serviceRevenueCents(appointments, today.getFullYear(), today.getMonth(), indexServices(services));
 
   const formatPrice = (cents: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
