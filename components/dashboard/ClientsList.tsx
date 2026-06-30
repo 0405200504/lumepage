@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Client, Appointment } from '@/types/database';
 import {
   Search, MessageCircle, History, X, Clock, AlertTriangle,
-  Cake, TrendingDown, ShieldCheck, Sparkles, UserPlus, Upload, FileSpreadsheet
+  Cake, TrendingDown, ShieldCheck, Sparkles, UserPlus, Upload, FileSpreadsheet, BarChart3, Contact
 } from 'lucide-react';
 import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
@@ -88,7 +88,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
   const router = useRouter();
   const { success, error, info } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'away' | 'birthday'>('all');
+  const [filter, setFilter] = useState<'all' | 'away' | 'birthday' | 'frequency'>('all');
   const [detail, setDetail] = useState<Client | null>(null);
 
   // Ficha técnica / observações da cliente
@@ -281,8 +281,21 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
     if (!matchesSearch) return false;
     if (filter === 'away') return isAway(getStats(c));
     if (filter === 'birthday') return birthdayMonth(c) === currentMonth;
+    if (filter === 'frequency') return true; // mostra todos, mas vai ordenar por frequência
     return true;
   });
+
+  // Ordena por frequência quando o filtro é 'frequency'
+  const sortedClients = useMemo(() => {
+    if (filter === 'frequency') {
+      return [...filteredClients].sort((a, b) => {
+        const sa = getStats(a);
+        const sb = getStats(b);
+        return sb.completed - sa.completed;
+      });
+    }
+    return filteredClients;
+  }, [filteredClients, filter]);
 
   const reliability = (s: ClientStats) => {
     const base = s.total + s.noShows;
@@ -295,31 +308,38 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
 
   return (
     <div className="space-y-6 select-none animate-fade-up">
-      {/* Resumo / alertas de retenção */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button onClick={() => setFilter('all')} className={`card p-5 text-left transition-all-custom ${filter === 'all' ? 'ring-2 ring-wine-700/25' : ''}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Total de Clientes</span>
-            <Sparkles className="h-4 w-4 text-wine-500" />
-          </div>
-          <p className="text-2xl font-black text-ink mt-2">{initialClients.length}</p>
-        </button>
-        <button onClick={() => setFilter(filter === 'away' ? 'all' : 'away')} className={`card p-5 text-left transition-all-custom ${filter === 'away' ? 'ring-2 ring-wine-700/25' : ''}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Clientes Sumidas</span>
-            <TrendingDown className="h-4 w-4 text-[#b23a48]" />
-          </div>
-          <p className="text-2xl font-black text-ink mt-2">{awayCount}</p>
-          <span className="text-[10px] text-gray-450 font-semibold">Sem retorno há +{DAYS_AWAY} dias — reative!</span>
-        </button>
-        <button onClick={() => setFilter(filter === 'birthday' ? 'all' : 'birthday')} className={`card p-5 text-left transition-all-custom ${filter === 'birthday' ? 'ring-2 ring-wine-700/25' : ''}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Aniversariantes do Mês</span>
-            <Cake className="h-4 w-4 text-wine-500" />
-          </div>
-          <p className="text-2xl font-black text-ink mt-2">{birthdayCount}</p>
-          <span className="text-[10px] text-gray-450 font-semibold">Ótimo motivo para um mimo</span>
-        </button>
+      {/* Sub-abas de navegação */}
+      <div className="flex items-center gap-1 bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft overflow-x-auto scrollbar-none">
+        {[
+          { key: 'all' as const, label: 'Todos', icon: Contact, count: initialClients.length },
+          { key: 'birthday' as const, label: 'Aniversariantes', icon: Cake, count: birthdayCount },
+          { key: 'frequency' as const, label: 'Frequência', icon: BarChart3, count: undefined },
+          { key: 'away' as const, label: 'Sem retorno', icon: TrendingDown, count: awayCount },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const active = filter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(active && tab.key !== 'all' ? 'all' : tab.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all-custom ${
+                active
+                  ? 'bg-wine-700 text-white shadow-soft'
+                  : 'text-gray-450 hover:bg-cream hover:text-ink'
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                  active ? 'bg-white/20 text-white' : 'bg-gray-150 text-gray-450'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Busca */}
@@ -349,13 +369,13 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Importar lista</span>
           </button>
           <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom whitespace-nowrap">
-            <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Adicionar cliente</span>
+            <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Adicionar contato</span>
           </button>
         </div>
       </div>
 
       {/* Barra de ações em lote */}
-      {filteredClients.length > 0 && (
+      {sortedClients.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 card p-3">
           <span className="text-xs font-bold text-ink">
             {selected.size > 0 ? `${selected.size} selecionado(s)` : 'Edição em lote'}
@@ -376,8 +396,8 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
 
       {/* Cards (mobile) */}
       <div className="lg:hidden space-y-3">
-        {filteredClients.length > 0 ? (
-          filteredClients.map((client) => {
+        {sortedClients.length > 0 ? (
+          sortedClients.map((client) => {
             const s = getStats(client);
             const rel = reliability(s);
             const away = isAway(s);
@@ -433,7 +453,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           })
         ) : (
           <div className="card py-12 text-center text-xs text-gray-450">
-            {filter === 'all' ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente neste filtro.'}
+            {filter === 'all' ? 'Nenhum contato cadastrado ainda.' : 'Nenhum contato neste filtro.'}
           </div>
         )}
       </div>
@@ -448,12 +468,12 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                   <input
                     type="checkbox"
                     aria-label="Selecionar todos"
-                    checked={filteredClients.length > 0 && filteredClients.every(c => selected.has(c.id))}
-                    onChange={(e) => setSelected(e.target.checked ? new Set(filteredClients.map(c => c.id)) : new Set())}
+                    checked={sortedClients.length > 0 && sortedClients.every(c => selected.has(c.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(sortedClients.map(c => c.id)) : new Set())}
                     className="h-4 w-4 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700"
                   />
                 </th>
-                <th className="px-6 py-4">Cliente</th>
+                <th className="px-6 py-4">Contato</th>
                 <th className="px-6 py-4">WhatsApp</th>
                 <th className="px-6 py-4">Visitas / Faltas</th>
                 <th className="px-6 py-4">Última Visita</th>
@@ -461,8 +481,8 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150 text-sm text-ink">
-              {filteredClients.length > 0 ? (
-                filteredClients.map((client) => {
+              {sortedClients.length > 0 ? (
+                sortedClients.map((client) => {
                   const s = getStats(client);
                   const rel = reliability(s);
                   const away = isAway(s);
@@ -525,7 +545,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
               ) : (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-xs text-gray-450">
-                    {filter === 'all' ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente neste filtro.'}
+                    {filter === 'all' ? 'Nenhum contato cadastrado ainda.' : 'Nenhum contato neste filtro.'}
                   </td>
                 </tr>
               )}
@@ -544,7 +564,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             <aside className="relative w-full max-w-md h-full bg-paper shadow-glow flex flex-col animate-slide-right">
               <div className="surface-wine text-white p-6 flex items-start justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Ficha da cliente</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Ficha do contato</p>
                   <h3 className="text-lg font-black mt-1">{detail.name}</h3>
                   <p className="text-xs text-white/70 mt-0.5">{detail.whatsapp}{detail.email ? ` · ${detail.email}` : ''}</p>
                   {detail.birthday && (
@@ -569,7 +589,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 {/* Ficha técnica / observações da cliente */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Ficha da cliente</p>
+                    <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Ficha do contato</p>
                     <button
                       onClick={saveNote}
                       disabled={savingNote}

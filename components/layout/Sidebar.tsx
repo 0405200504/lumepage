@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot, MessageCircle
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot, MessageCircle,
+  PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -23,6 +24,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
   const router = useRouter();
   const { success, error } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Lembra a preferência de barra recolhida entre sessões.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (localStorage.getItem('lume_sidebar_collapsed') === '1') setCollapsed(true);
+  }, []);
+  const toggleCollapsed = () => setCollapsed((c) => {
+    const next = !c;
+    try { localStorage.setItem('lume_sidebar_collapsed', next ? '1' : '0'); } catch {}
+    return next;
+  });
 
   const handleLogout = async () => {
     try {
@@ -60,8 +73,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
       { href: '/dashboard/services', label: 'Serviços', icon: Sparkles },
       { href: '/dashboard/availability', label: 'Disponibilidade', icon: Clock },
       { href: '/dashboard/blocks', label: 'Bloqueios', icon: Lock },
-      { href: '/dashboard/clients', label: 'Clientes', icon: Users },
-      { href: '/dashboard/finance', label: 'Contas', icon: Wallet },
+      { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
+      { href: '/dashboard/sales', label: 'Vendas', icon: ShoppingBag },
+      { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
       { href: '/dashboard/pending', label: 'Conversas', icon: MessageCircle },
       { href: '/dashboard/whatsapp', label: 'Bot WhatsApp', icon: Bot },
       { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
@@ -73,8 +87,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
     { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
     { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
     { href: '/dashboard/tasks', label: 'Tarefas', icon: NotebookPen },
-    { href: '/dashboard/finance', label: 'Contas', icon: Wallet },
-    { href: '/dashboard/clients', label: 'Clientes', icon: Users },
+    { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
+    { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
   ];
 
   const links = getLinks();
@@ -82,19 +96,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
   // Slug real da profissional (corrige link público quebrado)
   const publicSlug = slug || name.toLowerCase().trim().replace(/\s+/g, '-');
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full surface-wine text-white p-5 select-none overflow-y-auto scrollbar-none">
-      <div className="space-y-7">
+  const SidebarContent = ({ collapsed: isCollapsed = false, showToggle = false }: { collapsed?: boolean; showToggle?: boolean }) => (
+    <div className={`flex flex-col h-full surface-wine text-white select-none overflow-y-auto overflow-x-hidden scrollbar-none ${isCollapsed ? 'px-2.5 py-5 items-center' : 'p-5'}`}>
+      <div className={`w-full ${isCollapsed ? 'space-y-5' : 'space-y-7'}`}>
         {/* Logo / Header */}
-        <div className="px-1">
-          <LumeLogo variant="light" className="h-8" />
-          <span className="text-[9px] text-white/55 font-bold uppercase tracking-[0.22em] mt-2 block pl-0.5">
-            {role === 'super_admin' ? 'Super Admin' : 'Agenda'}
-          </span>
+        <div className={`flex items-center ${isCollapsed ? 'flex-col gap-3' : 'justify-between'}`}>
+          <div className={isCollapsed ? '' : 'px-1'}>
+            {isCollapsed ? (
+              <LumeLogo variant="light" className="h-5" />
+            ) : (
+              <>
+                <LumeLogo variant="light" className="h-8" />
+                <span className="text-[9px] text-white/55 font-bold uppercase tracking-[0.22em] mt-2 block pl-0.5">
+                  {role === 'super_admin' ? 'Super Admin' : 'Agenda'}
+                </span>
+              </>
+            )}
+          </div>
+          {showToggle && (
+            <button
+              onClick={toggleCollapsed}
+              title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+              aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+              className="p-2 rounded-xl text-white/55 hover:text-white hover:bg-white/8 transition-all-custom shrink-0"
+            >
+              {isCollapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
+            </button>
+          )}
         </div>
 
         {/* Info Profissional */}
-        {role === 'professional' && (
+        {role === 'professional' && !isCollapsed && (
           <div className="bg-white/8 rounded-2xl p-4 border border-white/10 ring-hairline">
             <p className="text-[9px] uppercase font-bold text-white/45 tracking-[0.18em]">Profissional</p>
             <p className="text-sm font-bold text-white truncate mt-1" title={displayName}>{displayName}</p>
@@ -116,17 +148,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`group flex items-center gap-3 px-4 py-2.5 text-[13px] font-semibold rounded-2xl transition-all-custom ${
+                title={isCollapsed ? link.label : undefined}
+                className={`group relative flex items-center rounded-2xl text-[13px] font-semibold transition-all-custom ${
+                  isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-4 py-2.5'
+                } ${
                   isActive
                     ? 'bg-white text-[#500b18] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]'
                     : 'text-white/70 hover:bg-white/8 hover:text-white'
                 }`}
               >
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#500b18]' : 'text-white/55 group-hover:text-white'}`} />
-                <span className="flex-1">{link.label}</span>
+                {!isCollapsed && <span className="flex-1">{link.label}</span>}
                 {badge && (
-                  <span className="text-[10px] font-bold text-white bg-amber-500 rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-                    {badge}
+                  <span className={`text-[10px] font-bold text-white bg-amber-500 rounded-full leading-none text-center ${isCollapsed ? 'absolute top-1 right-1 h-2 w-2 p-0' : 'px-1.5 py-0.5 min-w-[18px]'}`}>
+                    {isCollapsed ? '' : badge}
                   </span>
                 )}
               </Link>
@@ -136,23 +171,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
       </div>
 
       {/* Footer / Logout */}
-      <div className="space-y-2.5 mt-auto pt-6">
+      <div className={`mt-auto pt-6 w-full ${isCollapsed ? 'space-y-2' : 'space-y-2.5'}`}>
         {role === 'professional' && (
           <Link
             href={`/agendar/${publicSlug}`}
             target="_blank"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-white/10 hover:bg-white/16 text-xs font-bold rounded-2xl text-white transition-all-custom border border-white/10"
+            title={isCollapsed ? 'Ver Página Pública' : undefined}
+            className={`flex items-center justify-center gap-2 bg-white/10 hover:bg-white/16 text-xs font-bold rounded-2xl text-white transition-all-custom border border-white/10 ${isCollapsed ? 'h-11 w-11 mx-auto' : 'w-full py-3'}`}
           >
-            <ExternalLink className="h-4 w-4" />
-            Ver Página Pública
+            <ExternalLink className="h-4 w-4 shrink-0" />
+            {!isCollapsed && 'Ver Página Pública'}
           </Link>
         )}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-white/55 hover:bg-white/8 hover:text-white rounded-2xl transition-all-custom cursor-pointer"
+          title={isCollapsed ? 'Sair da Conta' : undefined}
+          className={`flex items-center text-xs font-bold text-white/55 hover:bg-white/8 hover:text-white rounded-2xl transition-all-custom cursor-pointer ${isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 w-full px-4 py-3'}`}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" />
-          <span>Sair da Conta</span>
+          {!isCollapsed && <span>Sair da Conta</span>}
         </button>
       </div>
     </div>
@@ -161,8 +198,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
   return (
     <>
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:block w-64 h-screen sticky top-0 shrink-0 shadow-glow">
-        <SidebarContent />
+      <aside className={`hidden lg:block h-screen sticky top-0 shrink-0 shadow-glow transition-[width] duration-200 ${collapsed ? 'w-20' : 'w-64'}`}>
+        {SidebarContent({ collapsed, showToggle: true })}
       </aside>
 
       {/* Botão flutuante (admin) */}
@@ -216,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-[#1a0e12]/70" onClick={() => setIsOpen(false)} />
           <aside className="relative w-64 h-full shadow-2xl animate-slide-right">
-            <SidebarContent />
+            {SidebarContent({})}
           </aside>
         </div>
       )}

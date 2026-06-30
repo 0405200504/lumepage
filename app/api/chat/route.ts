@@ -76,6 +76,7 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
       model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'),
       system: systemPrompt,
       messages,
+      maxSteps: 5,
       tools: {
         // ===== LEITURA (sempre baseada em dados reais do sistema) =====
         getAppointments: tool({

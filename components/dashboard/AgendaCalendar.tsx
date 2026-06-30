@@ -3,8 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ChevronLeft, ChevronRight, CalendarDays, CalendarRange, LayoutGrid,
+  ChevronLeft, ChevronRight, ChevronDown, CalendarDays, CalendarRange, LayoutGrid,
   X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
+  SlidersHorizontal, Lock,
 } from 'lucide-react';
 import { Appointment, Service, TimeBlock, Task, Client, AvailabilityRule } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
@@ -16,6 +17,7 @@ import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointmen
 import { AppointmentStatus } from '@/types/database';
 import { QuickAppointmentModal } from './QuickAppointmentModal';
 import { CalendarPlus } from 'lucide-react';
+import { useToast } from '../ui/Toast';
 
 type View = 'year' | 'month' | 'week' | 'day';
 
@@ -41,11 +43,24 @@ const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const startOfWeek = (d: Date) => addDays(d, -d.getDay());
 const sameDay = (a: Date, b: Date) => isoOf(a) === isoOf(b);
 const TASK_DND = 'application/lume-task';
+const APPT_DND = 'application/lume-appt';
+const EMPTY_MAP: Record<string, never> = {};
+const SNAP = 30; // granularidade de horário na agenda (minutos)
+const hhmmss = (min: number) => `${pad(Math.floor((min % 1440) / 60))}:${pad(min % 60)}:00`;
+
+// Inicia o arraste de um agendamento guardando o id e o offset do ponto pego
+// dentro do bloco (pra soltar alinhado embaixo do cursor).
+const apptDragStart = (e: React.DragEvent, apptId: string) => {
+  const offY = e.clientY - (e.currentTarget as HTMLElement).getBoundingClientRect().top;
+  e.dataTransfer.setData(APPT_DND, JSON.stringify({ id: apptId, offY }));
+  e.dataTransfer.effectAllowed = 'move';
+};
 
 export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients, availabilityRules = [],
 }) => {
   const router = useRouter();
+  const { success, error } = useToast();
   const today = new Date();
   const [view, setView] = useState<View>('month');
   const [cursor, setCursor] = useState<Date>(startOfMonth(today));
@@ -61,24 +76,54 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   }, []);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  // Estado local de agendamentos: permite mover (arrastar) com resposta imediata
+  // antes do servidor responder. Re-sincroniza quando o servidor envia novos dados.
+  const [appts, setAppts] = useState<Appointment[]>(appointments);
   const [dragOverISO, setDragOverISO] = useState<string | null>(null);
   const [quickBook, setQuickBook] = useState<{ date: string; time?: string } | null>(null);
 
+  // --- Filtros + opções avançadas (estilo painel lateral) ---
+  const [filterStatus, setFilterStatus] = useState<'all' | AppointmentStatus>('all');
+  const [filterClient, setFilterClient] = useState<string>('all'); // client_id | 'all'
+  const [filterService, setFilterService] = useState<string>('all'); // service id | 'all'
+  const [showWeekends, setShowWeekends] = useState(true);
+  const [showHolidays, setShowHolidays] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
+  const [miniCursor, setMiniCursor] = useState<Date>(startOfMonth(today));
+  const [sidebarOpen, setSidebarOpen] = useState(false); // drawer no mobile
+  const [fabOpen, setFabOpen] = useState(false);
+
+  const hasFilters = filterStatus !== 'all' || filterClient !== 'all' || filterService !== 'all';
+  const clearFilters = () => { setFilterStatus('all'); setFilterClient('all'); setFilterService('all'); };
+
   useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
+  useEffect(() => { setAppts(appointments); }, [appointments]);
+
+  // Agendamentos após filtros (status / cliente / serviço). Alimenta todas as visões.
+  const filteredAppointments = useMemo(() => appts.filter(a => {
+    if (filterStatus !== 'all' && a.status !== filterStatus) return false;
+    if (filterClient !== 'all' && a.client_id !== filterClient) return false;
+    if (filterService !== 'all') {
+      const ids = a.service_ids && a.service_ids.length ? a.service_ids : [a.service_id];
+      if (!ids.includes(filterService)) return false;
+    }
+    return true;
+  }), [appts, filterStatus, filterClient, filterService]);
 
   const apptByDate = useMemo(() => {
     const map: Record<string, Appointment[]> = {};
-    for (const a of appointments) (map[a.date] ||= []).push(a);
+    for (const a of filteredAppointments) (map[a.date] ||= []).push(a);
     for (const k in map) map[k].sort((x, y) => x.start_time.localeCompare(y.start_time));
     return map;
-  }, [appointments]);
+  }, [filteredAppointments]);
 
   const taskByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
+    if (!showTasks) return map;
     for (const t of tasks) if (t.due_date) (map[t.due_date] ||= []).push(t);
     for (const k in map) map[k].sort((a, b) => (a.due_time || '99').localeCompare(b.due_time || '99'));
     return map;
-  }, [tasks]);
+  }, [tasks, showTasks]);
 
   const blockByDate = useMemo(() => {
     const map: Record<string, TimeBlock[]> = {};
@@ -103,6 +148,9 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     const y = cursor.getFullYear();
     return getHolidayMap([y - 1, y, y + 1]);
   }, [cursor]);
+  // Mapa de feriados visível nas visões (respeita o toggle). O DayDetail continua
+  // usando o mapa completo, pois ali o feriado é informação útil mesmo escondido na grade.
+  const visibleHolidayMap = showHolidays ? holidayMap : EMPTY_MAP;
 
   const activeOf = (list: Appointment[] = []) => list.filter(a => a.status !== 'cancelled');
 
@@ -110,9 +158,28 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const moveTask = async (id: string, iso: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task || task.due_date === iso) return;
+    const oldDueDate = task.due_date;
     setTasks(ts => ts.map(t => t.id === id ? { ...t, due_date: iso } : t));
     const res = await updateTaskAction(professionalId, id, { dueDate: iso });
-    if (!res.success) setTasks(initialTasks); else router.refresh();
+    if (!res.success) {
+      setTasks(initialTasks);
+      error('Atenção', 'Não foi possível mover a tarefa.');
+    } else {
+      success('Tarefa movida', 'A data da tarefa foi atualizada.', {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          const undoRes = await updateTaskAction(professionalId, id, { dueDate: oldDueDate });
+          if (undoRes.success) {
+            setTasks(ts => ts.map(t => t.id === id ? { ...t, due_date: oldDueDate } : t));
+            success('Desfeito', 'A tarefa voltou para a data original.');
+            router.refresh();
+          } else {
+            error('Erro', 'Não foi possível reverter a tarefa.');
+          }
+        }
+      });
+      router.refresh();
+    }
   };
   const addTask = async (iso: string, content: string, time: string) => {
     const res = await createTaskAction(professionalId, { content, dueDate: iso, dueTime: time || null });
@@ -144,6 +211,42 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     return res.success;
   };
 
+  // Move um agendamento (arrastado na grade) para nova data/horário, mantendo a
+  // duração. Atualiza na hora (otimista) e persiste; reverte se o servidor recusar.
+  const moveAppt = async (apptId: string, dateIso: string, startMin: number) => {
+    const a = appts.find(x => x.id === apptId);
+    if (!a) return;
+    const oldDate = a.date;
+    const oldStartTime = a.start_time;
+    const oldEndTime = a.end_time;
+    const startMM = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const dur = Math.max(startMM(a.end_time) - startMM(a.start_time), SNAP);
+    const startTime = hhmmss(startMin);
+    const endTime = hhmmss(startMin + dur);
+    if (a.date === dateIso && a.start_time.startsWith(startTime.slice(0, 5))) return; // sem mudança
+    setAppts(list => list.map(x => x.id === apptId ? { ...x, date: dateIso, start_time: startTime, end_time: endTime } : x));
+    const res = await updateAppointmentAction(apptId, professionalId, { date: dateIso, startTime, endTime });
+    if (!res.success) { 
+      setAppts(appointments); 
+      error('Atenção', 'Não foi possível mover o agendamento.'); 
+    } else {
+      success('Horário alterado', 'O agendamento foi movido na sua agenda.', {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          const undoRes = await updateAppointmentAction(apptId, professionalId, { date: oldDate, startTime: oldStartTime, endTime: oldEndTime });
+          if (undoRes.success) {
+            setAppts(list => list.map(x => x.id === apptId ? { ...x, date: oldDate, start_time: oldStartTime, end_time: oldEndTime } : x));
+            success('Desfeito', 'O agendamento voltou ao horário original.');
+            router.refresh();
+          } else {
+            error('Erro', 'Não foi possível reverter o agendamento.');
+          }
+        }
+      });
+      router.refresh();
+    }
+  };
+
   const goToday = () => setCursor(view === 'day' || view === 'week' ? today : startOfMonth(today));
   const step = (dir: 1 | -1) => {
     if (view === 'year') setCursor(new Date(cursor.getFullYear() + dir, 0, 1));
@@ -168,58 +271,118 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     onDrop: (e: React.DragEvent) => { e.preventDefault(); const id = e.dataTransfer.getData(TASK_DND); setDragOverISO(null); if (id) moveTask(id, iso); },
   });
 
+  // Vai para um dia específico (a partir do mini-calendário): abre a visão diária.
+  const pickDay = (day: Date) => { setCursor(day); setView('day'); setMiniCursor(startOfMonth(day)); setSidebarOpen(false); };
+  const jumpToday = () => { goToday(); setMiniCursor(startOfMonth(today)); };
+
+  // Painel de filtros (reutilizado no desktop e no drawer mobile).
+  const sidebar = (
+    <AgendaSidebar
+      miniCursor={miniCursor}
+      onStepMonth={(dir) => setMiniCursor(addMonths(miniCursor, dir))}
+      today={today}
+      selectedISO={isoOf(cursor)}
+      apptByDate={apptByDate}
+      onPickDay={pickDay}
+      filterStatus={filterStatus} setFilterStatus={setFilterStatus}
+      filterClient={filterClient} setFilterClient={setFilterClient}
+      filterService={filterService} setFilterService={setFilterService}
+      clients={clients} services={services}
+      hasFilters={hasFilters} onClearFilters={clearFilters}
+      showWeekends={showWeekends} setShowWeekends={setShowWeekends}
+      showHolidays={showHolidays} setShowHolidays={setShowHolidays}
+      showTasks={showTasks} setShowTasks={setShowTasks}
+    />
+  );
+
+  const fabActions = [
+    { label: 'Novo agendamento', icon: CalendarPlus, onClick: () => setQuickBook({ date: isoOf(view === 'day' ? cursor : today) }) },
+    { label: 'Novo bloqueio de horário', icon: Lock, onClick: () => router.push('/dashboard/blocks') },
+    { label: 'Nova tarefa / lembrete', icon: NotebookPen, onClick: () => setSelectedISO(isoOf(view === 'day' ? cursor : today)) },
+  ];
+
   return (
-    <div className="space-y-5 select-none animate-fade-up">
-      {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
-            <button onClick={() => step(-1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Anterior"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={() => step(1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Próximo"><ChevronRight className="h-4 w-4" /></button>
-          </div>
-          <button onClick={goToday} className="px-4 py-2.5 bg-paper border border-gray-150 rounded-2xl text-xs font-bold text-forest shadow-soft hover:bg-cream transition-colors">Hoje</button>
-          <h3 className="text-lg md:text-xl font-black text-forest tracking-tight ml-1 capitalize">{title}</h3>
-        </div>
+    <div className="select-none animate-fade-up">
+      <div className="flex gap-5 items-start">
+        {/* Painel lateral (desktop) */}
+        <div className="hidden lg:block w-60 shrink-0 sticky top-2">{sidebar}</div>
 
-        <div className="flex items-center gap-2 self-start">
-          <button onClick={() => setQuickBook({ date: isoOf(view === 'day' ? cursor : today) })} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-forest text-white rounded-2xl text-xs font-bold shadow-soft hover:bg-forest-hover transition-all-custom">
-            <CalendarPlus className="h-3.5 w-3.5" /> Encaixar cliente
-          </button>
-          <button onClick={() => setSelectedISO(isoOf(today))} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 surface-wine text-white rounded-2xl text-xs font-bold shadow-soft hover:opacity-95 transition-all-custom">
-            <Plus className="h-3.5 w-3.5" /> Nova tarefa
-          </button>
-          <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
-            {([{ k: 'day', label: 'Dia', icon: Clock }, { k: 'week', label: 'Semana', icon: CalendarRange }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'year', label: 'Ano', icon: LayoutGrid }] as const).map(({ k, label, icon: Icon }) => (
-              <button key={k} onClick={() => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
-                <Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span>
+        {/* Coluna principal */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Topbar */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden inline-flex items-center gap-1.5 px-3 py-2.5 bg-paper border border-gray-150 rounded-2xl text-xs font-bold text-forest shadow-soft hover:bg-cream transition-colors" aria-label="Filtros">
+                <SlidersHorizontal className="h-3.5 w-3.5" /> Filtros{hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-wine-600" />}
               </button>
-            ))}
+              <button onClick={jumpToday} className="px-4 py-2.5 bg-paper border border-gray-150 rounded-2xl text-xs font-bold text-forest shadow-soft hover:bg-cream transition-colors">Hoje</button>
+              <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
+                <button onClick={() => step(-1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Anterior"><ChevronLeft className="h-4 w-4" /></button>
+                <button onClick={() => step(1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Próximo"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+              <h3 className="text-lg md:text-xl font-black text-forest tracking-tight ml-1 capitalize">{title}</h3>
+            </div>
+
+            <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft self-start">
+              {([{ k: 'day', label: 'Dia', icon: Clock }, { k: 'week', label: 'Semana', icon: CalendarRange }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'year', label: 'Ano', icon: LayoutGrid }] as const).map(({ k, label, icon: Icon }) => (
+                <button key={k} onClick={() => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
+                  <Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Legenda */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold text-gray-450">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#2e7d5b]" /> Confirmado</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b07a23]" /> Pendente</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-wine-700" /> Finalizado</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b23a48]" /> Falta</span>
+            {showTasks && <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-3 w-3 text-wine-600" /> Tarefa (arraste p/ mover)</span>}
+            {showHolidays && <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-3 w-3 text-wine-500" /> Feriado</span>}
+          </div>
+
+          {view === 'day' && (
+            <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} />
+          )}
+          {view === 'month' && (
+            <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
+          )}
+          {view === 'week' && (
+            <WeekView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} showWeekends={showWeekends} />
+          )}
+          {view === 'year' && (
+            <YearView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} activeOf={activeOf} onPickMonth={(m: number) => { setCursor(new Date(cursor.getFullYear(), m, 1)); setView('month'); }} />
+          )}
         </div>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold text-gray-450">
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#2e7d5b]" /> Confirmado</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b07a23]" /> Pendente</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-wine-700" /> Finalizado</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b23a48]" /> Falta</span>
-        <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-3 w-3 text-wine-600" /> Tarefa (arraste p/ mover)</span>
-        <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-3 w-3 text-wine-500" /> Feriado</span>
-      </div>
+      {/* Drawer de filtros (mobile) */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <aside className="relative w-[88%] max-w-xs h-full bg-cream overflow-y-auto p-4 shadow-glow animate-slide-right">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-black text-forest">Filtros & opções</p>
+              <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl hover:bg-paper text-gray-450"><X className="h-5 w-5" /></button>
+            </div>
+            {sidebar}
+          </aside>
+        </div>
+      )}
 
-      {view === 'day' && (
-        <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} />
-      )}
-      {view === 'month' && (
-        <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
-      )}
-      {view === 'week' && (
-        <WeekView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
-      )}
-      {view === 'year' && (
-        <YearView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={holidayMap} activeOf={activeOf} onPickMonth={(m: number) => { setCursor(new Date(cursor.getFullYear(), m, 1)); setView('month'); }} />
-      )}
+      {/* Botão flutuante (+) com ações rápidas */}
+      <div className="fixed right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] lg:right-6 lg:bottom-24 z-40 flex flex-col items-end gap-2.5">
+        {fabOpen && fabActions.map(({ label, icon: Icon, onClick }) => (
+          <button key={label} onClick={() => { setFabOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
+            <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-bold shadow-md whitespace-nowrap">{label}</span>
+            <span className="h-11 w-11 rounded-full bg-paper border border-gray-150 text-wine-700 shadow-md flex items-center justify-center shrink-0"><Icon className="h-4.5 w-4.5" /></span>
+          </button>
+        ))}
+        <button onClick={() => setFabOpen(o => !o)} className="h-14 w-14 rounded-full surface-wine text-white shadow-glow flex items-center justify-center hover:scale-105 transition-transform" aria-label="Novo" aria-expanded={fabOpen}>
+          <Plus className={`h-6 w-6 transition-transform ${fabOpen ? 'rotate-45' : ''}`} />
+        </button>
+      </div>
 
       {selectedISO && (
         <DayDetail
@@ -251,6 +414,134 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           onCreated={() => { setQuickBook(null); router.refresh(); }}
         />
       )}
+    </div>
+  );
+};
+
+/* ---------------- PAINEL LATERAL (mini-calendário + filtros + opções) ---------------- */
+const MINI_WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
+  <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5 w-full text-left py-0.5" role="switch" aria-checked={checked}>
+    <span className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${checked ? 'bg-wine-600' : 'bg-gray-250'}`}>
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${checked ? 'left-[1.125rem]' : 'left-0.5'}`} />
+    </span>
+    <span className="text-[13px] font-semibold text-ink">{label}</span>
+  </button>
+);
+
+const SelectField: React.FC<{ label: string; value: string; onChange: (v: string) => void; children: React.ReactNode }> = ({ label, value, onChange, children }) => (
+  <label className="block">
+    <span className="text-[13px] font-bold text-ink mb-1 block">{label}</span>
+    <div className="relative">
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-paper border border-gray-150 rounded-xl pl-3 pr-8 py-2 text-sm text-ink shadow-xs focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700">
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-450" />
+    </div>
+  </label>
+);
+
+interface AgendaSidebarProps {
+  miniCursor: Date;
+  onStepMonth: (dir: 1 | -1) => void;
+  today: Date;
+  selectedISO: string;
+  apptByDate: Record<string, Appointment[]>;
+  onPickDay: (d: Date) => void;
+  filterStatus: 'all' | AppointmentStatus;
+  setFilterStatus: (v: 'all' | AppointmentStatus) => void;
+  filterClient: string;
+  setFilterClient: (v: string) => void;
+  filterService: string;
+  setFilterService: (v: string) => void;
+  clients: Client[];
+  services: Service[];
+  hasFilters: boolean;
+  onClearFilters: () => void;
+  showWeekends: boolean; setShowWeekends: (v: boolean) => void;
+  showHolidays: boolean; setShowHolidays: (v: boolean) => void;
+  showTasks: boolean; setShowTasks: (v: boolean) => void;
+}
+
+const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
+  miniCursor, onStepMonth, today, selectedISO, apptByDate, onPickDay,
+  filterStatus, setFilterStatus, filterClient, setFilterClient, filterService, setFilterService,
+  clients, services, hasFilters, onClearFilters,
+  showWeekends, setShowWeekends, showHolidays, setShowHolidays, showTasks, setShowTasks,
+}) => {
+  const [advOpen, setAdvOpen] = useState(true);
+  const gridStart = startOfWeek(startOfMonth(miniCursor));
+  const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  const activeServices = services.filter(s => s.is_active);
+  const namedClients = clients.filter(c => c.name);
+
+  return (
+    <div className="space-y-5">
+      {/* Mini-calendário */}
+      <div className="card p-3">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => onStepMonth(-1)} className="p-1.5 rounded-lg hover:bg-cream text-gray-450 hover:text-forest" aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></button>
+          <p className="text-[13px] font-black text-forest capitalize">{MONTHS[miniCursor.getMonth()]} de {miniCursor.getFullYear()}</p>
+          <button onClick={() => onStepMonth(1)} className="p-1.5 rounded-lg hover:bg-cream text-gray-450 hover:text-forest" aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></button>
+        </div>
+        <div className="grid grid-cols-7">
+          {MINI_WEEKDAYS.map((w, i) => <div key={i} className={`text-center text-[10px] font-bold py-1 ${i === 0 ? 'text-wine-400' : 'text-gray-450/70'}`}>{w}</div>)}
+          {days.map((d, i) => {
+            const iso = isoOf(d);
+            const inMonth = d.getMonth() === miniCursor.getMonth();
+            const isToday = sameDay(d, today);
+            const isSelected = iso === selectedISO;
+            const has = (apptByDate[iso] || []).some(a => a.status !== 'cancelled');
+            return (
+              <button key={i} onClick={() => onPickDay(d)} className="aspect-square flex items-center justify-center">
+                <span className={`relative flex items-center justify-center h-7 w-7 text-[11px] rounded-full transition-colors ${isToday ? 'surface-wine text-white font-bold' : isSelected ? 'bg-wine-100 text-wine-700 font-bold' : inMonth ? 'text-ink hover:bg-cream' : 'text-gray-450/40'}`}>
+                  {d.getDate()}
+                  {has && !isToday && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-wine-600" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-base font-black text-forest">Filtros</p>
+          <button onClick={onClearFilters} disabled={!hasFilters} className="text-[13px] font-bold text-wine-600 hover:text-wine-700 disabled:text-gray-450/50 disabled:cursor-default transition-colors">Limpar filtros</button>
+        </div>
+        <SelectField label="Status" value={filterStatus} onChange={(v) => setFilterStatus(v as 'all' | AppointmentStatus)}>
+          <option value="all">Todos</option>
+          <option value="pending">Pendente</option>
+          <option value="confirmed">Confirmado</option>
+          <option value="completed">Finalizado</option>
+          <option value="no_show">Falta</option>
+          <option value="cancelled">Cancelado</option>
+        </SelectField>
+        <SelectField label="Cliente" value={filterClient} onChange={setFilterClient}>
+          <option value="all">Todos</option>
+          {namedClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </SelectField>
+        <SelectField label="Serviço" value={filterService} onChange={setFilterService}>
+          <option value="all">Todos</option>
+          {activeServices.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </SelectField>
+      </div>
+
+      {/* Opções avançadas */}
+      <div className="space-y-2.5">
+        <button onClick={() => setAdvOpen(o => !o)} className="flex items-center gap-1.5 text-[13px] font-black text-wine-600 hover:text-wine-700">
+          Opções avançadas <ChevronDown className={`h-4 w-4 transition-transform ${advOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {advOpen && (
+          <div className="space-y-2 pt-0.5">
+            <Toggle checked={showWeekends} onChange={setShowWeekends} label="Mostrar finais de semana" />
+            <Toggle checked={showTasks} onChange={setShowTasks} label="Mostrar tarefas e lembretes" />
+            <Toggle checked={showHolidays} onChange={setShowHolidays} label="Mostrar feriados" />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -328,7 +619,7 @@ const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number)
 const HOUR_H = 56;          // altura de 1 hora em px
 const PXM = HOUR_H / 60;    // px por minuto
 
-const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook }) => {
+const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt }) => {
   const iso = isoOf(cursor);
   const isToday = sameDay(cursor, today);
   const holiday = holidayMap[iso];
@@ -385,9 +676,17 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
 
+  // Estado de interação na timeline (hover para "clique p/ encaixar" + arraste).
+  const [hoverMin, setHoverMin] = useState<number | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Converte uma posição Y (relativa ao topo da coluna) em minutos, com snap.
+  const minFromY = (clientY: number, rectTop: number, snap = SNAP) => {
+    const min = rangeStartMin + Math.round(((clientY - rectTop) / PXM) / snap) * snap;
+    return Math.max(rangeStartMin, Math.min(min, endHour * 60 - snap));
+  };
   const bookAtY = (clientY: number, rectTop: number) => {
-    let min = rangeStartMin + Math.round(((clientY - rectTop) / PXM) / 15) * 15;
-    min = Math.max(rangeStartMin, Math.min(min, endHour * 60 - 5));
+    const min = minFromY(clientY, rectTop);
     onQuickBook(iso, `${pad(Math.floor(min / 60))}:${pad(min % 60)}`);
   };
 
@@ -422,27 +721,47 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
       {!fullDayBlock && (
         <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: '68vh' }}>
           <div className="flex" style={{ height: totalH }}>
-            {/* Régua de horas */}
+            {/* Régua de horas (rótulos de 30 em 30 min) */}
             <div className="relative w-14 shrink-0 select-none">
-              {Array.from({ length: hours + 1 }, (_, i) => {
-                const h = startHour + i;
+              {Array.from({ length: hours * 2 + 1 }, (_, i) => {
+                const min = rangeStartMin + i * 30;
+                const isHour = min % 60 === 0;
                 return (
-                  <div key={h} className="absolute right-2 -translate-y-1/2 text-[10px] font-bold text-gray-450 tabular-nums" style={{ top: yOf(h * 60) }}>
-                    {pad(h)}:00
+                  <div key={i} className={`absolute right-2 -translate-y-1/2 tabular-nums ${isHour ? 'text-[10px] font-bold text-gray-450' : 'text-[9px] font-semibold text-gray-450/55'}`} style={{ top: yOf(min) }}>
+                    {pad(Math.floor(min / 60))}:{pad(min % 60)}
                   </div>
                 );
               })}
             </div>
 
             {/* Coluna de eventos */}
-            <div className="relative flex-1 border-l border-gray-150">
+            <div
+              className={`relative flex-1 border-l border-gray-150 transition-colors ${isDragOver ? 'bg-wine-50/60' : ''}`}
+              onDragOver={(e) => { if (e.dataTransfer.types.includes(APPT_DND)) { e.preventDefault(); setIsDragOver(true); } }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault(); setIsDragOver(false);
+                const raw = e.dataTransfer.getData(APPT_DND); if (!raw) return;
+                const { id, offY } = JSON.parse(raw);
+                onMoveAppt?.(id, iso, minFromY(e.clientY - offY, e.currentTarget.getBoundingClientRect().top));
+              }}
+            >
               {/* Camada de clique (encaixa no horário tocado) */}
               <button
                 type="button"
                 aria-label="Encaixar cliente neste horário"
                 onClick={(e) => bookAtY(e.clientY, e.currentTarget.getBoundingClientRect().top)}
+                onMouseMove={(e) => setHoverMin(minFromY(e.clientY, e.currentTarget.getBoundingClientRect().top))}
+                onMouseLeave={() => setHoverMin(null)}
                 className="absolute inset-0 w-full cursor-pointer"
               />
+
+              {/* Ghost de "clique p/ encaixar" no horário sob o cursor */}
+              {hoverMin !== null && (
+                <div className="absolute left-1 right-1 z-[5] rounded-lg border-2 border-dashed border-wine-400/70 bg-wine-50/70 flex items-center px-2 pointer-events-none" style={{ top: yOf(hoverMin), height: SNAP * PXM }}>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600"><Plus className="h-3 w-3" /> Encaixar às {pad(Math.floor(hoverMin / 60))}:{pad(hoverMin % 60)}</span>
+                </div>
+              )}
 
               {/* Linhas de hora (cheia) + meia-hora (fraca) */}
               {Array.from({ length: hours }, (_, i) => {
@@ -490,8 +809,11 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 return (
                   <button
                     key={a.id}
+                    draggable
+                    onDragStart={(e) => apptDragStart(e, a.id)}
                     onClick={() => onSelectDay(iso)}
-                    className={`absolute z-10 text-left rounded-lg border px-2 py-1 overflow-hidden shadow-soft transition-transform active:scale-[0.99] ${m.block}`}
+                    title="Arraste para reagendar · clique para ver"
+                    className={`group absolute z-10 text-left rounded-lg border px-2 py-1 overflow-hidden shadow-soft cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] ${m.block}`}
                     style={{
                       top: yOf(s) + 1,
                       height: height - 2,
@@ -499,6 +821,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                       width: `calc(${widthPct}% - 8px)`,
                     }}
                   >
+                    <GripVertical className="absolute right-0.5 top-0.5 h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
                     <p className="text-[10px] font-black tabular-nums leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
                     <p className="text-[11px] font-bold truncate leading-tight">{a.client_name}</p>
                     {height > 46 && <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
@@ -539,45 +862,186 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
   );
 };
 
-/* ---------------- SEMANA ---------------- */
-const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, activeOf, onSelectDay, dropProps, dragOverISO }) => {
+/* ---------------- SEMANA (grade de horários, colunas por dia) ---------------- */
+const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt, showWeekends }) => {
   const ws = startOfWeek(cursor);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const allDays = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const days = showWeekends ? allDays : allDays.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
+
+  // Faixa de horas considerando tudo da semana visível (padrão 7h–21h, expande p/ caber).
+  const collected: number[] = [];
+  days.forEach((d) => {
+    const iso = isoOf(d);
+    activeOf(apptByDate[iso]).forEach((a: Appointment) => collected.push(tmin(a.start_time), tmin(a.end_time)));
+    (blockByDate[iso] || []).filter((b: TimeBlock) => b.start_time && b.end_time).forEach((b: TimeBlock) => collected.push(tmin(b.start_time!), tmin(b.end_time!)));
+    (taskByDate[iso] || []).filter((t: Task) => t.due_time).forEach((t: Task) => collected.push(tmin(t.due_time!)));
+  });
+  let startHour = 7, endHour = 21;
+  if (collected.length) {
+    startHour = Math.min(startHour, Math.floor(Math.min(...collected) / 60));
+    endHour = Math.max(endHour, Math.ceil(Math.max(...collected) / 60));
+  }
+  const rangeStartMin = startHour * 60;
+  const hours = endHour - startHour;
+  const totalH = hours * HOUR_H;
+  const yOf = (min: number) => (min - rangeStartMin) * PXM;
+
+  const nowMin = today.getHours() * 60 + today.getMinutes();
+  const weekKey = isoOf(ws);
+
+  // Hover (clique p/ encaixar) e coluna alvo do arraste.
+  const [hover, setHover] = useState<{ iso: string; min: number } | null>(null);
+  const [dragOverIso, setDragOverIso] = useState<string | null>(null);
+  const minFromY = (clientY: number, rectTop: number, snap = SNAP) => {
+    const min = rangeStartMin + Math.round(((clientY - rectTop) / PXM) / snap) * snap;
+    return Math.max(rangeStartMin, Math.min(min, endHour * 60 - snap));
+  };
+
+  // Rola para perto do horário atual ao abrir/trocar de semana.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current; if (!el) return;
+    el.scrollTop = Math.max(0, yOf(nowMin >= rangeStartMin && nowMin <= endHour * 60 ? nowMin : 8 * 60) - 90);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekKey]);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-7 gap-3">
-      {days.map((day) => {
-        const iso = isoOf(day);
-        const isToday = sameDay(day, today);
-        const holiday = holidayMap[iso];
-        const appts = activeOf(apptByDate[iso]);
-        const dayTasks: Task[] = taskByDate[iso] || [];
-        const isDragOver = dragOverISO === iso;
-        return (
-          <div key={iso} {...dropProps(iso)} className={`card p-3 flex flex-col min-h-[200px] ${isToday ? 'ring-2 ring-wine-700/30' : ''} ${isDragOver ? 'ring-2 ring-wine-700/60 bg-wine-50' : ''}`}>
-            <button onClick={() => onSelectDay(iso)} className="text-left">
-              <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-black uppercase tracking-wider ${day.getDay() === 0 ? 'text-wine-500' : 'text-gray-450'}`}>{WEEKDAYS_SHORT[day.getDay()]}</span>
-                <span className={`inline-flex items-center justify-center h-7 w-7 text-xs font-bold rounded-full ${isToday ? 'surface-wine text-white' : 'text-ink'}`}>{day.getDate()}</span>
-              </div>
-              {holiday && <div className="mt-1.5 flex items-center gap-1 text-[9px] font-bold text-wine-600"><PartyPopper className="h-2.5 w-2.5" /> <span className="truncate">{holiday.name}</span></div>}
+    <div className="card p-0 overflow-hidden">
+      {/* Cabeçalho dos dias */}
+      <div className="flex border-b border-gray-150 bg-cream/60">
+        <div className="w-14 shrink-0" />
+        {days.map((d) => {
+          const iso = isoOf(d);
+          const isToday = sameDay(d, today);
+          const holiday = holidayMap[iso];
+          const count = activeOf(apptByDate[iso]).length;
+          return (
+            <button key={iso} onClick={() => onSelectDay(iso)} className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-gray-150 hover:bg-cream transition-colors ${(holiday || d.getDay() === 0) ? 'bg-wine-50/50' : ''}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${d.getDay() === 0 ? 'text-wine-500' : 'text-gray-450'}`}>{WEEKDAYS_SHORT[d.getDay()]}</p>
+              <span className={`mt-0.5 inline-flex items-center justify-center h-7 w-7 text-xs font-bold rounded-full ${isToday ? 'surface-wine text-white' : 'text-ink'}`}>{d.getDate()}</span>
+              {count > 0 && <p className="text-[8px] font-bold text-wine-600 truncate">{count} agend.</p>}
             </button>
-            <div className="mt-2 space-y-1.5 flex-1 overflow-y-auto">
-              {appts.length === 0 && dayTasks.length === 0 && <p className="text-[10px] text-gray-450/70 pt-4 text-center">Sem itens</p>}
-              {appts.map((a: Appointment) => {
-                const m = statusMeta(a.status);
-                return (
-                  <button key={a.id} onClick={() => onSelectDay(iso)} className={`w-full text-left rounded-xl border px-2 py-1.5 ${m.block}`}>
-                    <p className="text-[10px] font-black">{a.start_time.substring(0, 5)}</p>
-                    <p className="text-[11px] font-bold truncate">{a.client_name}</p>
-                    <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>
-                  </button>
-                );
-              })}
-              {dayTasks.map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} />)}
-            </div>
+          );
+        })}
+      </div>
+
+      {/* Timeline rolável */}
+      <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: '68vh' }}>
+        <div className="flex" style={{ height: totalH }}>
+          {/* Régua de horas (rótulos de 30 em 30 min) */}
+          <div className="relative w-14 shrink-0 select-none">
+            {Array.from({ length: hours * 2 + 1 }, (_, i) => {
+              const min = rangeStartMin + i * 30;
+              const isHour = min % 60 === 0;
+              return <div key={i} className={`absolute right-2 -translate-y-1/2 tabular-nums ${isHour ? 'text-[10px] font-bold text-gray-450' : 'text-[9px] font-semibold text-gray-450/55'}`} style={{ top: yOf(min) }}>{pad(Math.floor(min / 60))}:{pad(min % 60)}</div>;
+            })}
           </div>
-        );
-      })}
+
+          {/* Uma coluna por dia */}
+          {days.map((d) => {
+            const iso = isoOf(d);
+            const isToday = sameDay(d, today);
+            const appts: Appointment[] = activeOf(apptByDate[iso]).slice().sort((a: Appointment, b: Appointment) => a.start_time.localeCompare(b.start_time));
+            const blocks: TimeBlock[] = (blockByDate[iso] || []).filter((b: TimeBlock) => b.block_type === 'custom_time' && b.start_time && b.end_time);
+            const lunch = (lunchByWeekday || {})[d.getDay()];
+            const tTasks: Task[] = (taskByDate[iso] || []).filter((t: Task) => t.due_time);
+
+            const laneEnds: number[] = [];
+            const placed = appts.map((a) => {
+              const s = tmin(a.start_time), e = Math.max(tmin(a.end_time), s + 15);
+              let lane = laneEnds.findIndex(end => end <= s);
+              if (lane === -1) { lane = laneEnds.length; laneEnds.push(e); } else { laneEnds[lane] = e; }
+              return { a, s, e, lane };
+            });
+            const laneCount = Math.max(1, laneEnds.length);
+
+            return (
+              <div key={iso}
+                className={`relative flex-1 min-w-0 border-l border-gray-150 transition-colors ${dragOverIso === iso ? 'bg-wine-50/60' : isToday ? 'bg-wine-50/25' : ''}`}
+                onDragOver={(e) => { if (e.dataTransfer.types.includes(APPT_DND)) { e.preventDefault(); setDragOverIso(iso); } }}
+                onDragLeave={() => setDragOverIso(o => (o === iso ? null : o))}
+                onDrop={(e) => {
+                  e.preventDefault(); setDragOverIso(null);
+                  const raw = e.dataTransfer.getData(APPT_DND); if (!raw) return;
+                  const { id, offY } = JSON.parse(raw);
+                  onMoveAppt?.(id, iso, minFromY(e.clientY - offY, e.currentTarget.getBoundingClientRect().top));
+                }}
+              >
+                {/* Camada de clique (encaixa cliente no horário tocado) */}
+                <button type="button" aria-label="Encaixar cliente neste horário"
+                  onClick={(e) => {
+                    const min = minFromY(e.clientY, e.currentTarget.getBoundingClientRect().top);
+                    onQuickBook(iso, `${pad(Math.floor(min / 60))}:${pad(min % 60)}`);
+                  }}
+                  onMouseMove={(e) => setHover({ iso, min: minFromY(e.clientY, e.currentTarget.getBoundingClientRect().top) })}
+                  onMouseLeave={() => setHover(h => (h && h.iso === iso ? null : h))}
+                  className="absolute inset-0 w-full cursor-pointer" />
+
+                {/* Ghost de "clique p/ encaixar" */}
+                {hover && hover.iso === iso && (
+                  <div className="absolute left-0.5 right-0.5 z-[5] rounded-md border-2 border-dashed border-wine-400/70 bg-wine-50/70 flex items-center justify-center pointer-events-none" style={{ top: yOf(hover.min), height: SNAP * PXM }}>
+                    <span className="text-[9px] font-bold text-wine-600 tabular-nums">+ {pad(Math.floor(hover.min / 60))}:{pad(hover.min % 60)}</span>
+                  </div>
+                )}
+
+                {/* Linhas de hora / meia-hora */}
+                {Array.from({ length: hours }, (_, i) => {
+                  const h = startHour + i;
+                  return (
+                    <React.Fragment key={h}>
+                      <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(h * 60) }} />
+                      <div className="absolute left-0 right-0 border-t border-dashed border-gray-150/45 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Almoço */}
+                {lunch && (
+                  <div className="absolute left-0.5 right-0.5 rounded-md bg-gray-100 border border-gray-200/80 overflow-hidden pointer-events-none" style={{ top: yOf(tmin(lunch.start)), height: Math.max((tmin(lunch.end) - tmin(lunch.start)) * PXM, 12) }} />
+                )}
+
+                {/* Bloqueios */}
+                {blocks.map((b, i) => (
+                  <div key={`b${i}`} className="absolute left-0.5 right-0.5 rounded-md bg-gray-150/70 border border-dashed border-gray-300 overflow-hidden pointer-events-none px-1" style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 12) }}>
+                    <p className="text-[8px] font-bold text-gray-500 truncate">🔒 {b.start_time!.substring(0, 5)}</p>
+                  </div>
+                ))}
+
+                {/* Linha do "agora" */}
+                {isToday && nowMin >= rangeStartMin && nowMin <= endHour * 60 && (
+                  <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
+                    <span className="h-2 w-2 rounded-full bg-[#b23a48] -ml-1 shadow" /><div className="flex-1 border-t-2 border-[#b23a48]" />
+                  </div>
+                )}
+
+                {/* Agendamentos */}
+                {placed.map(({ a, s, e, lane }) => {
+                  const m = statusMeta(a.status);
+                  const w = 100 / laneCount;
+                  const height = Math.max((e - s) * PXM, 20);
+                  return (
+                    <button key={a.id} draggable onDragStart={(ev) => apptDragStart(ev, a.id)} onClick={() => onSelectDay(iso)} title="Arraste para reagendar · clique para ver"
+                      className={`absolute z-10 text-left rounded-md border px-1 py-0.5 overflow-hidden shadow-soft cursor-grab active:cursor-grabbing ${m.block}`}
+                      style={{ top: yOf(s) + 1, height: height - 2, left: `calc(${lane * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
+                      <p className="text-[9px] font-black tabular-nums leading-tight">{a.start_time.substring(0, 5)}</p>
+                      <p className="text-[10px] font-bold truncate leading-tight">{a.client_name.split(' ')[0]}</p>
+                    </button>
+                  );
+                })}
+
+                {/* Tarefas com horário */}
+                {tTasks.map((t) => (
+                  <div key={`t${t.id}`} onClick={(ev) => { ev.stopPropagation(); onSelectDay(iso); }}
+                    className={`absolute z-10 left-0.5 right-0.5 flex items-center gap-1 rounded-md border px-1 py-0.5 cursor-pointer shadow-soft bg-wine-700/8 border-wine-700/25 text-wine-800 ${t.done ? 'opacity-50 line-through' : ''}`}
+                    style={{ top: yOf(tmin(t.due_time!)), height: 20 }}>
+                    <NotebookPen className="h-2.5 w-2.5 shrink-0 text-wine-600" /><span className="text-[9px] font-bold truncate">{t.content}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

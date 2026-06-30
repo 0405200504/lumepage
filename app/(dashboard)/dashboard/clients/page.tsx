@@ -4,8 +4,8 @@ import { dbService } from '@/lib/supabase/db';
 import { ClientsList } from '@/components/dashboard/ClientsList';
 
 export const metadata = {
-  title: 'Minhas Clientes | Lume Agenda Dashboard',
-  description: 'Fichário de clientes com históricos de agendamentos acumulados e atalhos de contato rápido.'
+  title: 'Contatos | Lume',
+  description: 'Gerencie seus contatos com histórico de atendimentos, aniversariantes e frequência de visitas.'
 };
 
 export default async function DashboardClientsPage() {
