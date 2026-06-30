@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { AppointmentStatus, Service, AvailabilityRule, Professional, Setting, BlockType } from '@/types/database';
+import { revalidatePath } from 'next/cache';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
@@ -205,6 +206,7 @@ export async function updateAppointmentAction(
     if (!result) return { success: false, error: 'Agendamento não encontrado.' };
     // Mantém a receita automática em sincronia com o status atual
     await dbService.syncAppointmentRevenue(appointmentId).catch(() => {});
+    revalidatePath('/dashboard/agenda');
     return { success: true, appointment: result };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar agendamento.' };

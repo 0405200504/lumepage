@@ -3,6 +3,7 @@
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
 import { TransactionType } from '@/types/database';
+import { revalidatePath } from 'next/cache';
 import { isDemo } from '@/lib/demo';
 
 const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
@@ -93,6 +94,7 @@ export async function updateTaskAction(
     if (fields.dueDate !== undefined) payload.due_date = fields.dueDate;
     if (fields.dueTime !== undefined) payload.due_time = fields.dueTime;
     await dbService.updateTask(id, payload, professionalId);
+    revalidatePath('/dashboard/agenda');
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao atualizar tarefa.' };
