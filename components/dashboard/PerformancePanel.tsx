@@ -185,7 +185,7 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
               <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Star className="h-5 w-5" /></div>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Serviço mais vendido</p>
-                <p className="text-sm font-black text-ink truncate">{data.topServices[0]?.label || '—'}</p>
+                <p className="text-sm font-bold text-ink truncate">{data.topServices[0]?.label || '—'}</p>
                 {data.topServices[0] && <p className="text-[11px] text-gray-450">{data.topServices[0].value}x no período</p>}
               </div>
             </div>
@@ -193,7 +193,7 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
               <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Crown className="h-5 w-5" /></div>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Cliente que mais agendou</p>
-                <p className="text-sm font-black text-ink truncate">{data.topClient?.[0] || '—'}</p>
+                <p className="text-sm font-bold text-ink truncate">{data.topClient?.[0] || '—'}</p>
                 {data.topClient && <p className="text-[11px] text-gray-450">{data.topClient[1]} agendamentos</p>}
               </div>
             </div>
@@ -225,7 +225,7 @@ const Kpi: React.FC<{ icon: React.ReactNode; label: string; value: string; muted
   <div className="card p-4">
     <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-gray-100 text-gray-450' : 'bg-wine-700/8 text-wine-700'}`}>{icon}</div>
     <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{label}</p>
-    <p className="text-lg font-black text-ink mt-0.5">{value}</p>
+    <p className="text-lg font-bold text-ink mt-0.5">{value}</p>
   </div>
 );
 

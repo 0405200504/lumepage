@@ -32,6 +32,7 @@ export default async function FinancePage() {
         transactions={transactions}
         appointments={appointments}
         fixedExpenses={fixedExpenses}
+        services={services}
       />
     </div>
   );
