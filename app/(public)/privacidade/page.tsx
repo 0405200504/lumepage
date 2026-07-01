@@ -70,6 +70,7 @@ export default function PrivacidadePage() {
             <ul className="list-disc pl-5 space-y-1 mt-2">
               <li><strong>Supabase</strong> — banco de dados e autenticação;</li>
               <li><strong>Vercel</strong> — hospedagem da aplicação;</li>
+              <li><strong>Google Cloud (Google Calendar)</strong> — para sincronização bidirecional de agendas, nós acessamos e editamos apenas eventos criados através do Lume para evitar conflitos;</li>
               <li><strong>OpenAI</strong> — assistente de IA (quando usado pela profissional);</li>
               <li><strong>Provedor de mensageria do WhatsApp</strong> — envio das mensagens automáticas.</li>
             </ul>
