@@ -41,7 +41,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         {comparison && <StatBadge comparison={comparison} suffix={comparisonSuffix} higherIsBetter={higherIsBetter} />}
       </div>
       <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{label}</p>
-      <p className={`text-xl sm:text-2xl font-bold mt-0.5 tabular-nums ${accent ? 'text-forest' : 'text-heading'}`}>{value}</p>
+      <p className={`text-xl sm:text-2xl font-semibold mt-0.5 tracking-tight tabular-nums ${accent ? 'text-forest' : 'text-heading'}`}>{value}</p>
       <div className="flex items-end justify-between gap-2 mt-1">
         {hint && <p className="text-[10px] text-gray-450 font-medium">{hint}</p>}
         {spark && spark.length > 1 && <Sparkline data={spark} color={sparkColor ?? 'var(--color-wine-500)'} className="ml-auto" />}

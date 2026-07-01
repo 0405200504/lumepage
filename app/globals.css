@@ -54,9 +54,9 @@
   --color-warn: #b07a23;
   --color-bad: #c0203c;
 
-  /* — Tipografia (Inter unificada — títulos e corpo) — */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* — Tipografia (Manrope — sans leve e delicada, títulos e corpo) — */
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 
   /* — Raios (moderados e consistentes) — */
   --radius-card: 0.75rem;  /* cartões (12px) */
