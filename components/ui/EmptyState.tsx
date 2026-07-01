@@ -17,8 +17,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-12 px-4 border border-dashed border-line rounded-xl bg-surface-2/50">
-      <div className="p-3.5 bg-surface-2 text-gray-450 rounded-xl mb-4 shrink-0">
+    <div className="relative flex flex-col items-center justify-center text-center py-12 px-4 border border-dashed border-line rounded-2xl bg-gradient-to-b from-surface-2/40 to-transparent overflow-hidden">
+      <span className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 h-24 w-40 rounded-full bg-wine-500/[0.06] blur-2xl" />
+      <div className="relative p-3.5 bg-white text-forest rounded-2xl mb-4 shrink-0 ring-1 ring-wine-700/10 shadow-soft">
         {icon || <FolderOpen className="h-7 w-7" />}
       </div>
       <h3 className="text-sm font-semibold text-heading tracking-tight">{title}</h3>
@@ -26,7 +27,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionText && onAction && (
         <button
           onClick={onAction}
-          className="mt-5 px-4 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-lg shadow-xs transition-all-custom"
+          className="tap mt-5 px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:shadow-glow transition-all-custom"
         >
           {actionText}
         </button>

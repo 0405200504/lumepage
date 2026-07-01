@@ -39,7 +39,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f7f3ee]">
+    <div
+      className="flex min-h-screen bg-cream"
+      style={{
+        backgroundImage:
+          'radial-gradient(60% 50% at 100% 0%, rgba(140,36,56,0.04) 0%, transparent 60%), radial-gradient(50% 40% at 0% 100%, rgba(80,11,24,0.035) 0%, transparent 55%)',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <Sidebar
         role="professional"
         name={session.name}

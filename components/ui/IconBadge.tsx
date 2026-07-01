@@ -21,8 +21,8 @@ const SIZES = {
 export const IconBadge: React.FC<IconBadgeProps> = ({ icon, variant = 'solid', size = 'md', className = '' }) => {
   const base = 'inline-flex items-center justify-center rounded-full shrink-0';
   const tone =
-    variant === 'solid' ? 'bg-forest text-white'
-    : variant === 'soft' ? 'bg-[color:var(--color-accent-soft)] text-forest'
+    variant === 'solid' ? 'surface-wine text-white shadow-soft ring-hairline'
+    : variant === 'soft' ? 'bg-[color:var(--color-accent-soft)] text-forest ring-1 ring-[color:var(--color-accent-soft-border)]'
     : 'bg-surface-2 text-gray-450';
   return <span className={`${base} ${SIZES[size]} ${tone} ${className}`}>{icon}</span>;
 };

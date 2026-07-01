@@ -42,8 +42,8 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
   return (
     <Portal>
       <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-        <div className="absolute inset-0 bg-[#100b0c]/50 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-2xl p-0 z-10 animate-slide-up max-h-[85vh] flex flex-col">
+        <div className="absolute inset-0 bg-[#100b0c]/55 backdrop-blur-md" onClick={onClose} />
+        <div className="relative card-elevated w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-3xl p-0 z-10 animate-slide-up max-h-[85vh] flex flex-col safe-sheet sm:pb-0">
           <div className="flex items-start justify-between gap-3 p-5 border-b border-line">
             <div className="min-w-0">
               <h3 className="text-base font-bold text-heading tracking-tight truncate">{title}</h3>

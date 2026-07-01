@@ -54,22 +54,22 @@
   --color-warn: #b07a23;
   --color-bad: #c0203c;
 
-  /* — Tipografia (Inter unificada — títulos e corpo) — */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* — Tipografia (Manrope — sans leve e delicada, títulos e corpo) — */
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 
-  /* — Raios (moderados e consistentes) — */
-  --radius-card: 0.75rem;  /* cartões (12px) */
+  /* — Raios (moderados e consistentes — premium/SaaS) — */
+  --radius-card: 0.875rem;  /* cartões (14px) */
   --radius-3xl: 1rem;
   --radius-4xl: 1.25rem;
   --radius-5xl: 1.5rem;
 
-  /* — Sombras (quase nulas — minimalista) — */
+  /* — Sombras (profundidade real, em camadas — premium sem pesar) — */
   --shadow-xs:   0 1px 2px rgba(16, 16, 20, 0.05);
-  --shadow-soft: 0 1px 2px rgba(16, 16, 20, 0.05);
-  --shadow-md:   0 1px 3px rgba(16, 16, 20, 0.06), 0 4px 12px -8px rgba(16, 16, 20, 0.10);
-  --shadow-lg:   0 8px 24px -12px rgba(16, 16, 20, 0.12), 0 24px 48px -24px rgba(16, 16, 20, 0.14);
-  --shadow-glow: 0 16px 48px -24px rgba(80, 11, 24, 0.25);
+  --shadow-soft: 0 1px 2px rgba(16, 16, 20, 0.04), 0 4px 10px -6px rgba(16, 16, 20, 0.08);
+  --shadow-md:   0 2px 4px rgba(16, 16, 20, 0.05), 0 8px 20px -10px rgba(16, 16, 20, 0.14);
+  --shadow-lg:   0 10px 30px -14px rgba(16, 16, 20, 0.16), 0 28px 56px -28px rgba(16, 16, 20, 0.18);
+  --shadow-glow: 0 20px 56px -26px rgba(80, 11, 24, 0.32);
 }
 
 /* — Base — */
@@ -208,21 +208,23 @@ svg.lucide {
    No mobile o blur de backdrop é caro (engasga o toque), então usamos
    fundo sólido lá e só ligamos o blur no desktop. */
 .glass {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
 }
 .glass-dark {
   background: rgba(80, 11, 24, 0.96);
 }
 @media (min-width: 1024px) {
   .glass {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.66) 100%);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
   .glass-dark {
-    background: rgba(80, 11, 24, 0.88);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, rgba(80, 11, 24, 0.92) 0%, rgba(58, 8, 17, 0.9) 100%);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -235,23 +237,69 @@ svg.lucide {
 }
 :focus:not(:focus-visible) { outline: none; }
 
-/* Superfície bordô com profundidade (futurista) */
+/* Superfície bordô com profundidade (futurista) — brilho radial + granulado sutil */
 .surface-wine {
+  position: relative;
+  isolation: isolate;
   background:
-    radial-gradient(120% 120% at 100% 0%, rgba(140, 36, 56, 0.55) 0%, transparent 55%),
-    linear-gradient(160deg, #500b18 0%, #3a0811 100%);
+    radial-gradient(130% 120% at 100% -10%, rgba(188, 93, 112, 0.5) 0%, transparent 52%),
+    radial-gradient(120% 130% at 0% 110%, rgba(140, 36, 56, 0.42) 0%, transparent 55%),
+    linear-gradient(158deg, #500b18 0%, #3a0811 55%, #26040a 100%);
+}
+/* Luz discreta no topo (fica ATRÁS do conteúdo, nunca intercepta cliques) */
+.surface-wine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* Borda luminosa fina */
 .ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 
-/* Cartão padrão (mais sóbrio: 1px sutil + sombra muito leve, raio moderado) */
+/* Cartão padrão: 1px sutil + sombra em camadas + realce superior discreto (premium) */
 .card {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-soft);
 }
+
+/* Cartão elevado: gradiente branco sutil + hairline + glow no hover (KPIs, modais) */
+.card-elevated {
+  position: relative;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fcfcfd 100%);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-elevated:hover {
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--color-accent-soft-border);
+}
+
+/* Glow bordô reutilizável (halos, realces futuristas) */
+.glow-wine { box-shadow: 0 0 0 1px rgba(80, 11, 24, 0.06), 0 18px 48px -22px rgba(80, 11, 24, 0.3); }
+
+/* Número-chave com leve gradiente bordô (dado de destaque) */
+.text-gradient-wine {
+  background: linear-gradient(120deg, #6b1525 0%, #8c2438 55%, #bc5d70 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Divisores 1px com leve gradiente (mais fino/premium que uma borda chapada) */
+.hairline-t { border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--color-line) 20%, var(--color-line) 80%, transparent) 1; }
+.hairline-b { border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--color-line) 20%, var(--color-line) 80%, transparent) 1; }
 
 /* — Animações — */
 @keyframes slide-right {

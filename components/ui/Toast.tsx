@@ -63,11 +63,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 w-full bg-white border border-[#efe9e6] rounded-2xl p-4 shadow-lg animate-slide-in transition-all"
+            className={`pointer-events-auto relative flex items-start gap-3 w-full bg-white/95 backdrop-blur-xl border border-[#efe9e6] rounded-2xl p-4 pl-5 shadow-lg animate-slide-in transition-all overflow-hidden`}
             style={{
               animation: 'toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
             }}
           >
+            {/* Barra de acento por tipo */}
+            <span className={`absolute left-0 top-0 bottom-0 w-1 ${
+              toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`} />
             {/* Ícones */}
             {toast.type === 'success' && <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />}
             {toast.type === 'error' && <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />}
