@@ -63,18 +63,10 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const router = useRouter();
   const { success, error } = useToast();
   const today = new Date();
-  const [view, setView] = useState<View>('month');
-  const [cursor, setCursor] = useState<Date>(startOfMonth(today));
-
-  // No celular, abre direto na visão diária (mais fácil de acompanhar o dia).
-  // Inicia 'month' no SSR e ajusta no cliente para evitar mismatch de hidratação.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
-      setView('day');
-      setCursor(today);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Abre sempre na visão diária, apontando para hoje (desktop e mobile).
+  // Valor inicial determinístico → sem mismatch de hidratação.
+  const [view, setView] = useState<View>('day');
+  const [cursor, setCursor] = useState<Date>(today);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   // Estado local de agendamentos: permite mover (arrastar) com resposta imediata

@@ -18,9 +18,14 @@ interface QuickAddFabProps {
 
 /**
  * Botão flutuante padrão de "adicionar" (+), presente em todos os módulos.
- * Fica fixo no canto inferior direito, LOGO ACIMA do botão do chat da Lume
- * (mesmos offsets do AIAgentChat: o chat usa bottom 5.5rem/mobile e 1.5rem/desktop,
- * então este fica em 9.5rem/mobile e 6rem/desktop). z-40 mantém o chat (z-50) acessível.
+ * Fica fixo no canto inferior direito, LOGO ACIMA do botão do chat da Lume, com o
+ * MESMO alinhamento à direita (right-4 / lg:right-6) e uma folga pequena e uniforme.
+ *
+ * A posição é derivada da do chat (AIAgentChat):
+ *   chat.bottom = 5.5rem (mobile) · 1.5rem (desktop) · altura h-14 = 3.5rem
+ *   +.bottom    = chat.bottom + 3.5rem (altura) + 0.75rem (folga)
+ *             → 9.75rem (mobile, + safe-area) · 5.75rem (desktop)
+ * z-40 mantém o chat (z-50) acessível.
  */
 export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adicionar' }) => {
   const [open, setOpen] = useState(false);
@@ -28,7 +33,7 @@ export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adic
   const single = actions.length === 1;
 
   return (
-    <div className="fixed right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] lg:right-6 lg:bottom-24 z-40 flex flex-col items-end gap-2.5 no-print">
+    <div className="fixed right-4 lg:right-6 bottom-[calc(9.75rem+env(safe-area-inset-bottom))] lg:bottom-[5.75rem] z-40 flex flex-col items-end gap-2.5 no-print">
       {!single && open && actions.map(({ label: l, icon: Icon, onClick }) => (
         <button key={l} onClick={() => { setOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
           <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-bold shadow-md whitespace-nowrap">{l}</span>
