@@ -6,6 +6,7 @@ import { TimeBlock, BlockType } from '@/types/database';
 import { Plus, Trash2, Calendar, Clock, Lock, X, Save } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { createTimeBlockAction, deleteTimeBlockAction } from '@/app/actions/professional';
 
 interface TimeBlocksListProps {
@@ -114,6 +115,8 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
           <span>Bloquear Horário</span>
         </button>
       </div>
+
+      <QuickAddFab actions={[{ label: 'Bloquear horário', icon: Plus, onClick: handleOpenCreate }]} />
 
       {/* Cards (mobile) */}
       <div className="lg:hidden space-y-3">

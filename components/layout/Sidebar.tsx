@@ -24,16 +24,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
   const router = useRouter();
   const { success, error } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // Desktop: rail minimizado por padrão que expande no hover.
+  // `pinned` = profissional fixou aberto (persiste entre sessões).
+  // `hovered` = mouse sobre a barra. Expandido = pinned || hovered.
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const expanded = pinned || hovered;
 
-  // Lembra a preferência de barra recolhida entre sessões.
+  // Lembra a preferência de barra fixada aberta entre sessões.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (localStorage.getItem('lume_sidebar_collapsed') === '1') setCollapsed(true);
+    if (localStorage.getItem('lume_sidebar_pinned') === '1') setPinned(true);
   }, []);
-  const toggleCollapsed = () => setCollapsed((c) => {
-    const next = !c;
-    try { localStorage.setItem('lume_sidebar_collapsed', next ? '1' : '0'); } catch {}
+  const togglePinned = () => setPinned((p) => {
+    const next = !p;
+    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch {}
     return next;
   });
 
@@ -115,12 +120,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
           </div>
           {showToggle && (
             <button
-              onClick={toggleCollapsed}
-              title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-              aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-              className="p-2 rounded-xl text-white/55 hover:text-white hover:bg-white/8 transition-all-custom shrink-0"
+              onClick={togglePinned}
+              title={pinned ? 'Desafixar (recolher ao tirar o mouse)' : 'Fixar menu aberto'}
+              aria-label={pinned ? 'Desafixar menu' : 'Fixar menu aberto'}
+              aria-pressed={pinned}
+              className={`p-2 rounded-xl transition-all-custom shrink-0 ${pinned ? 'text-white bg-white/12' : 'text-white/55 hover:text-white hover:bg-white/8'}`}
             >
-              {isCollapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
+              {pinned ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
             </button>
           )}
         </div>
@@ -201,9 +207,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
 
   return (
     <>
-      {/* Sidebar Desktop */}
-      <aside className={`hidden lg:block h-screen sticky top-0 shrink-0 shadow-glow transition-[width] duration-200 ${collapsed ? 'w-20' : 'w-64'}`}>
-        {SidebarContent({ collapsed, showToggle: true })}
+      {/* Sidebar Desktop — rail minimizado que expande no hover (overlay).
+          O <aside> reserva a largura do rail (80px), ou 256px quando fixado;
+          o painel interno é fixo e expande sobre o conteúdo, sem empurrá-lo. */}
+      <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`hidden lg:block h-screen shrink-0 transition-[width] duration-200 ${pinned ? 'w-64' : 'w-20'}`}
+      >
+        <div
+          className={`fixed top-0 left-0 h-screen z-40 shadow-glow transition-[width] duration-200 ease-out ${expanded ? 'w-64' : 'w-20'}`}
+        >
+          {SidebarContent({ collapsed: !expanded, showToggle: expanded })}
+        </div>
       </aside>
 
       {/* Botão flutuante (admin) */}
