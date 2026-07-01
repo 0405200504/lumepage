@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/types/database';
 import { Plus, Check, Trash2, NotebookPen, CalendarClock } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { createTaskAction, toggleTaskAction, deleteTaskAction } from '@/app/actions/crm';
 import { formatDateBR } from '@/lib/whatsapp';
 
 interface TasksWidgetProps {
   professionalId: string;
   initialTasks: Task[];
+  /** Exibe o botão flutuante (+) padrão. Só na página de Tarefas (evita duplicar na Início). */
+  showFab?: boolean;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -20,9 +23,10 @@ const isoFromNow = (days: number) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initialTasks }) => {
+export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initialTasks, showFab = false }) => {
   const router = useRouter();
   const { error } = useToast();
+  const contentRef = useRef<HTMLInputElement>(null);
   const [content, setContent] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
@@ -84,6 +88,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
             <span className="text-wine-700">1.</span> O que você precisa lembrar?
           </label>
           <input
+            ref={contentRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Ex: comprar algodão, retornar p/ Marina, pagar fornecedor…"
@@ -172,6 +177,14 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
           </>
         )}
       </div>
+
+      {showFab && (
+        <QuickAddFab actions={[{
+          label: 'Nova tarefa',
+          icon: Plus,
+          onClick: () => { contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); contentRef.current?.focus(); },
+        }]} />
+      )}
     </div>
   );
 };

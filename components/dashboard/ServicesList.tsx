@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { 
   createServiceAction, 
   updateServiceAction, 
@@ -173,6 +174,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({
           <span>Cadastrar Serviço</span>
         </button>
       </div>
+
+      <QuickAddFab actions={[{ label: 'Cadastrar serviço', icon: Plus, onClick: handleOpenCreate }]} />
 
       {/* Grid de Serviços */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

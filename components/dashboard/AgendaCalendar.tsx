@@ -16,6 +16,7 @@ import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/
 import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointments/services';
 import { AppointmentStatus } from '@/types/database';
 import { QuickAppointmentModal } from './QuickAppointmentModal';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { CalendarPlus } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 
@@ -91,7 +92,6 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const [showTasks, setShowTasks] = useState(true);
   const [miniCursor, setMiniCursor] = useState<Date>(startOfMonth(today));
   const [sidebarOpen, setSidebarOpen] = useState(false); // drawer no mobile
-  const [fabOpen, setFabOpen] = useState(false);
 
   const hasFilters = filterStatus !== 'all' || filterClient !== 'all' || filterService !== 'all';
   const clearFilters = () => { setFilterStatus('all'); setFilterClient('all'); setFilterService('all'); };
@@ -371,18 +371,8 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
         </div>
       )}
 
-      {/* Botão flutuante (+) com ações rápidas */}
-      <div className="fixed right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] lg:right-6 lg:bottom-24 z-40 flex flex-col items-end gap-2.5">
-        {fabOpen && fabActions.map(({ label, icon: Icon, onClick }) => (
-          <button key={label} onClick={() => { setFabOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
-            <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-bold shadow-md whitespace-nowrap">{label}</span>
-            <span className="h-11 w-11 rounded-full bg-paper border border-gray-150 text-wine-700 shadow-md flex items-center justify-center shrink-0"><Icon className="h-4.5 w-4.5" /></span>
-          </button>
-        ))}
-        <button onClick={() => setFabOpen(o => !o)} className="h-14 w-14 rounded-full surface-wine text-white shadow-glow flex items-center justify-center hover:scale-105 transition-transform" aria-label="Novo" aria-expanded={fabOpen}>
-          <Plus className={`h-6 w-6 transition-transform ${fabOpen ? 'rotate-45' : ''}`} />
-        </button>
-      </div>
+      {/* Botão flutuante (+) padrão com ações rápidas */}
+      <QuickAddFab actions={fabActions} label="Novo" />
 
       {selectedISO && (
         <DayDetail

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import {
   updateAppointmentStatusAction, deleteAppointmentAction, updateAppointmentAction,
   getTrashedAppointmentsAction, restoreAppointmentAction, purgeAppointmentAction,
@@ -427,6 +428,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
           <Plus className="h-4 w-4" /> Novo agendamento
         </button>
       </div>
+
+      <QuickAddFab actions={[{ label: 'Novo agendamento', icon: Plus, onClick: openNew }]} />
 
       {/* Barra de Filtros e Busca */}
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between card p-4">

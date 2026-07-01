@@ -11,6 +11,7 @@ import { statusMeta } from '@/lib/appointments/status';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import {
   createClientAction, importClientsAction, deleteClientsAction, deleteAllClientsAction, updateClientNotesAction,
   getTrashedClientsAction, restoreClientsAction, purgeClientsAction,
@@ -373,6 +374,11 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           </button>
         </div>
       </div>
+
+      <QuickAddFab actions={[
+        { label: 'Adicionar contato', icon: UserPlus, onClick: () => setShowAdd(true) },
+        { label: 'Importar lista', icon: Upload, onClick: () => setShowImport(true) },
+      ]} />
 
       {/* Barra de ações em lote */}
       {sortedClients.length > 0 && (

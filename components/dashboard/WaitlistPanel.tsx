@@ -6,6 +6,7 @@ import { WaitlistEntry, WaitlistStatus, Service } from '@/types/database';
 import { Clock, MessageCircle, X, Plus, Trash2, CalendarPlus, UserPlus } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import {
   updateWaitlistStatusAction, deleteWaitlistEntryAction,
@@ -139,6 +140,8 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
           <UserPlus className="h-4 w-4" /> Adicionar à lista
         </button>
       </div>
+
+      <QuickAddFab actions={[{ label: 'Adicionar à lista', icon: UserPlus, onClick: () => setShowAdd(true) }]} />
 
       {initialEntries.length === 0 ? (
         <EmptyState

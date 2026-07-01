@@ -25,6 +25,7 @@ import { KpiCard } from '../ui/KpiCard';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
+import { QuickAddFab } from '../ui/QuickAddFab';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
 import { LineChart } from '../ui/charts/LineChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
@@ -321,6 +322,8 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
           </button>
         </div>
       </div>
+
+      <QuickAddFab actions={[{ label: 'Novo lançamento', icon: Plus, onClick: () => setShowForm(true) }]} />
 
       <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
 

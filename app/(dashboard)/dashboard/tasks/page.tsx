@@ -13,5 +13,5 @@ export default async function TasksPage() {
   const professionalId = session.professional_id!;
   const tasks = await dbService.getTasksByProfessional(professionalId);
 
-  return <TasksWidget professionalId={professionalId} initialTasks={tasks} />;
+  return <TasksWidget professionalId={professionalId} initialTasks={tasks} showFab />;
 }
