@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="flex justify-between items-center gap-3 glass hairline-b px-4 sm:px-6 py-3.5 sm:py-5 pt-safe sticky top-0 z-30 select-none">
-      <div className="min-w-0">
+      <div className="min-w-0" data-tour="page-header">
         <h2 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{resolvedTitle}</h2>
         {/* Subtítulo descritivo só no desktop — no celular o header fica enxuto, cara de app */}
         {resolvedSubtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{resolvedSubtitle}</p>}

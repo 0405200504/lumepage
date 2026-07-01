@@ -43,6 +43,7 @@ export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adic
           </button>
         ))}
         <button
+          data-tour="quick-add"
           onClick={() => single ? actions[0].onClick() : setOpen(o => !o)}
           className="tap h-14 w-14 rounded-full surface-wine text-white shadow-glow flex items-center justify-center hover:scale-105 transition-transform"
           aria-label={single ? actions[0].label : label}

@@ -67,7 +67,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 select-none animate-fade-up">
       {/* Hero — número-chave grande + ações rápidas circulares (cara de app) */}
-      <div className="surface-wine text-white rounded-[1.75rem] sm:rounded-4xl p-6 sm:p-8 relative overflow-hidden ring-hairline">
+      <div data-tour="home-hero" className="surface-wine text-white rounded-[1.75rem] sm:rounded-4xl p-6 sm:p-8 relative overflow-hidden ring-hairline">
         <div className="absolute right-0 -top-6 h-48 w-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex items-start justify-between gap-4">
