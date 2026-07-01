@@ -32,6 +32,16 @@ export default async function DashboardLayout({
       if (prof) {
         brandName = prof.brand_name;
         slug = prof.slug;
+
+        // Verificação de Trial Expirado
+        if (prof.subscription_status === 'trialing' && prof.trial_ends_at) {
+          if (new Date() > new Date(prof.trial_ends_at)) {
+            // Opcional: Atualizar no banco para 'trial_expired' ou algo do tipo
+            // Mas só o redirect já garante o bloqueio imediato
+            const { redirect } = await import('next/navigation');
+            redirect('/planos');
+          }
+        }
       }
       pendingConversations = paused.length;
     } catch (e) {
