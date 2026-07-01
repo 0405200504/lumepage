@@ -32,7 +32,7 @@ export function Segmented<T extends string>({ items, value, onChange, size = 'md
             onClick={() => onChange(it.key)}
             className={`flex items-center gap-2 px-3.5 ${padY} rounded-lg text-xs font-semibold whitespace-nowrap transition-all-custom ${
               active
-                ? 'bg-[color:var(--color-accent-soft)] text-forest'
+                ? 'bg-[color:var(--color-accent-soft)] text-forest shadow-soft ring-1 ring-[color:var(--color-accent-soft-border)]'
                 : 'text-gray-450 hover:bg-surface-2 hover:text-ink'
             }`}
           >

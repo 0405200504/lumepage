@@ -60,19 +60,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen min-h-dvh bg-cream flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden">
-      {/* Halo decorativo bordô (futurista) */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-100/50 blur-3xl" />
+    <div
+      className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden"
+      style={{
+        background:
+          'radial-gradient(120% 90% at 85% -10%, rgba(140,36,56,0.5) 0%, transparent 55%), radial-gradient(110% 90% at 0% 110%, rgba(80,11,24,0.55) 0%, transparent 50%), linear-gradient(160deg, #26040a 0%, #1a0409 55%, #120207 100%)',
+      }}
+    >
+      {/* Halos decorativos bordô (futurista) */}
+      <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-500/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-700/30 blur-3xl" />
+      {/* Grid tech sutil */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+          maskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
+          WebkitMaskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
+        }}
+      />
 
       <div className="max-w-md w-full z-10 animate-fade-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-6">
-          <LumeLogo variant="wine" className="h-12 text-wine-700 mb-5" />
-          <h2 className="text-2xl font-black text-forest tracking-tight">
+          <LumeLogo variant="light" className="h-12 text-white mb-5" />
+          <h2 className="text-2xl font-black text-white tracking-tight">
             {mode === 'admin' ? 'Acesso do Administrador' : mode === 'manager' ? 'Acesso do Gerente' : 'Bem-vinda de volta'}
           </h2>
-          <p className="text-xs text-gray-450 mt-1.5">
+          <p className="text-xs text-white/55 mt-1.5">
             {mode === 'admin' ? 'Painel de gestão da plataforma Lume'
               : mode === 'manager' ? 'Gerencie as contas das suas funcionárias'
               : 'Acesse seu painel de agenda profissional'}
@@ -80,7 +97,7 @@ export default function LoginPage() {
         </div>
 
         {/* Seletor de tipo de acesso */}
-        <div className="grid grid-cols-3 gap-1 bg-sand/70 border border-gray-150 rounded-2xl p-1 mb-5 max-w-sm mx-auto">
+        <div className="grid grid-cols-3 gap-1 bg-white/[0.06] border border-white/10 ring-hairline rounded-2xl p-1 mb-5 max-w-sm mx-auto backdrop-blur-md">
           {([
             { k: 'pro', label: 'Profissional', icon: User },
             { k: 'manager', label: 'Gerente', icon: Store },
@@ -91,7 +108,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setMode(k)}
               className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
-                mode === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'
+                mode === k ? 'bg-white text-wine-700 shadow-md' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
               <Icon className="h-3.5 w-3.5" /> {label}
@@ -105,7 +122,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card de Login */}
-        <div className="card p-7 md:p-9">
+        <div className="card-elevated glow-wine p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">

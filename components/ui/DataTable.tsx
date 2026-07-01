@@ -61,7 +61,7 @@ export function DataTable<T>({
     <div>
       <div className="overflow-x-auto scroll-touch">
         <table className="min-w-full text-left">
-          <thead className="text-[10px] font-bold text-gray-450 uppercase tracking-wider border-b border-line">
+          <thead className="text-[10px] font-bold text-gray-450 uppercase tracking-wider border-b border-line bg-surface-2/50">
             <tr>
               {columns.map(col => {
                 const sortable = !!col.sortValue;
@@ -83,7 +83,7 @@ export function DataTable<T>({
             {pageRows.map(row => (
               <tr
                 key={rowKey(row)}
-                className={`hover:bg-surface-2 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`hover:bg-[color:var(--color-accent-soft)]/60 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {columns.map(col => (

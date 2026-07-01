@@ -51,15 +51,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const theme = getThemeClasses();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Background overlay */}
-      <div 
-        className="absolute inset-0 bg-[#1a0e12]/30 backdrop-blur-xs transition-opacity" 
+      <div
+        className="absolute inset-0 bg-[#1a0e12]/50 backdrop-blur-sm transition-opacity"
         onClick={isLoading ? undefined : onCancel}
       />
 
       {/* Modal Box */}
-      <div className="relative bg-white rounded-3xl p-6 shadow-xl max-w-sm w-full mx-4 border border-[#efe9e6] z-10 transform transition-all">
+      <div className="card-elevated relative rounded-3xl p-6 max-w-sm w-full z-10 animate-slide-up">
         <div className="flex gap-4 items-start">
           <div className={`p-3 rounded-2xl ${theme.iconBg} shrink-0`}>
             <AlertCircle className="h-6 w-6" />

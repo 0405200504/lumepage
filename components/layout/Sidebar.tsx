@@ -127,7 +127,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
 
         {/* Info Profissional */}
         {role === 'professional' && !isCollapsed && (
-          <div className="bg-white/8 rounded-2xl p-4 border border-white/10 ring-hairline">
+          <div className="relative overflow-hidden bg-white/[0.07] rounded-2xl p-4 border border-white/10 ring-hairline">
+            <span className="pointer-events-none absolute -top-8 -right-6 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
             <p className="text-[9px] uppercase font-bold text-white/45 tracking-[0.18em]">Profissional</p>
             <p className="text-sm font-bold text-white truncate mt-1" title={displayName}>{displayName}</p>
           </div>
@@ -153,10 +154,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                   isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-4 py-2.5'
                 } ${
                   isActive
-                    ? 'bg-white text-[#500b18] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]'
-                    : 'text-white/70 hover:bg-white/8 hover:text-white'
+                    ? 'bg-gradient-to-br from-white to-white/92 text-[#500b18] shadow-[0_10px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/40'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
+                {isActive && !isCollapsed && (
+                  <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#8c2438]" />
+                )}
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#500b18]' : 'text-white/55 group-hover:text-white'}`} />
                 {!isCollapsed && <span className="flex-1">{link.label}</span>}
                 {badge && (
@@ -227,8 +231,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                   active ? 'text-wine-700' : 'text-gray-450'
                 }`}
               >
-                {active && <span className="absolute top-0 h-1 w-7 rounded-full bg-wine-700" />}
-                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-wine-700/12' : ''}`}>
+                {active && <span className="absolute top-0 h-1 w-7 rounded-full bg-gradient-to-r from-wine-500 to-wine-700 shadow-[0_2px_8px_-1px_rgba(80,11,24,0.5)]" />}
+                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-gradient-to-br from-wine-700/12 to-wine-500/8' : ''}`}>
                   <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-110' : ''}`} strokeWidth={active ? 2.5 : 2} />
                 </span>
                 <span className={`text-[10px] tracking-tight ${active ? 'font-bold' : 'font-semibold'}`}>{link.label}</span>

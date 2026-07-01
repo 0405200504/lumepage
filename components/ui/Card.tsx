@@ -12,7 +12,7 @@ export const Card: React.FC<CardProps> = ({ as = 'div', pad = 'p-5', interactive
   const Tag = as as React.ElementType;
   return (
     <Tag
-      className={`card ${pad} ${interactive ? 'transition-all-custom hover:shadow-md cursor-pointer' : ''} ${className}`}
+      className={`card ${pad} ${interactive ? 'transition-all-custom hover:shadow-lg hover:-translate-y-0.5 hover:border-[color:var(--color-accent-soft-border)] cursor-pointer' : ''} ${className}`}
       {...rest}
     >
       {children}

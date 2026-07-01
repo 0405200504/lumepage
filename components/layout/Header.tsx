@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
   const resolvedSubtitle = subtitle ?? meta?.subtitle;
 
   return (
-    <header className="flex justify-between items-center gap-3 glass border-b border-gray-150 px-4 sm:px-6 py-3.5 sm:py-5 pt-safe sticky top-0 z-30 select-none">
+    <header className="flex justify-between items-center gap-3 glass hairline-b px-4 sm:px-6 py-3.5 sm:py-5 pt-safe sticky top-0 z-30 select-none">
       <div className="min-w-0">
         <h2 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{resolvedTitle}</h2>
         {/* Subtítulo descritivo só no desktop — no celular o header fica enxuto, cara de app */}
@@ -92,15 +92,15 @@ export const Header: React.FC<HeaderProps> = ({
         disabled={isRefreshing}
         title="Atualizar dados sem recarregar a página"
         aria-label="Atualizar"
-        className="shrink-0 ml-auto inline-flex items-center justify-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-full sm:rounded-xl bg-paper/70 border border-gray-150 text-forest shadow-soft hover:bg-cream transition-colors disabled:opacity-60"
+        className="shrink-0 ml-auto inline-flex items-center justify-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-full sm:rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom disabled:opacity-60"
       >
         <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         <span className="hidden sm:inline text-xs font-bold">{isRefreshing ? 'Atualizando…' : 'Atualizar'}</span>
       </button>
 
       {/* No mobile: só o avatar limpo (estilo app). No desktop: caixa com nome/email. */}
-      <div className="flex items-center gap-0 sm:gap-3 shrink-0 sm:bg-paper/70 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2.5 sm:shadow-soft">
-        <div className="h-9 w-9 bg-wine-700/8 text-forest rounded-full sm:rounded-xl flex items-center justify-center font-bold shrink-0">
+      <div className="flex items-center gap-0 sm:gap-3 shrink-0 sm:bg-paper/80 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2.5 sm:shadow-soft">
+        <div className="h-9 w-9 bg-gradient-to-br from-wine-700/12 to-wine-500/8 ring-1 ring-wine-700/10 text-forest rounded-full sm:rounded-xl flex items-center justify-center font-bold shrink-0">
           {role === 'super_admin' ? (
             <ShieldAlert className="h-5 w-5 text-forest" />
           ) : (
