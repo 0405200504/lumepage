@@ -6,6 +6,7 @@ import {
   Sparkles, X, ArrowLeft, ArrowRight, Check,
 } from 'lucide-react';
 import { Portal } from '../ui/Portal';
+import { isDemo } from '@/lib/demo';
 
 /** Prefixo da chave de persistência. A chave final é escopada por profissional
  *  (`lume_onboarding_v1:{professionalId}`) para que cada conta nova seja tratada
@@ -129,19 +130,27 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
   const step = steps[index];
 
   const finish = useCallback(() => {
-    try { localStorage.setItem(storageKey, 'done'); } catch { /* ignore */ }
+    // Na conta demo, NÃO persiste — assim o tour reaparece toda vez que alguém entra.
+    if (!isDemo(professionalId)) {
+      try { localStorage.setItem(storageKey, 'done'); } catch { /* ignore */ }
+    }
     setVisible(false);
-  }, [storageKey]);
+  }, [storageKey, professionalId]);
 
   // Primeiro contato: só abre automaticamente se a chave ainda não existe.
+  // Conta demo: SEMPRE abre (ignora localStorage).
   useEffect(() => {
+    if (isDemo(professionalId)) {
+      const t = setTimeout(() => setVisible(true), 600);
+      return () => clearTimeout(t);
+    }
     let seen = 'done';
     try { seen = localStorage.getItem(storageKey) || ''; } catch { /* ignore */ }
     if (seen !== 'done') {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
-  }, [storageKey]);
+  }, [storageKey, professionalId]);
 
   // Permite reabrir o tour manualmente a qualquer momento.
   useEffect(() => {
