@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Professional, Setting, ConfirmationMode } from '@/types/database';
-import { Save, Sparkles, User, Settings, Paintbrush } from 'lucide-react';
+import { Professional, Setting, ConfirmationMode, GoogleCalendarConnection } from '@/types/database';
+import { Save, Sparkles, User, Settings as SettingsIcon, Paintbrush, Link as LinkIcon, Calendar } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
 import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
@@ -12,15 +12,17 @@ import { BookingDecor } from '@/components/booking/BookingDecor';
 interface SettingsFormProps {
   professional: Professional;
   settings: Setting | null;
+  googleConnection?: GoogleCalendarConnection | null;
 }
 
 export const SettingsForm: React.FC<SettingsFormProps> = ({
   professional,
   settings,
+  googleConnection,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'branding'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'branding' | 'integrations'>('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estados de Cadastro
@@ -134,7 +136,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
           }`}
         >
-          <Settings className="h-4 w-4" />
+          <SettingsIcon className="h-4 w-4" />
           <span>Regras de Agenda</span>
         </button>
 
@@ -149,6 +151,19 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         >
           <Paintbrush className="h-4 w-4" />
           <span>Identidade Visual</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('integrations')}
+          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-bold rounded-xl transition-all w-full cursor-pointer whitespace-nowrap ${
+            activeTab === 'integrations'
+              ? 'bg-[#500b18] text-white shadow-md shadow-black/10'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+          }`}
+        >
+          <LinkIcon className="h-4 w-4" />
+          <span>Integrações</span>
         </button>
       </div>
 
@@ -532,8 +547,71 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </div>
         )}
 
+        {/* ABA: Integrações */}
+        {activeTab === 'integrations' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-base font-bold text-gray-800 tracking-tight">Integrações</h3>
+              <p className="text-xs text-gray-450 mt-1">Conecte sua conta Lume a outros serviços e plataformas.</p>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center shrink-0 text-blue-500">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-800">Google Calendar</h4>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                    Sincronize seus agendamentos da Lume com o seu Google Calendar em tempo real. Bloqueios criados no Google também refletem na Lume.
+                  </p>
+                  {googleConnection && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 text-green-700 text-[10px] font-bold">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      Conectado como {googleConnection.google_email}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="shrink-0 w-full sm:w-auto">
+                {googleConnection ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm('Tem certeza que deseja desconectar o Google Calendar? Seus agendamentos pararão de sincronizar.')) {
+                        try {
+                          const res = await fetch('/api/google/disconnect', { method: 'POST' });
+                          if (!res.ok) throw new Error();
+                          success('Desconectado', 'Sua conta Google Calendar foi desconectada.');
+                          router.refresh();
+                        } catch {
+                          error('Erro', 'Não foi possível desconectar o Google Calendar.');
+                        }
+                      }
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                  >
+                    Desconectar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = '/api/google/auth';
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+                  >
+                    Conectar Conta Google
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Rodapé do Formulário */}
-        <div className="pt-5 border-t border-gray-150 flex justify-end gap-3">
+        <div className="pt-6 border-t border-gray-150 flex justify-end gap-3">
           <button
             type="submit"
             disabled={isSubmitting}
