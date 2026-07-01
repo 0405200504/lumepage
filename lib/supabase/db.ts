@@ -4,8 +4,9 @@ import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus,
   Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus,
-  WhatsAppSettings, WhatsAppConversation
+  WhatsAppSettings, WhatsAppConversation, GoogleCalendarConnection
 } from '@/types/database';
+import { syncAppointmentToGoogle } from '@/lib/google/calendar';
 
 /**
  * Cliente de banco para uso EXCLUSIVO no servidor.
@@ -736,6 +737,9 @@ export const dbService = {
         .single();
       if (appErr) throw appErr;
 
+      // Fire-and-forget: sincronizar com Google Calendar
+      syncAppointmentToGoogle(data.professional_id, appointment, 'create').catch(() => {});
+
       return appointment;
     }
     
@@ -763,6 +767,14 @@ export const dbService = {
       if (professionalId) q = q.eq('professional_id', professionalId);
       const { data, error } = await q.select().maybeSingle();
       if (error) throw error;
+
+      // Fire-and-forget: sincronizar com Google Calendar
+      if (data && (status === 'cancelled')) {
+        syncAppointmentToGoogle(data.professional_id, data, 'delete').catch(() => {});
+      } else if (data) {
+        syncAppointmentToGoogle(data.professional_id, data, 'update').catch(() => {});
+      }
+
       return data;
     }
     return mockDb.updateAppointmentStatus(id, status, cancellationReason);
@@ -790,6 +802,12 @@ export const dbService = {
       if (professionalId) q = q.eq('professional_id', professionalId);
       const { data, error } = await q.select('*, service:services(*)').maybeSingle();
       if (error) throw error;
+
+      // Fire-and-forget: sincronizar com Google Calendar
+      if (data) {
+        syncAppointmentToGoogle(data.professional_id, data, 'update').catch(() => {});
+      }
+
       return data;
     }
     return null;
@@ -1713,6 +1731,24 @@ export const dbService = {
       .in('whatsapp', phones);
     const nameMap = new Map((clients || []).map((c: { whatsapp: string; name: string }) => [c.whatsapp, c.name]));
     return convs.map((c: WhatsAppConversation) => ({ ...c, client_name: nameMap.get(c.client_phone) as string | undefined }));
+  },
+
+  // --- Google Calendar ---
+  getGoogleCalendarConnection: async (professionalId: string): Promise<GoogleCalendarConnection | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('google_calendar_connections')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .eq('enabled', true)
+      .maybeSingle();
+    
+    if (error) {
+      if (isMissingTable(error)) return null;
+      console.error('[db.getGoogleCalendarConnection] Erro:', error);
+      return null;
+    }
+    return data;
   },
 };
 export default dbService;

@@ -196,6 +196,7 @@ export interface Appointment {
   cancellation_reason: string | null;
   payment_method?: string | null;
   deleted_at?: string | null; // lixeira (soft-delete)
+  google_event_id?: string | null; // ID do evento no Google Calendar (sync bidirecional)
   created_at: string;
   updated_at: string;
   automation_booking_sent_at?: string | null;
@@ -262,4 +263,21 @@ export interface WhatsAppConversation {
   client_summary?: string | null;
   last_message_at: string;
   created_at: string;
+}
+
+export interface GoogleCalendarConnection {
+  id: string;
+  professional_id: string;
+  google_email: string;
+  access_token: string;
+  refresh_token: string;
+  token_expires_at: string;
+  calendar_id: string;
+  sync_channel_id: string | null;
+  sync_resource_id: string | null;
+  sync_expiration: string | null;
+  last_sync_token: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }

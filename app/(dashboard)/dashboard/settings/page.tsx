@@ -10,9 +10,10 @@ export default async function DashboardSettingsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [professional, settings] = await Promise.all([
+  const [professional, settings, googleConnection] = await Promise.all([
     dbService.getProfessionalById(professionalId),
     dbService.getSettingsByProfessional(professionalId),
+    dbService.getGoogleCalendarConnection(professionalId),
   ]);
 
   if (!professional) {
@@ -23,5 +24,5 @@ export default async function DashboardSettingsPage() {
     );
   }
 
-  return <SettingsForm professional={professional} settings={settings} />;
+  return <SettingsForm professional={professional} settings={settings} googleConnection={googleConnection} />;
 }
