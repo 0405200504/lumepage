@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { Appointment, Service } from '@/types/database';
-import { Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import {
+  Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ArrowRight,
+  CalendarRange, Wallet, Contact, Share2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { statusMeta } from '@/lib/appointments/status';
 import { serviceRevenueCents, indexServices } from '@/lib/finance';
@@ -35,114 +38,133 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const formatPrice = (cents: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
 
+  const firstName = professionalName?.split(' ')[0] || professionalName;
   const bookingHref = slug ? `/agendar/${slug}` : '#';
 
-  const kpis = [
-    { label: 'Faturamento do mês', value: formatPrice(monthlyRevenueCents), hint: 'Serviços confirmados + concluídos', icon: DollarSign, link: undefined as string | undefined },
-    { label: 'Atendimentos de Hoje', value: todayApps.length, hint: 'Reservados para hoje', icon: Calendar, link: undefined as string | undefined },
-    { label: 'Pendentes de Aprovação', value: pendingApps.length, hint: pendingApps.length > 0 ? 'Há pendências' : 'Tudo em dia!', icon: Clock, link: pendingApps.length > 0 ? '/dashboard/appointments?status=pending' : undefined },
-    { label: 'Total de Clientes', value: uniqueClients, hint: 'Na sua carteira', icon: Users, link: undefined as string | undefined },
+  // Ações rápidas (mesmos destinos que já existem no menu) — cara de app.
+  const quickActions = [
+    { label: 'Agenda', icon: CalendarRange, href: '/dashboard/agenda', external: false },
+    { label: 'Contatos', icon: Contact, href: '/dashboard/clients', external: false },
+    { label: 'Contas', icon: Wallet, href: '/dashboard/finance', external: false },
+    { label: 'Divulgar', icon: Share2, href: bookingHref, external: true },
   ];
 
+  // KPIs com acento de cor suave por métrica (leve, sem poluir).
+  const kpis = [
+    { label: 'Faturamento do mês', value: formatPrice(monthlyRevenueCents), hint: 'Confirmados + concluídos', icon: DollarSign, tint: 'wine', link: undefined as string | undefined },
+    { label: 'Atendimentos hoje', value: todayApps.length, hint: 'Reservados para hoje', icon: Calendar, tint: 'indigo', link: undefined as string | undefined },
+    { label: 'Pendentes', value: pendingApps.length, hint: pendingApps.length > 0 ? 'Há pendências' : 'Tudo em dia!', icon: Clock, tint: 'amber', link: pendingApps.length > 0 ? '/dashboard/appointments?status=pending' : undefined },
+    { label: 'Total de clientes', value: uniqueClients, hint: 'Na sua carteira', icon: Users, tint: 'emerald', link: undefined as string | undefined },
+  ];
+
+  const tintClasses: Record<string, string> = {
+    wine: 'bg-wine-700/10 text-wine-700',
+    indigo: 'bg-indigo-500/10 text-indigo-600',
+    amber: 'bg-amber-500/10 text-amber-600',
+    emerald: 'bg-emerald-500/10 text-emerald-600',
+  };
+
   return (
-    <div className="space-y-8 select-none animate-fade-up">
-      {/* Banner de Boas-Vindas */}
-      <div className="surface-wine text-white p-7 md:p-9 rounded-4xl flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative overflow-hidden ring-hairline">
-        <div className="space-y-2 z-10">
-          <span className="text-[10px] font-black uppercase text-wine-200 tracking-[0.2em] flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" />
-            <span>Agenda Operacional</span>
-          </span>
-          <h3 className="text-xl md:text-2xl font-black tracking-tight">Bem-vinda, {professionalName}!</h3>
-          <p className="text-xs text-white/65 max-w-md leading-relaxed">
-            Seu link público está ativo e pronto para receber clientes. Divulgue-o no Instagram para preencher sua agenda.
-          </p>
+    <div className="space-y-6 sm:space-y-8 select-none animate-fade-up">
+      {/* Hero — número-chave grande + ações rápidas circulares (cara de app) */}
+      <div className="surface-wine text-white rounded-[1.75rem] sm:rounded-4xl p-6 sm:p-8 relative overflow-hidden ring-hairline">
+        <div className="absolute right-0 -top-6 h-48 w-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="text-[10px] font-black uppercase text-white/60 tracking-[0.18em] flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3" /> Faturamento do mês
+            </span>
+            <p className="text-[2rem] sm:text-4xl font-black tracking-tight mt-2 leading-none tabular-nums">{formatPrice(monthlyRevenueCents)}</p>
+            <p className="text-xs text-white/60 mt-2">Bem-vinda de volta, {firstName} 👋</p>
+          </div>
         </div>
-        <div className="flex gap-2 shrink-0 z-10 w-full md:w-auto">
-          <Link
-            href={bookingHref}
-            target="_blank"
-            className="flex-1 md:flex-none text-center inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white text-wine-700 text-xs font-bold rounded-2xl shadow-soft hover:opacity-95 transition-all-custom"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Página de Agendamento
-          </Link>
+
+        {/* Ações rápidas */}
+        <div className="relative z-10 mt-6 grid grid-cols-4 gap-2">
+          {quickActions.map(({ label, icon: Icon, href, external }) => (
+            <Link
+              key={label}
+              href={href}
+              target={external ? '_blank' : undefined}
+              className="tap flex flex-col items-center gap-2 group"
+            >
+              <span className="h-12 w-12 sm:h-13 sm:w-13 rounded-2xl bg-white/12 border border-white/15 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-white/85 text-center leading-tight">{label}</span>
+            </Link>
+          ))}
         </div>
-        <div className="absolute right-0 top-0 h-48 w-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPIs — cards arredondados, 2 colunas no mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           const body = (
             <>
-              <div className="space-y-3">
-                <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{kpi.label}</span>
-                <p className="text-2xl font-black text-ink leading-none">{kpi.value}</p>
-                <span className="text-[10px] text-gray-450 font-semibold flex items-center gap-1">
-                  {kpi.link && <AlertCircle className="h-3 w-3 text-wine-500" />}{kpi.hint}
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center justify-center h-9 w-9 rounded-xl ${tintClasses[kpi.tint]}`}>
+                  <Icon className="h-[18px] w-[18px]" />
                 </span>
+                {kpi.link && <ArrowRight className="h-4 w-4 text-gray-450" />}
               </div>
-              <div className="p-3 bg-wine-700/6 text-wine-700 rounded-2xl shrink-0">
-                <Icon className="h-5 w-5" />
-              </div>
+              <p className="text-xl sm:text-2xl font-black text-ink leading-none mt-4 tabular-nums">{kpi.value}</p>
+              <span className="text-[11px] font-bold text-gray-450 mt-1.5 block">{kpi.label}</span>
+              <span className="text-[10px] text-gray-450 font-medium flex items-center gap-1 mt-0.5">
+                {kpi.link && <AlertCircle className="h-3 w-3 text-wine-500" />}{kpi.hint}
+              </span>
             </>
           );
           return kpi.link ? (
-            <Link key={kpi.label} href={kpi.link} className="card p-5 flex justify-between items-start hover:shadow-glow transition-all-custom">{body}</Link>
+            <Link key={kpi.label} href={kpi.link} className="card-elevated p-4 sm:p-5 rounded-3xl hover:-translate-y-0.5">{body}</Link>
           ) : (
-            <div key={kpi.label} className="card p-5 flex justify-between items-start">{body}</div>
+            <div key={kpi.label} className="card-elevated p-4 sm:p-5 rounded-3xl">{body}</div>
           );
         })}
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Timeline de Hoje */}
-        <div className="card p-6 lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Atendimentos de Hoje */}
+        <div className="card p-5 sm:p-6 rounded-3xl lg:col-span-2 space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-black text-ink tracking-tight">Atendimentos de Hoje</h3>
-              <p className="text-xs text-gray-450 mt-1">Sua agenda cronológica para hoje.</p>
+              <h3 className="text-base font-black text-ink tracking-tight">Atendimentos de hoje</h3>
+              <p className="text-xs text-gray-450 mt-0.5">Sua agenda cronológica para hoje.</p>
             </div>
-            <Link href="/dashboard/agenda" className="text-[11px] font-bold text-wine-700 hover:underline flex items-center gap-1">
+            <Link href="/dashboard/agenda" className="text-[11px] font-bold text-wine-700 hover:underline flex items-center gap-1 shrink-0">
               Ver agenda <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {sortedTodayApps.length > 0 ? (
-              <div className="relative pl-4 border-l border-gray-150 space-y-5">
-                {sortedTodayApps.map((app) => {
-                  const m = statusMeta(app.status);
-                  return (
-                    <div key={app.id} className="relative">
-                      <div className={`absolute -left-[21px] top-1 h-3.5 w-3.5 rounded-full border-2 border-paper ${m.dot}`} />
-                      <div className="bg-cream/60 border border-gray-150 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                          <span className="text-[10px] font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-md">
-                            {app.start_time.substring(0, 5)} - {app.end_time.substring(0, 5)}
-                          </span>
-                          <h4 className="font-bold text-sm text-ink mt-2">{app.client_name}</h4>
-                          <p className="text-xs text-gray-450 mt-0.5">{app.service?.name}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
-                          <Link href="/dashboard/appointments" className="text-[11px] font-bold text-gray-450 hover:text-wine-700 transition-colors">
-                            Detalhes
-                          </Link>
-                        </div>
-                      </div>
+              sortedTodayApps.map((app) => {
+                const m = statusMeta(app.status);
+                return (
+                  <Link
+                    key={app.id}
+                    href="/dashboard/appointments"
+                    className="tap flex items-center gap-3 bg-surface-2/60 hover:bg-surface-2 border border-gray-150 rounded-2xl p-3 transition-colors"
+                  >
+                    <span className={`h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center bg-wine-700/8 text-wine-700 font-black text-xs tabular-nums`}>
+                      {app.start_time.substring(0, 5)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm text-ink truncate">{app.client_name}</p>
+                      <p className="text-xs text-gray-450 truncate">{app.service?.name}</p>
                     </div>
-                  );
-                })}
-              </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${m.badge}`}>{m.label}</span>
+                  </Link>
+                );
+              })
             ) : (
-              <div className="text-center py-12 border-2 border-dashed border-gray-250 rounded-2xl">
-                <p className="text-xs text-gray-450">Você não tem agendamentos marcados para hoje.</p>
-                <Link href={bookingHref} target="_blank" className="mt-4 inline-block text-xs font-bold text-wine-700 hover:underline">
-                  Abrir link de agendamento público &rarr;
+              <div className="text-center py-10 border border-dashed border-gray-250 rounded-2xl">
+                <p className="text-xs text-gray-450">Nenhum agendamento marcado para hoje.</p>
+                <Link href={bookingHref} target="_blank" className="mt-3 inline-block text-xs font-bold text-wine-700 hover:underline">
+                  Abrir link de agendamento &rarr;
                 </Link>
               </div>
             )}
@@ -150,20 +172,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Serviços */}
-        <div className="card p-6 space-y-6">
+        <div className="card p-5 sm:p-6 rounded-3xl space-y-5">
           <div>
-            <h3 className="text-base font-black text-ink tracking-tight">Seus Serviços</h3>
-            <p className="text-xs text-gray-450 mt-1">Preços e duração cadastrados.</p>
+            <h3 className="text-base font-black text-ink tracking-tight">Seus serviços</h3>
+            <p className="text-xs text-gray-450 mt-0.5">Preços e duração cadastrados.</p>
           </div>
 
-          <div className="divide-y divide-gray-150 max-h-[300px] overflow-y-auto pr-1">
+          <div className="divide-y divide-gray-150 max-h-[300px] overflow-y-auto scroll-touch -mx-1 px-1">
             {services.length > 0 ? services.map((service) => (
-              <div key={service.id} className="py-3 flex justify-between items-center text-xs">
-                <div>
-                  <p className="font-bold text-ink">{service.name}</p>
+              <div key={service.id} className="py-3 flex justify-between items-center gap-3 text-xs">
+                <div className="min-w-0">
+                  <p className="font-bold text-ink truncate">{service.name}</p>
                   <p className="text-[10px] text-gray-450 mt-0.5">{service.duration_minutes} minutos</p>
                 </div>
-                <span className="font-black text-ink">{formatPrice(service.price_cents)}</span>
+                <span className="font-black text-ink shrink-0 tabular-nums">{formatPrice(service.price_cents)}</span>
               </div>
             )) : (
               <p className="text-xs text-gray-450 py-6 text-center">Nenhum serviço cadastrado ainda.</p>
@@ -171,7 +193,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
 
           <Link href="/dashboard/services" className="block text-center w-full py-2.5 bg-cream hover:bg-sand text-xs font-bold text-wine-700 rounded-xl border border-gray-150 transition-colors">
-            Gerenciar Serviços
+            Gerenciar serviços
           </Link>
         </div>
       </div>
