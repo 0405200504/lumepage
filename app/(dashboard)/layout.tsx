@@ -73,7 +73,11 @@ export default async function DashboardLayout({
 
       {/* Tour de boas-vindas — só aparece no primeiro contato da profissional
           (controlado por localStorage no próprio componente). */}
-      <OnboardingTour firstName={session.name?.split(' ')[0]} slug={slug} />
+      <OnboardingTour
+        firstName={session.name?.split(' ')[0]}
+        slug={slug}
+        professionalId={session.professional_id ?? undefined}
+      />
     </div>
   );
 }

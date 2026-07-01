@@ -9,10 +9,11 @@ import {
 } from 'lucide-react';
 import { Portal } from '../ui/Portal';
 
-/** Chave de persistência: enquanto não for 'done', a profissional é considerada
- *  em primeiro contato e o tour aparece automaticamente. Versionada para permitir
- *  reexibir num futuro redesenho (basta subir para _v2). */
-const STORAGE_KEY = 'lume_onboarding_v1';
+/** Prefixo da chave de persistência. A chave final é escopada por profissional
+ *  (`lume_onboarding_v1:{professionalId}`) para que cada conta nova seja tratada
+ *  como primeiro contato, mesmo que outra conta já tenha visto o tour no mesmo
+ *  navegador. Versionada para permitir reexibir num futuro redesenho (subir _v2). */
+const STORAGE_PREFIX = 'lume_onboarding_v1';
 /** Evento global para reabrir o tour manualmente (ex.: botão "?" no Header). */
 export const OPEN_ONBOARDING_EVENT = 'lume:open-onboarding';
 
@@ -29,12 +30,16 @@ interface OnboardingTourProps {
   firstName?: string;
   /** Slug público para montar o link de agendamento de exemplo. */
   slug?: string;
+  /** ID da profissional — escopa o "já vi o tutorial" por conta. */
+  professionalId?: string;
 }
 
-export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug }) => {
+export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug, professionalId }) => {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
+
+  const storageKey = `${STORAGE_PREFIX}:${professionalId || 'anon'}`;
 
   const publicUrl = `agendar/${slug || 'sua-marca'}`;
 
@@ -113,19 +118,19 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug 
   const isLast = index === total - 1;
 
   const finish = useCallback(() => {
-    try { localStorage.setItem(STORAGE_KEY, 'done'); } catch { /* ignore */ }
+    try { localStorage.setItem(storageKey, 'done'); } catch { /* ignore */ }
     setVisible(false);
-  }, []);
+  }, [storageKey]);
 
   // Primeiro contato: só abre automaticamente se a chave ainda não existe.
   useEffect(() => {
     let seen = 'done';
-    try { seen = localStorage.getItem(STORAGE_KEY) || ''; } catch { /* ignore */ }
+    try { seen = localStorage.getItem(storageKey) || ''; } catch { /* ignore */ }
     if (seen !== 'done') {
       const t = setTimeout(() => setVisible(true), 500);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [storageKey]);
 
   // Permite reabrir o tour manualmente a qualquer momento.
   useEffect(() => {

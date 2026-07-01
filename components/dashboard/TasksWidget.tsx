@@ -167,7 +167,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
 
       <div className="space-y-1.5 max-h-80 overflow-y-auto -mx-1 px-1">
         {tasks.length === 0 && (
-          <p className="text-xs text-gray-450 text-center py-6">Nada anotado ainda. Comece pela primeira tarefa acima ☝️</p>
+          <p className="text-xs text-gray-450 text-center py-6">Nada anotado ainda. Comece pela primeira tarefa acima.</p>
         )}
         {pending.map((t) => <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />)}
         {done.length > 0 && (
