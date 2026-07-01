@@ -76,7 +76,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <Sparkles className="h-3 w-3" /> Faturamento do mês
             </span>
             <p className="text-[2rem] sm:text-4xl font-black tracking-tight mt-2 leading-none tabular-nums">{formatPrice(monthlyRevenueCents)}</p>
-            <p className="text-xs text-white/60 mt-2">Bem-vinda de volta, {firstName} 👋</p>
+            <p className="text-xs text-white/60 mt-2">Bem-vinda de volta, {firstName}</p>
           </div>
         </div>
 

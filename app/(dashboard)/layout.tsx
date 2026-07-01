@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { ActingBanner } from '@/components/salon/ActingBanner';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 /**
  * Casca persistente do app (PWA).
@@ -69,6 +70,14 @@ export default async function DashboardLayout({
       </div>
 
       <AIAgentChat />
+
+      {/* Tour de boas-vindas — só aparece no primeiro contato da profissional
+          (controlado por localStorage no próprio componente). */}
+      <OnboardingTour
+        firstName={session.name?.split(' ')[0]}
+        slug={slug}
+        professionalId={session.professional_id ?? undefined}
+      />
     </div>
   );
 }
