@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
                || payload?.data?.customer?.email 
                || payload?.customer?.email;
                
+    const eventName = payload?.event || payload?.type;
     const status = payload?.status || payload?.data?.status; // ex: 'approved', 'paid', etc
     const productId = payload?.product_id || payload?.data?.product?.id;
 
@@ -27,8 +28,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, ignored: true, reason: 'no email' });
     }
 
-    // Só ativamos se o status for de pagamento aprovado
-    if (status === 'approved' || status === 'paid') {
+    // Só ativamos se for um evento de sucesso de pagamento ou assinatura ativada
+    const isSuccessEvent = 
+      eventName === 'invoice.payment_succeeded' || 
+      eventName === 'subscription.activated' ||
+      status === 'approved' || 
+      status === 'paid';
+
+    if (isSuccessEvent) {
       
       // Mapear o ID do produto para o plano correto (Start, Pro, Premium)
       // Usando os IDs dos links de pagamento fornecidos:
