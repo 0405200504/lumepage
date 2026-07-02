@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { createClient } from '@supabase/supabase-js';
 
-// Precisamos inicializar um supabase com a SERVICE_ROLE key para dar bypass em RLS
-// durante webhooks (pois não há sessão de usuário ativa).
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
+// A inicialização precisa acontecer dentro da função para evitar erro de build
+// caso a variável de ambiente não esteja definida na CI.
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
@@ -43,6 +39,10 @@ export async function POST(req: NextRequest) {
       if (productId === 'Ijgtp0VTZ3QXmyCvAPKe' || productId === 'kp8OZWVfP7tLSWpMx5ok') plan = 'pro';
       if (productId === 'G1EIrESSFgnth0kXxCPC' || productId === 'rqw8NXaLwSvl111uEMRH') plan = 'premium';
       if (productId === 'W0OcCJoqELUskNPEhbdL' || productId === 'AgzZbpcOki2gtS9voVrq') plan = 'start';
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
       // Atualiza o profissional no Supabase usando o email
       const { data: profs } = await supabaseAdmin
