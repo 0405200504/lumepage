@@ -2,34 +2,18 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sparkles, UserPlus } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
-import { loginAction, loginDemoAction } from '@/app/actions/professional';
-import Link from 'next/link';
-import InstallApp from '@/components/pwa/InstallApp';
+import { loginAction } from '@/app/actions/professional';
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const { success, error } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'pro' | 'manager'>('pro');
-  const [demoLoading, setDemoLoading] = useState(false);
-
-  const handleDemo = async () => {
-    setDemoLoading(true);
-    try {
-      await loginDemoAction();
-      success('Conta teste', 'Entrando na conta de exemplo (Amanda Costa)...');
-      router.push('/dashboard');
-    } catch {
-      error('Erro', 'Não foi possível abrir a conta teste.');
-      setDemoLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +26,12 @@ export default function LoginPage() {
     try {
       const res = await loginAction(email, password);
       if (res.success && res.profile) {
-        success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
         if (res.profile.role === 'super_admin') {
+          success('Bem-vindo!', `Olá, Administrador. Acessando painel...`);
           router.push('/admin');
-        } else if (res.profile.is_salon_manager) {
-          router.push('/salon');
         } else {
-          router.push('/dashboard');
+          error('Acesso Negado', 'Esta área é restrita a administradores.');
+          // You might want to log them out here if they aren't admin, but standard login flow redirects them.
         }
       } else {
         error('Falha no Login', res.error || 'Credenciais incorretas.');
@@ -68,59 +51,21 @@ export default function LoginPage() {
           'radial-gradient(120% 90% at 85% -10%, rgba(140,36,56,0.5) 0%, transparent 55%), radial-gradient(110% 90% at 0% 110%, rgba(80,11,24,0.55) 0%, transparent 50%), linear-gradient(160deg, #26040a 0%, #1a0409 55%, #120207 100%)',
       }}
     >
-      {/* Halos decorativos bordô (futurista) */}
       <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-500/25 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-700/30 blur-3xl" />
-      {/* Grid tech sutil */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '44px 44px',
-          maskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
-          WebkitMaskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
-        }}
-      />
 
       <div className="max-w-md w-full z-10 animate-fade-up">
-        {/* Logo */}
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="light" className="h-12 text-white mb-5" />
-          <h2 className="text-2xl font-black text-white tracking-tight">
-            {mode === 'manager' ? 'Acesso do Gerente' : 'Bem-vinda de volta'}
+          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <ShieldCheck className="text-wine-500 h-6 w-6" />
+            Lume Admin
           </h2>
           <p className="text-xs text-white/55 mt-1.5">
-            {mode === 'manager' ? 'Gerencie as contas das suas funcionárias'
-              : 'Acesse seu painel de agenda profissional'}
+            Acesso restrito à administração da plataforma.
           </p>
         </div>
 
-        {/* Seletor de tipo de acesso */}
-        <div className="grid grid-cols-2 gap-1 bg-white/[0.06] border border-white/10 ring-hairline rounded-2xl p-1 mb-5 max-w-sm mx-auto backdrop-blur-md">
-          {([
-            { k: 'pro', label: 'Profissional', icon: User },
-            { k: 'manager', label: 'Gerente', icon: Store },
-          ] as const).map(({ k, label, icon: Icon }) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setMode(k)}
-              className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
-                mode === k ? 'bg-white text-wine-700 shadow-md' : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" /> {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Instalar como app no celular (PWA) */}
-        <div className="mb-5">
-          <InstallApp />
-        </div>
-
-        {/* Card de Login */}
         <div className="card-elevated glow-wine p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -134,7 +79,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder="voce@suamarca.com"
+                  placeholder="admin@lume.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 bg-cream/60 border border-gray-150 rounded-2xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 transition-all"
@@ -173,33 +118,9 @@ export default function LoginPage() {
               className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom cursor-pointer disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
-              <span>{isLoading ? 'Autenticando...' : 'Acessar Painel'}</span>
+              <span>{isLoading ? 'Autenticando...' : 'Entrar no Admin'}</span>
             </button>
           </form>
-
-          {/* Nova sessão de Registro */}
-          <div className="mt-6 pt-5 border-t border-gray-150 text-center">
-            <p className="text-sm font-bold text-gray-900 mb-3">Ainda não usa o Lume?</p>
-            <Link 
-              href="/register"
-              className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-cream border-2 border-wine-700 text-wine-700 text-sm font-bold rounded-2xl hover:bg-wine-50 transition-all-custom"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span>Comece seus 7 dias grátis</span>
-            </Link>
-          </div>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={handleDemo}
-              disabled={demoLoading}
-              className="text-[11px] font-semibold text-gray-500 hover:text-wine-700 underline underline-offset-2"
-            >
-              {demoLoading ? 'Abrindo demo...' : 'Apenas testar a plataforma na conta de exemplo'}
-            </button>
-          </div>
-
         </div>
       </div>
     </div>
