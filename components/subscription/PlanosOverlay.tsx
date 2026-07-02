@@ -53,12 +53,11 @@ export function PlanosOverlay() {
 
         {/* Titulo */}
         <div className="text-center mb-10 mt-4">
-          <div className="inline-flex items-center gap-2 px-5 py-2 bg-wine-500 text-white border border-wine-400/50 rounded-full text-xs font-black uppercase tracking-widest mb-6 shadow-lg shadow-wine-500/20">
-            <ShieldCheck className="h-4 w-4" />
+          <div className="inline-flex items-center justify-center px-6 py-2 bg-wine-900 text-white rounded-md text-[10px] font-black uppercase tracking-widest mb-6 shadow-lg">
             <span>Seu teste grátis acabou</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4 uppercase">
-            Assine a Lume e continue crescendo
+          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-4 uppercase">
+            Assine <span className="text-wine-500">a Lume</span> e continue crescendo
           </h1>
           <p className="text-sm text-white/80 max-w-2xl mx-auto leading-relaxed">
             Não perca os agendamentos, o histórico de clientes e o painel financeiro.
@@ -68,25 +67,24 @@ export function PlanosOverlay() {
 
         {/* Toggle Mensal/Anual */}
         <div className="flex justify-center mb-12">
-          <div className="bg-black/40 backdrop-blur-md p-1.5 rounded-full border border-white/10 flex items-center shadow-inner relative">
+          <div className="bg-[#e5e5e5] p-1.5 rounded-full flex items-center shadow-inner relative w-[280px] h-[48px]">
             <button
               onClick={() => setIsAnnual(false)}
-              className={`relative z-10 px-6 py-2.5 rounded-full text-xs font-bold transition-colors ${!isAnnual ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+              className={`relative z-10 flex-1 h-full rounded-full text-[11px] font-black uppercase transition-colors ${!isAnnual ? 'text-white' : 'text-wine-900 hover:text-wine-700'}`}
             >
               Mensal
             </button>
             <button
               onClick={() => setIsAnnual(true)}
-              className={`relative z-10 px-6 py-2.5 rounded-full text-xs font-bold transition-colors flex items-center gap-2 ${isAnnual ? 'text-forest' : 'text-white/50 hover:text-white/80'}`}
+              className={`relative z-10 flex-1 h-full rounded-full text-[11px] font-black uppercase transition-colors ${isAnnual ? 'text-white' : 'text-wine-900 hover:text-wine-700'}`}
             >
-              Anual <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider ${isAnnual ? 'bg-forest/20 text-forest' : 'bg-lima text-forest'}`}>-20%</span>
+              Anual
             </button>
             {/* Pill Background animado */}
             <div 
-              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-full transition-all duration-300 ease-out"
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-full transition-all duration-300 ease-out bg-wine-900 shadow-md"
               style={{ 
                 left: isAnnual ? 'calc(50% + 3px)' : '6px',
-                background: isAnnual ? '#c4f000' : 'rgba(255,255,255,0.15)', // lima no anual, branco leve no mensal
               }} 
             />
           </div>
@@ -96,31 +94,30 @@ export function PlanosOverlay() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           
           {/* 1. START */}
-          <div className="bg-white/[0.04] backdrop-blur-md border border-white/10 p-8 rounded-3xl flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative">
+          <div className="bg-[#e5e5e5] p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-xl mt-4 md:mt-8 mb-4 md:mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-white/10 rounded-lg"><TrendingUp className="h-4 w-4 text-white" /></div>
-                <h3 className="text-xl font-bold text-white">Start</h3>
+              <div className="flex items-center justify-center mb-6">
+                <h3 className="text-2xl text-wine-900"><span className="font-light">lume</span> <span className="font-black">START</span></h3>
               </div>
-              <p className="text-xs text-white/60 mb-6 min-h[40px]">Sua vitrine profissional começa aqui. Pare de agendar no papel.</p>
+              <p className="text-xs text-wine-900/60 mb-6 min-h-[40px] text-center">Sua vitrine profissional começa aqui. Pare de agendar no papel.</p>
               
-              <div className="mb-8">
+              <div className="mb-8 text-center">
                 {isAnnual && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold text-white/40 line-through">R$ 598,80</span>
-                    <span className="text-[10px] font-bold text-lima bg-lima/10 px-2 py-0.5 rounded-full">Economize R$ 120</span>
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-wine-900/40 line-through">R$ 598,80</span>
+                    <span className="text-[10px] font-bold text-wine-900 bg-wine-900/10 px-2 py-0.5 rounded-full">Economize R$ 120</span>
                   </div>
                 )}
-                <div className="flex items-end gap-1">
-                  <span className="text-sm font-bold text-white/60 mb-1">R$</span>
-                  <span className="text-4xl font-black text-white">{isAnnual ? '39' : '49'}</span>
-                  <span className="text-sm font-bold text-white/60 mb-1">,90/mês</span>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-sm font-bold text-wine-900/60 mb-1">R$</span>
+                  <span className="text-4xl font-black text-wine-900">{isAnnual ? '39' : '49'}</span>
+                  <span className="text-sm font-bold text-wine-900/60 mb-1">,90/mês</span>
                 </div>
-                {isAnnual && <span className="text-xs text-white/50 block mt-1">Cobrado R$ 478,80 anualmente</span>}
+                {isAnnual && <span className="text-xs text-wine-900/50 block mt-1">Cobrado R$ 478,80 anualmente</span>}
               </div>
 
               <div className="space-y-4 mb-8">
-                <div className="text-xs font-bold text-white/90 pb-2 border-b border-white/10">O que está incluso:</div>
+                <div className="text-xs font-bold text-wine-900/90 pb-2 border-b border-wine-900/10 text-center">O que está incluso:</div>
                 <ul className="space-y-3.5">
                   {[
                     '1 profissional',
@@ -131,8 +128,8 @@ export function PlanosOverlay() {
                     'Lembretes automáticos por WhatsApp',
                     'Financeiro básico'
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-xs text-white/70">
-                      <CheckCircle2 className="h-4 w-4 text-white/40 shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-wine-900/80">
+                      <CheckCircle2 className="h-4 w-4 text-wine-900 shrink-0 mt-0.5" />
                       <span className="leading-snug">{feat}</span>
                     </li>
                   ))}
@@ -144,37 +141,29 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/AgzZbpcOki2gtS9voVrq" : "https://pay.hub.la/W0OcCJoqELUskNPEhbdL"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-3.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/10"
+              className="tap w-full py-3.5 bg-wine-900 hover:bg-wine-950 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
             >
               Assinar Start
             </a>
           </div>
 
           {/* 2. PRO (Destaque) */}
-          <div className="bg-gradient-to-b from-wine-700/80 to-wine-900/80 backdrop-blur-md border-2 border-wine-500/50 p-8 rounded-3xl flex flex-col justify-between shadow-2xl shadow-wine-900/50 transform md:-translate-y-4 relative">
+          <div className="bg-wine-800 p-8 pt-12 rounded-[1.5rem] flex flex-col justify-between shadow-2xl relative z-10">
             
-            <div className="absolute -top-4 inset-x-0 flex justify-center">
-              <span className="bg-lima text-forest px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-md">
-                <Star className="h-3.5 w-3.5" />
-                Mais Vendido
-              </span>
-            </div>
-
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-lima/20 rounded-lg"><Zap className="h-4 w-4 text-lima" /></div>
-                <h3 className="text-xl font-bold text-white">Pro</h3>
+              <div className="flex items-center justify-center mb-6">
+                <h3 className="text-2xl text-white"><span className="font-light">lume</span> <span className="font-black">PRO</span></h3>
               </div>
-              <p className="text-xs text-white/80 mb-6 min-h-[40px]">Para quem vive de agenda cheia e quer automatizar tudo.</p>
+              <p className="text-xs text-white/80 mb-6 min-h-[40px] text-center">Para quem vive de agenda cheia e quer automatizar tudo.</p>
               
-              <div className="mb-8">
+              <div className="mb-8 text-center">
                 {isAnnual && (
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center justify-center gap-2 mb-1">
                     <span className="text-[10px] font-bold text-white/60 line-through">R$ 1.198,80</span>
-                    <span className="text-[10px] font-bold text-lima bg-lima/10 px-2 py-0.5 rounded-full">Economize R$ 240</span>
+                    <span className="text-[10px] font-bold text-white bg-white/20 px-2 py-0.5 rounded-full">Economize R$ 240</span>
                   </div>
                 )}
-                <div className="flex items-end gap-1">
+                <div className="flex items-end justify-center gap-1">
                   <span className="text-sm font-bold text-white/80 mb-1">R$</span>
                   <span className="text-4xl font-black text-white">{isAnnual ? '79' : '99'}</span>
                   <span className="text-sm font-bold text-white/80 mb-1">,90/mês</span>
@@ -183,7 +172,7 @@ export function PlanosOverlay() {
               </div>
 
               <div className="space-y-4 mb-8">
-                <div className="text-xs font-bold text-white pb-2 border-b border-white/20">Tudo do Start, e mais:</div>
+                <div className="text-xs font-bold text-white pb-2 border-b border-white/20 text-center">Tudo do Start, e mais:</div>
                 <ul className="space-y-3.5">
                   {[
                     'Até 3 profissionais na agenda',
@@ -195,7 +184,7 @@ export function PlanosOverlay() {
                     'Notificações via WhatsApp'
                   ].map((feat, i) => (
                     <li key={i} className="flex items-start gap-2.5 text-xs text-white/90">
-                      <CheckCircle2 className="h-4 w-4 text-lima shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-white shrink-0 mt-0.5" />
                       <span className="leading-snug">{feat}</span>
                     </li>
                   ))}
@@ -207,38 +196,37 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok" : "https://pay.hub.la/Ijgtp0VTZ3QXmyCvAPKe"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-4 bg-lima hover:bg-lima-hover text-forest text-sm font-black rounded-2xl transition-all shadow-xl shadow-lima/20 flex items-center justify-center gap-2"
+              className="tap w-full py-3.5 bg-[#e5e5e5] hover:bg-white text-wine-900 text-sm font-black rounded-xl transition-all shadow-xl flex items-center justify-center gap-2"
             >
               Assinar Pro
             </a>
           </div>
 
           {/* 3. PREMIUM */}
-          <div className="bg-white/[0.04] backdrop-blur-md border border-white/10 p-8 rounded-3xl flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative">
+          <div className="bg-[#e5e5e5] p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-xl mt-4 md:mt-8 mb-4 md:mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-amber-500/20 rounded-lg"><Crown className="h-4 w-4 text-amber-400" /></div>
-                <h3 className="text-xl font-bold text-white">Premium</h3>
+              <div className="flex items-center justify-center mb-6">
+                <h3 className="text-2xl text-wine-900"><span className="font-light">lume</span> <span className="font-black">PREMIUM</span></h3>
               </div>
-              <p className="text-xs text-white/60 mb-6 min-h-[40px]">Gestão completa para estúdios e clínicas escalarem.</p>
+              <p className="text-xs text-wine-900/60 mb-6 min-h-[40px] text-center">Gestão completa para estúdios e clínicas escalarem.</p>
               
-              <div className="mb-8">
+              <div className="mb-8 text-center">
                 {isAnnual && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold text-white/40 line-through">R$ 2.158,80</span>
-                    <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">Economize R$ 360</span>
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-wine-900/40 line-through">R$ 2.158,80</span>
+                    <span className="text-[10px] font-bold text-wine-900 bg-wine-900/10 px-2 py-0.5 rounded-full">Economize R$ 360</span>
                   </div>
                 )}
-                <div className="flex items-end gap-1">
-                  <span className="text-sm font-bold text-white/60 mb-1">R$</span>
-                  <span className="text-4xl font-black text-white">{isAnnual ? '149' : '179'}</span>
-                  <span className="text-sm font-bold text-white/60 mb-1">,90/mês</span>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-sm font-bold text-wine-900/60 mb-1">R$</span>
+                  <span className="text-4xl font-black text-wine-900">{isAnnual ? '149' : '179'}</span>
+                  <span className="text-sm font-bold text-wine-900/60 mb-1">,90/mês</span>
                 </div>
-                {isAnnual && <span className="text-xs text-white/50 block mt-1">Cobrado R$ 1.798,80 anualmente</span>}
+                {isAnnual && <span className="text-xs text-wine-900/50 block mt-1">Cobrado R$ 1.798,80 anualmente</span>}
               </div>
 
               <div className="space-y-4 mb-8">
-                <div className="text-xs font-bold text-amber-400/90 pb-2 border-b border-white/10">Tudo do Pro, e mais:</div>
+                <div className="text-xs font-bold text-wine-900/90 pb-2 border-b border-wine-900/10 text-center">Tudo do Pro, e mais:</div>
                 <ul className="space-y-3.5">
                   {[
                     'Profissionais ilimitados',
@@ -247,8 +235,8 @@ export function PlanosOverlay() {
                     'Comissões automáticas por profissional',
                     'Suporte prioritário'
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-xs text-white/70">
-                      <CheckCircle2 className="h-4 w-4 text-amber-400/60 shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-wine-900/80">
+                      <CheckCircle2 className="h-4 w-4 text-wine-900 shrink-0 mt-0.5" />
                       <span className="leading-snug">{feat}</span>
                     </li>
                   ))}
@@ -260,7 +248,7 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/rqw8NXaLwSvl111uEMRH" : "https://pay.hub.la/G1EIrESSFgnth0kXxCPC"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-3.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/10"
+              className="tap w-full py-3.5 bg-wine-900 hover:bg-wine-950 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
             >
               Assinar Premium
             </a>
