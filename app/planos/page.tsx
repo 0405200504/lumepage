@@ -142,7 +142,9 @@ export default function PlanosPage() {
             </div>
 
             <a
-              href="#"
+              href={isAnnual ? "https://pay.hub.la/AgzZbpcOki2gtS9voVrq" : "https://pay.hub.la/W0OcCJoqELUskNPEhbdL"}
+              target="_blank"
+              rel="noopener noreferrer"
               className="tap w-full py-3.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/10"
             >
               Assinar Start
@@ -203,7 +205,9 @@ export default function PlanosPage() {
             </div>
 
             <a
-              href="#"
+              href={isAnnual ? "https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok" : "https://pay.hub.la/Ijgtp0VTZ3QXmyCvAPKe"}
+              target="_blank"
+              rel="noopener noreferrer"
               className="tap w-full py-4 bg-lima hover:bg-lima-hover text-forest text-sm font-black rounded-2xl transition-all shadow-xl shadow-lima/20 flex items-center justify-center gap-2"
             >
               Assinar Pro
@@ -254,7 +258,9 @@ export default function PlanosPage() {
             </div>
 
             <a
-              href="#"
+              href={isAnnual ? "https://pay.hub.la/rqw8NXaLwSvl111uEMRH" : "https://pay.hub.la/G1EIrESSFgnth0kXxCPC"}
+              target="_blank"
+              rel="noopener noreferrer"
               className="tap w-full py-3.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/10"
             >
               Assinar Premium
