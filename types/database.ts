@@ -31,6 +31,10 @@ export interface Professional {
   public_bio: string | null;
   status: ProfessionalStatus;
   deleted_at?: string | null; // lixeira (soft-delete) — requer migração v23
+  subscription_status?: string | null;
+  trial_ends_at?: string | null;
+  hubla_subscription_id?: string | null;
+  subscription_plan?: 'start' | 'pro' | 'premium' | null;
   created_at: string;
   updated_at: string;
 }
