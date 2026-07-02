@@ -25,6 +25,7 @@ export default async function DashboardLayout({
   let slug = '';
   let pendingConversations = 0;
   let isTrialExpired = false;
+  let subscriptionPlan: string | null = null;
 
   if (session.professional_id) {
     try {
@@ -35,6 +36,7 @@ export default async function DashboardLayout({
       if (prof) {
         brandName = prof.brand_name;
         slug = prof.slug;
+        subscriptionPlan = prof.subscription_plan ?? null;
 
         // Verificação de Trial Expirado
         if (prof.subscription_status === 'trialing' && prof.trial_ends_at) {
@@ -65,6 +67,7 @@ export default async function DashboardLayout({
         name={session.name}
         brandName={brandName || session.name}
         slug={slug}
+        plan={subscriptionPlan}
         pendingConversations={pendingConversations}
       />
 

@@ -10,16 +10,18 @@ import {
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
+import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
 
 interface SidebarProps {
   role: 'super_admin' | 'professional';
   name: string;
   brandName?: string;
   slug?: string;
+  plan?: string | null;
   pendingConversations?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, pendingConversations }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, plan, pendingConversations }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { success, error } = useToast();
@@ -146,7 +148,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
             const Icon = link.icon;
             const isActive = pathname === link.href || (link.href !== '/dashboard' && link.href !== '/admin' && pathname.startsWith(link.href));
 
-            const badge = link.href === '/dashboard/pending' && pendingConversations && pendingConversations > 0
+            // Recurso fora do plano da profissional → mostra cadeado. O link continua
+            // navegando: a própria rota renderiza a tela de upgrade (bloqueio no servidor).
+            const capability = role === 'professional' ? ROUTE_CAPABILITY[link.href] : undefined;
+            const locked = !!capability && !can(plan, capability);
+
+            const badge = !locked && link.href === '/dashboard/pending' && pendingConversations && pendingConversations > 0
               ? pendingConversations
               : null;
 
@@ -161,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                 } ${
                   isActive
                     ? 'bg-gradient-to-br from-white to-white/92 text-[#500b18] shadow-[0_10px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/40'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    : `text-white/70 hover:bg-white/10 hover:text-white ${locked ? 'opacity-60' : ''}`
                 }`}
               >
                 {isActive && !isCollapsed && (
@@ -169,6 +176,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                 )}
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#500b18]' : 'text-white/55 group-hover:text-white'}`} />
                 {!isCollapsed && <span className="flex-1">{link.label}</span>}
+                {locked && !isCollapsed && (
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-white/40" />
+                )}
+                {locked && isCollapsed && (
+                  <span className="absolute top-1 right-1"><Lock className="h-2.5 w-2.5 text-white/50" /></span>
+                )}
                 {badge && (
                   <span className={`text-[10px] font-bold text-white bg-amber-500 rounded-full leading-none text-center ${isCollapsed ? 'absolute top-1 right-1 h-2 w-2 p-0' : 'px-1.5 py-0.5 min-w-[18px]'}`}>
                     {isCollapsed ? '' : badge}
