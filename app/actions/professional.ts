@@ -292,6 +292,15 @@ export async function loginDemoAction() {
   return { success: true };
 }
 
+// 8b. Login/cadastro via Google — recebe o access_token do cliente (validado no servidor).
+export async function googleAuthAction(accessToken: string) {
+  if (!accessToken) return { success: false, error: 'Sessão do Google ausente.' };
+  const ip = ipFromHeaders(await headers());
+  const rl = await rateLimit(`google:${ip}`, 15, 5 * 60 * 1000);
+  if (!rl.ok) return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
+  return authService.loginWithGoogle(accessToken);
+}
+
 // 8. Login no sistema
 export async function loginAction(email: string, password?: string) {
   // Rate limit por IP: corta brute force de senha (best-effort por instância).

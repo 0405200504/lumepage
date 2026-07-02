@@ -18,6 +18,10 @@ export const supabase = isSupabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        // OAuth (Google): o token volta no hash da URL e o SDK o captura no
+        // cliente, que então chama a action de servidor pra montar o cookie do Lume.
+        detectSessionInUrl: true,
+        flowType: 'implicit',
       }
     })
   : (null as any); // Evita erros de compilação em desenvolvimento local sem .env
