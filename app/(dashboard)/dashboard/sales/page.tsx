@@ -2,8 +2,7 @@ import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { SalesPanel } from '@/components/dashboard/SalesPanel';
-import { getCurrentPlan } from '@/lib/subscription/guard';
-import { can } from '@/lib/subscription/entitlements';
+import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
@@ -15,7 +14,7 @@ export default async function SalesPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!can(await getCurrentPlan(professionalId), 'sales')) return <UpgradeRequired capability="sales" />;
+  if (!(await professionalCan(professionalId, 'sales'))) return <UpgradeRequired capability="sales" />;
 
   const [appointments, services] = await Promise.all([
     dbService.getAppointmentsByProfessional(professionalId),

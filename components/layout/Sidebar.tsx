@@ -18,10 +18,12 @@ interface SidebarProps {
   brandName?: string;
   slug?: string;
   plan?: string | null;
+  /** Aplicar limites de plano (só conta nova com assinatura ativa). */
+  enforcePlan?: boolean;
   pendingConversations?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, plan, pendingConversations }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, plan, enforcePlan, pendingConversations }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { success, error } = useToast();
@@ -150,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
 
             // Recurso fora do plano da profissional → mostra cadeado. O link continua
             // navegando: a própria rota renderiza a tela de upgrade (bloqueio no servidor).
-            const capability = role === 'professional' ? ROUTE_CAPABILITY[link.href] : undefined;
+            const capability = enforcePlan && role === 'professional' ? ROUTE_CAPABILITY[link.href] : undefined;
             const locked = !!capability && !can(plan, capability);
 
             const badge = !locked && link.href === '/dashboard/pending' && pendingConversations && pendingConversations > 0

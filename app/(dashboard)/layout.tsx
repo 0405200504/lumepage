@@ -7,6 +7,7 @@ import { ActingBanner } from '@/components/salon/ActingBanner';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
+import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
 
 /**
  * Casca persistente do app (PWA).
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
   let pendingConversations = 0;
   let isTrialExpired = false;
   let subscriptionPlan: string | null = null;
+  let enforcePlan = false;
 
   if (session.professional_id) {
     try {
@@ -38,9 +40,20 @@ export default async function DashboardLayout({
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
 
-        // Verificação de Trial Expirado
-        if (prof.subscription_status === 'trialing' && prof.trial_ends_at) {
+        const legacy = isLegacyAccount(prof.created_at);
+        // Contas legadas nunca são bloqueadas/limitadas por plano.
+        enforcePlan = planEnforced({ createdAt: prof.created_at, status: prof.subscription_status });
+
+        // Verificação de Trial Expirado (só conta nova)
+        if (!legacy && prof.subscription_status === 'trialing' && prof.trial_ends_at) {
           if (new Date() > new Date(prof.trial_ends_at)) {
+            isTrialExpired = true;
+          }
+        }
+
+        // Plano pago vencido (vencimento definido pelo admin) → paywall (só conta nova ativa)
+        if (!legacy && prof.subscription_status === 'active' && prof.subscription_ends_at) {
+          if (new Date() > new Date(prof.subscription_ends_at)) {
             isTrialExpired = true;
           }
         }
@@ -68,6 +81,7 @@ export default async function DashboardLayout({
         brandName={brandName || session.name}
         slug={slug}
         plan={subscriptionPlan}
+        enforcePlan={enforcePlan}
         pendingConversations={pendingConversations}
       />
 

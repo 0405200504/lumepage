@@ -1,8 +1,7 @@
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { PendingConversationsWidget } from '@/components/dashboard/PendingConversationsWidget';
-import { getCurrentPlan } from '@/lib/subscription/guard';
-import { can } from '@/lib/subscription/entitlements';
+import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
@@ -14,7 +13,7 @@ export default async function PendingConversationsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!can(await getCurrentPlan(professionalId), 'conversations')) return <UpgradeRequired capability="conversations" />;
+  if (!(await professionalCan(professionalId, 'conversations'))) return <UpgradeRequired capability="conversations" />;
 
   const pendingConvs = await dbService.getPausedConversations(professionalId).catch(() => []);
 

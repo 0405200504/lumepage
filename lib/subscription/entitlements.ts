@@ -63,6 +63,38 @@ export const UPGRADE_CHECKOUT: Record<PlanType, string | null> = {
   premium: 'https://pay.hub.la/rqw8NXaLwSvl111uEMRH',
 };
 
+/**
+ * Marco de virada: contas criadas ANTES desta data são LEGADAS e mantêm acesso
+ * cheio — as regras de plano NÃO se aplicam a elas. Só contas novas (criadas a
+ * partir daqui) são limitadas pelo plano. Ajuste esta data para o momento do
+ * lançamento das regras de plano.
+ */
+export const ENTITLEMENTS_CUTOFF = new Date('2026-07-03T00:00:00-03:00');
+
+/** Conta legada (criada antes do marco) → nunca é limitada por plano. */
+export function isLegacyAccount(createdAt?: string | Date | null): boolean {
+  if (!createdAt) return false; // sem data → trata como nova
+  return new Date(createdAt) < ENTITLEMENTS_CUTOFF;
+}
+
+/**
+ * As regras de plano só valem para conta NOVA com assinatura ATIVA.
+ * Legadas e contas em teste (trial) têm acesso cheio.
+ */
+export function planEnforced(opts: { createdAt?: string | Date | null; status?: string | null }): boolean {
+  if (isLegacyAccount(opts.createdAt)) return false;
+  return opts.status === 'active';
+}
+
+/** Checagem final de acesso a um recurso, considerando legado/trial/plano. */
+export function canAccess(
+  prof: { created_at?: string | null; subscription_status?: string | null; subscription_plan?: string | null },
+  capability: Capability,
+): boolean {
+  if (!planEnforced({ createdAt: prof.created_at, status: prof.subscription_status })) return true;
+  return can(prof.subscription_plan, capability);
+}
+
 /** Plano nulo/desconhecido é tratado como Start (o mais restritivo). */
 export function resolvePlan(plan?: string | null): PlanType {
   return plan === 'pro' || plan === 'premium' ? plan : 'start';

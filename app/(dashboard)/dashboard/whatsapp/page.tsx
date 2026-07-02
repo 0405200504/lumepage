@@ -1,8 +1,7 @@
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { WhatsAppBotPanel } from '@/components/dashboard/WhatsAppBotPanel';
-import { getCurrentPlan } from '@/lib/subscription/guard';
-import { can } from '@/lib/subscription/entitlements';
+import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
@@ -13,7 +12,7 @@ export default async function WhatsAppBotPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!can(await getCurrentPlan(professionalId), 'whatsappBot')) return <UpgradeRequired capability="whatsappBot" />;
+  if (!(await professionalCan(professionalId, 'whatsappBot'))) return <UpgradeRequired capability="whatsappBot" />;
 
   let waSettings = null;
   try {

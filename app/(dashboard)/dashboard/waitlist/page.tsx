@@ -2,8 +2,7 @@ import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { WaitlistPanel } from '@/components/dashboard/WaitlistPanel';
-import { getCurrentPlan } from '@/lib/subscription/guard';
-import { can } from '@/lib/subscription/entitlements';
+import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
@@ -15,7 +14,7 @@ export default async function WaitlistPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!can(await getCurrentPlan(professionalId), 'waitlist')) return <UpgradeRequired capability="waitlist" />;
+  if (!(await professionalCan(professionalId, 'waitlist'))) return <UpgradeRequired capability="waitlist" />;
 
   const [entries, services] = await Promise.all([
     dbService.getWaitlistByProfessional(professionalId),

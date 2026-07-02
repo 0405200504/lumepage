@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Professional, ProfessionalStatus } from '@/types/database';
 import { Search, Edit, ExternalLink, RefreshCw, Power, Trash2, X, AlertTriangle, RotateCcw, Inbox } from 'lucide-react';
+import { PLAN_LABEL, isLegacyAccount } from '@/lib/subscription/entitlements';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalStatusAction, deleteProfessionalAction, restoreProfessionalAction, purgeProfessionalAction } from '@/app/actions/admin';
 import Link from 'next/link';
@@ -129,6 +130,21 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
 
   const fmtDate = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
 
+  const getPlanBadge = (p: Professional) => {
+    if (isLegacyAccount(p.created_at)) {
+      return <span className="text-[10px] font-bold border border-gray-200 bg-gray-50 text-gray-500 rounded-full px-2.5 py-0.5">Legada</span>;
+    }
+    if (!p.subscription_plan) {
+      return <span className="text-[10px] font-bold border border-gray-200 bg-gray-50 text-gray-400 rounded-full px-2.5 py-0.5">—</span>;
+    }
+    const tone: Record<string, string> = {
+      start: 'border-sky-100 bg-sky-50 text-sky-700',
+      pro: 'border-wine-200 bg-wine-50 text-wine-700',
+      premium: 'border-violet-100 bg-violet-50 text-violet-700',
+    };
+    return <span className={`text-[10px] font-bold border rounded-full px-2.5 py-0.5 ${tone[p.subscription_plan]}`}>{PLAN_LABEL[p.subscription_plan]}</span>;
+  };
+
   return (
     <div className="space-y-6 select-none">
       {/* Abas Ativas / Lixeira */}
@@ -188,6 +204,7 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
                     <th className="px-6 py-4">Slug / Link Público</th>
                     <th className="px-6 py-4">WhatsApp / E-mail</th>
                     <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Plano</th>
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -216,6 +233,7 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(p.status)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{getPlanBadge(p)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -241,7 +259,7 @@ export const ProfessionalsTable: React.FC<ProfessionalsTableProps> = ({
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan={5} className="py-12 text-center text-xs text-gray-400">Nenhuma profissional atende aos filtros de busca.</td></tr>
+                    <tr><td colSpan={6} className="py-12 text-center text-xs text-gray-400">Nenhuma profissional atende aos filtros de busca.</td></tr>
                   )}
                 </tbody>
               </table>
