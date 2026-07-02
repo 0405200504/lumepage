@@ -31,11 +31,11 @@ export async function POST(req: NextRequest) {
     if (status === 'approved' || status === 'paid') {
       
       // Mapear o ID do produto para o plano correto (Start, Pro, Premium)
-      // TODO: Trocar os IDs abaixo pelos IDs reais que a Hubla te der
+      // Usando os IDs dos links de pagamento fornecidos:
       let plan = 'start'; // default
-      if (productId === 'ID_PRO_MENSAL' || productId === 'ID_PRO_ANUAL') plan = 'pro';
-      if (productId === 'ID_PREMIUM_MENSAL' || productId === 'ID_PREMIUM_ANUAL') plan = 'premium';
-      if (productId === 'ID_START_MENSAL' || productId === 'ID_START_ANUAL') plan = 'start';
+      if (productId === 'Ijgtp0VTZ3QXmyCvAPKe' || productId === 'kp8OZWVfP7tLSWpMx5ok') plan = 'pro';
+      if (productId === 'G1EIrESSFgnth0kXxCPC' || productId === 'rqw8NXaLwSvl111uEMRH') plan = 'premium';
+      if (productId === 'W0OcCJoqELUskNPEhbdL' || productId === 'AgzZbpcOki2gtS9voVrq') plan = 'start';
 
       // Atualiza o profissional no Supabase usando o email
       const { data: profs } = await supabaseAdmin
