@@ -53,11 +53,11 @@ export function PlanosOverlay() {
 
         {/* Titulo */}
         <div className="text-center mb-10 mt-4">
-          <div className="inline-flex items-center justify-center px-6 py-2 bg-wine-900 text-white rounded-md text-[10px] font-black uppercase tracking-widest mb-6 shadow-lg">
+          <div className="inline-flex items-center justify-center px-6 py-2 bg-gradient-to-r from-wine-900 to-wine-800 border border-wine-500/30 text-white rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6 shadow-[0_0_20px_rgba(140,36,56,0.4)]">
             <span>Seu teste grátis acabou</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-4 uppercase">
-            Assine <span className="text-wine-500">a Lume</span> e continue crescendo
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70 tracking-tight mb-4 uppercase">
+            Assine <span className="text-transparent bg-clip-text bg-gradient-to-r from-wine-400 to-wine-600 drop-shadow-sm">a Lume</span> e continue crescendo
           </h1>
           <p className="text-sm text-white/80 max-w-2xl mx-auto leading-relaxed">
             Não perca os agendamentos, o histórico de clientes e o painel financeiro.
@@ -82,7 +82,7 @@ export function PlanosOverlay() {
             </button>
             {/* Pill Background animado */}
             <div 
-              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-full transition-all duration-300 ease-out bg-wine-900 shadow-md"
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-wine-800 to-wine-950 shadow-md"
               style={{ 
                 left: isAnnual ? 'calc(50% + 3px)' : '6px',
               }} 
@@ -94,10 +94,10 @@ export function PlanosOverlay() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           
           {/* 1. START */}
-          <div className="bg-[#e5e5e5] p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-xl mt-4 md:mt-8 mb-4 md:mb-8">
+          <div className="bg-gradient-to-b from-white to-[#f4f4f4] border border-white p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] mt-4 md:mt-8 mb-4 md:mb-8">
             <div>
               <div className="flex items-center justify-center mb-6">
-                <h3 className="text-2xl text-wine-900"><span className="font-light">lume</span> <span className="font-black">START</span></h3>
+                <h3 className="text-2xl text-wine-900 tracking-tight"><span className="font-extralight tracking-normal">lume</span> <span className="font-black">START</span></h3>
               </div>
               <p className="text-xs text-wine-900/60 mb-6 min-h-[40px] text-center">Sua vitrine profissional começa aqui. Pare de agendar no papel.</p>
               
@@ -141,18 +141,19 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/AgzZbpcOki2gtS9voVrq" : "https://pay.hub.la/W0OcCJoqELUskNPEhbdL"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-3.5 bg-wine-900 hover:bg-wine-950 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+              className="tap w-full py-3.5 bg-gradient-to-r from-wine-800 to-wine-950 hover:from-wine-900 hover:to-[#4a0815] text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(140,36,56,0.15)] hover:shadow-[0_10px_25px_rgba(140,36,56,0.3)]"
             >
               Assinar Start
             </a>
           </div>
 
           {/* 2. PRO (Destaque) */}
-          <div className="bg-wine-800 p-8 pt-12 rounded-[1.5rem] flex flex-col justify-between shadow-2xl relative z-10">
+          <div className="bg-gradient-to-br from-wine-800 via-wine-900 to-[#4a0815] border border-wine-500/20 p-8 pt-12 rounded-[1.5rem] flex flex-col justify-between shadow-[0_20px_50px_rgba(80,11,24,0.5)] relative z-10 overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-wine-500/20 blur-3xl rounded-full pointer-events-none" />
             
             <div>
               <div className="flex items-center justify-center mb-6">
-                <h3 className="text-2xl text-white"><span className="font-light">lume</span> <span className="font-black">PRO</span></h3>
+                <h3 className="text-3xl text-white tracking-tight drop-shadow-sm"><span className="font-extralight tracking-normal text-white/90">lume</span> <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-200">PRO</span></h3>
               </div>
               <p className="text-xs text-white/80 mb-6 min-h-[40px] text-center">Para quem vive de agenda cheia e quer automatizar tudo.</p>
               
@@ -196,17 +197,17 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok" : "https://pay.hub.la/Ijgtp0VTZ3QXmyCvAPKe"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-3.5 bg-[#e5e5e5] hover:bg-white text-wine-900 text-sm font-black rounded-xl transition-all shadow-xl flex items-center justify-center gap-2"
+              className="tap w-full py-3.5 bg-gradient-to-r from-[#f5f5f5] to-white hover:from-white hover:to-white text-wine-900 text-sm font-extrabold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.25)] flex items-center justify-center gap-2"
             >
               Assinar Pro
             </a>
           </div>
 
           {/* 3. PREMIUM */}
-          <div className="bg-[#e5e5e5] p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-xl mt-4 md:mt-8 mb-4 md:mb-8">
+          <div className="bg-gradient-to-b from-white to-[#f4f4f4] border border-white p-8 rounded-[1.5rem] flex flex-col justify-between transition-transform hover:scale-105 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] mt-4 md:mt-8 mb-4 md:mb-8">
             <div>
               <div className="flex items-center justify-center mb-6">
-                <h3 className="text-2xl text-wine-900"><span className="font-light">lume</span> <span className="font-black">PREMIUM</span></h3>
+                <h3 className="text-2xl text-wine-900 tracking-tight"><span className="font-extralight tracking-normal">lume</span> <span className="font-black">PREMIUM</span></h3>
               </div>
               <p className="text-xs text-wine-900/60 mb-6 min-h-[40px] text-center">Gestão completa para estúdios e clínicas escalarem.</p>
               
@@ -248,7 +249,7 @@ export function PlanosOverlay() {
               href={isAnnual ? "https://pay.hub.la/rqw8NXaLwSvl111uEMRH" : "https://pay.hub.la/G1EIrESSFgnth0kXxCPC"}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap w-full py-3.5 bg-wine-900 hover:bg-wine-950 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+              className="tap w-full py-3.5 bg-gradient-to-r from-wine-800 to-wine-950 hover:from-wine-900 hover:to-[#4a0815] text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(140,36,56,0.15)] hover:shadow-[0_10px_25px_rgba(140,36,56,0.3)]"
             >
               Assinar Premium
             </a>
