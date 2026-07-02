@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { ActingBanner } from '@/components/salon/ActingBanner';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
 
 /**
  * Casca persistente do app (PWA).
@@ -23,6 +24,8 @@ export default async function DashboardLayout({
   let brandName = '';
   let slug = '';
   let pendingConversations = 0;
+  let isTrialExpired = false;
+
   if (session.professional_id) {
     try {
       const [prof, paused] = await Promise.all([
@@ -36,10 +39,7 @@ export default async function DashboardLayout({
         // Verificação de Trial Expirado
         if (prof.subscription_status === 'trialing' && prof.trial_ends_at) {
           if (new Date() > new Date(prof.trial_ends_at)) {
-            // Opcional: Atualizar no banco para 'trial_expired' ou algo do tipo
-            // Mas só o redirect já garante o bloqueio imediato
-            const { redirect } = await import('next/navigation');
-            redirect('/planos');
+            isTrialExpired = true;
           }
         }
       }
@@ -58,6 +58,8 @@ export default async function DashboardLayout({
         backgroundAttachment: 'fixed',
       }}
     >
+      {isTrialExpired && <PlanosOverlay />}
+
       <Sidebar
         role="professional"
         name={session.name}

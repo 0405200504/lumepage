@@ -7,7 +7,7 @@ import { LumeLogo } from '@/components/ui/LumeLogo';
 import { useToast } from '@/components/ui/Toast';
 import { logoutAction } from '@/app/actions/professional';
 
-export default function PlanosPage() {
+export function PlanosOverlay() {
   const router = useRouter();
   const { error } = useToast();
   const [isAnnual, setIsAnnual] = useState(true);
@@ -23,10 +23,10 @@ export default function PlanosPage() {
 
   return (
     <div
-      className="min-h-screen min-h-dvh flex flex-col items-center px-4 py-12 select-none relative overflow-x-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center px-4 py-12 select-none overflow-y-auto bg-black/40 backdrop-blur-md"
       style={{
-        background:
-          'radial-gradient(120% 90% at 85% -10%, rgba(140,36,56,0.5) 0%, transparent 55%), radial-gradient(110% 90% at 0% 110%, rgba(80,11,24,0.55) 0%, transparent 50%), linear-gradient(160deg, #26040a 0%, #1a0409 55%, #120207 100%)',
+        // Aquele gradiente suave para ajudar na leitura, mas com fundo transparente/blur
+        backgroundImage: 'radial-gradient(120% 90% at 85% -10%, rgba(140,36,56,0.3) 0%, transparent 55%), radial-gradient(110% 90% at 0% 110%, rgba(80,11,24,0.4) 0%, transparent 50%)'
       }}
     >
       <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-500/25 blur-3xl" />
@@ -44,24 +44,23 @@ export default function PlanosPage() {
       <div className="max-w-6xl w-full z-10 animate-fade-up flex flex-col">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-10">
-          <LumeLogo variant="light" className="h-10 text-white" />
-          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors">
+        <div className="flex justify-end items-center mb-6">
+          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors bg-black/40 px-3 py-1.5 rounded-full border border-white/10">
             <LogOut className="h-4 w-4" />
-            <span>Sair</span>
+            <span>Sair da conta</span>
           </button>
         </div>
 
         {/* Titulo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Seu período de teste terminou</span>
+        <div className="text-center mb-10 mt-4">
+          <div className="inline-flex items-center gap-2 px-5 py-2 bg-wine-500 text-white border border-wine-400/50 rounded-full text-xs font-black uppercase tracking-widest mb-6 shadow-lg shadow-wine-500/20">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Seu teste grátis acabou</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
-            Assine o Lume e continue crescendo
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4 uppercase">
+            Assine a Lume e continue crescendo
           </h1>
-          <p className="text-sm text-white/70 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm text-white/80 max-w-2xl mx-auto leading-relaxed">
             Não perca os agendamentos, o histórico de clientes e o painel financeiro.
             Escolha o plano que faz mais sentido para o seu momento e desbloqueie o acesso total.
           </p>
