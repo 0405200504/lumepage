@@ -13,8 +13,8 @@ interface Plan {
   featured?: boolean;
   featuresLabel: string;
   features: string[];
-  monthly: { price: string; href: string; oldYear?: string; save?: string; yearTotal?: string; yearPrice?: string };
-  annual: { price: string; href: string; oldYear: string; save: string; yearTotal: string };
+  monthly: { price: string; href: string };
+  annual: { price: string; href: string; oldYear: string; save: string; avista: string };
 }
 
 const PLANS: Plan[] = [
@@ -33,7 +33,7 @@ const PLANS: Plan[] = [
       'Financeiro básico',
     ],
     monthly: { price: '49', href: 'https://pay.hub.la/W0OcCJoqELUskNPEhbdL' },
-    annual: { price: '39', href: 'https://pay.hub.la/AgzZbpcOki2gtS9voVrq', oldYear: 'R$ 598,80', save: '−R$ 120', yearTotal: 'R$ 478,80' },
+    annual: { price: '39', href: 'https://pay.hub.la/AgzZbpcOki2gtS9voVrq', oldYear: 'R$ 598,80', save: '−R$ 120', avista: '392,68' },
   },
   {
     key: 'pro',
@@ -51,7 +51,7 @@ const PLANS: Plan[] = [
       'Notificações via WhatsApp',
     ],
     monthly: { price: '99', href: 'https://pay.hub.la/Ijgtp0VTZ3QXmyCvAPKe' },
-    annual: { price: '79', href: 'https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok', oldYear: 'R$ 1.198,80', save: '−R$ 240', yearTotal: 'R$ 958,80' },
+    annual: { price: '79', href: 'https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok', oldYear: 'R$ 1.198,80', save: '−R$ 240', avista: '786,37' },
   },
   {
     key: 'premium',
@@ -66,7 +66,7 @@ const PLANS: Plan[] = [
       'Suporte prioritário',
     ],
     monthly: { price: '179', href: 'https://pay.hub.la/G1EIrESSFgnth0kXxCPC' },
-    annual: { price: '149', href: 'https://pay.hub.la/rqw8NXaLwSvl111uEMRH', oldYear: 'R$ 2.158,80', save: '−R$ 360', yearTotal: 'R$ 1.798,80' },
+    annual: { price: '149', href: 'https://pay.hub.la/rqw8NXaLwSvl111uEMRH', oldYear: 'R$ 2.158,80', save: '−R$ 360', avista: '1.475,30' },
   },
 ];
 
@@ -200,8 +200,8 @@ export function PlanosOverlay() {
                     <span className={`font-black tabular-nums ${featured ? 'text-6xl text-white' : 'text-5xl text-ink'}`}>{p.price}</span>
                     <span className={`text-sm font-medium ${featured ? 'text-white/60' : 'text-ink/40'}`}>,90<span className="text-[10px]">/mês</span></span>
                   </div>
-                  {isAnnual && plan.annual.yearTotal && (
-                    <span className={`text-[10px] block mt-1 ${featured ? 'text-white/50' : 'text-ink/30'}`}>Cobrado {plan.annual.yearTotal} anualmente</span>
+                  {isAnnual && (
+                    <span className={`text-[10px] block mt-1 ${featured ? 'text-white/50' : 'text-ink/30'}`}>12x no cartão · ou R$ {plan.annual.avista} à vista</span>
                   )}
                 </div>
 
