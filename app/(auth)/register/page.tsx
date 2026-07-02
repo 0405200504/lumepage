@@ -6,6 +6,7 @@ import { Mail, Lock, User, Store, LogIn, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { registerProfessionalAction } from '@/app/actions/professional';
+import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import InstallApp from '@/components/pwa/InstallApp';
 
@@ -191,6 +192,14 @@ export default function RegisterPage() {
               <span>{isLoading ? 'Criando Conta...' : 'Começar meus 7 dias grátis'}</span>
             </button>
           </form>
+
+          {/* Separador + cadastro com Google */}
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-gray-150" />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">ou</span>
+            <span className="h-px flex-1 bg-gray-150" />
+          </div>
+          <GoogleButton label="Cadastrar com Google" />
 
           <div className="mt-6 pt-5 border-t border-gray-150 text-center">
             <p className="text-xs text-gray-500">
