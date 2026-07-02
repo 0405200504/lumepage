@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { EditProfessionalPanel } from '@/components/admin/EditProfessionalPanel';
+import { SubscriptionAdminCard } from '@/components/admin/SubscriptionAdminCard';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -49,7 +50,10 @@ export default async function AdminEditProfessionalPage({ params }: PageProps) {
       title={`Editar Cadastro: ${professional.name}`} 
       subtitle={`Altere informações administrativas, cores de identidade visual e dados de contato de ${professional.brand_name}.`}
     >
-      <EditProfessionalPanel professional={professional} />
+      <div className="space-y-6">
+        <SubscriptionAdminCard professional={professional} />
+        <EditProfessionalPanel professional={professional} />
+      </div>
     </LayoutAdmin>
   );
 }

@@ -367,3 +367,37 @@ export async function getDashboardStatsAction() {
     return { success: false, error: e.message || 'Erro ao carregar estatísticas gerais.' };
   }
 }
+
+// ===================== ASSINATURA / PLANO (liberação manual pelo admin) =====================
+export interface UpdateSubscriptionInput {
+  /** Plano da profissional. null = sem plano (volta a comportar-se como Start/trial). */
+  plan: 'start' | 'pro' | 'premium' | null;
+  /** 'active' libera o acesso; 'trialing' volta pro teste. */
+  status: 'active' | 'trialing';
+  /** Vencimento do acesso pago (ISO). null = sem vencimento definido. */
+  endsAt: string | null;
+}
+
+/**
+ * Libera/ajusta o plano de uma profissional (área admin). Grava plano, status e
+ * vencimento. O app usa esses campos para liberar recursos e mostrar quanto falta
+ * pra vencer.
+ */
+export async function updateProfessionalSubscriptionAction(professionalId: string, input: UpdateSubscriptionInput) {
+  try {
+    if (!await authorizeAdmin()) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+
+    const result = await dbService.upsertProfessional({
+      id: professionalId,
+      subscription_plan: input.plan,
+      subscription_status: input.status,
+      subscription_ends_at: input.endsAt,
+    });
+
+    return { success: true, professional: result };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Erro ao atualizar o plano.' };
+  }
+}

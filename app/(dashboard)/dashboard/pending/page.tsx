@@ -1,6 +1,8 @@
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { PendingConversationsWidget } from '@/components/dashboard/PendingConversationsWidget';
+import { professionalCan } from '@/lib/subscription/guard';
+import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
   title: 'Conversas Pendentes | Lume',
@@ -10,6 +12,8 @@ export const metadata = {
 export default async function PendingConversationsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
+
+  if (!(await professionalCan(professionalId, 'conversations'))) return <UpgradeRequired capability="conversations" />;
 
   const pendingConvs = await dbService.getPausedConversations(professionalId).catch(() => []);
 

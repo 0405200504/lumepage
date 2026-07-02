@@ -35,6 +35,7 @@ export interface Professional {
   trial_ends_at?: string | null;
   hubla_subscription_id?: string | null;
   subscription_plan?: 'start' | 'pro' | 'premium' | null;
+  subscription_ends_at?: string | null; // vencimento do acesso pago (admin) — requer migração v28
   created_at: string;
   updated_at: string;
 }
