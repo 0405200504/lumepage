@@ -45,6 +45,10 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string }> = {
     title: 'Carteira de Clientes',
     subtitle: 'Acompanhe histórico, reative clientes sumidas e monitore faltas para fidelizar mais.',
   },
+  '/dashboard/anamnese': {
+    title: 'Fichas de Anamnese',
+    subtitle: 'Crie fichas, envie por link para as clientes responderem e receba tudo em PDF.',
+  },
   '/dashboard/finance': {
     title: 'Contas',
     subtitle: 'Seu controle financeiro completo: o que entrou, o que saiu, lucro e quanto sobrou.',

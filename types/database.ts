@@ -270,6 +270,60 @@ export interface WhatsAppConversation {
   created_at: string;
 }
 
+// ===================== FICHA DE ANAMNESE (requer migração v29) =====================
+
+export type AnamnesisQuestionType = 'text' | 'textarea' | 'yesno' | 'select' | 'multiselect' | 'date' | 'number';
+
+export interface AnamnesisQuestion {
+  id: string;
+  label: string;
+  type: AnamnesisQuestionType;
+  options?: string[]; // para select/multiselect
+  required?: boolean;
+}
+
+export interface AnamnesisDesign {
+  accent?: string;    // cor de destaque do link público e do PDF (hex)
+  showLogo?: boolean; // exibe o nome/marca da profissional no topo
+}
+
+export interface AnamnesisForm {
+  id: string;
+  professional_id: string;
+  title: string;
+  description: string | null;
+  questions: AnamnesisQuestion[];
+  design: AnamnesisDesign;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AnamnesisResponseStatus = 'pending' | 'completed';
+
+export interface AnamnesisAnswer {
+  questionId: string;
+  answer: string | string[];
+}
+
+export interface AnamnesisResponse {
+  id: string;
+  form_id: string;
+  professional_id: string;
+  client_id: string | null;
+  client_name: string;
+  client_whatsapp: string;
+  token: string;
+  status: AnamnesisResponseStatus;
+  questions_snapshot: AnamnesisQuestion[];
+  design_snapshot: AnamnesisDesign;
+  form_title: string;
+  answers: AnamnesisAnswer[];
+  signature: string | null;
+  pdf_sent_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
 export interface GoogleCalendarConnection {
   id: string;
   professional_id: string;
