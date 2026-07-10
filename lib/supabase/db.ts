@@ -4,7 +4,8 @@ import {
   Professional, Profile, Service, AvailabilityRule,
   TimeBlock, Setting, Client, Appointment, AppointmentStatus,
   Transaction, Task, FixedExpense, Salon, WaitlistEntry, WaitlistStatus,
-  WhatsAppSettings, WhatsAppConversation, GoogleCalendarConnection
+  WhatsAppSettings, WhatsAppConversation, GoogleCalendarConnection,
+  AnamnesisForm, AnamnesisResponse
 } from '@/types/database';
 import { syncAppointmentToGoogle } from '@/lib/google/calendar';
 
@@ -1749,6 +1750,164 @@ export const dbService = {
       return null;
     }
     return data;
+  },
+
+  // --- Fichas de anamnese (requer migração v29) ---
+  getAnamnesisForms: async (professionalId: string): Promise<AnamnesisForm[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb()
+      .from('anamnesis_forms')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('anamnesis_forms'); return []; }
+      throw error;
+    }
+    return data || [];
+  },
+
+  getAnamnesisFormById: async (id: string, professionalId: string): Promise<AnamnesisForm | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('anamnesis_forms')
+      .select('*')
+      .eq('id', id)
+      .eq('professional_id', professionalId)
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) return null;
+      throw error;
+    }
+    return data;
+  },
+
+  createAnamnesisForm: async (
+    data: Omit<AnamnesisForm, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<AnamnesisForm> => {
+    const { data: created, error } = await getDb()
+      .from('anamnesis_forms')
+      .insert(data)
+      .select()
+      .single();
+    if (error) {
+      if (isMissingTable(error)) throw new Error('Rode supabase/migration_v29_anamnesis.sql no Supabase para ativar as fichas de anamnese.');
+      throw error;
+    }
+    return created;
+  },
+
+  updateAnamnesisForm: async (
+    id: string,
+    professionalId: string,
+    patch: Partial<Pick<AnamnesisForm, 'title' | 'description' | 'questions' | 'design'>>
+  ): Promise<AnamnesisForm> => {
+    const { data, error } = await getDb()
+      .from('anamnesis_forms')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('professional_id', professionalId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  deleteAnamnesisForm: async (id: string, professionalId: string): Promise<void> => {
+    const { error } = await getDb()
+      .from('anamnesis_forms')
+      .delete()
+      .eq('id', id)
+      .eq('professional_id', professionalId);
+    if (error) throw error;
+  },
+
+  getAnamnesisResponses: async (professionalId: string): Promise<AnamnesisResponse[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb()
+      .from('anamnesis_responses')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .order('created_at', { ascending: false })
+      .limit(300);
+    if (error) {
+      if (isMissingTable(error)) return [];
+      throw error;
+    }
+    return data || [];
+  },
+
+  /** Busca pelo token do link público — usada pela página /ficha/[token] e pelo PDF. */
+  getAnamnesisResponseByToken: async (token: string): Promise<AnamnesisResponse | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('anamnesis_responses')
+      .select('*')
+      .eq('token', token)
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) return null;
+      throw error;
+    }
+    return data;
+  },
+
+  createAnamnesisResponse: async (
+    data: Omit<AnamnesisResponse, 'id' | 'created_at'>
+  ): Promise<AnamnesisResponse> => {
+    const { data: created, error } = await getDb()
+      .from('anamnesis_responses')
+      .insert(data)
+      .select()
+      .single();
+    if (error) {
+      if (isMissingTable(error)) throw new Error('Rode supabase/migration_v29_anamnesis.sql no Supabase para ativar as fichas de anamnese.');
+      throw error;
+    }
+    return created;
+  },
+
+  /** Grava as respostas da cliente e marca como concluída (escrita pública via token). */
+  completeAnamnesisResponse: async (
+    token: string,
+    answers: AnamnesisResponse['answers'],
+    signature: string | null,
+    clientName?: string
+  ): Promise<AnamnesisResponse | null> => {
+    const patch: Record<string, unknown> = {
+      answers,
+      signature,
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    };
+    if (clientName) patch.client_name = clientName;
+    const { data, error } = await getDb()
+      .from('anamnesis_responses')
+      .update(patch)
+      .eq('token', token)
+      .eq('status', 'pending') // só conclui uma vez — reenvio não sobrescreve
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  markAnamnesisPdfSent: async (id: string): Promise<void> => {
+    try {
+      await getDb()
+        .from('anamnesis_responses')
+        .update({ pdf_sent_at: new Date().toISOString() })
+        .eq('id', id);
+    } catch { /* best-effort */ }
+  },
+
+  deleteAnamnesisResponse: async (id: string, professionalId: string): Promise<void> => {
+    const { error } = await getDb()
+      .from('anamnesis_responses')
+      .delete()
+      .eq('id', id)
+      .eq('professional_id', professionalId);
+    if (error) throw error;
   },
 };
 export default dbService;

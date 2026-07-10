@@ -52,6 +52,41 @@ export async function sendWhatsAppText(
   }
 }
 
+/**
+ * Envia um documento (ex.: PDF) via uazapi. A uazapi baixa o arquivo da URL
+ * pública informada em `fileUrl` — a URL precisa estar acessível na internet.
+ * Tenta POST /send/media (formato uazapiGO) e cai para /send/document.
+ */
+export async function sendWhatsAppDocument(
+  baseUrl: string,
+  token: string,
+  phone: string,
+  fileUrl: string,
+  docName: string,
+  caption?: string
+): Promise<boolean> {
+  const headers = { token, 'Content-Type': 'application/json' };
+  const attempts: Array<{ path: string; body: Record<string, unknown> }> = [
+    { path: '/send/media', body: { number: phone, type: 'document', file: fileUrl, docName, text: caption || '' } },
+    { path: '/send/document', body: { number: phone, file: fileUrl, docName, filename: docName, caption: caption || '' } },
+  ];
+  for (const { path, body } of attempts) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (res.ok) return true;
+      console.error(`[uazapi] sendDocument ${path} falhou:`, res.status, (await res.text().catch(() => '')).slice(0, 200));
+    } catch (e) {
+      console.error(`[uazapi] Erro ao enviar documento (${path}):`, e);
+    }
+  }
+  return false;
+}
+
 /** Configura o webhook da instância na uazapi para receber eventos de mensagem. */
 export async function configureUazapiWebhook(
   baseUrl: string,
