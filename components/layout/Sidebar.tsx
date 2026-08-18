@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
   LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot, MessageCircle,
-  PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact, ClipboardList
+  PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact, ClipboardList, Globe
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
@@ -76,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
 
     return [
       { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
+      { href: '/dashboard/site', label: 'Minha Página', icon: Globe },
       { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
       { href: '/dashboard/appointments', label: 'Agendamentos', icon: CalendarDays },
       { href: '/dashboard/waitlist', label: 'Lista de espera', icon: Hourglass },

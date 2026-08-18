@@ -7,6 +7,7 @@ import {
   WhatsAppSettings, WhatsAppConversation, GoogleCalendarConnection,
   AnamnesisForm, AnamnesisResponse
 } from '@/types/database';
+import type { ProfessionalSite, SiteConfig, SiteStatus } from '@/types/site';
 import { syncAppointmentToGoogle } from '@/lib/google/calendar';
 
 /**
@@ -39,6 +40,26 @@ function isUuid(v: unknown): boolean {
 function isMissingColumnError(error: unknown, column: string): boolean {
   const e = error as { code?: string; message?: string } | null;
   return !!e && (e.code === '42703' || (typeof e.message === 'string' && e.message.includes(column)));
+}
+
+/**
+ * Horário tomado por outra cliente entre a checagem e a gravação.
+ * Erro tipado (não string) para a action reconhecer sem depender de texto e
+ * responder à cliente com uma frase clara em vez de um erro técnico.
+ */
+export class SlotTakenError extends Error {
+  constructor() {
+    super('LUME_SLOT_TAKEN');
+    this.name = 'SlotTakenError';
+  }
+}
+
+/** A migração v31 (função lume_claim_slot) ainda não foi rodada? */
+function isMissingFunction(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '42883'
+    || error.code === 'PGRST202'
+    || /could not find the function|does not exist/i.test(error.message || '');
 }
 
 /** Remove uma chave de um objeto (cópia rasa). */
@@ -671,7 +692,22 @@ export const dbService = {
     return mockDb.getAppointmentById(id);
   },
 
-  createAppointment: async (data: Omit<Appointment, 'id' | 'status' | 'created_at' | 'updated_at'>): Promise<Appointment> => {
+  /**
+   * Cria o agendamento (e garante a cliente na base).
+   *
+   * `opts.concurrencyBufferMinutes` liga a trava de concorrência: em vez de um
+   * INSERT solto, a gravação passa pela função `lume_claim_slot`, que re-checa
+   * o conflito e insere na MESMA transação, com lock por (profissional, dia).
+   * É o caminho do agendamento PÚBLICO — duas clientes no mesmo horário viram
+   * fila, e a segunda recebe SlotTakenError.
+   *
+   * Sem esse `opts`, o comportamento é exatamente o de sempre: é assim que o
+   * painel continua podendo encaixar duas clientes no mesmo horário de propósito.
+   */
+  createAppointment: async (
+    data: Omit<Appointment, 'id' | 'status' | 'created_at' | 'updated_at'>,
+    opts?: { concurrencyBufferMinutes?: number },
+  ): Promise<Appointment> => {
     if (isSupabaseConfigured) {
       const nowStr = new Date().toISOString();
       const clientAdmin = getSupabaseAdmin() || supabaseAdmin || supabase;
@@ -716,7 +752,35 @@ export const dbService = {
         if (updateClientErr) throw updateClientErr;
       }
 
-      // 2. Criar agendamento
+      // 2. Criar agendamento — com trava de concorrência quando pedido.
+      if (opts?.concurrencyBufferMinutes !== undefined) {
+        const { data: claimed, error: claimErr } = await clientAdmin.rpc('lume_claim_slot', {
+          p_professional_id: data.professional_id,
+          p_service_id: data.service_id,
+          p_service_ids: data.service_ids && data.service_ids.length ? data.service_ids : null,
+          p_client_id: client.id,
+          p_client_name: data.client_name,
+          p_client_whatsapp: data.client_whatsapp,
+          p_client_email: data.client_email,
+          p_date: data.date,
+          p_start_time: data.start_time,
+          p_end_time: data.end_time,
+          p_notes: data.notes,
+          p_payment_method: data.payment_method ?? null,
+          p_buffer_minutes: Math.max(0, Math.round(opts.concurrencyBufferMinutes)),
+        });
+
+        if (!claimErr && claimed) {
+          syncAppointmentToGoogle(data.professional_id, claimed as Appointment, 'create').catch(() => {});
+          return claimed as Appointment;
+        }
+        // Outra cliente levou o horário no meio do caminho.
+        if (claimErr && /LUME_SLOT_TAKEN/.test(claimErr.message || '')) throw new SlotTakenError();
+        // Migração v31 pendente: segue pelo caminho antigo (sem a trava).
+        if (claimErr && !isMissingFunction(claimErr)) throw claimErr;
+        if (claimErr) warnMigration('lume_claim_slot (migração v31)');
+      }
+
       const { data: appointment, error: appErr } = await clientAdmin
         .from('appointments')
         .insert({
@@ -1908,6 +1972,107 @@ export const dbService = {
       .eq('id', id)
       .eq('professional_id', professionalId);
     if (error) throw error;
+  },
+
+  // ===================== MINHA PÁGINA (site público) — migração v30 =====================
+  // Guarda só APRESENTAÇÃO. Serviços/agenda/clientes continuam nos seus módulos.
+  // Enquanto a migração v30 não roda, tudo aqui devolve null/no-op com aviso —
+  // o app segue funcionando exatamente como antes (fallback gracioso).
+
+  /** Página da profissional (rascunho + publicado). null = ainda não criou. */
+  getProfessionalSite: async (professionalId: string): Promise<ProfessionalSite | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('professional_sites')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('professional_sites'); return null; }
+      throw error;
+    }
+    return data;
+  },
+
+  /**
+   * Cria ou atualiza a página. O `professional_id` é sempre o da sessão
+   * validada na action — nunca vem do cliente.
+   */
+  upsertProfessionalSite: async (
+    professionalId: string,
+    patch: Partial<Pick<ProfessionalSite, 'template_id' | 'status' | 'draft_config' | 'published_config' | 'published_at'>>,
+  ): Promise<ProfessionalSite | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('professional_sites')
+      .upsert(
+        { professional_id: professionalId, ...patch, updated_at: new Date().toISOString() },
+        { onConflict: 'professional_id' },
+      )
+      .select()
+      .single();
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('professional_sites'); return null; }
+      throw error;
+    }
+    return data;
+  },
+
+  /**
+   * Página PUBLICADA de um slug — é o que a visitante enxerga.
+   * Rascunho nunca sai daqui: quem não publicou não tem página no ar.
+   */
+  getPublishedSiteByProfessional: async (professionalId: string): Promise<ProfessionalSite | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb()
+      .from('professional_sites')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .eq('status', 'published')
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('professional_sites'); return null; }
+      throw error;
+    }
+    return data;
+  },
+
+  /** Muda só o status (publicar / tirar do ar) sem tocar nas configs. */
+  setProfessionalSiteStatus: async (
+    professionalId: string,
+    status: SiteStatus,
+    publishedConfig?: SiteConfig | null,
+  ): Promise<ProfessionalSite | null> => {
+    if (!isSupabaseConfigured) return null;
+    const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+    if (status === 'published') {
+      patch.published_at = new Date().toISOString();
+      if (publishedConfig) patch.published_config = publishedConfig;
+    }
+    const { data, error } = await getDb()
+      .from('professional_sites')
+      .update(patch)
+      .eq('professional_id', professionalId)
+      .select()
+      .maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) { warnMigration('professional_sites'); return null; }
+      throw error;
+    }
+    return data;
+  },
+
+  /** O slug já é de outra profissional? (case-insensitive; slug é único no banco) */
+  isSlugTaken: async (slug: string, exceptProfessionalId: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) return false;
+    const { data, error } = await getDb()
+      .from('professionals')
+      .select('id')
+      .ilike('slug', slug)
+      .neq('id', exceptProfessionalId)
+      .limit(1);
+    if (error) throw error;
+    return !!(data && data.length);
   },
 };
 export default dbService;
