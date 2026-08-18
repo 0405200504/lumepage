@@ -11,12 +11,15 @@ interface BookingModalProps {
   professionalSlug: string;
   isOpen: boolean;
   onClose: () => void;
+  /** Repassado ao fluxo: abre já com estes serviços marcados. */
+  initialServiceIds?: string[];
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   professionalSlug,
   isOpen,
-  onClose
+  onClose,
+  initialServiceIds
 }) => {
   const { error } = useToast();
   
@@ -117,6 +120,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               services={services}
               settings={settings}
               isEmbed={true}
+              initialServiceIds={initialServiceIds}
               onSuccessClose={onClose}
               onAnalyticsEvent={(event, data) => {
                 console.log(`[ANALYTICS] Evento disparado: ${event}`, data);

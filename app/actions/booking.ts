@@ -1,7 +1,7 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { dbService } from '@/lib/supabase/db';
+import { dbService, SlotTakenError } from '@/lib/supabase/db';
 import { getAvailableSlots, getDaysAvailability, timeToMinutes } from '@/lib/appointments/slots';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { verifyTurnstile } from '@/lib/turnstile';
@@ -381,22 +381,50 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
     const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
     const finalStartTime = `${startTime}:00`;
 
-    // 4. Salvar agendamento no banco
-    const appointment = await dbService.createAppointment({
-      professional_id: professionalId,
-      service_id: service.id,
-      service_ids: serviceIds.length > 1 ? serviceIds : null,
-      client_id: null, // será vinculado internamente
-      client_name: clientName,
-      client_whatsapp: normalizeWhatsapp(clientWhatsapp), // apenas números
-      client_email: clientEmail || null,
-      date,
-      start_time: finalStartTime,
-      end_time: endTime,
-      notes: notes || null,
-      cancellation_reason: null,
-      payment_method: input.paymentMethod || null,
-    });
+    // 4. Salvar agendamento no banco — COM trava de concorrência.
+    //
+    // A validação do passo 3 sozinha não basta: entre "o horário está livre?" e
+    // o INSERT existe uma janela de milissegundos em que outra cliente pode
+    // gravar o mesmo horário. Passando o buffer aqui, a gravação vai pela função
+    // `lume_claim_slot`, que re-checa e insere na mesma transação, serializada
+    // por (profissional, dia). A segunda cliente perde a corrida de forma limpa.
+    //
+    // O buffer efetivo segue a MESMA precedência do motor de horários: regra do
+    // dia (aba Disponibilidade) → default global → 15 min.
+    const weekdayOfDate = new Date(`${date}T12:00:00`).getDay();
+    const [dayRules, agendaSettings] = await Promise.all([
+      dbService.getAvailabilityRulesByProfessional(professionalId).catch(() => []),
+      dbService.getSettingsByProfessional(professionalId).catch(() => null),
+    ]);
+    const dayRule = dayRules.find(r => r.weekday === weekdayOfDate && r.is_active);
+    const bufferMinutes = dayRule?.buffer_minutes ?? agendaSettings?.default_buffer_minutes ?? 15;
+
+    let appointment;
+    try {
+      appointment = await dbService.createAppointment({
+        professional_id: professionalId,
+        service_id: service.id,
+        service_ids: serviceIds.length > 1 ? serviceIds : null,
+        client_id: null, // será vinculado internamente
+        client_name: clientName,
+        client_whatsapp: normalizeWhatsapp(clientWhatsapp), // apenas números
+        client_email: clientEmail || null,
+        date,
+        start_time: finalStartTime,
+        end_time: endTime,
+        notes: notes || null,
+        cancellation_reason: null,
+        payment_method: input.paymentMethod || null,
+      }, { concurrencyBufferMinutes: bufferMinutes });
+    } catch (e: unknown) {
+      if (e instanceof SlotTakenError) {
+        return {
+          success: false,
+          error: 'O horário selecionado acabou de ser reservado por outro cliente. Por favor, escolha outro horário.',
+        };
+      }
+      throw e;
+    }
 
     // Best-effort: registrar aniversário da cliente (requer migração v2 — não bloqueia o agendamento)
     if (clientBirthday) {

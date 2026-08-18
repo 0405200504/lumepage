@@ -22,6 +22,10 @@ interface BookingFlowProps {
   isEmbed?: boolean;
   onSuccessClose?: () => void;
   onAnalyticsEvent?: (eventName: string, data?: any) => void;
+  /** Serviços já marcados ao abrir (ex.: a cliente clicou em "Agendar" num
+   *  serviço específico na página pública). Opcional — sem isto o fluxo abre
+   *  exatamente como sempre abriu, na etapa 1 com nada selecionado. */
+  initialServiceIds?: string[];
 }
 
 export const BookingFlow: React.FC<BookingFlowProps> = ({
@@ -30,7 +34,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   settings,
   isEmbed = false,
   onSuccessClose,
-  onAnalyticsEvent
+  onAnalyticsEvent,
+  initialServiceIds
 }) => {
   const { success, error } = useToast();
   
@@ -38,7 +43,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [step, setStep] = useState(1);
   
   // Seleções (multi-serviço)
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>(
+    () => (initialServiceIds?.length ? services.filter(s => initialServiceIds.includes(s.id)) : []),
+  );
   const selectedService = selectedServices[0] || null; // serviço primário (compatibilidade de exibição)
   const servicesLabel = formatServiceNames(selectedServices);
   const totalCents = sumPriceCents(selectedServices);
