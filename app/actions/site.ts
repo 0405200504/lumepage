@@ -42,6 +42,19 @@ const ALLOWED_MIME: Record<string, string> = {
 /** Mensagem amigável — a profissional nunca vê stack trace nem erro do Postgres. */
 const FRIENDLY = 'Não foi possível salvar agora. Tente de novo em instantes.';
 
+/**
+ * A conta teste (Amanda Costa) existe para explorar o sistema: ela LÊ dados
+ * reais mas nenhuma escrita persiste. O editor inteiro funciona nela — dá para
+ * trocar de modelo, mexer nas cores e ver a prévia ao vivo.
+ *
+ * O que NÃO pode acontecer é a conta teste dizer "sua página está no ar": a
+ * página não existiria, o link daria 404, e a pessoa só descobriria depois.
+ * Então tudo que produz um efeito VISÍVEL PARA FORA (publicar, tirar do ar,
+ * trocar o endereço, subir imagem) recusa e explica o porquê, em vez de fingir
+ * que deu certo.
+ */
+const DEMO_MSG = 'Esta é a conta teste, então nada aqui é salvo de verdade. Entre com a sua conta da Lume para publicar a sua página.';
+
 type Result<T = unknown> = { success: true } & T | { success: false; error: string };
 
 /**
@@ -163,9 +176,10 @@ export async function publishSiteAction(
   try {
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
 
+    if (isDemo(professionalId)) return { success: false, error: DEMO_MSG };
+
     const prof = await dbService.getProfessionalById(professionalId);
     if (!prof) return { success: false, error: 'Não foi possível publicar. Tente novamente.' };
-    if (isDemo(professionalId)) return { success: true, url: `/${prof.slug}` };
 
     // Salva o rascunho mais recente antes de publicar (evita publicar versão velha).
     if (input?.config) {
@@ -186,7 +200,11 @@ export async function publishSiteAction(
 
     const config = normalizeConfig(site.draft_config, site.template_id, prof);
     const published = await dbService.setProfessionalSiteStatus(professionalId, 'published', config);
-    if (!published) return { success: false, error: 'Não foi possível publicar suas alterações. Tente novamente.' };
+    // Só dizemos "está no ar" depois de reler a linha e ver que ela realmente
+    // está publicada COM conteúdo. Nunca comemorar por otimismo.
+    if (!published || published.status !== 'published' || !published.published_config) {
+      return { success: false, error: 'Não foi possível publicar suas alterações. Tente novamente.' };
+    }
 
     revalidatePath('/dashboard/site');
     revalidatePath(`/${prof.slug}`);
@@ -200,7 +218,7 @@ export async function publishSiteAction(
 export async function unpublishSiteAction(professionalId: string): Promise<Result> {
   try {
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    if (isDemo(professionalId)) return { success: true };
+    if (isDemo(professionalId)) return { success: false, error: DEMO_MSG };
 
     const prof = await dbService.getProfessionalById(professionalId);
     const updated = await dbService.setProfessionalSiteStatus(professionalId, 'unpublished');
@@ -227,7 +245,7 @@ export async function updateSiteSlugAction(
 
     const check = validateSlug(rawSlug);
     if (!check.ok) return { success: false, error: check.error || 'Endereço inválido.' };
-    if (isDemo(professionalId)) return { success: true, slug: check.slug };
+    if (isDemo(professionalId)) return { success: false, error: DEMO_MSG };
 
     const prof = await dbService.getProfessionalById(professionalId);
     if (!prof) return { success: false, error: FRIENDLY };
@@ -270,9 +288,7 @@ export async function uploadSiteImageAction(
 ): Promise<Result<{ url: string }>> {
   try {
     if (!await authorize(professionalId)) return { success: false, error: 'Não autorizado.' };
-    if (isDemo(professionalId)) {
-      return { success: false, error: 'A conta de demonstração não guarda imagens.' };
-    }
+    if (isDemo(professionalId)) return { success: false, error: DEMO_MSG };
 
     // Trava de abuso: 60 uploads por 10 min por IP.
     const ip = ipFromHeaders(await headers());
