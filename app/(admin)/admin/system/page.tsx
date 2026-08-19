@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Database, HardDrive, Bot, Trash2, Activity } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
+import { StatCard } from '@/components/admin/primitives';
 import { dbService } from '@/lib/supabase/db';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
@@ -53,15 +54,10 @@ export default async function AdminSystemPage() {
 
   const usedPct = storage ? (storage.dbSizeBytes / FREE_TIER_BYTES) * 100 : 0;
 
-  const card = (icon: React.ReactNode, label: string, value: string, hint?: string) => (
-    <div className="card px-4 py-3 flex items-start gap-3">
-      <span className="h-9 w-9 rounded-xl bg-surface-2 text-muted flex items-center justify-center shrink-0">{icon}</span>
-      <span className="min-w-0">
-        <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</span>
-        <span className="block text-lg font-bold text-heading tabular-nums leading-tight">{value}</span>
-        {hint && <span className="block text-[11px] text-muted">{hint}</span>}
-      </span>
-    </div>
+  // O ícone saiu: o rótulo tipográfico já diz o que é, e o quadradinho colorido era
+  // exatamente a marca registrada do visual genérico que este redesign tira.
+  const card = (_icon: React.ReactNode, label: string, value: string, hint?: string) => (
+    <StatCard key={label} label={label} value={value} note={hint} />
   );
 
   return (

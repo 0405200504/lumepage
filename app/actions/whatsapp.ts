@@ -5,9 +5,14 @@ import { dbService } from '@/lib/supabase/db';
 import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode } from '@/lib/uazapi';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
 
-async function getProfessionalId(): Promise<string | null> {
+/**
+ * `mutating: true` recusa a sessão de suporte em modo leitura — o admin entrou para
+ * investigar, não para ligar/desligar o bot da cliente sem querer.
+ */
+async function getProfessionalId(mutating = true): Promise<string | null> {
   try {
     const session = await authService.getCurrentUser('pro');
+    if (mutating && session?.impersonated_by && session.readonly) return null;
     return session?.professional_id ?? null;
   } catch {
     return null;

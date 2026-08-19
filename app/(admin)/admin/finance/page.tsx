@@ -1,15 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
-import { Badge } from '@/components/admin/badges';
 import { getSaasRevenue, getNetworkVolume } from '@/lib/admin/business';
 import { listPlansAction } from '@/app/actions/admin-plans';
 import { professionalOptions } from '@/lib/admin/queries';
 import { parseTableParams, RawSearchParams } from '@/lib/query-params';
-import { brl, pct } from '@/lib/format';
+import { brl, brlCompact, pct } from '@/lib/format';
+import { BarChart } from '@/components/admin/BarChart';
+import { RankedBars } from '@/components/admin/RankedBars';
+import { StatCard, SectionHeader } from '@/components/admin/primitives';
 
 export const metadata = { title: 'Financeiro | Lume Admin' };
 
@@ -33,14 +35,21 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   };
 
   const kpi = (label: string, value: string, hint?: React.ReactNode) => (
-    <div className="card px-4 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</p>
-      <p className="text-2xl font-bold text-heading tabular-nums leading-tight mt-0.5">{value}</p>
-      {hint && <p className="mt-0.5">{hint}</p>}
-    </div>
+    <StatCard key={label} label={label} value={value} note={hint} />
   );
 
-  const maxMrr = Math.max(1, ...saas.mrrSeries.map(s => s.mrrCents));
+  // Bloco inteiro zerado = feature ainda não rodou. Colapsa em uma linha (B.6).
+  const noSubscriptions = saas.activeSubscriptions === 0 && saas.mrrCents === 0;
+
+  // Segunda faixa: só os contadores que têm valor. Zero não ocupa cartão.
+  const secondary = ([
+    { label: 'Em teste', value: saas.trialing },
+    { label: 'Inadimplentes', value: saas.pastDue },
+    { label: 'Canceladas', value: saas.canceled, hint: <span className="text-[11px] text-muted">churn {pct(saas.churnRatePct, 1)}</span> },
+    { label: 'Sem plano (legadas)', value: saas.legacy },
+  ] as const)
+    .filter(k => k.value > 0)
+    .map(k => ({ label: k.label, value: String(k.value), hint: 'hint' in k ? k.hint : undefined }));
 
   return (
     <LayoutAdmin
@@ -48,44 +57,66 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       title="Financeiro"
       subtitle="Duas coisas diferentes, cada uma no seu bloco: o que a Lume fatura e o que a rede movimenta."
     >
-      <div className="space-y-6">
-        {/* ══════════ RECEITA DA LUME ══════════ */}
+      <div className="space-y-14">
+        {/* ══════════ 01 · RECEITA DA LUME ══════════ */}
         <section className="space-y-3">
-          <header className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-accent-link" aria-hidden />
-            <h2 className="text-sm font-bold text-ink">Receita da Lume</h2>
-            <span className="text-[11px] text-muted">assinaturas — este é o dinheiro do negócio</span>
-          </header>
+          <SectionHeader index="01" title="Receita da Lume" note="assinaturas — este é o dinheiro do negócio" />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {kpi('MRR', brl(saas.mrrCents), <span className="text-[11px] text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>)}
-            {kpi('ARR', brl(saas.arrCents))}
-            {kpi('ARPA', brl(saas.arpaCents))}
-            {kpi('LTV estimado', brl(saas.ltvCents), <span className="text-[11px] text-muted">ARPA ÷ churn</span>)}
-            {kpi('Em teste', String(saas.trialing))}
-            {kpi('Inadimplentes', String(saas.pastDue))}
-            {kpi('Canceladas', String(saas.canceled), <span className="text-[11px] text-muted">churn {pct(saas.churnRatePct, 1)}</span>)}
-            {kpi('Sem plano (legadas)', String(saas.legacy))}
-          </div>
+          {noSubscriptions ? (
+            /* Oito caixas com R$ 0,00 não são informação — são ruído. Enquanto
+               nenhuma conta tiver plano, o bloco inteiro vira uma linha com a ação. */
+            <p className="card px-4 py-3.5 text-xs text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
+              <strong>Nenhuma assinatura ativa ainda.</strong>
+              <span className="text-muted">
+                As {saas.legacy} conta(s) da rede estão como <strong className="text-ink">Legada</strong>, sem plano atribuído —
+                então MRR, ARR, ARPA, LTV e churn não têm o que calcular.
+              </span>
+              <Link href="/admin/professionals" className="font-bold text-accent-link hover:underline">Definir planos →</Link>
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                {kpi('MRR', brl(saas.mrrCents), <span className="text-[11px] text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>)}
+                {kpi('ARR', brl(saas.arrCents))}
+                {kpi('ARPA', brl(saas.arpaCents))}
+                {kpi('LTV estimado', brl(saas.ltvCents), <span className="text-[11px] text-muted">ARPA ÷ churn</span>)}
+              </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div className="card p-4">
+              {/* Segunda linha: só o que tem valor. O que está zerado vira uma frase. */}
+              {secondary.length > 0 ? (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {secondary.map(k => kpi(k.label, k.value, k.hint))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted px-1">
+                  Nenhuma conta em teste, inadimplente ou cancelada — e {saas.legacy} legada(s).
+                </p>
+              )}
+            </>
+          )}
+
+          <div className="grid gap-3 lg:grid-cols-12">
+            <div className="card p-4 lg:col-span-7">
               <h3 className="text-xs font-bold text-ink mb-3">MRR mês a mês</h3>
-              <ul className="flex items-end gap-1.5 h-32">
-                {saas.mrrSeries.map((s, i) => (
-                  <li key={i} className="flex-1 flex flex-col items-center gap-1" title={`${s.label}: ${brl(s.mrrCents)}`}>
-                    <span className="w-full rounded-t bg-accent" style={{ height: `${Math.round((s.mrrCents / maxMrr) * 100)}%`, minHeight: 2, opacity: s.mrrCents ? 1 : 0.2 }} aria-hidden />
-                    <span className="text-[9px] text-muted">{s.label}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-muted">
-                Reconstruído a partir da data de criação de cada conta e do preço do plano atual —
-                não há histórico de preço por mês antes da migration v33.
-              </p>
+              {noSubscriptions ? (
+                <p className="py-6 text-center text-xs text-muted">
+                  Sem assinatura, sem série. O gráfico aparece quando a primeira conta ganhar um plano.
+                </p>
+              ) : (
+                <>
+                  <BarChart
+                    points={saas.mrrSeries.map(s => ({ label: s.label, value: s.mrrCents, hint: `${s.label}: ${brl(s.mrrCents)}` }))}
+                    format={brlCompact}
+                  />
+                  <p className="mt-2 text-[11px] text-muted">
+                    Reconstruído a partir da data de criação de cada conta e do preço do plano atual —
+                    não há histórico de preço por mês antes da migration v33.
+                  </p>
+                </>
+              )}
             </div>
 
-            <div className="card overflow-hidden">
+            <div className="card overflow-hidden lg:col-span-5">
               <h3 className="px-4 py-3 text-xs font-bold text-ink border-b border-line">Assinaturas por plano</h3>
               <ul className="divide-y divide-line">
                 {saas.byPlan.map(p => (
@@ -106,14 +137,13 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
 
         {/* ══════════ MOVIMENTO DA REDE ══════════ */}
         <section className="space-y-3">
-          <header className="flex flex-wrap items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted" aria-hidden />
-            <h2 className="text-sm font-bold text-ink">Movimento da rede (GMV)</h2>
-            <span className="text-[11px] text-muted">o que as profissionais faturam — <strong>não é receita da Lume</strong></span>
-            <div className="ml-auto"><DateRangeFilter basePath={BASE} /></div>
-          </header>
+          <SectionHeader
+            index="02" title="Movimento da rede (GMV)"
+            note={<>o que as profissionais faturam — <strong className="text-[color:var(--ink)]">não é receita da Lume</strong></>}
+            action={<DateRangeFilter basePath={BASE} />}
+          />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {kpi('GMV no período', brl(network.gmvCents), delta(network.gmvCents, network.gmvPreviousCents))}
             {kpi('Agendamentos', String(network.appointments), delta(network.appointments, network.appointmentsPrevious))}
             {kpi('Ticket médio', brl(network.ticketCents))}
@@ -121,7 +151,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           </div>
 
           {network.concentrationPct >= 50 && network.byProfessional[0] && (
-            <p className="card px-4 py-3 flex items-start gap-2 text-xs text-[color:var(--color-bad)]">
+            <p className="border border-[color:var(--bad-edge)] border-l-2 bg-[color:var(--bad-bg)] rounded-[8px] px-4 py-3 flex items-start gap-2 text-[13px] text-[color:var(--bad-ink)]">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
               <span>
                 <strong>Risco de concentração:</strong> {network.byProfessional[0].name} responde por{' '}
@@ -131,22 +161,14 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             </p>
           )}
 
-          <div className="card overflow-hidden">
-            <h3 className="px-4 py-3 text-xs font-bold text-ink border-b border-line">Faturamento por profissional</h3>
-            <ul className="divide-y divide-line">
-              {network.byProfessional.slice(0, 15).map(p => (
-                <li key={p.id} className="px-4 py-2.5 flex items-center gap-3 text-xs">
-                  <Link href={`/admin/professionals/${p.id}`} className="font-semibold text-ink flex-1 truncate hover:underline">{p.name}</Link>
-                  <span className="text-muted tabular-nums">{p.appointments} agend.</span>
-                  <span className="w-24 h-1.5 rounded-full bg-surface-2 overflow-hidden hidden sm:block" aria-hidden>
-                    <span className="block h-full bg-accent" style={{ width: `${Math.min(100, p.sharePct)}%` }} />
-                  </span>
-                  {p.sharePct >= 50 && <Badge tone="bad">{pct(p.sharePct, 0)}</Badge>}
-                  <span className="text-ink font-bold tabular-nums w-24 text-right">{brl(p.gmvCents)}</span>
-                </li>
-              ))}
-              {network.byProfessional.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Sem movimento no período.</li>}
-            </ul>
+          <div className="card p-4">
+            <h3 className="text-xs font-bold text-ink mb-3">Faturamento por profissional</h3>
+            <RankedBars
+              items={network.byProfessional.slice(0, 15).map(p => ({
+                id: p.id, label: p.name, value: p.gmvCents, sharePct: p.sharePct, alert: p.sharePct >= 50,
+              }))}
+              format={brl}
+            />
           </div>
         </section>
       </div>

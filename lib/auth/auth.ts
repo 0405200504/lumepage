@@ -4,6 +4,7 @@ import { dbService } from '../supabase/db';
 import { Profile } from '@/types/database';
 import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
 import { signSession, verifySession } from './cookie';
+import { logAccessEvent } from '../access-tokens';
 
 /**
  * ESCOPOS DE SESSÃO
@@ -56,6 +57,14 @@ export interface SessionData {
   is_salon_manager?: boolean;
   /** E-mail do admin que está "entrando como" esta profissional (FASE 1.3). */
   impersonated_by?: string;
+  /**
+   * Sessão de suporte em modo LEITURA: nenhuma mutação passa (ver
+   * lib/auth/authorize-professional.ts). É o que permite investigar a conta de uma
+   * cliente real sem risco de mexer no dado dela por engano.
+   */
+  readonly?: boolean;
+  /** Para onde o botão "Sair" do banner devolve o admin (o detalhe da conta). */
+  return_to?: string;
   /** Expiração em epoch-ms. Usada pela impersonação (30 min); ausente = validade do cookie. */
   exp?: number;
 }
@@ -205,6 +214,7 @@ export const authService = {
       // 5. Monta o cookie de sessão assinado (mesmo formato do login por senha).
       const sessionData: SessionData = buildSession(profile, user.id);
       await writeSessionCookie(sessionData);
+      await logAccessEvent({ professionalId, email: cleanEmail, method: 'google' });
       return { success: true, role: profile.role };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao entrar com Google.' };

@@ -2,10 +2,10 @@
 
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, PauseCircle, PlayCircle, Trash2, Loader2, CreditCard, X } from 'lucide-react';
+import { PauseCircle, PlayCircle, Trash2, Loader2, CreditCard, X, Eye, Pencil } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import {
-  bulkSetStatusAction, bulkTrashAction, impersonateAction, changePlanAction, PlanChange,
+  bulkSetStatusAction, bulkTrashAction, impersonateAction, changePlanAction, PlanChange, SupportMode,
 } from '@/app/actions/admin-professionals';
 
 /**
@@ -38,19 +38,40 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
     });
   };
 
+  /** Sessão de suporte em nova aba: a aba do admin continua onde estava. */
+  const enter = (mode: SupportMode) =>
+    start(async () => {
+      const res = await impersonateAction(id, mode);
+      if (!res.success) { error('Não deu', res.error ?? 'Tente de novo.'); return; }
+      window.open(res.url ?? '/dashboard', '_blank', 'noopener');
+      success('Sessão de suporte aberta', `${brandName} · ${mode === 'read' ? 'somente leitura' : 'pode editar'} · 30 min`);
+    });
+
   const btn = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold transition-colors disabled:opacity-50';
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button" disabled={pending} className={`${btn} bg-forest hover:bg-forest-hover text-white`}
-          title="Abre o painel desta profissional numa sessão de suporte de 30 minutos"
-          onClick={() => run(() => impersonateAction(id), `Entrando como ${brandName}…`, '/dashboard')}
-        >
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogIn className="h-3.5 w-3.5" />}
-          Entrar como
-        </button>
+        {/* Entrar como: modo explícito e NOVA ABA — o admin não perde a tela onde estava. */}
+        <span className="inline-flex rounded-[4px] overflow-hidden border border-line">
+          <button
+            type="button" disabled={pending}
+            title="Abre o painel desta profissional em nova aba, sessão de suporte de 30 min, sem poder alterar nada"
+            onClick={() => enter('read')}
+            className={`${btn} rounded-none bg-forest hover:bg-forest-hover text-white`}
+          >
+            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+            Entrar como · só olhar
+          </button>
+          <button
+            type="button" disabled={pending}
+            title="Mesma sessão, mas com permissão de alterar dados desta conta"
+            onClick={() => { if (confirm(`Entrar na conta de ${brandName} PODENDO EDITAR? Toda alteração fica registrada no seu nome.`)) enter('edit'); }}
+            className={`${btn} rounded-none border-l border-white/20 bg-forest hover:bg-forest-hover text-white px-2.5`}
+          >
+            <Pencil className="h-3.5 w-3.5" /> editar
+          </button>
+        </span>
 
         <button type="button" disabled={pending} onClick={() => setShowPlan(true)} className={`${btn} border border-line bg-surface text-ink hover:bg-surface-2`}>
           <CreditCard className="h-3.5 w-3.5" /> Mudar plano

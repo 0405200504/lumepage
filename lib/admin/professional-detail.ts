@@ -1,6 +1,7 @@
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Appointment, Client, Professional, Service, WhatsAppSettings } from '@/types/database';
 import { daysAgoISO } from './queries';
+import { accountState } from './account-state';
 
 /** Dados consolidados de UMA conta — alimenta as abas de /admin/professionals/[id]. */
 
@@ -120,11 +121,12 @@ export async function getProfessionalOverview(id: string): Promise<ProfessionalO
   onboarding[1] = { label: 'Configurou disponibilidade', done: (availCount || 0) > 0, hint: `${availCount || 0} regra(s)` };
 
   const alerts: { level: 'warn' | 'bad' | 'info'; text: string }[] = [];
-  const endsAt = professional.subscription_ends_at || professional.trial_ends_at;
-  if (endsAt) {
-    const days = Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000);
-    if (days < 0) alerts.push({ level: 'bad', text: `Acesso vencido há ${Math.abs(days)} dia(s).` });
-    else if (days <= 7) alerts.push({ level: 'warn', text: `Acesso vence em ${days} dia(s).` });
+  // Mesmo estado que o selo da linha e que a faixa de atenção — ver lib/admin/account-state.ts.
+  const state = accountState(professional);
+  if (state.state === 'expired' && state.days !== null) {
+    alerts.push({ level: 'bad', text: `Acesso vencido há ${Math.abs(state.days)} dia(s) — e a conta continua entrando.` });
+  } else if (state.hasAccess && state.days !== null && state.days >= 0 && state.days <= 7) {
+    alerts.push({ level: 'warn', text: `Acesso vence em ${state.days} dia(s).` });
   }
   if (last30.length === 0) alerts.push({ level: 'warn', text: 'Nenhum agendamento nos últimos 30 dias.' });
   if (!botConfigured) alerts.push({ level: 'info', text: 'Bot de WhatsApp não configurado.' });
@@ -173,4 +175,104 @@ export async function getSubscriptionHistory(professionalId: string): Promise<{
     .select('*').eq('professional_id', professionalId).order('created_at', { ascending: false }).limit(50);
   if (error) return [];
   return data || [];
+}
+
+/**
+ * AGENDA DA PROFISSIONAL, VISTA DE DENTRO DO ADMIN
+ * ------------------------------------------------
+ * O caminho recomendado para "ver a conta dela sem trocar de contexto": em vez de
+ * embutir o painel dela num iframe, o admin já lê o mesmo banco — então renderizamos
+ * a agenda com os componentes do admin. É mais rápido, funciona no mobile e não
+ * depende de sessão nenhuma. Somente leitura, sempre.
+ */
+export interface AgendaDay {
+  /** "YYYY-MM-DD" */
+  date: string;
+  items: {
+    id: string; start: string; end: string; clientName: string;
+    serviceName: string; priceCents: number; status: string;
+  }[];
+}
+
+export interface ProfessionalAgenda {
+  /** Mês exibido, "YYYY-MM". */
+  month: string;
+  prevMonth: string;
+  nextMonth: string;
+  label: string;
+  days: AgendaDay[];
+  totals: { appointments: number; revenueCents: number; busiestDate: string | null };
+}
+
+const MONTH_NAMES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+const shiftMonth = (ym: string, delta: number): string => {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+export async function getProfessionalAgenda(id: string, month?: string): Promise<ProfessionalAgenda> {
+  const now = new Date();
+  const ym = /^\d{4}-\d{2}$/.test(month || '')
+    ? (month as string)
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [y, m] = ym.split('-').map(Number);
+  const first = `${ym}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const last = `${ym}-${String(lastDay).padStart(2, '0')}`;
+
+  const empty: ProfessionalAgenda = {
+    month: ym, prevMonth: shiftMonth(ym, -1), nextMonth: shiftMonth(ym, 1),
+    label: `${MONTH_NAMES[m - 1]} de ${y}`,
+    days: [], totals: { appointments: 0, revenueCents: 0, busiestDate: null },
+  };
+  if (!isSupabaseConfigured) return empty;
+
+  const { data } = await db().from('appointments')
+    .select('id, date, start_time, end_time, client_name, status, service:services(name, price_cents)')
+    .eq('professional_id', id).is('deleted_at', null)
+    .gte('date', first).lte('date', last)
+    .order('date').order('start_time');
+
+  type Row = {
+    id: string; date: string; start_time: string; end_time: string; client_name: string; status: string;
+    service: { name?: string; price_cents?: number } | { name?: string; price_cents?: number }[] | null;
+  };
+
+  const byDate = new Map<string, AgendaDay>();
+  let revenueCents = 0;
+  let count = 0;
+
+  for (const r of (data || []) as unknown as Row[]) {
+    const svc = Array.isArray(r.service) ? r.service[0] : r.service;
+    const price = svc?.price_cents || 0;
+    if (r.status !== 'cancelled') {
+      count++;
+      if (REVENUE.includes(r.status)) revenueCents += price;
+    }
+    const day = byDate.get(r.date) ?? { date: r.date, items: [] };
+    day.items.push({
+      id: r.id,
+      start: (r.start_time || '').slice(0, 5),
+      end: (r.end_time || '').slice(0, 5),
+      clientName: r.client_name,
+      serviceName: svc?.name || '—',
+      priceCents: price,
+      status: r.status,
+    });
+    byDate.set(r.date, day);
+  }
+
+  const busiest = [...byDate.values()].sort((a, b) => b.items.length - a.items.length)[0];
+
+  return {
+    ...empty,
+    days: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    totals: { appointments: count, revenueCents, busiestDate: busiest?.date ?? null },
+  };
 }

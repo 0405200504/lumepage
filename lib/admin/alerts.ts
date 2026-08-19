@@ -1,6 +1,7 @@
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { daysAgoISO } from './queries';
+import { accountState } from './account-state';
 
 /**
  * ALERTAS PROATIVOS
@@ -31,7 +32,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
 
   const [profsRes, apptsRes, convRes, settingsRes] = await Promise.all([
     db().from('professionals')
-      .select('id, brand_name, name, status, subscription_status, subscription_ends_at, trial_ends_at')
+      .select('id, brand_name, name, status, created_at, subscription_status, subscription_plan, subscription_ends_at, trial_ends_at')
       .is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID),
     db().from('appointments').select('professional_id').is('deleted_at', null).gte('date', since30).limit(20000),
     db().from('whatsapp_conversations').select('id, bot_paused, last_message_at')
@@ -39,7 +40,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     db().from('whatsapp_settings').select('professional_id, uazapi_url, uazapi_token'),
   ]);
 
-  type P = { id: string; brand_name: string; name: string; status: string; subscription_status: string | null; subscription_ends_at: string | null; trial_ends_at: string | null };
+  type P = { id: string; brand_name: string; name: string; status: string; created_at: string | null; subscription_status: string | null; subscription_plan: string | null; subscription_ends_at: string | null; trial_ends_at: string | null };
   const profs = (profsRes.data || []) as P[];
   const activeIds = new Set((apptsRes.data || []).map((a: { professional_id: string }) => a.professional_id));
   const withBot = new Set(((settingsRes.data || []) as { professional_id: string; uazapi_url: string; uazapi_token: string }[])
@@ -47,11 +48,16 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
 
   const alerts: AdminAlert[] = [];
 
+  // Estado derivado uma vez, na fonte única — os alertas e os selos das telas passam
+  // a contar a MESMA história (era daqui que saía "13 ativas com acesso vencido" ao
+  // lado de um selo "Ativa" na listagem).
+  const state = new Map(profs.map(p => [p.id, accountState(p)]));
+
   const expiring = profs.filter(p => {
+    const s = state.get(p.id)!;
+    if (!s.hasAccess || s.days === null) return false;
     const end = p.subscription_ends_at || p.trial_ends_at;
-    if (!end) return false;
-    const d = new Date(end);
-    return d >= new Date() && d <= in7;
+    return !!end && new Date(end) >= new Date() && new Date(end) <= in7;
   });
   if (expiring.length) {
     alerts.push({
@@ -62,16 +68,13 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     });
   }
 
-  const expired = profs.filter(p => {
-    const end = p.subscription_ends_at || p.trial_ends_at;
-    return !!end && new Date(end) < new Date() && p.status === 'active';
-  });
+  const expired = profs.filter(p => state.get(p.id)!.state === 'expired');
   if (expired.length) {
     alerts.push({
       id: 'expired', level: 'bad', count: expired.length,
-      title: `${expired.length} conta(s) ativa(s) com acesso já vencido`,
-      detail: 'Continuam usando a plataforma sem assinatura válida.',
-      href: '/admin/professionals',
+      title: `${expired.length} conta(s) com o acesso vencido`,
+      detail: 'Continuam entrando no painel sem assinatura válida.',
+      href: '/admin/professionals?risk=expired',
     });
   }
 
@@ -85,7 +88,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     });
   }
 
-  const idle = profs.filter(p => p.status === 'active' && !activeIds.has(p.id));
+  const idle = profs.filter(p => state.get(p.id)!.hasAccess && !activeIds.has(p.id));
   if (idle.length) {
     alerts.push({
       id: 'idle', level: 'warn', count: idle.length,
@@ -95,7 +98,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     });
   }
 
-  const noBot = profs.filter(p => p.status === 'active' && !withBot.has(p.id));
+  const noBot = profs.filter(p => state.get(p.id)!.hasAccess && !withBot.has(p.id));
   if (noBot.length) {
     alerts.push({
       id: 'no-bot', level: 'info', count: noBot.length,

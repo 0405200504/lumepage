@@ -10,11 +10,12 @@ import { saveAppSettingAction } from '@/app/actions/admin-system';
  * Ajustes globais da plataforma. Chave/valor em `app_settings` — o app lê conforme
  * for precisando; aqui é onde se muda sem deploy.
  */
-const FIELDS: { key: string; label: string; hint: string; type: 'number' | 'text' | 'boolean' }[] = [
+const FIELDS: { key: string; label: string; hint: string; type: 'number' | 'text' | 'boolean'; /** Valor assumido quando a chave nunca foi salva. */ fallback?: boolean }[] = [
   { key: 'trial_days', label: 'Dias de teste para conta nova', hint: 'Usado no cadastro. Hoje o padrão do banco é 7.', type: 'number' },
   { key: 'ai_monthly_message_limit', label: 'Limite de mensagens de IA por conta/mês', hint: '0 = sem limite. Serve de teto de custo por conta.', type: 'number' },
   { key: 'support_whatsapp', label: 'WhatsApp de suporte', hint: 'Exibido para as profissionais quando precisam de ajuda.', type: 'text' },
   { key: 'signups_open', label: 'Cadastro aberto ao público', hint: 'Desligue para pausar novas contas sem tirar o site do ar.', type: 'boolean' },
+  { key: 'notify_on_impersonation', label: 'Avisar a profissional quando o suporte entrar na conta dela', hint: 'Ligado por padrão. É o que torna o "Entrar como" defensável: ela sabe, e fica registrado.', type: 'boolean', fallback: true },
 ];
 
 export function AppSettingsForm({ initial }: { initial: Record<string, unknown> }) {
@@ -25,7 +26,10 @@ export function AppSettingsForm({ initial }: { initial: Record<string, unknown> 
     for (const f of FIELDS) {
       const raw = (initial[f.key] as { value?: unknown } | undefined);
       const val = raw && typeof raw === 'object' && 'value' in raw ? raw.value : initial[f.key];
-      v[f.key] = f.type === 'boolean' ? Boolean(val) : (val === undefined || val === null ? '' : String(val));
+      const unset = val === undefined || val === null;
+      v[f.key] = f.type === 'boolean'
+        ? (unset ? Boolean(f.fallback) : Boolean(val))
+        : (unset ? '' : String(val));
     }
     return v;
   });

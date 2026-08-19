@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
+import { StatCard } from '@/components/admin/primitives';
 import { AppointmentStatusBadge, Badge } from '@/components/admin/badges';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { normalizePhone } from '@/lib/admin/queries';
@@ -43,12 +44,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const last = appts.length ? appts[0].date : null;
   const prof = profData as { id: string; name: string; brand_name: string } | null;
 
-  const kpi = (label: string, value: string) => (
-    <div className="card px-4 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</p>
-      <p className="text-xl font-bold text-heading tabular-nums leading-tight mt-0.5">{value}</p>
-    </div>
-  );
+  const kpi = (label: string, value: string) => <StatCard key={label} label={label} value={value} />;
 
   return (
     <LayoutAdmin

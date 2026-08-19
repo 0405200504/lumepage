@@ -1,13 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
-import {
-  Users, Wallet, CalendarDays, TrendingUp, AlertTriangle, Bell, Info, ArrowRight,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { BarChart } from '@/components/admin/BarChart';
+import { RankedBars } from '@/components/admin/RankedBars';
 import { AppointmentStatusBadge } from '@/components/admin/badges';
+import { StatCard, SectionHeader } from '@/components/admin/primitives';
 import { getSaasRevenue, getNetworkVolume } from '@/lib/admin/business';
 import { getAdminAlerts } from '@/lib/admin/alerts';
 import { listPlansAction } from '@/app/actions/admin-plans';
@@ -60,27 +60,12 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
     );
   };
 
-  const kpi = (icon: React.ReactNode, label: string, value: string, sub?: React.ReactNode, href?: string) => {
-    const body = (
-      <>
-        <span className="flex items-center gap-2">
-          <span className="h-8 w-8 rounded-xl bg-accent-soft text-accent-link flex items-center justify-center shrink-0">{icon}</span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</span>
-        </span>
-        <span className="block text-3xl font-bold text-heading tabular-nums leading-none mt-3">{value}</span>
-        {sub && <span className="block mt-1">{sub}</span>}
-      </>
-    );
-    return href
-      ? <Link href={href} className="card px-4 py-4 block hover:bg-surface-2 transition-colors">{body}</Link>
-      : <div className="card px-4 py-4">{body}</div>;
-  };
-
-  const alertIcon = { bad: AlertTriangle, warn: Bell, info: Info } as const;
-  const alertTone = {
-    bad: 'text-[color:var(--color-bad)] bg-[color:var(--color-bad)]/10',
-    warn: 'text-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10',
-    info: 'text-muted bg-surface-2',
+  // Marcador do nível do alerta: um filete colorido de 2px na borda esquerda, não
+  // um ícone dentro de quadradinho. A cor entra uma vez, na menor área possível.
+  const alertEdge = {
+    bad: 'var(--bad-ink)',
+    warn: 'var(--warn-ink)',
+    info: 'var(--rule-strong)',
   } as const;
 
   return (
@@ -90,112 +75,135 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
       subtitle="O estado da rede em uma tela: o que a Lume fatura, o que a rede movimenta e o que precisa de você."
       actions={<DateRangeFilter basePath={BASE} />}
     >
-      <div className="space-y-6">
-        {/* ───── Faixa 1 · números do negócio ───── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {kpi(<TrendingUp className="h-4 w-4" />, 'MRR da Lume', brl(saas.mrrCents),
-            <span className="text-[11px] text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>, '/admin/finance')}
-          {kpi(<Users className="h-4 w-4" />, 'Contas ativas', String(activeCount),
-            <span className="text-[11px] text-muted">{profs.length} no total</span>, '/admin/professionals')}
-          {kpi(<Wallet className="h-4 w-4" />, 'GMV da rede', brl(network.gmvCents),
-            trend(network.gmvCents, network.gmvPreviousCents), '/admin/finance')}
-          {kpi(<CalendarDays className="h-4 w-4" />, 'Agendamentos', String(network.appointments),
-            trend(network.appointments, network.appointmentsPrevious), '/admin/appointments')}
-        </div>
-
-        {/* ───── Faixa 2 · precisa da sua atenção ───── */}
+      {/* Espaço negativo agressivo ENTRE blocos (56px) e apertado dentro deles. */}
+      <div className="space-y-14">
+        {/* ───── 01 · números do negócio ───── */}
         <section>
-          <h2 className="text-sm font-bold text-ink mb-2.5">Precisa da sua atenção</h2>
+          <SectionHeader index="01" title="Onde o negócio está" note="MRR é da Lume; GMV é da rede — não se somam" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <StatCard label="MRR da Lume" value={brl(saas.mrrCents)} accent
+              note={`${saas.activeSubscriptions} assinatura(s) ativa(s)`} href="/admin/finance" />
+            <StatCard label="Contas com acesso" value={String(activeCount)}
+              note={`${profs.length} no total`} href="/admin/professionals" />
+            <StatCard label="GMV da rede" value={brl(network.gmvCents)}
+              note={trend(network.gmvCents, network.gmvPreviousCents)} href="/admin/finance" />
+            <StatCard label="Agendamentos" value={String(network.appointments)}
+              note={trend(network.appointments, network.appointmentsPrevious)} href="/admin/appointments" />
+          </div>
+        </section>
+
+        {/* ───── 02 · precisa da sua atenção ───── */}
+        <section>
+          <SectionHeader index="02" title="Precisa da sua atenção"
+            note={alerts.length ? `${alerts.length} item(ns)` : undefined} />
           {alerts.length === 0 ? (
-            <p className="card px-4 py-6 text-center text-xs text-muted">Nada pendente. Rede rodando.</p>
+            <p className="text-[13px] text-[color:var(--ink-muted)] py-2">
+              Nada pendente — nenhuma conta vencendo, nenhuma conversa parada, nenhuma cobrança em atraso.
+            </p>
           ) : (
-            <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-              {alerts.slice(0, 6).map(a => {
-                const Icon = alertIcon[a.level];
-                return (
-                  <li key={a.id}>
-                    <Link href={a.href} className="card px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors h-full">
-                      <span className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${alertTone[a.level]}`}>
-                        <Icon className="h-4 w-4" aria-hidden />
-                      </span>
+            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {alerts.slice(0, 6).map(a => (
+                <li key={a.id}>
+                  <Link
+                    href={a.href}
+                    style={{ borderLeftColor: alertEdge[a.level] }}
+                    className="block h-full border border-[color:var(--rule-subtle)] border-l-2 rounded-[8px] px-3.5 py-3 hover:bg-[color:var(--surface-raised)] transition-colors group"
+                  >
+                    <span className="flex items-start gap-2">
                       <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-bold text-ink">{a.title}</span>
-                        <span className="block text-[11px] text-muted mt-0.5 line-clamp-2">{a.detail}</span>
+                        <span className="block text-[13px] font-semibold text-[color:var(--ink)] leading-snug">{a.title}</span>
+                        <span className="block text-[11px] text-[color:var(--ink-muted)] mt-1 line-clamp-2">{a.detail}</span>
                       </span>
-                      <ArrowRight className="h-3.5 w-3.5 text-muted shrink-0 mt-1" aria-hidden />
-                    </Link>
-                  </li>
-                );
-              })}
+                      <ArrowRight className="h-3.5 w-3.5 text-[color:var(--ink-faint)] shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden />
+                    </span>
+                  </Link>
+                </li>
+              ))}
             </ul>
           )}
         </section>
 
-        {/* ───── Faixa 3 · dois gráficos ───── */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="card p-4">
-            <h2 className="text-sm font-bold text-ink mb-3">MRR mês a mês</h2>
-            <BarChart
-              points={saas.mrrSeries.map(s => ({ label: s.label, value: s.mrrCents, hint: `${s.label}: ${brl(s.mrrCents)}` }))}
-              format={brlCompact}
-              caption="Receita recorrente da Lume — assinaturas ativas."
-            />
+        {/* ───── 03 · série no tempo (7) × ranking (5) ─────
+             Assimetria proposital: a série precisa de largura para os meses; o
+             ranking é uma lista e lê melhor estreito. Nada de 6/6. */}
+        <div className="grid gap-4 lg:grid-cols-12">
+          <section className="lg:col-span-7">
+            <SectionHeader index="03" title="MRR mês a mês" note="assinaturas ativas da Lume" />
+            {saas.mrrCents === 0 ? (
+              <p className="py-8 text-center text-xs text-muted">
+                Ainda não há assinatura ativa para compor MRR.{' '}
+                <Link href="/admin/professionals" className="font-bold text-accent-link hover:underline">Definir planos →</Link>
+              </p>
+            ) : (
+              <BarChart
+                points={saas.mrrSeries.map(s => ({ label: s.label, value: s.mrrCents, hint: `${s.label}: ${brl(s.mrrCents)}` }))}
+                format={brlCompact}
+                caption="Receita recorrente da Lume — assinaturas ativas."
+              />
+            )}
           </section>
 
-          <section className="card p-4">
-            <h2 className="text-sm font-bold text-ink mb-3">Faturamento por profissional (período)</h2>
-            <BarChart
-              points={network.byProfessional.slice(0, 8).map(p => ({
-                label: p.name.split(' ')[0].slice(0, 8),
-                value: p.gmvCents,
-                hint: `${p.name}: ${brl(p.gmvCents)} (${pct(p.sharePct, 0)} da rede)`,
+          <section className="lg:col-span-5">
+            <SectionHeader index="04" title="Faturamento por profissional" note="GMV — não é receita da Lume" />
+            <RankedBars
+              items={network.byProfessional.slice(0, 8).map(p => ({
+                id: p.id, label: p.name, value: p.gmvCents, sharePct: p.sharePct,
+                alert: p.sharePct >= 50,
               }))}
-              format={brlCompact}
-              trimLeadingZeros={false}
-              caption="GMV das profissionais — não é receita da Lume."
+              format={brl}
             />
           </section>
         </div>
 
-        {/* ───── Faixa 4 · ranking e atividade ───── */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Top profissionais</h2>
-              <Link href="/admin/professionals" className="text-xs font-bold text-accent-link hover:underline">ver tudo</Link>
-            </div>
-            <ul className="divide-y divide-line">
-              {network.byProfessional.slice(0, 5).map(p => (
-                <li key={p.id} className="px-4 py-2.5 flex items-center gap-3 text-xs">
-                  <Link href={`/admin/professionals/${p.id}`} className="font-semibold text-ink flex-1 truncate hover:underline">{p.name}</Link>
-                  <span className="text-muted tabular-nums">{pct(p.sharePct, 0)}</span>
-                  <span className="text-ink font-bold tabular-nums w-24 text-right">{brl(p.gmvCents)}</span>
-                </li>
-              ))}
-              {network.byProfessional.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Sem movimento no período.</li>}
-            </ul>
-          </section>
-
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Atividade recente</h2>
-              <Link href="/admin/appointments" className="text-xs font-bold text-accent-link hover:underline">ver tudo</Link>
-            </div>
-            <ul className="divide-y divide-line">
+        {/* ───── 05 · atividade ─────
+             Listas secundárias sem cartão: filete no topo de cada linha. Cartão com
+             sombra para cinco linhas de texto é embalagem, não estrutura. */}
+        <div className="grid gap-8 lg:grid-cols-2">
+          <section>
+            <SectionHeader index="05" title="Atividade recente"
+              action={<Link href="/admin/appointments" className="text-[11px] font-semibold text-[color:var(--color-accent-link)] hover:underline">ver tudo</Link>} />
+            <ul className="border-t border-[color:var(--rule-subtle)]">
               {recent.map(a => (
-                <li key={a.id} className="px-4 py-2.5 flex items-center gap-3 text-xs">
-                  <span className="font-semibold text-ink flex-1 truncate">{a.client_name}</span>
-                  <span className="text-muted truncate max-w-[10rem] hidden sm:block">{profNames.get(a.professional_id) ?? '—'}</span>
-                  <span className="text-muted tabular-nums">{formatDateBR(a.date)} {formatTimeBR(a.start_time)}</span>
+                <li key={a.id} className="flex items-center gap-3 py-2 border-b border-[color:var(--rule-subtle)] text-[13px] group">
+                  <span className="font-medium text-[color:var(--ink)] flex-1 truncate">{a.client_name}</span>
+                  <span className="text-[color:var(--ink-muted)] truncate max-w-[10rem] hidden sm:block">{profNames.get(a.professional_id) ?? '—'}</span>
+                  {/* Hover revela a hora exata; em repouso só a data importa. */}
+                  <span className="text-[color:var(--ink-muted)] tabular-nums whitespace-nowrap">
+                    {formatDateBR(a.date)}
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity"> {formatTimeBR(a.start_time)}</span>
+                  </span>
                   <AppointmentStatusBadge status={a.status} />
                 </li>
               ))}
-              {recent.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Nenhum agendamento recente.</li>}
+              {recent.length === 0 && (
+                <li className="py-3 text-[13px] text-[color:var(--ink-muted)]">
+                  Nenhum agendamento criado ainda nesta rede.
+                </li>
+              )}
+            </ul>
+          </section>
+
+          <section>
+            <SectionHeader index="06" title="Contas por faturamento"
+              action={<Link href="/admin/professionals" className="text-[11px] font-semibold text-[color:var(--color-accent-link)] hover:underline">ver tudo</Link>} />
+            <ul className="border-t border-[color:var(--rule-subtle)]">
+              {network.byProfessional.slice(0, 5).map(p => (
+                <li key={p.id} className="flex items-center gap-3 py-2 border-b border-[color:var(--rule-subtle)] text-[13px]">
+                  <Link href={`/admin/professionals/${p.id}`} className="font-medium text-[color:var(--ink)] flex-1 truncate hover:text-[color:var(--accent)] transition-colors">{p.name}</Link>
+                  <span className="text-[color:var(--ink-muted)] tabular-nums">{pct(p.sharePct, 0)}</span>
+                  <span className="text-[color:var(--ink)] font-semibold tabular-nums w-24 text-right">{brl(p.gmvCents)}</span>
+                </li>
+              ))}
+              {network.byProfessional.length === 0 && (
+                <li className="py-3 text-[13px] text-[color:var(--ink-muted)]">
+                  Nenhum atendimento pago no período escolhido.
+                </li>
+              )}
             </ul>
           </section>
         </div>
 
-        <p className="text-[11px] text-muted px-1">
+        <p className="text-[11px] text-[color:var(--ink-faint)]">
           Infraestrutura (uso do banco, lixeira da rede, webhooks) foi para{' '}
           <Link href="/admin/system" className="font-bold text-accent-link hover:underline">Saúde do sistema</Link>.
         </p>

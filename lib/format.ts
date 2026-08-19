@@ -79,18 +79,88 @@ export function formatTimeBR(value: string | Date | null | undefined, fallback =
   return `${pad(p.hh)}:${pad(p.mi)}`;
 }
 
-/** "há 3 dias" / "em 5 dias" — usado nos alertas e no "último acesso". */
+/**
+ * "há 3 dias" / "em 5 dias" — alertas e "último acesso".
+ *
+ * O bug que isto corrige: a versão anterior comparava o instante do evento com a
+ * MEIA-NOITE de hoje e arredondava. Um acesso hoje às 13h virava
+ * round(0,54) = 1 → "amanhã". Daí o "ÚLTIMO ACESSO: amanhã" na listagem.
+ *
+ * Agora a comparação é entre dias de calendário (truncados), e o futuro é tratado
+ * explicitamente: passado usa "há", futuro usa "em", e nada mais arredonda para
+ * o lado errado do presente.
+ */
 export function formatRelativeBR(value: string | Date | null | undefined, now = new Date(), fallback = '—'): string {
   const p = parseDateParts(value);
   if (!p) return fallback;
-  const then = new Date(p.y, p.m - 1, p.d, p.hh, p.mi).getTime();
-  const diffDays = Math.round((then - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000);
-  if (diffDays === 0) return 'hoje';
+
+  const then = new Date(p.y, p.m - 1, p.d, p.hh, p.mi);
+  const startOfThen = new Date(p.y, p.m - 1, p.d).getTime();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const diffDays = Math.round((startOfThen - startOfToday) / 86_400_000);
+
+  if (diffDays === 0) {
+    // Dentro do mesmo dia, a hora é a informação útil — nunca "amanhã".
+    const minutes = Math.round((then.getTime() - now.getTime()) / 60_000);
+    if (minutes >= -1 && minutes <= 1) return 'agora';
+    if (minutes < 0) {
+      const ago = Math.abs(minutes);
+      return ago < 60 ? `há ${ago} min` : `há ${Math.floor(ago / 60)}h`;
+    }
+    return minutes < 60 ? `em ${minutes} min` : `em ${Math.floor(minutes / 60)}h`;
+  }
+
   if (diffDays === 1) return 'amanhã';
   if (diffDays === -1) return 'ontem';
-  if (diffDays > 0) return `em ${diffDays} dias`;
+
+  if (diffDays > 0) {
+    if (diffDays < 30) return `em ${diffDays} dias`;
+    // Além de um mês no futuro, a data exata diz mais do que "em 4 meses".
+    return `em ${formatDateBR(value)}`;
+  }
+
   const ago = Math.abs(diffDays);
   if (ago < 30) return `há ${ago} dias`;
   const months = Math.round(ago / 30);
-  return months < 12 ? `há ${months} ${months === 1 ? 'mês' : 'meses'}` : `há ${Math.round(ago / 365)} ano(s)`;
+  if (months < 12) return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
+  const years = Math.round(ago / 365);
+  return `há ${years} ano${years === 1 ? '' : 's'}`;
+}
+
+/**
+ * Duração legível a partir de milissegundos. "1422h" não é informação — é ruído.
+ *
+ *   < 1 min  → "agora"
+ *   < 1 h    → "37 min"
+ *   < 48 h   → "13h"        (com minutos abaixo de 1h)
+ *   < 60 d   → "59d"
+ *   >= 60 d  → "2 meses"
+ */
+export function formatDurationBR(ms: number): string {
+  const total = Math.max(0, Math.round(ms));
+  const minutes = Math.floor(total / 60_000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 60) return `${days}d`;
+
+  const months = Math.round(days / 30);
+  return months < 12 ? `${months} meses` : `${Math.round(days / 365)} ano(s)`;
+}
+
+/**
+ * Quanto tempo passou desde um instante, no formato de `formatDurationBR`.
+ * Data no futuro devolve `fallback` — "esperando há -3h" é sempre dado sujo ou
+ * problema de fuso, e nunca deve virar texto na tela.
+ */
+export function formatElapsedBR(value: string | Date | null | undefined, now = new Date(), fallback = '—'): string {
+  const p = parseDateParts(value);
+  if (!p) return fallback;
+  const ms = now.getTime() - new Date(p.y, p.m - 1, p.d, p.hh, p.mi).getTime();
+  if (ms < 0) return fallback;
+  return formatDurationBR(ms);
 }

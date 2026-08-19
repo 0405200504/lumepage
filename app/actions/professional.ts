@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
+import { logAccessEvent } from '@/lib/access-tokens';
 
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
@@ -301,7 +302,18 @@ export async function loginAction(email: string, password?: string) {
     return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
   }
   // Não logar e-mail, senha nem o resultado do login (PII/credenciais nos logs da Vercel).
-  return authService.login(email, password);
+  const res = await authService.login(email, password);
+
+  // Histórico de acesso da conta (aba "Acesso" do admin). Guarda o QUE aconteceu —
+  // método, IP, sucesso/falha — e nunca a credencial usada.
+  await logAccessEvent({
+    professionalId: res.profile?.professional_id ?? null,
+    email: email.trim().toLowerCase(),
+    method: 'password',
+    success: res.success,
+  });
+
+  return res;
 }
 
 // 9. Cadastro de profissional
