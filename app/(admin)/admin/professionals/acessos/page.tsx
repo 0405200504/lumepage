@@ -151,9 +151,9 @@ export default async function AccessOverviewPage() {
 function Flag({ tone, n, text }: { tone: 'bad' | 'warn' | 'neutral'; n: number; text: string }) {
   const color = tone === 'bad' ? 'var(--color-bad)' : tone === 'warn' ? 'var(--color-warn)' : 'var(--color-muted)';
   return (
-    <li className="card px-3.5 py-3 border-l-2" style={{ borderLeftColor: `color-mix(in srgb, ${color} 70%, transparent)` }}>
-      <span className="block text-2xl font-bold tabular-nums leading-none" style={{ color }}>{n}</span>
-      <span className="block text-[11px] text-muted mt-1 leading-snug">{text}</span>
+    <li className="card px-4 py-3 rounded-3xl">
+      <span className="block text-2xl font-black tabular-nums leading-none" style={{ color }}>{n}</span>
+      <span className="block text-[11px] text-muted mt-1.5 leading-snug">{text}</span>
     </li>
   );
 }

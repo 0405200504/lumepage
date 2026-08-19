@@ -40,14 +40,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Manrope: produto (painel da profissional e páginas públicas).
-            Inter Tight + Archivo: painel administrativo — dados com tabular real
-            e uma grotesk mais estreita e pesada para título. Ver o bloco
-            "PAINEL ADMINISTRATIVO" em globals.css. */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=Archivo:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="antialiased min-h-screen bg-cream">
         <ToastProvider>

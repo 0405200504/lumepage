@@ -30,7 +30,7 @@ export function ThemeToggle({ initial }: { initial: Theme }) {
 
   return (
     <button type="button" onClick={cycle} title={`${label} — clique para trocar`} aria-label={label}
-      className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-line bg-surface text-muted hover:text-ink hover:bg-surface-2 transition-colors">
+      className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom">
       <Icon className="h-4 w-4" aria-hidden />
     </button>
   );

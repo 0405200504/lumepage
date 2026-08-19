@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, MessageCircle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { ServerTable, ServerColumn } from '@/components/ui/ServerTable';
@@ -73,9 +73,9 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
       title="Conversas do WhatsApp"
       subtitle="A fila que o KPI da home prometia e não tinha tela: quem está esperando atendimento humano."
     >
-      <div className="space-y-8">
+      <div className="space-y-4">
         {longWait.length > 0 && (
-          <p className="border border-[color:var(--bad-edge)] border-l-2 bg-[color:var(--bad-bg)] rounded-[8px] px-4 py-3 text-[13px] text-[color:var(--bad-ink)] flex items-start gap-2">
+          <p className="card px-4 py-3 text-xs font-semibold text-[color:var(--color-bad)] flex items-start gap-2">
             <Clock className="h-4 w-4 shrink-0 mt-px" aria-hidden />
             {longWait.length} conversa(s) esperando atendimento humano há mais de 48 horas — a mais antiga
             está parada há {formatDurationBR(Math.max(...longWait.map(r => r.waitingHours)) * 3_600_000)}.
@@ -83,11 +83,11 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
           </p>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          <StatCard label="Esperando humano" value={String(waiting)} accent={waiting > 0}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <StatCard label="Esperando humano" value={String(waiting)} icon={<Clock className="h-[18px] w-[18px]" />} tint="amber"
             note={waiting > 0 ? 'ninguém está respondendo por elas' : 'fila zerada'} />
-          <StatCard label="Conversas no filtro" value={String(total)} />
-          <StatCard label="Esperando +48h" value={String(longWait.length)}
+          <StatCard label="Conversas no filtro" value={String(total)} icon={<MessageCircle className="h-[18px] w-[18px]" />} tint="wine" />
+          <StatCard label="Esperando +48h" value={String(longWait.length)} icon={<Clock className="h-[18px] w-[18px]" />} tint="indigo"
             note={longWait.length > 0 ? 'já não é fila, é abandono' : undefined} />
         </div>
 
@@ -111,7 +111,7 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
                 <ClearFilters basePath={BASE} keys={['q', 'state', 'prof']} />
               </div>
             }
-            empty={{ title: 'Nenhuma conversa neste recorte', description: 'Nada na fila com os filtros atuais — o que é bom, se os filtros estiverem certos.' }}
+            empty={{ title: 'Nenhuma conversa neste recorte', description: 'Nada na fila com os filtros atuais — o que é bom, se os filtros estiverem certos.', icon: <MessageCircle className="h-8 w-8" /> }}
           />
           <ConversationBulkActions />
         </TableSelectionProvider>

@@ -61,9 +61,9 @@ export function ColumnMenu({ columns, hidden }: {
               <button
                 key={c.key} type="button" role="menuitemcheckbox" aria-checked={on}
                 disabled={c.locked} onClick={() => toggle(c.key)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[2px] text-xs text-left hover:bg-surface-2 transition-colors disabled:opacity-40"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left hover:bg-surface-2 transition-colors disabled:opacity-40"
               >
-                <span className={`h-3.5 w-3.5 rounded-[2px] border flex items-center justify-center shrink-0 ${on ? 'bg-forest border-forest text-white' : 'border-line'}`}>
+                <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${on ? 'bg-forest border-forest text-white' : 'border-line'}`}>
                   {on && <Check className="h-2.5 w-2.5" aria-hidden />}
                 </span>
                 <span className={on ? 'text-ink font-semibold' : 'text-muted'}>{c.label}</span>

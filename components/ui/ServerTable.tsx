@@ -97,14 +97,13 @@ export function ServerTable<T>({
       )}
 
       {isEmpty ? (
-        /* Uma frase e uma ação. O ícone gigante centralizado saiu: ele ocupava a
-           tela inteira e não dizia o que fazer em seguida. */
-        <div className="px-4 py-6">
-          <p className="text-[13px] font-semibold text-[color:var(--ink)]">{empty?.title ?? 'Nada por aqui'}</p>
+        <div className="py-16 px-6 flex flex-col items-center text-center">
+          {empty?.icon && <div className="mb-4 text-gray-450">{empty.icon}</div>}
+          <h3 className="text-sm font-bold text-ink">{empty?.title ?? 'Nada por aqui'}</h3>
           {empty?.description && (
-            <p className="mt-1 text-[13px] text-[color:var(--ink-muted)] max-w-xl leading-snug">{empty.description}</p>
+            <p className="mt-1.5 text-xs text-gray-450 max-w-sm leading-relaxed">{empty.description}</p>
           )}
-          {empty?.action && <div className="mt-3">{empty.action}</div>}
+          {empty?.action && <div className="mt-5">{empty.action}</div>}
         </div>
       ) : (
         <>

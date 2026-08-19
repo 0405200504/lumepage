@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
@@ -57,15 +57,16 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       title="Financeiro"
       subtitle="Duas coisas diferentes, cada uma no seu bloco: o que a Lume fatura e o que a rede movimenta."
     >
-      <div className="space-y-14">
+      <div className="space-y-6">
         {/* ══════════ 01 · RECEITA DA LUME ══════════ */}
         <section className="space-y-3">
-          <SectionHeader index="01" title="Receita da Lume" note="assinaturas — este é o dinheiro do negócio" />
+          <SectionHeader icon={<TrendingUp className="h-4 w-4 text-accent-link" />} title="Receita da Lume"
+            note="assinaturas — este é o dinheiro do negócio" />
 
           {noSubscriptions ? (
             /* Oito caixas com R$ 0,00 não são informação — são ruído. Enquanto
                nenhuma conta tiver plano, o bloco inteiro vira uma linha com a ação. */
-            <p className="card px-4 py-3.5 text-xs text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="card px-4 py-3.5 rounded-3xl text-xs text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
               <strong>Nenhuma assinatura ativa ainda.</strong>
               <span className="text-muted">
                 As {saas.legacy} conta(s) da rede estão como <strong className="text-ink">Legada</strong>, sem plano atribuído —
@@ -75,7 +76,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {kpi('MRR', brl(saas.mrrCents), <span className="text-[11px] text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>)}
                 {kpi('ARR', brl(saas.arrCents))}
                 {kpi('ARPA', brl(saas.arpaCents))}
@@ -84,7 +85,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
 
               {/* Segunda linha: só o que tem valor. O que está zerado vira uma frase. */}
               {secondary.length > 0 ? (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {secondary.map(k => kpi(k.label, k.value, k.hint))}
                 </div>
               ) : (
@@ -95,8 +96,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             </>
           )}
 
-          <div className="grid gap-3 lg:grid-cols-12">
-            <div className="card p-4 lg:col-span-7">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="card p-4 sm:p-5 rounded-3xl">
               <h3 className="text-xs font-bold text-ink mb-3">MRR mês a mês</h3>
               {noSubscriptions ? (
                 <p className="py-6 text-center text-xs text-muted">
@@ -116,7 +117,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
               )}
             </div>
 
-            <div className="card overflow-hidden lg:col-span-5">
+            <div className="card rounded-3xl overflow-hidden">
               <h3 className="px-4 py-3 text-xs font-bold text-ink border-b border-line">Assinaturas por plano</h3>
               <ul className="divide-y divide-line">
                 {saas.byPlan.map(p => (
@@ -138,8 +139,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         {/* ══════════ MOVIMENTO DA REDE ══════════ */}
         <section className="space-y-3">
           <SectionHeader
-            index="02" title="Movimento da rede (GMV)"
-            note={<>o que as profissionais faturam — <strong className="text-[color:var(--ink)]">não é receita da Lume</strong></>}
+            icon={<Building2 className="h-4 w-4" />} title="Movimento da rede (GMV)"
+            note={<>o que as profissionais faturam — <strong className="text-ink">não é receita da Lume</strong></>}
             action={<DateRangeFilter basePath={BASE} />}
           />
 
@@ -151,7 +152,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           </div>
 
           {network.concentrationPct >= 50 && network.byProfessional[0] && (
-            <p className="border border-[color:var(--bad-edge)] border-l-2 bg-[color:var(--bad-bg)] rounded-[8px] px-4 py-3 flex items-start gap-2 text-[13px] text-[color:var(--bad-ink)]">
+            <p className="card px-4 py-3 flex items-start gap-2 text-xs text-[color:var(--color-bad)]">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
               <span>
                 <strong>Risco de concentração:</strong> {network.byProfessional[0].name} responde por{' '}
@@ -161,7 +162,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             </p>
           )}
 
-          <div className="card p-4">
+          <div className="card p-4 sm:p-5 rounded-3xl">
             <h3 className="text-xs font-bold text-ink mb-3">Faturamento por profissional</h3>
             <RankedBars
               items={network.byProfessional.slice(0, 15).map(p => ({

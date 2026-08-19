@@ -38,12 +38,12 @@ export function AgendaMonth({ agenda, basePath }: { agenda: ProfessionalAgenda; 
     <div className="space-y-4">
       <div className="card px-4 py-3 flex flex-wrap items-center gap-3">
         <Link href={`${basePath}&month=${agenda.prevMonth}`} scroll={false} aria-label="Mês anterior"
-          className="inline-flex items-center justify-center h-8 w-8 rounded-[4px] border border-line text-muted hover:text-ink hover:bg-surface-2">
+          className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-line text-muted hover:text-ink hover:bg-surface-2">
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </Link>
         <h2 className="text-sm font-bold text-ink capitalize min-w-[10rem]">{agenda.label}</h2>
         <Link href={`${basePath}&month=${agenda.nextMonth}`} scroll={false} aria-label="Próximo mês"
-          className="inline-flex items-center justify-center h-8 w-8 rounded-[4px] border border-line text-muted hover:text-ink hover:bg-surface-2">
+          className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-line text-muted hover:text-ink hover:bg-surface-2">
           <ChevronRight className="h-4 w-4" aria-hidden />
         </Link>
 

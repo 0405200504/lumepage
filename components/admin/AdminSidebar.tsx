@@ -135,13 +135,13 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
                       aria-current={active ? 'page' : undefined}
                       className={`group relative flex items-center rounded-xl text-[13px] font-semibold transition-colors ${
                         mini ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-3 py-2.5'
-                      } ${active ? 'bg-white text-wine-700' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}
+                      } ${active ? 'bg-white text-wine-700 shadow-[0_8px_20px_-12px_rgba(0,0,0,0.7)]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
                     >
                       <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-wine-700' : 'text-white/55 group-hover:text-white'}`} />
                       {!mini && <span>{item.label}</span>}
                       {/* Tooltip do modo recolhido — a barra antiga não tinha nenhum. */}
                       {mini && (
-                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-[2px] bg-wine-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-lg bg-wine-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                           {item.label}
                         </span>
                       )}

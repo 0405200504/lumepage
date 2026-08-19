@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Plus, Bot, KeyRound } from 'lucide-react';
+import { Plus, Users, Bot, Wallet, Sparkles, KeyRound } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { ServerTable, ServerColumn } from '@/components/ui/ServerTable';
@@ -95,23 +95,24 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
       subtitle="As contas da rede, com o que cada uma produziu nos últimos 30 dias."
       actions={
         <>
-          <Link href="/admin/professionals/acessos" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px] border border-line text-ink text-[12px] font-semibold hover:bg-surface-2 transition-colors">
-            <KeyRound className="h-3.5 w-3.5" /> Acessos
+          <Link href="/admin/professionals/acessos" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-line bg-surface text-ink text-xs font-bold hover:bg-surface-2 transition-colors">
+            <KeyRound className="h-4 w-4" /> Acessos
           </Link>
-          <Link href="/admin/professionals/new" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px] bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] text-[color:var(--ink-inverse)] text-[12px] font-semibold transition-colors">
-            <Plus className="h-3.5 w-3.5" /> Cadastrar
+          <Link href="/admin/professionals/new" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold transition-colors">
+            <Plus className="h-4 w-4" /> Cadastrar
           </Link>
         </>
       }
     >
-      <div className="space-y-8">
-        {/* Quatro por linha, no máximo — e só os que mudam de valor. */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <StatCard label="Contas no filtro" value={String(total)} />
-          <StatCard label="Com acesso hoje" value={String(totals.active)}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label="Contas no filtro" value={String(total)} icon={<Users className="h-[18px] w-[18px]" />} tint="indigo" />
+          <StatCard label="Com acesso hoje" value={String(totals.active)} icon={<Sparkles className="h-[18px] w-[18px]" />} tint="emerald"
             note={total - totals.active > 0 ? `${total - totals.active} sem acesso` : undefined} />
-          <StatCard label="Com bot ligado" value={`${totals.withBot}`} note={`de ${total} contas`} />
-          <StatCard label="Faturamento 30d" value={brl(totals.revenue30dCents)} accent note="GMV da rede" />
+          <StatCard label="Com bot ligado" value={`${totals.withBot}`} icon={<Bot className="h-[18px] w-[18px]" />} tint="amber"
+            note={`de ${total} contas`} />
+          <StatCard label="Faturamento 30d" value={brl(totals.revenue30dCents)} icon={<Wallet className="h-[18px] w-[18px]" />} tint="wine"
+            note="GMV da rede" />
         </div>
 
         <TableSelectionProvider pageIds={rows.map(r => r.id)}>
@@ -157,6 +158,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
             empty={{
               title: 'Nenhuma conta com esse recorte',
               description: 'Os filtros ativos não deixaram nenhuma conta. Limpe a busca para ver a rede inteira.',
+              icon: <Users className="h-8 w-8" />,
             }}
           />
           <ProfessionalBulkActions />

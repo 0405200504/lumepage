@@ -52,7 +52,7 @@ export function ImpersonationBanner({ brandName, adminEmail, readOnly, expiresAt
     <div
       role="status"
       className={`sticky top-0 z-50 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-white text-xs font-bold
-        ${readOnly ? 'bg-[#3d2a08]' : 'bg-[#7a1020]'} border-b-2 ${readOnly ? 'border-[#c9a227]' : 'border-[#ff6b81]'}`}
+        ${readOnly ? 'bg-[color:var(--color-warn)]' : 'bg-[color:var(--color-bad)]'}`}
     >
       <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
 
@@ -61,15 +61,14 @@ export function ImpersonationBanner({ brandName, adminEmail, readOnly, expiresAt
         <span className="hidden sm:inline"> · sessão de suporte de {adminEmail}</span>
       </span>
 
-      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] uppercase tracking-[0.08em] text-[10px]
-        ${readOnly ? 'bg-[#c9a227] text-[#241a04]' : 'bg-white text-[#7a1020]'}`}>
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-[0.08em] text-[10px]">
         {readOnly ? <Eye className="h-3 w-3" aria-hidden /> : <Pencil className="h-3 w-3" aria-hidden />}
         {readOnly ? 'somente leitura' : 'pode editar'}
       </span>
 
       {clock && (
         <span
-          className={`tabular-nums px-2 py-0.5 rounded-[2px] bg-black/25 ${ending ? 'animate-pulse' : ''}`}
+          className={`tabular-nums px-2 py-0.5 rounded-full bg-black/20 ${ending ? 'animate-pulse' : ''}`}
           aria-label={`Sessão expira em ${clock}`}
         >
           expira em {clock}
@@ -78,7 +77,7 @@ export function ImpersonationBanner({ brandName, adminEmail, readOnly, expiresAt
 
       <button
         type="button" onClick={leave} disabled={leaving}
-        className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[4px] bg-white text-[#1a1a1a] hover:bg-white/85 transition-colors disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-60"
       >
         <LogOut className="h-3.5 w-3.5" aria-hidden /> {leaving ? 'Saindo…' : 'Sair e voltar ao admin'}
       </button>

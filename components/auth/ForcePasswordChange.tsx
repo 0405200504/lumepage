@@ -37,7 +37,7 @@ export function ForcePasswordChange() {
     <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 bg-[#1a0409]/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Trocar senha">
       <div className="w-full max-w-sm card p-6 space-y-4">
         <div className="flex items-start gap-3">
-          <span className="h-9 w-9 rounded-[4px] bg-accent-soft text-accent-link flex items-center justify-center shrink-0">
+          <span className="h-9 w-9 rounded-xl bg-accent-soft text-accent-link flex items-center justify-center shrink-0">
             <KeyRound className="h-4 w-4" aria-hidden />
           </span>
           <div>
@@ -63,7 +63,7 @@ export function ForcePasswordChange() {
             <input type="password" required autoComplete="new-password" minLength={8} className={field} value={confirm} onChange={e => setConfirm(e.target.value)} />
           </label>
           <button type="submit" disabled={saving || next.length < 8 || next !== confirm}
-            className="w-full h-11 rounded-[4px] bg-forest hover:bg-forest-hover text-white text-sm font-bold disabled:opacity-50">
+            className="w-full h-11 rounded-xl bg-forest hover:bg-forest-hover text-white text-sm font-bold disabled:opacity-50">
             {saving ? 'Salvando…' : 'Salvar nova senha'}
           </button>
         </form>

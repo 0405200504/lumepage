@@ -54,10 +54,8 @@ export default async function AdminSystemPage() {
 
   const usedPct = storage ? (storage.dbSizeBytes / FREE_TIER_BYTES) * 100 : 0;
 
-  // O ícone saiu: o rótulo tipográfico já diz o que é, e o quadradinho colorido era
-  // exatamente a marca registrada do visual genérico que este redesign tira.
-  const card = (_icon: React.ReactNode, label: string, value: string, hint?: string) => (
-    <StatCard key={label} label={label} value={value} note={hint} />
+  const card = (icon: React.ReactNode, label: string, value: string, hint?: string) => (
+    <StatCard key={label} label={label} value={value} note={hint} icon={icon} tint="indigo" />
   );
 
   return (
