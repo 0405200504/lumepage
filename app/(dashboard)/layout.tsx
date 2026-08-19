@@ -4,6 +4,8 @@ import { dbService } from '@/lib/supabase/db';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { ActingBanner } from '@/components/salon/ActingBanner';
+import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
+import { AdminNotices } from '@/components/dashboard/AdminNotices';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
@@ -27,6 +29,7 @@ export default async function DashboardLayout({
   let pendingConversations = 0;
   let isTrialExpired = false;
   let subscriptionPlan: string | null = null;
+  let subscriptionStatus: string | null = null;
   let enforcePlan = false;
 
   if (session.professional_id) {
@@ -39,6 +42,7 @@ export default async function DashboardLayout({
         brandName = prof.brand_name;
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
+        subscriptionStatus = prof.subscription_status ?? null;
 
         const legacy = isLegacyAccount(prof.created_at);
         // Contas legadas nunca são bloqueadas/limitadas por plano.
@@ -86,12 +90,19 @@ export default async function DashboardLayout({
       />
 
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Admin "entrando como": faixa fixa, impossível de ignorar. */}
+        {session.impersonated_by && (
+          <ImpersonationBanner brandName={brandName || session.name} adminEmail={session.impersonated_by} />
+        )}
         {session.is_salon_manager && <ActingBanner brandName={brandName || 'profissional'} />}
         <Header
           userName={session.name}
           userEmail={session.email}
           role="professional"
         />
+
+        {/* Avisos publicados pelo admin em /admin/broadcast */}
+        <AdminNotices professionalId={session.professional_id ?? ''} subscriptionStatus={subscriptionStatus} />
 
         <main className="flex-1 p-4 sm:p-6 pb-28 lg:pb-6 overflow-y-auto max-w-7xl w-full mx-auto">
           {children}

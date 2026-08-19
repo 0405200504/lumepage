@@ -1,17 +1,28 @@
 'use server';
 
 import { randomBytes } from 'crypto';
+import { revalidatePath } from 'next/cache';
 import { dbService } from '@/lib/supabase/db';
-import { authService } from '@/lib/auth/auth';
+import { isAdminSession } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/audit';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { ProfessionalStatus, Professional, Profile } from '@/types/database';
 
 /**
  * Valida se a sessão atual é de um Super Admin da Lume.
+ * Lê SÓ o cookie de admin (lib/auth/require-admin.ts) — estar logada como
+ * profissional/conta teste não autoriza nada aqui.
  */
 async function authorizeAdmin(): Promise<boolean> {
-  const session = await authService.getCurrentUser();
-  return session?.role === 'super_admin';
+  return isAdminSession();
+}
+
+/** Revalida as telas do admin afetadas por uma mutação. Com isso a tela recarrega
+ *  sozinha depois da ação — o botão "Atualizar" manual da topbar deixou de existir. */
+function revalidateAdmin(professionalId?: string) {
+  revalidatePath('/admin');
+  revalidatePath('/admin/professionals');
+  if (professionalId) revalidatePath(`/admin/professionals/${professionalId}`);
 }
 
 interface CreateProfessionalInput {
@@ -145,6 +156,14 @@ export async function createProfessionalAction(input: CreateProfessionalInput) {
       });
     }
 
+    await logAdminAction({
+      action: 'professional.create',
+      entityType: 'professional',
+      entityId: finalProfId,
+      after: { name, brand_name: brandName, slug: slugLower, email: cleanEmail },
+    });
+    revalidateAdmin();
+
     return { 
       success: true, 
       professional: newProf,
@@ -165,10 +184,21 @@ export async function updateProfessionalStatusAction(professionalId: string, sta
       return { success: false, error: 'Não autorizado.' };
     }
 
+    const before = await dbService.getProfessionalById(professionalId).catch(() => null);
+
     const result = await dbService.upsertProfessional({
       id: professionalId,
       status
     });
+
+    await logAdminAction({
+      action: 'professional.status.update',
+      entityType: 'professional',
+      entityId: professionalId,
+      before: { status: before?.status ?? null },
+      after: { status },
+    });
+    revalidateAdmin(professionalId);
 
     return { success: true, professional: result };
   } catch (e: any) {
@@ -182,6 +212,8 @@ export async function createSalonAction(name: string) {
     if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
     if (!name.trim()) return { success: false, error: 'Dê um nome ao grupo.' };
     const salon = await dbService.createSalon(name.trim());
+    await logAdminAction({ action: 'salon.create', entityType: 'salon', entityId: salon?.id ?? null, after: { name: name.trim() } });
+    revalidatePath('/admin/salons');
     return { success: true, salon };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao criar grupo.' };
@@ -191,7 +223,17 @@ export async function createSalonAction(name: string) {
 export async function assignProfessionalToSalonAction(professionalId: string, salonId: string | null) {
   try {
     if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
+    const before = await dbService.getProfessionalById(professionalId).catch(() => null);
     await dbService.setProfessionalSalon(professionalId, salonId);
+    await logAdminAction({
+      action: 'professional.salon.assign',
+      entityType: 'professional',
+      entityId: professionalId,
+      before: { salon_id: before?.salon_id ?? null },
+      after: { salon_id: salonId },
+    });
+    revalidatePath('/admin/salons');
+    revalidateAdmin(professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao vincular profissional.' };
@@ -226,6 +268,12 @@ export async function createSalonManagerAction(input: { name: string; email: str
         await clientAdmin.auth.admin.deleteUser(authUser.user!.id);
         return { success: false, error: 'Falha ao configurar gerente (rode a migração v6): ' + upErr.message };
       }
+      await logAdminAction({
+        action: 'salon.manager.create',
+        entityType: 'salon',
+        entityId: input.salonId,
+        after: { name, email },
+      });
       return { success: true };
     }
 
@@ -251,7 +299,15 @@ export async function deleteProfessionalAction(professionalId: string) {
     if (!await authorizeAdmin()) {
       return { success: false, error: 'Não autorizado.' };
     }
+    const before = await dbService.getProfessionalById(professionalId).catch(() => null);
     await dbService.softDeleteProfessional(professionalId);
+    await logAdminAction({
+      action: 'professional.trash',
+      entityType: 'professional',
+      entityId: professionalId,
+      before: { name: before?.name ?? null, slug: before?.slug ?? null, status: before?.status ?? null },
+    });
+    revalidateAdmin(professionalId);
     return { success: true };
   } catch (e: any) {
     console.error('Erro ao mover profissional para a lixeira:', e);
@@ -274,6 +330,8 @@ export async function restoreProfessionalAction(professionalId: string) {
   try {
     if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
     await dbService.restoreProfessional(professionalId);
+    await logAdminAction({ action: 'professional.restore', entityType: 'professional', entityId: professionalId });
+    revalidateAdmin(professionalId);
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao restaurar profissional.' };
@@ -307,7 +365,15 @@ export async function purgeProfessionalAction(professionalId: string) {
       }
     }
 
+    const before = await dbService.getProfessionalById(professionalId).catch(() => null);
     await dbService.deleteProfessional(professionalId);
+    await logAdminAction({
+      action: 'professional.purge',
+      entityType: 'professional',
+      entityId: professionalId,
+      before: { name: before?.name ?? null, slug: before?.slug ?? null, email: before?.email ?? null },
+    });
+    revalidateAdmin();
     return { success: true };
   } catch (e: any) {
     console.error('Erro ao excluir profissional definitivamente:', e);
@@ -320,6 +386,8 @@ export async function purgeNetworkTrashAction() {
   try {
     if (!await authorizeAdmin()) return { success: false, error: 'Não autorizado.' };
     const result = await dbService.purgeNetworkTrash();
+    await logAdminAction({ action: 'network.trash.purge', entityType: 'network', after: result });
+    revalidateAdmin();
     return { success: true, ...result };
   } catch (e: any) {
     return { success: false, error: e.message || 'Erro ao esvaziar a lixeira da rede.' };
@@ -389,12 +457,27 @@ export async function updateProfessionalSubscriptionAction(professionalId: strin
       return { success: false, error: 'Não autorizado.' };
     }
 
+    const before = await dbService.getProfessionalById(professionalId).catch(() => null);
+
     const result = await dbService.upsertProfessional({
       id: professionalId,
       subscription_plan: input.plan,
       subscription_status: input.status,
       subscription_ends_at: input.endsAt,
     });
+
+    await logAdminAction({
+      action: 'subscription.update',
+      entityType: 'professional',
+      entityId: professionalId,
+      before: {
+        subscription_plan: before?.subscription_plan ?? null,
+        subscription_status: before?.subscription_status ?? null,
+        subscription_ends_at: before?.subscription_ends_at ?? null,
+      },
+      after: { subscription_plan: input.plan, subscription_status: input.status, subscription_ends_at: input.endsAt },
+    });
+    revalidateAdmin(professionalId);
 
     return { success: true, professional: result };
   } catch (e: any) {

@@ -7,7 +7,7 @@ import { normalizeWhatsapp } from '@/lib/whatsapp';
 
 async function getProfessionalId(): Promise<string | null> {
   try {
-    const session = await authService.getCurrentUser();
+    const session = await authService.getCurrentUser('pro');
     return session?.professional_id ?? null;
   } catch {
     return null;

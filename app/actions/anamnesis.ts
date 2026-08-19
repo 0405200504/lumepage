@@ -3,7 +3,7 @@
 import { randomBytes } from 'crypto';
 import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
-import { authService } from '@/lib/auth/auth';
+import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { sendWhatsAppText, sendWhatsAppDocument } from '@/lib/uazapi';
@@ -24,17 +24,8 @@ async function getAppUrl(): Promise<string> {
   return '';
 }
 
-async function authorize(professionalId: string): Promise<boolean> {
-  const session = await authService.getCurrentUser();
-  if (!session) return false;
-  if (session.role === 'super_admin') return true;
-  if (session.professional_id === professionalId) return true;
-  if (session.is_salon_manager) {
-    const prof = await dbService.getProfessionalById(professionalId);
-    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
-  }
-  return false;
-}
+/** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
+const authorize = authorizeProfessional;
 
 /** Sanitiza as perguntas vindas do builder (limites de tamanho e tipos válidos). */
 function sanitizeQuestions(questions: AnamnesisQuestion[]): AnamnesisQuestion[] {

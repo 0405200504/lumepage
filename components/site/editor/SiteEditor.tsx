@@ -18,7 +18,7 @@ import Link from 'next/link';
 import {
   Palette, LayoutTemplate, UserRound, Type, Sparkles, Images, GitCompareArrows,
   MessageSquareQuote, HelpCircle, ListOrdered, Link2, Smartphone, Monitor,
-  ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight,
+  ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight, FlaskConical,
 } from 'lucide-react';
 import type { SiteConfig, SiteStatus } from '@/types/site';
 import type { PublicService } from '../types';
@@ -66,11 +66,13 @@ interface SiteEditorProps {
   exists: boolean;
   services: PublicService[];
   appUrl: string;
+  /** Conta teste: o editor funciona, mas nada é salvo nem vai ao ar. */
+  isDemo?: boolean;
 }
 
 export function SiteEditor({
   professionalId, initialSlug, initialTemplateId, initialConfig, initialStatus,
-  exists, services, appUrl,
+  exists, services, appUrl, isDemo,
 }: SiteEditorProps) {
   const { success, error: toastError } = useToast();
 
@@ -219,6 +221,8 @@ export function SiteEditor({
           </p>
         </header>
 
+        {isDemo && <DemoBanner />}
+
         <TemplatePicker
           selected={templateId}
           onSelect={id => { setTemplateId(id); dirty.current = true; }}
@@ -252,13 +256,17 @@ export function SiteEditor({
   // ── Editor ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4 select-none">
+      {isDemo && <DemoBanner />}
+
       {/* Barra de status e ações */}
       <div className="rounded-3xl border border-gray-150 bg-white shadow-xs p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <StatusPill status={status} />
             <span className="text-[11px] text-gray-400 truncate">
-              {saving ? 'Salvando…' : savedAt ? 'Rascunho salvo' : 'Alterações são salvas sozinhas'}
+              {isDemo
+                ? 'Conta teste — nada é salvo'
+                : saving ? 'Salvando…' : savedAt ? 'Rascunho salvo' : 'Alterações são salvas sozinhas'}
             </span>
           </div>
 
@@ -284,8 +292,9 @@ export function SiteEditor({
             <button
               type="button"
               onClick={publish}
-              disabled={publishing}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest hover:bg-forest-hover text-white text-[11px] font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              disabled={publishing || isDemo}
+              title={isDemo ? 'A conta teste não publica páginas.' : undefined}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest hover:bg-forest-hover text-white text-[11px] font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
               {status === 'published' ? 'Publicar alterações' : 'Publicar página'}
@@ -457,6 +466,24 @@ export function SiteEditor({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Aviso da conta teste. Existe porque o silêncio aqui vira uma mentira: a
+ * pessoa monta a página inteira, clica em publicar e só descobre depois que o
+ * link não abre. Melhor dizer na primeira tela.
+ */
+function DemoBanner() {
+  return (
+    <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <FlaskConical className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+      <p className="text-[12px] text-amber-800 leading-relaxed">
+        <b>Você está na conta teste.</b> Pode explorar o editor à vontade — trocar de modelo,
+        mexer nas cores, ver a prévia — mas <b>nada é salvo e a página não vai ao ar</b>.
+        Entre com a sua conta da Lume para publicar de verdade.
+      </p>
     </div>
   );
 }

@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  CalendarDays, CalendarRange, Clock, Settings, Users, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, X, ExternalLink, Wallet, UserCircle, BarChart3, Store, NotebookPen, Hourglass, Bot, MessageCircle,
+  CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
+  LayoutDashboard, LogOut, Menu, ExternalLink, Wallet, NotebookPen, Hourglass, Bot, MessageCircle,
   PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact, ClipboardList, Globe
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
@@ -13,7 +13,8 @@ import { LumeLogo } from '../ui/LumeLogo';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
 
 interface SidebarProps {
-  role: 'super_admin' | 'professional';
+  /** O painel administrativo tem barra própria (components/admin/AdminSidebar). */
+  role: 'professional';
   name: string;
   brandName?: string;
   slug?: string;
@@ -56,24 +57,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
       } else {
         error('Falha', 'Não foi possível realizar logout.');
       }
-    } catch (e) {
+    } catch {
       error('Erro', 'Ocorreu um erro ao encerrar sessão.');
     }
   };
 
   const getLinks = () => {
-    if (role === 'super_admin') {
-      return [
-        { href: '/admin', label: 'Visão Geral', icon: LayoutDashboard },
-        { href: '/admin/professionals', label: 'Profissionais', icon: Users },
-        { href: '/admin/salons', label: 'Grupos', icon: Store },
-        { href: '/admin/appointments', label: 'Agendamentos', icon: CalendarDays },
-        { href: '/admin/clients', label: 'Clientes', icon: UserCircle },
-        { href: '/admin/finance', label: 'Financeiro', icon: Wallet },
-        { href: '/admin/reports', label: 'Relatórios', icon: BarChart3 },
-      ];
-    }
-
     return [
       { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
       { href: '/dashboard/site', label: 'Minha Página', icon: Globe },
@@ -119,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
               <>
                 <LumeLogo variant="light" className="h-8" />
                 <span className="text-[9px] text-white/55 font-bold uppercase tracking-[0.22em] mt-2 block pl-0.5">
-                  {role === 'super_admin' ? 'Super Admin' : 'Agenda'}
+                  Agenda
                 </span>
               </>
             )}
@@ -138,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
         </div>
 
         {/* Info Profissional */}
-        {role === 'professional' && !isCollapsed && (
+        {!isCollapsed && (
           <div className="relative overflow-hidden bg-white/[0.07] rounded-2xl p-4 border border-white/10 ring-hairline">
             <span className="pointer-events-none absolute -top-8 -right-6 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
             <p className="text-[9px] uppercase font-bold text-white/45 tracking-[0.18em]">Profissional</p>
@@ -199,8 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
 
       {/* Footer / Logout */}
       <div className={`mt-auto pt-6 w-full ${isCollapsed ? 'space-y-2' : 'space-y-2.5'}`}>
-        {role === 'professional' && (
-          <Link
+        <Link
             href={`/agendar/${publicSlug}`}
             target="_blank"
             title={isCollapsed ? 'Ver Página Pública' : undefined}
@@ -208,8 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
           >
             <ExternalLink className="h-4 w-4 shrink-0" />
             {!isCollapsed && 'Ver Página Pública'}
-          </Link>
-        )}
+        </Link>
         <button
           onClick={handleLogout}
           title={isCollapsed ? 'Sair da Conta' : undefined}
@@ -239,17 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
         </div>
       </aside>
 
-      {/* Botão flutuante (admin) */}
-      {role === 'super_admin' && (
-        <div className="lg:hidden fixed top-4 right-4 z-40">
-          <button onClick={() => setIsOpen(!isOpen)} className="p-3 surface-wine text-white rounded-2xl shadow-lg border border-white/10 transition-all-custom">
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-      )}
-
       {/* Barra de navegação inferior (mobile · profissional) */}
-      {role === 'professional' && (
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-gray-150 px-2 pt-2 pb-safe shadow-[0_-8px_24px_-16px_rgba(38,4,10,0.25)]">
         <div className="flex items-stretch justify-around gap-1">
           {bottomLinks.map((link) => {
@@ -283,7 +260,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
           </button>
         </div>
       </nav>
-      )}
 
       {/* Sidebar Mobile Overlay */}
       {isOpen && (

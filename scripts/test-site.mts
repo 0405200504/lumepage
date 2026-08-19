@@ -639,6 +639,40 @@ if (!url || !key) {
 }
 
 // ============================================================================
+// 11. Conta teste não pode fingir que publicou
+// ============================================================================
+
+group('11. Conta teste — honestidade das ações');
+
+{
+  const src = fs.readFileSync(path.join(ROOT, 'app/actions/site.ts'), 'utf8');
+
+  // Ações com efeito VISÍVEL PARA FORA precisam RECUSAR na conta teste. Deixar
+  // qualquer uma devolver sucesso silencioso faz a interface prometer uma página
+  // no ar que não existe — foi exatamente o bug de 18/08/2026.
+  const paraFora = ['publishSiteAction', 'unpublishSiteAction', 'updateSiteSlugAction', 'uploadSiteImageAction'];
+  for (const nome of paraFora) {
+    const inicio = src.indexOf(`export async function ${nome}`);
+    const corpo = inicio >= 0 ? src.slice(inicio, inicio + 2600) : '';
+    const linha = corpo.split('\n').find(l => l.includes('isDemo(professionalId)')) || '';
+    check(`${nome} recusa na conta teste (não devolve sucesso falso)`,
+      !!linha && /success:\s*false/.test(linha), linha.trim() || 'sem checagem de isDemo');
+  }
+
+  // O editor precisa avisar ANTES, não depois.
+  const editor = fs.readFileSync(path.join(ROOT, 'components/site/editor/SiteEditor.tsx'), 'utf8');
+  check('o editor mostra aviso visível na conta teste', /conta teste/i.test(editor));
+  check('o botão de publicar fica desativado na conta teste', /disabled=\{publishing \|\| isDemo\}/.test(editor));
+  check('o painel informa ao editor se é conta teste',
+    /isDemo=\{isDemo\(professionalId\)\}/.test(
+      fs.readFileSync(path.join(ROOT, 'app/(dashboard)/dashboard/site/page.tsx'), 'utf8')));
+
+  // Publicar só comemora depois de confirmar que a linha ficou publicada.
+  check('publishSiteAction confirma o estado gravado antes de dizer "está no ar"',
+    /published\.status !== 'published'/.test(src) && /!published\.published_config/.test(src));
+}
+
+// ============================================================================
 // Resultado
 // ============================================================================
 

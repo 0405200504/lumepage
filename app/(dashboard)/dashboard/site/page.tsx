@@ -7,6 +7,7 @@ import type { PublicService } from '@/components/site/types';
 import { normalizeConfig, defaultSiteConfig } from '@/lib/site/config';
 import { getTemplateMeta, DEFAULT_TEMPLATE_ID } from '@/lib/site/templates';
 import { toPublicServices } from '@/lib/site/publicService';
+import { isDemo } from '@/lib/demo';
 
 /**
  * ============================================================================
@@ -68,6 +69,7 @@ export default async function MinhaPaginaPage() {
       exists={!!site}
       services={services}
       appUrl={base}
+      isDemo={isDemo(professionalId)}
     />
   );
 }

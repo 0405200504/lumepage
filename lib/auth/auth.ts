@@ -5,7 +5,23 @@ import { Profile } from '@/types/database';
 import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
 import { signSession, verifySession } from './cookie';
 
-const SESSION_COOKIE_NAME = 'lume_session';
+/**
+ * ESCOPOS DE SESSÃO
+ * -----------------
+ * Antes existia um único cookie (`lume_session`) para admin e profissional. Como o
+ * login (inclusive o da conta teste) sempre sobrescrevia esse cookie, entrar na conta
+ * demo derrubava a sessão de Super Admin. Agora cada escopo tem o seu cookie e os dois
+ * convivem: dá para estar logado como admin e como profissional ao mesmo tempo.
+ *
+ * O cookie legado continua sendo LIDO (ninguém é deslogado no deploy) e é apagado assim
+ * que a pessoa faz login de novo.
+ */
+const LEGACY_COOKIE_NAME = 'lume_session';
+export const ADMIN_COOKIE_NAME = 'lume_admin_session';
+export const PRO_COOKIE_NAME = 'lume_pro_session';
+
+/** 'admin' = Super Admin da Lume. 'pro' = profissional ou gerente de salão. */
+export type SessionScope = 'admin' | 'pro';
 
 const SESSION_COOKIE_OPTS = {
   httpOnly: true,
@@ -14,6 +30,20 @@ const SESSION_COOKIE_OPTS = {
   maxAge: 60 * 60 * 24 * 7, // 7 dias
   path: '/',
 };
+
+/** Em qual escopo esta sessão vive. */
+export const scopeOfRole = (role: string): SessionScope =>
+  role === 'super_admin' ? 'admin' : 'pro';
+
+const cookieForScope = (scope: SessionScope): string =>
+  scope === 'admin' ? ADMIN_COOKIE_NAME : PRO_COOKIE_NAME;
+
+/** Grava a sessão no cookie do escopo certo e limpa o cookie legado. */
+async function writeSessionCookie(data: SessionData): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(cookieForScope(scopeOfRole(data.role)), signSession(data), SESSION_COOKIE_OPTS);
+  cookieStore.delete(LEGACY_COOKIE_NAME);
+}
 
 export interface SessionData {
   profile_id: string;
@@ -24,6 +54,10 @@ export interface SessionData {
   professional_id: string | null;
   salon_id?: string | null;
   is_salon_manager?: boolean;
+  /** E-mail do admin que está "entrando como" esta profissional (FASE 1.3). */
+  impersonated_by?: string;
+  /** Expiração em epoch-ms. Usada pela impersonação (30 min); ausente = validade do cookie. */
+  exp?: number;
 }
 
 /** Monta o SessionData a partir do perfil (inclui dados de gerente de salão). */
@@ -68,8 +102,7 @@ export const authService = {
           // 3. Salvar cookie de sessão para redundância e rapidez nas rotas do servidor
           const sessionData: SessionData = buildSession(profile, authData.user.id);
 
-          const cookieStore = await cookies();
-          cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
+          await writeSessionCookie(sessionData);
 
           return { success: true, profile };
         }
@@ -88,8 +121,7 @@ export const authService = {
     // No Mock aceitamos qualquer senha para fins de facilidade de testes
     const sessionData: SessionData = buildSession(profile, null);
 
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
+    await writeSessionCookie(sessionData);
 
     return { success: true, profile };
   },
@@ -172,8 +204,7 @@ export const authService = {
 
       // 5. Monta o cookie de sessão assinado (mesmo formato do login por senha).
       const sessionData: SessionData = buildSession(profile, user.id);
-      const cookieStore = await cookies();
-      cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
+      await writeSessionCookie(sessionData);
       return { success: true, role: profile.role };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao entrar com Google.' };
@@ -192,18 +223,23 @@ export const authService = {
       salon_id: null,
       is_salon_manager: false,
     };
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, signSession(sessionData), SESSION_COOKIE_OPTS);
+    // Escopo 'pro': entrar na conta teste NÃO derruba mais a sessão de admin.
+    await writeSessionCookie(sessionData);
     return true;
   },
 
-  // Logout
-  logout: async (): Promise<boolean> => {
+  /**
+   * Logout. Sem escopo, encerra tudo (comportamento antigo). Com escopo, encerra só
+   * aquele painel — sair do admin não desloga a profissional e vice-versa.
+   */
+  logout: async (scope?: SessionScope): Promise<boolean> => {
     try {
       const cookieStore = await cookies();
-      cookieStore.delete(SESSION_COOKIE_NAME);
+      if (!scope || scope === 'admin') cookieStore.delete(ADMIN_COOKIE_NAME);
+      if (!scope || scope === 'pro') cookieStore.delete(PRO_COOKIE_NAME);
+      if (!scope) cookieStore.delete(LEGACY_COOKIE_NAME);
 
-      if (isSupabaseConfigured) {
+      if (isSupabaseConfigured && scope !== 'admin') {
         await supabase.auth.signOut();
       }
       return true;
@@ -213,8 +249,13 @@ export const authService = {
     }
   },
 
-  // Obter Usuário da Sessão Atual
-  getCurrentUser: async (): Promise<SessionData | null> => {
+  /**
+   * Sessão atual.
+   * - `scope` definido → lê SÓ aquele escopo (é o que o /admin e o /dashboard usam).
+   * - `scope` omitido → profissional primeiro, admin como fallback. Mantém o
+   *   comportamento das rotas que não distinguem painel (API, bot, página inicial).
+   */
+  getCurrentUser: async (scope?: SessionScope): Promise<SessionData | null> => {
     let cookieStore;
     try {
       cookieStore = await cookies();
@@ -225,27 +266,34 @@ export const authService = {
       return null;
     }
 
-    try {
-      const cookie = cookieStore.get(SESSION_COOKIE_NAME);
-      if (!cookie || !cookie.value) {
-        // Se estiver com Supabase configurado, podemos ler a sessão dele caso não haja cookie
-        if (isSupabaseConfigured) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const profile = await dbService.getProfileByAuthUserId(user.id);
-            if (profile) {
-              return buildSession(profile, user.id);
-            }
-          }
-        }
-        return null;
-      }
+    /** Lê e valida o cookie de um escopo (com fallback no cookie legado). */
+    const readScope = (want: SessionScope): SessionData | null => {
+      const scoped = verifySession<SessionData>(cookieStore!.get(cookieForScope(want))?.value);
+      // Sessão de impersonação expirada é sessão inexistente (o cookie até dura mais,
+      // mas o payload assinado carrega o prazo real).
+      if (scoped?.exp && Date.now() > scoped.exp) return null;
+      if (scoped && scopeOfRole(scoped.role) === want) return scoped;
+      // Compatibilidade: quem já estava logado antes da separação continua logado.
+      const legacy = verifySession<SessionData>(cookieStore!.get(LEGACY_COOKIE_NAME)?.value);
+      if (legacy && scopeOfRole(legacy.role) === want) return legacy;
+      return null;
+    };
 
-      // Valida a assinatura HMAC do cookie. Cookie forjado/adulterado → null
-      // (cai como não autenticado), em vez de ser aceito como antes.
-      const sessionData = verifySession<SessionData>(cookie.value);
-      if (!sessionData) return null;
-      return sessionData;
+    try {
+      if (scope) return readScope(scope);
+
+      const session = readScope('pro') ?? readScope('admin');
+      if (session) return session;
+
+      // Sem cookie nenhum: com Supabase configurado, tenta a sessão dele.
+      if (isSupabaseConfigured) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await dbService.getProfileByAuthUserId(user.id);
+          if (profile) return buildSession(profile, user.id);
+        }
+      }
+      return null;
     } catch (e: any) {
       if (e.digest === 'DYNAMIC_SERVER_USAGE' || (e.message && e.message.includes('Dynamic server usage'))) {
         throw e;
