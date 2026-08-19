@@ -1,5 +1,7 @@
 'use server';
 
+import { randomBytes } from 'crypto';
+
 import { cookies } from 'next/headers';
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
@@ -67,7 +69,10 @@ export async function createProfessionalForSalonAction(input: { name: string; br
     if (await dbService.getProfessionalBySlug(slug)) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
 
     const profId = isSupabaseConfigured ? crypto.randomUUID() : 'prof_' + Math.random().toString(36).slice(2, 9);
-    const tempPassword = 'Lume' + whatsapp.substring(0, 4) + '!';
+    // Aleatória e forte. Antes era 'Lume' + os 4 primeiros dígitos do telefone + '!' —
+    // adivinhável por qualquer pessoa que soubesse o número da funcionária. Mesmo
+    // conserto já aplicado em app/actions/admin.ts.
+    const tempPassword = 'Lm-' + randomBytes(9).toString('base64url');
 
     await dbService.createProfessional({
       id: profId, owner_user_id: null, salon_id: session.salon_id,

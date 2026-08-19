@@ -63,12 +63,16 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
           <ul className="relative flex items-end gap-1.5 h-full pb-4">
             {data.map((p, i) => (
               <li key={i} className="flex-1 min-w-0 flex flex-col justify-end h-full group" title={p.hint ?? `${p.label}: ${format(p.value)}`}>
+                {/* O valor exato aparece no hover — não é decoração, é a informação
+                    que o eixo aproxima. */}
+                <span className="block text-[10px] text-center tabular-nums text-ink font-semibold opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                  {format(p.value)}
+                </span>
                 <span
                   className="w-full rounded-t bg-accent transition-opacity group-hover:opacity-80"
                   style={{ height: `${Math.max(2, (p.value / max) * 100)}%`, opacity: p.value ? 1 : 0.18 }}
                   aria-hidden
                 />
-                <span className="absolute bottom-0 left-0 right-0 hidden" aria-hidden />
               </li>
             ))}
           </ul>

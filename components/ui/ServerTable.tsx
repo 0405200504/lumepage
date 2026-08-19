@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { RawSearchParams, TableParams, buildHref, nextSort } from '@/lib/query-params';
 import { TablePagination } from './TablePagination';
+import { ColumnMenu } from './ColumnMenu';
 
 /**
  * TABELA DO PAINEL ADMIN — server-driven
@@ -33,6 +34,8 @@ export interface ServerColumn<T> {
   primary?: boolean;
   /** Rótulo do cartão no mobile (padrão: header). */
   mobileLabel?: string;
+  /** Nome legível no menu de colunas. Sem isto, a coluna não pode ser escondida. */
+  menuLabel?: string;
   cell: (row: T) => React.ReactNode;
 }
 
@@ -70,30 +73,45 @@ const alignClass = (col: { align?: string; numeric?: boolean }) => {
 };
 
 export function ServerTable<T>({
-  columns, rows, rowKey, total, params, basePath, searchParams,
+  columns: allColumns, rows, rowKey, total, params, basePath, searchParams,
   rowHref, empty, caption, toolbar, footerLeft,
 }: ServerTableProps<T>) {
   const isEmpty = rows.length === 0;
 
+  // Colunas escondidas vivem na URL (?cols=a,b), do mesmo jeito que filtro e ordem.
+  // Antes a coluna que não cabia simplesmente sumia cortada, com a barra de rolagem
+  // horizontal invisível — informação perdida sem aviso.
+  const rawCols = searchParams?.cols;
+  const hidden = (Array.isArray(rawCols) ? rawCols[0] : rawCols || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const columns = allColumns.filter(c => !(c.menuLabel && hidden.includes(c.key)));
+  const menuColumns = allColumns.filter(c => c.menuLabel).map(c => ({ key: c.key, label: c.menuLabel as string }));
+
   return (
     <div className="card overflow-hidden">
-      {toolbar && (
-        <div className="px-4 py-3 border-b border-line bg-surface-2/40 no-print">{toolbar}</div>
+      {(toolbar || menuColumns.length > 0) && (
+        <div className="px-4 py-3 border-b border-line bg-surface-2/40 no-print flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">{toolbar}</div>
+          {menuColumns.length > 0 && <ColumnMenu columns={menuColumns} hidden={hidden} />}
+        </div>
       )}
 
       {isEmpty ? (
-        <div className="py-16 px-6 flex flex-col items-center text-center">
-          {empty?.icon && <div className="mb-4 text-gray-450">{empty.icon}</div>}
-          <h3 className="text-sm font-bold text-ink">{empty?.title ?? 'Nada por aqui'}</h3>
+        /* Uma frase e uma ação. O ícone gigante centralizado saiu: ele ocupava a
+           tela inteira e não dizia o que fazer em seguida. */
+        <div className="px-4 py-6">
+          <p className="text-[13px] font-semibold text-[color:var(--ink)]">{empty?.title ?? 'Nada por aqui'}</p>
           {empty?.description && (
-            <p className="mt-1.5 text-xs text-gray-450 max-w-sm leading-relaxed">{empty.description}</p>
+            <p className="mt-1 text-[13px] text-[color:var(--ink-muted)] max-w-xl leading-snug">{empty.description}</p>
           )}
-          {empty?.action && <div className="mt-5">{empty.action}</div>}
+          {empty?.action && <div className="mt-3">{empty.action}</div>}
         </div>
       ) : (
         <>
           {/* ————— Desktop: tabela ————— */}
-          <div className="hidden md:block overflow-x-auto scroll-touch max-h-[70vh]">
+          {/* `table-scroll` deixa a barra horizontal SEMPRE visível e marca a borda
+              direita quando há mais coluna para o lado — nada de corte silencioso. */}
+          <div className="hidden md:block overflow-x-auto scroll-touch table-scroll max-h-[70vh]">
             <table className="min-w-full text-left border-collapse">
               <caption className="sr-only">{caption}</caption>
               <thead className="sticky top-0 z-10 bg-surface-2 text-[11px] font-bold text-muted uppercase tracking-[0.08em]">

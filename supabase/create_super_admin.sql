@@ -24,7 +24,9 @@ BEGIN
       raw_app_meta_data, raw_user_meta_data
     ) VALUES (
       '00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated',
-      v_email, crypt(v_password, gen_salt('bf')),
+      -- gen_salt('bf') sem argumento usa custo 6 — fraco demais para uma conta de
+      -- Super Admin. 10 é o mesmo custo que o GoTrue usa nas contas normais.
+      v_email, crypt(v_password, gen_salt('bf', 10)),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       jsonb_build_object('name', v_name)
@@ -42,7 +44,7 @@ BEGIN
   ELSE
     -- Já existe: garante senha e confirmação
     UPDATE auth.users
-      SET encrypted_password = crypt(v_password, gen_salt('bf')),
+      SET encrypted_password = crypt(v_password, gen_salt('bf', 10)),
           email_confirmed_at = COALESCE(email_confirmed_at, now())
       WHERE id = v_uid;
   END IF;

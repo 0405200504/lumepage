@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
+import { StatCard } from '@/components/admin/primitives';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { getReports } from '@/lib/admin/reports';
 import { parseTableParams, RawSearchParams } from '@/lib/query-params';
@@ -21,11 +22,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   const maxMonthly = Math.max(1, ...r.monthly.map(m => m.appointments));
 
   const kpi = (label: string, value: string, hint?: string) => (
-    <div className="card px-4 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</p>
-      <p className="text-2xl font-bold text-heading tabular-nums leading-tight mt-0.5">{value}</p>
-      {hint && <p className="text-[11px] text-muted mt-0.5">{hint}</p>}
-    </div>
+    <StatCard key={label} label={label} value={value} note={hint} />
   );
 
   return (

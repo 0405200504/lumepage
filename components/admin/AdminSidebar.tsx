@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, Store, CalendarDays, UserCircle, Wallet, BarChart3,
   LogOut, Menu, X, PanelLeftClose, PanelLeftOpen, CreditCard, MessageCircle,
-  ScrollText, Settings, Activity, Megaphone, Bell,
+  ScrollText, Settings, Activity, Megaphone, Bell, KeyRound,
 } from 'lucide-react';
 import { LumeLogo } from '../ui/LumeLogo';
 
@@ -34,6 +34,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: '/admin', label: 'Visão Geral', icon: LayoutDashboard },
       { href: '/admin/professionals', label: 'Profissionais', icon: Users },
+      { href: '/admin/professionals/acessos', label: 'Acessos', icon: KeyRound },
       { href: '/admin/salons', label: 'Grupos', icon: Store },
     ],
   },
@@ -65,8 +66,16 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-const isActiveHref = (pathname: string, href: string): boolean =>
-  href === '/admin' ? pathname === '/admin' : pathname === href || pathname.startsWith(`${href}/`);
+/**
+ * Item ativo = o href MAIS ESPECÍFICO que casa com a rota atual.
+ * Sem isso, /admin/professionals/acessos acenderia dois itens ao mesmo tempo
+ * (Profissionais e Acessos), porque um é prefixo do outro.
+ */
+function activeHrefFor(pathname: string): string | null {
+  const matches = GROUPS.flatMap(g => g.items).map(i => i.href).filter(href =>
+    href === '/admin' ? pathname === '/admin' : pathname === href || pathname.startsWith(`${href}/`));
+  return matches.sort((a, b) => b.length - a.length)[0] ?? null;
+}
 
 interface NavProps {
   mini: boolean;
@@ -80,6 +89,7 @@ interface NavProps {
 
 /** Conteúdo da barra. Fora do componente pai para não ser recriado a cada render. */
 function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, onLogout }: NavProps) {
+  const currentHref = activeHrefFor(pathname);
   return (
     <div className={`flex flex-col h-full surface-wine text-white select-none overflow-y-auto scrollbar-none ${mini ? 'px-2.5 py-5' : 'px-4 py-5'}`}>
       <div className={`flex items-center ${mini ? 'flex-col gap-3' : 'justify-between'}`}>
@@ -104,6 +114,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
       </div>
 
       <nav className="mt-7 space-y-6 flex-1" aria-label="Navegação do painel administrativo">
+        {/* Calculado uma vez: ver activeHrefFor. */}
         {GROUPS.map(group => (
           <div key={group.title}>
             {mini ? (
@@ -114,7 +125,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
             <ul className="space-y-1">
               {group.items.map(item => {
                 const Icon = item.icon;
-                const active = isActiveHref(pathname, item.href);
+                const active = currentHref === item.href;
                 return (
                   <li key={item.href}>
                     <Link
@@ -124,13 +135,13 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
                       aria-current={active ? 'page' : undefined}
                       className={`group relative flex items-center rounded-xl text-[13px] font-semibold transition-colors ${
                         mini ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-3 py-2.5'
-                      } ${active ? 'bg-white text-wine-700 shadow-[0_8px_20px_-12px_rgba(0,0,0,0.7)]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+                      } ${active ? 'bg-white text-wine-700' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}
                     >
                       <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-wine-700' : 'text-white/55 group-hover:text-white'}`} />
                       {!mini && <span>{item.label}</span>}
                       {/* Tooltip do modo recolhido — a barra antiga não tinha nenhum. */}
                       {mini && (
-                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-lg bg-wine-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-[2px] bg-wine-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
                           {item.label}
                         </span>
                       )}

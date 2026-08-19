@@ -9,6 +9,8 @@ import { AdminNotices } from '@/components/dashboard/AdminNotices';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
+import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
+import { mustChangePassword } from '@/lib/auth/must-change-password';
 import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
 
 /**
@@ -23,6 +25,9 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await requireProfessional();
+
+  // Senha temporária definida pelo suporte: destrava só depois que ela escolher a dela.
+  const forcePasswordChange = await mustChangePassword(session);
 
   let brandName = '';
   let slug = '';
@@ -78,6 +83,7 @@ export default async function DashboardLayout({
       }}
     >
       {isTrialExpired && <PlanosOverlay />}
+      {forcePasswordChange && <ForcePasswordChange />}
 
       <Sidebar
         role="professional"
@@ -92,7 +98,12 @@ export default async function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Admin "entrando como": faixa fixa, impossível de ignorar. */}
         {session.impersonated_by && (
-          <ImpersonationBanner brandName={brandName || session.name} adminEmail={session.impersonated_by} />
+          <ImpersonationBanner
+            brandName={brandName || session.name}
+            adminEmail={session.impersonated_by}
+            readOnly={session.readonly !== false}
+            expiresAt={session.exp}
+          />
         )}
         {session.is_salon_manager && <ActingBanner brandName={brandName || 'profissional'} />}
         <Header

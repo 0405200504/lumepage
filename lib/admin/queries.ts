@@ -2,6 +2,7 @@ import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { TableParams, toISODate } from '@/lib/query-params';
 import { Appointment, Client, Professional, WhatsAppSettings } from '@/types/database';
+import { accountState, AccountStateResult } from './account-state';
 
 /**
  * CONSULTAS DO PAINEL ADMIN
@@ -55,6 +56,23 @@ export interface ProfessionalRow {
   lastSignInAt: string | null;
   /** Conta de teste evidente (page 1..5, "teste", e-mail example.com). */
   looksLikeTest: boolean;
+}
+
+/** Estado derivado de uma linha da lista. Um lugar só, memoizado por request. */
+const stateCache = new WeakMap<object, AccountStateResult>();
+function stateOf(r: ProfessionalRow): AccountStateResult {
+  const hit = stateCache.get(r);
+  if (hit) return hit;
+  const s = accountState({
+    status: r.status,
+    subscription_status: r.subscriptionStatus,
+    subscription_plan: r.plan,
+    subscription_ends_at: r.subscriptionEndsAt,
+    trial_ends_at: r.trialEndsAt,
+    created_at: r.createdAt,
+  });
+  stateCache.set(r, s);
+  return s;
 }
 
 const TEST_NAME = /^(page\s*\d+|teste|test)$/i;
@@ -161,7 +179,9 @@ export async function listProfessionals(params: TableParams): Promise<Profession
 
   // ————— filtros —————
   const f = params.filters;
-  if (f.status) rows = rows.filter(r => r.status === f.status);
+  // Filtro por SITUAÇÃO derivada, não por `professionals.status` cru — é o mesmo
+  // estado que o selo da linha mostra (lib/admin/account-state.ts).
+  if (f.status) rows = rows.filter(r => stateOf(r).state === f.status);
   if (f.plan) rows = rows.filter(r => (r.plan ?? 'none') === f.plan);
   if (f.bot === 'yes') rows = rows.filter(r => r.botConfigured);
   if (f.bot === 'no') rows = rows.filter(r => !r.botConfigured);
@@ -171,9 +191,11 @@ export async function listProfessionals(params: TableParams): Promise<Profession
     const limit = new Date(); limit.setDate(limit.getDate() + 7);
     rows = rows.filter(r => {
       const end = r.subscriptionEndsAt || r.trialEndsAt;
-      return !!end && new Date(end) <= limit && new Date(end) >= new Date();
+      return !!end && new Date(end) <= limit && new Date(end) >= new Date() && stateOf(r).hasAccess;
     });
   }
+  if (f.risk === 'expired') rows = rows.filter(r => stateOf(r).state === 'expired');
+  if (f.risk === 'never') rows = rows.filter(r => !r.lastSignInAt);
   if (params.q) {
     const q = params.q.toLowerCase();
     rows = rows.filter(r =>
@@ -184,8 +206,8 @@ export async function listProfessionals(params: TableParams): Promise<Profession
   if (params.to) rows = rows.filter(r => r.createdAt <= `${params.to}T23:59:59`);
 
   const totals = {
-    active: rows.filter(r => r.status === 'active').length,
-    paused: rows.filter(r => r.status === 'paused').length,
+    active: rows.filter(r => stateOf(r).hasAccess).length,
+    paused: rows.filter(r => stateOf(r).state === 'paused').length,
     withBot: rows.filter(r => r.botConfigured).length,
     revenue30dCents: rows.reduce((s, r) => s + r.revenue30dCents, 0),
   };
@@ -194,7 +216,7 @@ export async function listProfessionals(params: TableParams): Promise<Profession
   const dir = params.dir === 'asc' ? 1 : -1;
   const sorters: Record<string, (a: ProfessionalRow, b: ProfessionalRow) => number> = {
     name: (a, b) => a.brandName.localeCompare(b.brandName, 'pt-BR'),
-    status: (a, b) => a.status.localeCompare(b.status),
+    status: (a, b) => stateOf(a).state.localeCompare(stateOf(b).state),
     plan: (a, b) => (a.plan ?? '').localeCompare(b.plan ?? ''),
     appts: (a, b) => a.appts30d - b.appts30d,
     revenue: (a, b) => a.revenue30dCents - b.revenue30dCents,

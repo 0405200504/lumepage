@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
+import { StatCard } from '@/components/admin/primitives';
 import { PlansEditor } from '@/components/admin/PlansEditor';
 import { listPlansAction } from '@/app/actions/admin-plans';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -49,18 +50,11 @@ export default async function AdminPlansPage() {
           </p>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="card px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">MRR estimado</p>
-            <p className="text-2xl font-bold text-heading tabular-nums">{brl(mrrCents)}</p>
-            <p className="text-[11px] text-muted">só contas com assinatura ativa</p>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          <StatCard label="MRR estimado" value={brl(mrrCents)} accent note="só contas com assinatura ativa" />
           {plans.map(p => (
-            <div key={p.key} className="card px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{p.name}</p>
-              <p className="text-2xl font-bold text-heading tabular-nums">{subscribers[p.key] ?? 0}</p>
-              <p className="text-[11px] text-muted">{brl(p.price_cents)}/{p.billing_cycle === 'yearly' ? 'ano' : 'mês'}</p>
-            </div>
+            <StatCard key={p.key} label={p.name} value={String(subscribers[p.key] ?? 0)}
+              note={`${brl(p.price_cents)}/${p.billing_cycle === 'yearly' ? 'ano' : 'mês'}`} />
           ))}
         </div>
 

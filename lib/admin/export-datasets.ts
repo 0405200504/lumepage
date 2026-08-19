@@ -3,6 +3,7 @@ import { CsvColumn, csvCents } from '@/lib/csv';
 import { TableParams } from '@/lib/query-params';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { formatDateBR, formatDateTimeBR } from '@/lib/format';
+import { listAccessRows, AccessRow, METHOD_LABEL } from '@/lib/admin/access';
 
 /**
  * CONJUNTOS EXPORTÁVEIS DO /ADMIN
@@ -18,7 +19,7 @@ import { formatDateBR, formatDateTimeBR } from '@/lib/format';
 const BATCH = 1000;
 const db = () => getSupabaseAdmin() || supabase;
 
-export type DatasetKey = 'professionals' | 'appointments' | 'clients';
+export type DatasetKey = 'professionals' | 'appointments' | 'clients' | 'access';
 
 interface Dataset<T> {
   filename: string;
@@ -153,7 +154,34 @@ const clients: Dataset<ClientRow> = {
   }),
 };
 
+// ————————————————————————————— Acessos —————————————————————————————
+// A "lista de logins" que o suporte precisa: quem entra por qual caminho, quando
+// entrou pela última vez e quantas sessões estão abertas. Nenhuma senha, nunca —
+// a coluna útil é justamente a que mostra quem NÃO consegue entrar.
+
+const access: Dataset<AccessRow> = {
+  filename: 'acessos',
+  columns: [
+    { header: 'Marca', value: r => r.brandName },
+    { header: 'Profissional', value: r => r.name },
+    { header: 'E-mail de login', value: r => r.loginEmail },
+    { header: 'E-mail comercial', value: r => r.businessEmail },
+    { header: 'Método', value: r => METHOD_LABEL[r.method] },
+    { header: 'Último acesso', value: r => formatDateTimeBR(r.lastSignInAt) },
+    { header: 'Sessões ativas', value: r => (r.activeSessions < 0 ? '' : r.activeSessions) },
+    { header: 'Senha definida em', value: r => formatDateBR(r.passwordSetAt) },
+    { header: 'Troca de senha pendente', value: r => (r.mustChangePassword ? 'sim' : 'não') },
+    { header: 'Consegue entrar', value: r => (r.hasAuthUser && r.method !== 'none' ? 'sim' : 'NÃO') },
+    { header: 'Status da conta', value: r => r.status },
+  ],
+  // Uma "página" só: a composição vem do GoTrue, não de uma query paginável.
+  batches: async function* () {
+    const { rows } = await listAccessRows();
+    if (rows.length) yield rows;
+  },
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const DATASETS: Record<DatasetKey, Dataset<any>> = { professionals, appointments, clients };
+export const DATASETS: Record<DatasetKey, Dataset<any>> = { professionals, appointments, clients, access };
 
 export const isDatasetKey = (v: string): v is DatasetKey => v in DATASETS;

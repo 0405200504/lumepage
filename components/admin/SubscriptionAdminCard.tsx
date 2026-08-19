@@ -1,5 +1,6 @@
 'use client';
 
+import { formatDateBR } from '@/lib/format';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Professional } from '@/types/database';
@@ -27,12 +28,8 @@ function daysUntil(iso?: string | null): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function formatDate(iso?: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+/** Toda data do painel passa por lib/format.ts — nada de toLocaleDateString solto. */
+const formatDate = (iso?: string | null): string => formatDateBR(iso, '—');
 
 export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
   const router = useRouter();
