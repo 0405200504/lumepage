@@ -1,10 +1,9 @@
 import { Appointment } from '@/types/database';
+// Formatação de data vive em lib/format.ts — um lugar só (ver o bug de data do admin).
+import { formatDateBR } from './format';
 
-/** Formata "YYYY-MM-DD" para "DD/MM/AAAA" sem problemas de fuso. */
-export function formatDateBR(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
+// Reexporte: várias telas já importam `formatDateBR` deste módulo.
+export { formatDateBR };
 
 /** Normaliza um número para o formato wa.me (apenas dígitos, com DDI 55). */
 export function normalizeWhatsapp(raw: string): string {

@@ -20,7 +20,7 @@ import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
-import { authService } from '@/lib/auth/auth';
+import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { getSupabaseAdmin } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
@@ -61,17 +61,8 @@ type Result<T = unknown> = { success: true } & T | { success: false; error: stri
  * A sessão atual pode agir sobre esta profissional?
  * Mesma regra já usada em professional.ts / anamnesis.ts — sem sistema paralelo.
  */
-async function authorize(professionalId: string): Promise<boolean> {
-  const session = await authService.getCurrentUser();
-  if (!session) return false;
-  if (session.role === 'super_admin') return true;
-  if (session.professional_id === professionalId) return true;
-  if (session.is_salon_manager) {
-    const prof = await dbService.getProfessionalById(professionalId);
-    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
-  }
-  return false;
-}
+/** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
+const authorize = authorizeProfessional;
 
 /** Campos da conta que pré-preenchem a página (nada é perguntado duas vezes). */
 async function seedFrom(professionalId: string): Promise<SiteSeedProfessional | undefined> {

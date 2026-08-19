@@ -3,12 +3,13 @@ import { authService } from '@/lib/auth/auth';
 import Link from 'next/link';
 
 export default async function HomePage() {
-  const session = await authService.getCurrentUser();
+  // Admin tem precedência: com as duas sessões abertas (admin + conta teste),
+  // a raiz leva ao painel administrativo.
+  const admin = await authService.getCurrentUser('admin');
+  if (admin) redirect('/admin');
 
-  // Se já estiver logado, manda direto para o painel
-  if (session) {
-    redirect(session.role === 'super_admin' ? '/admin' : '/dashboard');
-  }
+  const session = await authService.getCurrentUser('pro');
+  if (session) redirect('/dashboard');
 
   // Página pública para aprovação do Google (não redireciona mais forçadamente)
   return (

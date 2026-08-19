@@ -6,7 +6,7 @@ import { getAvailableSlots, getDaysAvailability, timeToMinutes } from '@/lib/app
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
-import { authService } from '@/lib/auth/auth';
+import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { isDemo } from '@/lib/demo';
 import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR, formatPriceBRL, normalizeWhatsapp } from '@/lib/whatsapp';
@@ -135,8 +135,9 @@ export async function getDaysAvailabilityAction(professionalId: string, dateStrs
  */
 export async function getSlotsInternalAction(professionalId: string, dateStr: string, durationMinutes: number) {
   try {
-    const session = await authService.getCurrentUser();
-    if (!session || (session.professional_id !== professionalId && session.role !== 'super_admin' && !session.is_salon_manager)) {
+    // IDOR fechado: antes bastava ser gerente de QUALQUER salão. authorizeProfessional
+    // confere se a profissional pertence ao salão de quem está pedindo.
+    if (!await authorizeProfessional(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
     const slots = await getAvailableSlots(professionalId, dateStr, durationMinutes);
@@ -169,8 +170,9 @@ export async function createManualAppointmentAction(input: {
   try {
     const { professionalId, serviceId, clientName, clientWhatsapp, date, startTime } = input;
 
-    const session = await authService.getCurrentUser();
-    if (!session || (session.professional_id !== professionalId && session.role !== 'super_admin' && !session.is_salon_manager)) {
+    // IDOR fechado: antes bastava ser gerente de QUALQUER salão. authorizeProfessional
+    // confere se a profissional pertence ao salão de quem está pedindo.
+    if (!await authorizeProfessional(professionalId)) {
       return { success: false, error: 'Não autorizado.' };
     }
     if (isDemo(professionalId)) return { success: true, appointmentId: 'demo' };

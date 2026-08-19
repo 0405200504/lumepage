@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { dbService } from '@/lib/supabase/db';
 import { authService } from '@/lib/auth/auth';
+import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { AppointmentStatus, Service, AvailabilityRule, Professional, Setting, BlockType } from '@/types/database';
 import { revalidatePath } from 'next/cache';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
@@ -12,18 +13,8 @@ import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
  */
-async function authorizeAction(professionalId: string): Promise<boolean> {
-  const session = await authService.getCurrentUser();
-  if (!session) return false;
-  if (session.role === 'super_admin') return true;
-  if (session.professional_id === professionalId) return true;
-  // Gerente de contas pode agir sobre as funcionárias do seu salão
-  if (session.is_salon_manager) {
-    const prof = await dbService.getProfessionalById(professionalId);
-    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
-  }
-  return false;
-}
+/** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
+const authorizeAction = authorizeProfessional;
 
 // 1. Atualizar Cadastro do Profissional
 export async function updateProfessionalAction(professionalId: string, data: Partial<Professional>) {

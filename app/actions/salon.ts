@@ -15,7 +15,7 @@ const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]
  */
 export async function actAsProfessionalAction(professionalId: string) {
   try {
-    const session = await authService.getCurrentUser();
+    const session = await authService.getCurrentUser('pro');
     if (!session || !session.is_salon_manager) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -50,7 +50,7 @@ export async function exitActingAction() {
  */
 export async function createProfessionalForSalonAction(input: { name: string; brandName: string; email: string; whatsapp: string }) {
   try {
-    const session = await authService.getCurrentUser();
+    const session = await authService.getCurrentUser('pro');
     if (!session || !session.is_salon_manager || !session.salon_id) {
       return { success: false, error: 'Não autorizado.' };
     }
@@ -100,7 +100,7 @@ export async function createProfessionalForSalonAction(input: { name: string; br
 /** Gerente pausa/ativa uma funcionária do seu salão. */
 export async function setProfessionalStatusForSalonAction(professionalId: string, status: ProfessionalStatus) {
   try {
-    const session = await authService.getCurrentUser();
+    const session = await authService.getCurrentUser('pro');
     if (!session || !session.is_salon_manager) return { success: false, error: 'Não autorizado.' };
     const prof = await dbService.getProfessionalById(professionalId);
     if (!prof || (prof.salon_id ?? null) !== (session.salon_id ?? null)) return { success: false, error: 'Profissional não pertence ao seu salão.' };

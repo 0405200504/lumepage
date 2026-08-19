@@ -1,24 +1,15 @@
 'use server';
 
 import { dbService } from '@/lib/supabase/db';
-import { authService } from '@/lib/auth/auth';
+import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { isDemo } from '@/lib/demo';
 import { WaitlistStatus } from '@/types/database';
 import { createManualAppointmentAction } from './booking';
 
 const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
 
-async function authorize(professionalId: string): Promise<boolean> {
-  const session = await authService.getCurrentUser();
-  if (!session) return false;
-  if (session.role === 'super_admin') return true;
-  if (session.professional_id === professionalId) return true;
-  if (session.is_salon_manager) {
-    const prof = await dbService.getProfessionalById(professionalId);
-    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
-  }
-  return false;
-}
+/** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
+const authorize = authorizeProfessional;
 
 /**
  * PÚBLICO — a cliente entra na lista de espera pela página de agendamento.

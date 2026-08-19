@@ -1,50 +1,93 @@
 import React from 'react';
+import Link from 'next/link';
+import { UserCircle, Users2, AlertTriangle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
-import { dbService } from '@/lib/supabase/db';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
-import { AdminClients } from '@/components/admin/AdminClients';
-import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
+import { ServerTable, ServerColumn } from '@/components/ui/ServerTable';
+import { SearchInput, FilterSelect, ClearFilters } from '@/components/ui/TableFilters';
+import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
+import { NormalizePhonesButton, RenameClientButton } from '@/components/admin/ClientTools';
+import { Badge } from '@/components/admin/badges';
+import { listClients, professionalOptions, ClientRow } from '@/lib/admin/queries';
+import { parseTableParams, RawSearchParams } from '@/lib/query-params';
+import { brl, formatDateBR } from '@/lib/format';
 
 export const metadata = { title: 'Clientes | Lume Admin' };
 
-const digits = (s: string) => (s || '').replace(/\D/g, '');
+const BASE = '/admin/clients';
 
-export default async function AdminClientsPage() {
+export default async function AdminClientsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const session = await requireAdmin();
-  const allProfessionals = await dbService.getProfessionals();
-  const allClients = await dbService.getAllClients();
-  const allAppointments = await dbService.getAllAppointments();
+  const raw = await searchParams;
+  const params = parseTableParams(raw, { filterKeys: ['prof'], defaultSort: 'name', defaultDir: 'asc' });
 
-  // Exclui a conta teste (Amanda) dos dados do super admin
-  const professionals = allProfessionals.filter(p => p.id !== DEMO_PROFESSIONAL_ID);
-  const clients = allClients.filter(c => c.professional_id !== DEMO_PROFESSIONAL_ID);
-  const appointments = allAppointments.filter(a => a.professional_id !== DEMO_PROFESSIONAL_ID);
+  const options = await professionalOptions();
+  const profNames = new Map(options.map(o => [o.value, o.label]));
+  const { rows, total, duplicateGroups } = await listClients(params, profNames);
 
-  const profName: Record<string, string> = {};
-  professionals.forEach(p => { profName[p.id] = p.brand_name || p.name; });
-
-  // stats por (profissional + whatsapp)
-  const stats: Record<string, { visits: number; noShows: number; last: string | null }> = {};
-  for (const a of appointments) {
-    const k = `${a.professional_id}|${digits(a.client_whatsapp)}`;
-    const s = (stats[k] ||= { visits: 0, noShows: 0, last: null });
-    if (a.status !== 'cancelled') s.visits++;
-    if (a.status === 'no_show') s.noShows++;
-    if (['completed', 'confirmed'].includes(a.status) && (!s.last || a.date > s.last)) s.last = a.date;
-  }
-
-  const items = clients.map(c => {
-    const s = stats[`${c.professional_id}|${digits(c.whatsapp)}`] || { visits: c.total_appointments || 0, noShows: 0, last: c.last_appointment_at };
-    return {
-      id: c.id, name: c.name, whatsapp: c.whatsapp, email: c.email,
-      professional_id: c.professional_id, professional_name: profName[c.professional_id] || '—',
-      visits: s.visits, noShows: s.noShows, last: s.last,
-    };
-  });
+  const columns: ServerColumn<ClientRow>[] = [
+    {
+      key: 'name', header: 'Cliente', sortable: true, primary: true,
+      cell: r => (
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="min-w-0">
+            <span className="block font-semibold text-ink truncate">{r.name}</span>
+            <span className="block text-[11px] text-muted tabular-nums">{r.whatsapp}{r.email ? ` · ${r.email}` : ''}</span>
+          </span>
+          {r.namelessy && <Badge tone="warn" title="O nome cadastrado é o próprio telefone">sem nome</Badge>}
+        </span>
+      ),
+    },
+    { key: 'prof', header: 'Profissional', cell: r => <span className="text-xs text-muted truncate">{r.professionalName}</span> },
+    { key: 'visits', header: 'Visitas', sortable: true, numeric: true, cell: r => r.visits },
+    { key: 'noshow', header: 'Faltas', numeric: true, cell: r => r.noShows > 0 ? <span className="text-[color:var(--color-bad)] font-bold">{r.noShows}</span> : '0' },
+    { key: 'spent', header: 'Total gasto', numeric: true, cell: r => brl(r.spentCents) },
+    { key: 'last', header: 'Última visita', sortable: true, cell: r => <span className="text-xs text-muted tabular-nums">{formatDateBR(r.lastVisit, 'nunca')}</span> },
+    { key: 'created', header: 'Cadastro', sortable: true, hideOnMobile: true, cell: r => <span className="text-xs text-muted tabular-nums">{formatDateBR(r.createdAt)}</span> },
+    { key: 'fix', header: '', align: 'right', hideOnMobile: true, cell: r => r.namelessy ? <RenameClientButton id={r.id} current={r.name} /> : null },
+  ];
 
   return (
-    <LayoutAdmin session={session} title="Clientes da Rede" subtitle="Toda a base de clientes da plataforma, por profissional.">
-      <AdminClients items={items} professionals={professionals.map(p => ({ id: p.id, name: p.brand_name || p.name }))} />
+    <LayoutAdmin
+      session={session}
+      title="Clientes da rede"
+      subtitle="A base de clientes de todas as profissionais, com gasto, faltas e duplicatas."
+      actions={<><NormalizePhonesButton /><ExportCsvButton dataset="clients" /></>}
+    >
+      <div className="space-y-4">
+        {duplicateGroups > 0 && (
+          <Link href="/admin/clients/duplicates" className="card px-4 py-3 flex items-center gap-2.5 text-xs hover:bg-surface-2 transition-colors">
+            <AlertTriangle className="h-4 w-4 text-[color:var(--color-warn)] shrink-0" aria-hidden />
+            <span className="text-ink font-semibold">
+              {duplicateGroups} grupo(s) de clientes duplicadas — mesmo telefone, cadastros diferentes.
+            </span>
+            <span className="ml-auto font-bold text-accent-link">Revisar e unificar →</span>
+          </Link>
+        )}
+
+        <ServerTable
+          columns={columns}
+          rows={rows}
+          rowKey={r => r.id}
+          total={total}
+          params={params}
+          basePath={BASE}
+          searchParams={raw}
+          rowHref={r => `${BASE}/${r.id}`}
+          caption="Clientes de toda a rede com histórico de visitas e gastos"
+          toolbar={
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchInput basePath={BASE} placeholder="Nome, telefone ou e-mail…" className="w-full sm:w-72" />
+              <FilterSelect basePath={BASE} name="prof" label="Profissional" allLabel="Todas as profissionais" options={options} />
+              <ClearFilters basePath={BASE} keys={['q', 'prof', 'range', 'from', 'to']} />
+              <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted">
+                <Users2 className="h-3.5 w-3.5" /> {total.toLocaleString('pt-BR')} cliente(s)
+              </span>
+            </div>
+          }
+          empty={{ title: 'Nenhuma cliente encontrada', description: 'Ajuste a busca ou o filtro de profissional.', icon: <UserCircle className="h-8 w-8" /> }}
+        />
+      </div>
     </LayoutAdmin>
   );
 }
