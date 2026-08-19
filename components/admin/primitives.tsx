@@ -4,85 +4,88 @@ import Link from 'next/link';
 /**
  * PRIMITIVAS DO ADMIN
  * -------------------
- * Três peças que aparecem em toda tela. O que elas deliberadamente NÃO têm:
- *
- *  - ícone Lucide dentro de um quadradinho colorido no topo do cartão. Era a marca
- *    registrada do visual genérico e estava em todos os KPIs do painel. Aqui o lugar
- *    do ícone é ocupado por um rótulo tipográfico — ou por nada.
- *  - sombra. A estrutura vem do filete de 1px.
- *  - degradê. Em lugar nenhum.
- *
- * Hierarquia: rótulo 10,5px em caixa-alta com tracking aberto · número 32px tabular ·
- * nota 11px em tinta fraca. Tamanho e espaço fazem o trabalho que a cor não deve fazer.
+ * Mesmo vocabulário visual dos cartões do painel da profissional
+ * (components/dashboard/DashboardOverview.tsx): `card-elevated` arredondado, ícone
+ * dentro de um quadradinho tintado, número grande em Manrope black com tabular-nums
+ * e rótulo em cinza abaixo. O admin não tem um sistema visual próprio — é o mesmo
+ * produto, e um KPI daqui deve ser reconhecível como um KPI de lá.
  */
 
-export function StatCard({ label, value, note, href, accent = false, className = '' }: {
+/** Tintas do ícone — as mesmas quatro usadas nos KPIs do painel da profissional. */
+export type StatTint = 'wine' | 'indigo' | 'amber' | 'emerald';
+
+const TINT: Record<StatTint, string> = {
+  wine: 'bg-wine-700/10 text-wine-700',
+  indigo: 'bg-indigo-500/10 text-indigo-600',
+  amber: 'bg-amber-500/10 text-amber-600',
+  emerald: 'bg-emerald-500/10 text-emerald-600',
+};
+
+export function StatCard({ label, value, note, href, icon, tint = 'wine', className = '' }: {
   label: string;
   value: string;
   /** Linha secundária: comparação, contexto, unidade. */
   note?: React.ReactNode;
   href?: string;
-  /** Um número por tela pode receber o bordô. Só um. */
-  accent?: boolean;
+  icon?: React.ReactNode;
+  tint?: StatTint;
   className?: string;
 }) {
   const body = (
     <>
-      <span className="admin-eyebrow block">{label}</span>
-      <span className={`admin-figure block mt-2.5 ${accent ? 'text-[color:var(--accent)]' : ''}`}>{value}</span>
-      {note && <span className="block mt-1.5 text-[11px] text-[color:var(--ink-muted)] leading-snug">{note}</span>}
+      {icon && (
+        <span className={`inline-flex items-center justify-center h-9 w-9 rounded-xl ${TINT[tint]}`}>
+          {icon}
+        </span>
+      )}
+      <p className={`text-xl sm:text-2xl font-black text-ink leading-none tabular-nums ${icon ? 'mt-4' : ''}`}>{value}</p>
+      <span className="text-[11px] font-bold text-gray-450 mt-1.5 block">{label}</span>
+      {note && <span className="block text-[10px] text-gray-450 font-medium mt-0.5">{note}</span>}
     </>
   );
 
-  const shell = `border border-[color:var(--rule-subtle)] rounded-[8px] bg-[color:var(--surface-card)] px-3.5 py-3 ${className}`;
+  const shell = `card-elevated p-4 sm:p-5 rounded-3xl ${className}`;
 
   return href
-    ? <Link href={href} className={`${shell} block hover:border-[color:var(--rule-strong)] transition-colors`}>{body}</Link>
+    ? <Link href={href} className={`${shell} block hover:-translate-y-0.5`}>{body}</Link>
     : <div className={shell}>{body}</div>;
 }
 
-/**
- * Cabeçalho de seção numerado ("01 — Precisa da sua atenção").
- * A numeração é o que dá ao painel cara de documento operacional em vez de
- * dashboard genérico: as seções passam a ter ordem declarada, não só posição.
- */
-export function SectionHeader({ index, title, note, action }: {
-  index?: string;
+/** Cabeçalho de seção — mesmo peso dos títulos internos do painel da profissional. */
+export function SectionHeader({ title, note, action, icon }: {
   title: string;
   note?: React.ReactNode;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3 pb-2 border-b border-[color:var(--rule-subtle)]">
-      {index && <span className="admin-section-index shrink-0">{index} —</span>}
-      <h2 className="text-[15px] font-semibold text-[color:var(--ink)] leading-none">{title}</h2>
-      {note && <span className="text-[11px] text-[color:var(--ink-muted)]">{note}</span>}
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3">
+      {icon && <span className="text-gray-450 shrink-0">{icon}</span>}
+      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      {note && <span className="text-[11px] text-gray-450">{note}</span>}
       {action && <span className="ml-auto">{action}</span>}
     </div>
   );
 }
 
-/**
- * Estado vazio: uma frase e uma ação. Nunca um ícone gigante centralizado —
- * o ícone não diz o que fazer, a frase diz.
- */
+/** Estado vazio de uma linha só, com a ação ao lado. */
 export function EmptyLine({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <p className="border border-[color:var(--rule-subtle)] rounded-[8px] px-4 py-3.5 text-[13px] text-[color:var(--ink-muted)] flex flex-wrap items-center gap-x-2 gap-y-1">
+    <p className="card px-4 py-3.5 text-xs text-gray-450 flex flex-wrap items-center gap-x-2 gap-y-1">
       <span>{children}</span>
       {action}
     </p>
   );
 }
 
-/** Linha de dado sem cartão: filete no topo, densidade alta. */
+/** Lista secundária dentro de um cartão. */
 export function RuleList({ children }: { children: React.ReactNode }) {
-  return <ul className="border-t border-[color:var(--rule-subtle)]">{children}</ul>;
+  return <ul className="divide-y divide-line">{children}</ul>;
 }
 
 export function RuleItem({ children, href }: { children: React.ReactNode; href?: string }) {
-  const cls = 'flex flex-wrap items-center gap-x-3 gap-y-1 py-2 border-b border-[color:var(--rule-subtle)] text-[13px]';
+  const cls = 'flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-xs';
   return href
-    ? <li><Link href={href} className={`${cls} hover:text-[color:var(--accent)] transition-colors`}>{children}</Link></li>
+    ? <li><Link href={href} className={`${cls} hover:bg-surface-2 transition-colors`}>{children}</Link></li>
     : <li className={cls}>{children}</li>;
 }

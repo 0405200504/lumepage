@@ -5,20 +5,19 @@ import { accountState, AccountStateInput } from '@/lib/admin/account-state';
 
 type Tone = 'ok' | 'warn' | 'bad' | 'neutral' | 'accent';
 
-/* Trio bg / border / text por tom — os mesmos tokens em claro e em escuro.
-   Raio de 2px: badge e input compartilham o valor mais fechado da escala; o pill
-   arredondado saiu junto com o resto do vocabulário de "template SaaS". */
+/* Pills — os mesmos do painel da profissional: fundo em 10% do tom, texto no tom
+   cheio e anel de 1px. */
 const TONE: Record<Tone, string> = {
-  ok: 'bg-[color:var(--ok-bg)] text-[color:var(--ok-ink)] border-[color:var(--ok-edge)]',
-  warn: 'bg-[color:var(--warn-bg)] text-[color:var(--warn-ink)] border-[color:var(--warn-edge)]',
-  bad: 'bg-[color:var(--bad-bg)] text-[color:var(--bad-ink)] border-[color:var(--bad-edge)]',
-  neutral: 'bg-transparent text-[color:var(--ink-muted)] border-[color:var(--rule-strong)]',
-  accent: 'bg-[color:var(--accent-tint)] text-[color:var(--color-accent-link)] border-[color:var(--accent-edge)]',
+  ok: 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)] ring-[color:var(--color-ok)]/20',
+  warn: 'bg-[color:var(--color-warn)]/10 text-[color:var(--color-warn)] ring-[color:var(--color-warn)]/20',
+  bad: 'bg-[color:var(--color-bad)]/10 text-[color:var(--color-bad)] ring-[color:var(--color-bad)]/20',
+  neutral: 'bg-surface-2 text-muted ring-line',
+  accent: 'bg-accent-soft text-accent-link ring-accent-soft-border',
 };
 
 export function Badge({ tone = 'neutral', children, title }: { tone?: Tone; children: React.ReactNode; title?: string }) {
   return (
-    <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-px rounded-[2px] text-[11px] font-medium border whitespace-nowrap ${TONE[tone]}`}>
+    <span title={title} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ring-1 whitespace-nowrap ${TONE[tone]}`}>
       {children}
     </span>
   );

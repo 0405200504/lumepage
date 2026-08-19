@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronRight, Bell } from 'lucide-react';
+import { ChevronRight, ShieldAlert, Bell } from 'lucide-react';
 import { AdminGlobalSearch } from './AdminGlobalSearch';
 import { ThemeToggle } from './ThemeToggle';
 import { DensityToggle } from './DensityToggle';
@@ -11,14 +11,16 @@ import { DensityToggle } from './DensityToggle';
 /**
  * Barra superior do admin.
  *
- * DEFEITO CORRIGIDO NESTA RODADA: a faixa herdava `.glass`, que pintava de carvão
- * escuro mesmo no tema claro, enquanto os tokens de texto continuavam os do claro.
- * Título e breadcrumb ficavam cinza-escuro sobre cinza-escuro (~2:1) — o segundo
- * item do breadcrumb sumia por completo. Agora a faixa acompanha o fundo da página
- * (areia) e se separa do conteúdo por filete, não por cor.
+ * Mesmo vocabulário visual do <Header> do painel da profissional: faixa `glass`,
+ * título em Manrope black, subtítulo em cinza, e o chip de identidade em cartão
+ * arredondado com sombra suave. O que o admin tem a mais é o breadcrumb e a busca
+ * global — navegação, não decoração.
  *
- * A hierarquia é feita por tamanho e espaço, não por caixa: rótulo pequeno em
- * caixa-alta, título grande, subtítulo em tinta fraca — sem ícone em quadradinho.
+ * DEFEITO CORRIGIDO NESTA RODADA: `.glass` pintava de carvão escuro mesmo no tema
+ * claro (a regra `[data-theme='system'] .glass` estava fora do @media de
+ * prefers-color-scheme), enquanto os tokens de texto continuavam os do tema claro.
+ * Título e breadcrumb ficavam cinza-escuro sobre cinza-escuro (~2:1). O conserto
+ * está em globals.css; aqui a faixa volta a ser a mesma do resto do produto.
  */
 
 const SEGMENT_LABEL: Record<string, string> = {
@@ -75,25 +77,21 @@ export function AdminTopbar({
 }: Props) {
   const pathname = usePathname();
   const crumbs = buildCrumbs(pathname, title);
-  const initials = userName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 bg-[color:var(--surface-page)] border-b border-[color:var(--rule-strong)] select-none">
-      {/* Linha 1 — navegação e ferramentas. Filete separa da linha do título. */}
-      <div className="px-4 sm:px-6 h-11 flex items-center gap-4 border-b border-[color:var(--rule-subtle)]">
+    <header className="sticky top-0 z-30 glass hairline-b select-none">
+      <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-4">
         <nav aria-label="Trilha de navegação" className="min-w-0 flex-1 pl-12 lg:pl-0">
-          <ol className="flex items-center gap-1.5 text-[11px] font-medium">
+          <ol className="flex items-center gap-1 text-[11px] font-bold text-gray-450">
             {crumbs.map((crumb, i) => {
               const last = i === crumbs.length - 1;
               return (
                 <li key={crumb.href} className="flex items-center gap-1.5 min-w-0">
-                  {i > 0 && <ChevronRight className="h-3 w-3 text-[color:var(--ink-faint)] shrink-0" aria-hidden />}
+                  {i > 0 && <ChevronRight className="h-3 w-3 text-gray-450/70 shrink-0" aria-hidden />}
                   {last ? (
-                    <span className="text-[color:var(--ink)] font-semibold truncate" aria-current="page">{crumb.label}</span>
+                    <span className="text-ink truncate" aria-current="page">{crumb.label}</span>
                   ) : (
-                    <Link href={crumb.href} className="text-[color:var(--ink-muted)] hover:text-[color:var(--ink)] transition-colors truncate">
-                      {crumb.label}
-                    </Link>
+                    <Link href={crumb.href} className="hover:text-ink transition-colors truncate">{crumb.label}</Link>
                   )}
                 </li>
               );
@@ -101,7 +99,7 @@ export function AdminTopbar({
           </ol>
         </nav>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="hidden md:block"><AdminGlobalSearch /></div>
 
           <DensityToggle initial={density} />
@@ -110,35 +108,36 @@ export function AdminTopbar({
           <Link
             href="/admin/alerts"
             aria-label={alertCount > 0 ? `${alertCount} alertas` : 'Alertas'}
-            className="relative inline-flex items-center justify-center h-8 w-8 rounded-[4px] border border-line text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom"
           >
             <Bell className="h-4 w-4" aria-hidden />
             {alertCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-[2px] bg-[color:var(--bad-ink)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[color:var(--color-bad)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
                 {alertCount > 99 ? '99+' : alertCount}
               </span>
             )}
           </Link>
 
-          {/* Identidade sem ícone em quadradinho colorido: iniciais em filete. */}
-          <span
-            className="flex items-center gap-2 h-8 pl-1 pr-2.5 rounded-[4px] border border-line"
+          {/* Mesmo chip de identidade do painel da profissional. */}
+          <div
+            className="flex items-center gap-0 sm:gap-2.5 shrink-0 sm:bg-paper/80 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2 sm:shadow-soft"
             title={`${userName} · ${userEmail}`}
           >
-            <span className="h-6 w-6 rounded-[2px] bg-[color:var(--accent)] text-[color:var(--ink-inverse)] text-[10px] font-bold flex items-center justify-center shrink-0">
-              {initials || 'LU'}
+            <span className="h-9 w-9 bg-gradient-to-br from-wine-700/12 to-wine-500/8 ring-1 ring-wine-700/10 text-forest rounded-full sm:rounded-xl flex items-center justify-center shrink-0">
+              <ShieldAlert className="h-5 w-5" aria-hidden />
             </span>
-            <span className="hidden xl:block text-[11px] font-medium text-ink truncate max-w-[140px]">{userEmail}</span>
-          </span>
+            <span className="hidden xl:block leading-tight text-left">
+              <span className="block text-xs font-bold text-ink">{userName}</span>
+              <span className="block text-[10px] text-gray-450 truncate max-w-[150px]">{userEmail}</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Linha 2 — título da tela. 20px/600 contra 10.5px de rótulo: hierarquia por
-          tamanho, não por cor nem por caixa. */}
-      <div className="px-4 sm:px-6 py-3.5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+      <div className="px-4 sm:px-6 lg:px-8 pb-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[20px] font-semibold text-[color:var(--ink)] leading-tight truncate">{title}</h1>
-          {subtitle && <p className="hidden sm:block text-[13px] text-[color:var(--ink-muted)] mt-1 max-w-3xl leading-snug">{subtitle}</p>}
+          <h1 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{title}</h1>
+          {subtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 no-print">{actions}</div>}
       </div>

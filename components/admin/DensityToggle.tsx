@@ -30,7 +30,7 @@ export function DensityToggle({ initial }: { initial: Density }) {
   return (
     <button
       type="button" onClick={toggle} title={`${label} — clique para trocar`} aria-label={label}
-      className="inline-flex items-center justify-center h-8 w-8 rounded-[4px] border border-line text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+      className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom"
     >
       <Icon className="h-4 w-4" aria-hidden />
     </button>

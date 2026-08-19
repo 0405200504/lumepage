@@ -1,20 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
+import { Bell, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { getAdminAlerts } from '@/lib/admin/alerts';
 
 export const metadata = { title: 'Alertas | Lume Admin' };
 
-/**
- * O nível do alerta é marcado por um filete de 2px na borda esquerda e por um rótulo
- * em caixa-alta — não por um ícone dentro de um quadradinho colorido. A cor entra
- * uma vez, na menor área possível, e o que carrega a hierarquia é o tamanho do texto.
- */
-const LEVEL = {
-  bad: { edge: 'var(--bad-ink)', label: 'crítico' },
-  warn: { edge: 'var(--warn-ink)', label: 'atenção' },
-  info: { edge: 'var(--rule-strong)', label: 'informação' },
+const ICON = { bad: AlertTriangle, warn: Bell, info: Info } as const;
+const TONE = {
+  bad: 'text-[color:var(--color-bad)] bg-[color:var(--color-bad)]/10',
+  warn: 'text-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10',
+  info: 'text-muted bg-surface-2',
 } as const;
 
 export default async function AdminAlertsPage() {
@@ -28,29 +25,26 @@ export default async function AdminAlertsPage() {
       subtitle="O que precisa da sua atenção agora. As regras são avaliadas a cada carregamento — sem job, sem atraso."
     >
       {alerts.length === 0 ? (
-        <p className="text-[13px] text-[color:var(--ink-muted)] max-w-xl">
-          Nada pegando fogo: nenhum acesso vencendo, nenhuma conta parada há 30 dias e nenhuma
-          conversa esperando atendimento humano.
-        </p>
+        <div className="card py-16 flex flex-col items-center text-center">
+          <CheckCircle2 className="h-8 w-8 text-[color:var(--color-ok)] mb-3" aria-hidden />
+          <h2 className="text-sm font-bold text-ink">Nada pegando fogo</h2>
+          <p className="mt-1 text-xs text-muted">Nenhum trial vencendo, nenhuma conta parada, nenhuma conversa esperando.</p>
+        </div>
       ) : (
-        <ul className="border-t border-[color:var(--rule-subtle)]">
+        <ul className="space-y-2.5">
           {alerts.map(a => {
-            const level = LEVEL[a.level];
+            const Icon = ICON[a.level];
             return (
               <li key={a.id}>
-                <Link
-                  href={a.href}
-                  style={{ borderLeftColor: level.edge }}
-                  className="group flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-[color:var(--rule-subtle)] border-l-2 pl-3.5 pr-2 py-3 hover:bg-[color:var(--surface-raised)] transition-colors"
-                >
-                  <span className="admin-eyebrow w-20 shrink-0">{level.label}</span>
+                <Link href={a.href} className="card px-4 py-3.5 flex items-start gap-3 hover:bg-surface-2 transition-colors">
+                  <span className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${TONE[a.level]}`}>
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold text-[color:var(--ink)] leading-snug">{a.title}</span>
-                    <span className="block text-[12px] text-[color:var(--ink-muted)] mt-0.5">{a.detail}</span>
+                    <span className="block text-sm font-bold text-ink">{a.title}</span>
+                    <span className="block text-xs text-muted mt-0.5">{a.detail}</span>
                   </span>
-                  <span className="text-[11px] font-semibold text-[color:var(--color-accent-link)] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Ver →
-                  </span>
+                  <span className="text-xs font-bold text-accent-link shrink-0 self-center">Ver →</span>
                 </Link>
               </li>
             );

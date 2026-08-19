@@ -135,7 +135,7 @@ export function AccessPanel({ data }: { data: AccessPanelData }) {
           <Row label="E-mail de login" hint="é este que ela digita para entrar">
             <span className="font-semibold text-ink break-all">{data.loginEmail}</span>
             <button type="button" onClick={() => copy(data.loginEmail, 'email')} aria-label="Copiar e-mail de login"
-              className="p-1 rounded-[2px] text-muted hover:text-ink hover:bg-surface-2">
+              className="p-1 rounded-lg text-muted hover:text-ink hover:bg-surface-2">
               {copied === 'email' ? <Check className="h-3.5 w-3.5 text-[color:var(--color-ok)]" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
             <button type="button" onClick={() => setEmailDialog(true)} disabled={!data.hasAuthUser}
@@ -244,16 +244,16 @@ export function AccessPanel({ data }: { data: AccessPanelData }) {
               router.refresh();
             })}
           />
-          <div className="rounded-[8px] border border-line p-3">
+          <div className="rounded-2xl border border-line p-3">
             <p className="flex items-center gap-2 text-xs font-bold text-ink"><LogIn className="h-4 w-4 text-muted" aria-hidden /> Entrar como</p>
             <p className="text-[11px] text-muted mt-0.5">Sessão de suporte de 30 minutos, em nova aba.</p>
             <div className="flex gap-2 mt-2.5">
               <button type="button" disabled={pending} onClick={() => enter('read')}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px] bg-forest hover:bg-forest-hover text-white text-[11px] font-bold disabled:opacity-50">
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-forest hover:bg-forest-hover text-white text-[11px] font-bold disabled:opacity-50">
                 {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />} Só olhar
               </button>
               <button type="button" disabled={pending} onClick={() => { if (confirm(`Entrar na conta de ${data.brandName} PODENDO EDITAR? Toda alteração fica registrada no nome de quem entrou.`)) enter('edit'); }}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px] border border-line bg-surface text-ink text-[11px] font-bold hover:bg-surface-2 disabled:opacity-50">
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-line bg-surface text-ink text-[11px] font-bold hover:bg-surface-2 disabled:opacity-50">
                 <Pencil className="h-3.5 w-3.5" /> Pode editar
               </button>
             </div>
@@ -335,7 +335,7 @@ function Action({ icon, title, desc, onClick, disabled }: {
 }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="text-left rounded-[8px] border border-line p-3 hover:bg-surface-2 transition-colors disabled:opacity-40 disabled:hover:bg-transparent">
+      className="text-left rounded-2xl border border-line p-3 hover:bg-surface-2 transition-colors disabled:opacity-40 disabled:hover:bg-transparent">
       <span className="flex items-center gap-2 text-xs font-bold text-ink"><span className="text-muted">{icon}</span>{title}</span>
       <span className="block text-[11px] text-muted mt-0.5">{desc}</span>
     </button>
@@ -352,10 +352,10 @@ function SecretDialog({ title, value, note, onClose, onCopy, copied }: {
       <div className="relative w-full max-w-lg card p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-sm font-bold text-ink">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1.5 rounded-[2px] text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1.5 rounded-lg text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
         </div>
 
-        <p className="rounded-[4px] bg-surface-2 border border-line px-3 py-2.5 font-mono text-xs text-ink break-all select-all">{value}</p>
+        <p className="rounded-xl bg-surface-2 border border-line px-3 py-2.5 font-mono text-xs text-ink break-all select-all">{value}</p>
 
         <p className="text-[11px] text-[color:var(--color-warn)] font-semibold flex items-start gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" aria-hidden /> {note}
@@ -363,10 +363,10 @@ function SecretDialog({ title, value, note, onClose, onCopy, copied }: {
 
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => onCopy(value)}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[4px] bg-forest hover:bg-forest-hover text-white text-xs font-bold">
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold">
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copiado' : 'Copiar'}
           </button>
-          <button type="button" onClick={onClose} className="h-9 px-3 rounded-[4px] text-xs font-bold text-muted hover:bg-surface-2">Já anotei</button>
+          <button type="button" onClick={onClose} className="h-9 px-3 rounded-xl text-xs font-bold text-muted hover:bg-surface-2">Já anotei</button>
         </div>
       </div>
     </div>
@@ -391,7 +391,7 @@ function ChangeEmailDialog({ current, brandName, onClose, onSave }: {
         <label className="block">
           <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-1">Novo e-mail de login</span>
           <input type="email" value={value} onChange={e => setValue(e.target.value)} placeholder="novo@email.com"
-            className="w-full h-9 px-3 rounded-[2px] border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+            className="w-full h-9 px-3 rounded-lg border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
         </label>
 
         <p className="text-[11px] text-muted">
@@ -400,10 +400,10 @@ function ChangeEmailDialog({ current, brandName, onClose, onSave }: {
         </p>
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-9 px-3 rounded-[4px] text-xs font-bold text-muted hover:bg-surface-2">Cancelar</button>
+          <button type="button" onClick={onClose} className="h-9 px-3 rounded-xl text-xs font-bold text-muted hover:bg-surface-2">Cancelar</button>
           <button type="button" disabled={saving || !value.includes('@')}
             onClick={async () => { setSaving(true); await onSave(value.trim().toLowerCase()); setSaving(false); }}
-            className="h-9 px-4 rounded-[4px] bg-forest hover:bg-forest-hover text-white text-xs font-bold disabled:opacity-50">
+            className="h-9 px-4 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold disabled:opacity-50">
             {saving ? 'Salvando…' : 'Alterar'}
           </button>
         </div>

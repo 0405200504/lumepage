@@ -2,14 +2,14 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  ExternalLink, CheckCircle2, Circle, AlertTriangle, Bot, MessageCircle,
+  ExternalLink, CheckCircle2, Circle, AlertTriangle, Bot, MessageCircle, TrendingUp,
 } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { EditProfessionalPanel } from '@/components/admin/EditProfessionalPanel';
 import { ProfessionalActions } from '@/components/admin/ProfessionalActions';
 import { AccountStateGroup, Badge } from '@/components/admin/badges';
-import { StatCard, SectionHeader } from '@/components/admin/primitives';
+import { StatCard } from '@/components/admin/primitives';
 import { getProfessionalOverview, getSubscriptionHistory, getProfessionalAgenda } from '@/lib/admin/professional-detail';
 import { AgendaMonth } from '@/components/admin/AgendaMonth';
 import { BarChart } from '@/components/admin/BarChart';
@@ -126,9 +126,9 @@ export default async function ProfessionalDetailPage({
         />
       }
     >
-      <div className="space-y-5">
-        {/* Faixa de identidade — filete, sem cartão: é contexto, não conteúdo. */}
-        <div className="flex flex-wrap items-center gap-2.5 pb-3 border-b border-[color:var(--rule-subtle)]">
+      <div className="space-y-4">
+        {/* Faixa de identidade */}
+        <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5">
           <AccountStateGroup account={p} />
           <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-link hover:underline">
             /agendar/{p.slug} <ExternalLink className="h-3 w-3" />
@@ -137,17 +137,15 @@ export default async function ProfessionalDetailPage({
         </div>
 
         {/* Abas */}
-        <nav className="flex gap-0 overflow-x-auto scrollbar-none border-b border-[color:var(--rule-strong)]" aria-label="Seções da conta">
+        <nav className="flex gap-1 overflow-x-auto scrollbar-none border-b border-line" aria-label="Seções da conta">
           {TABS.map(t => (
             <Link
               key={t.key}
               href={`/admin/professionals/${id}?tab=${t.key}`}
               scroll={false}
               aria-current={active === t.key ? 'page' : undefined}
-              className={`px-3 py-2 text-[12px] whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                active === t.key
-                  ? 'border-[color:var(--accent)] text-[color:var(--ink)] font-semibold'
-                  : 'border-transparent text-[color:var(--ink-muted)] font-medium hover:text-[color:var(--ink)]'
+              className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                active === t.key ? 'border-accent text-accent-link' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {t.label}
@@ -161,18 +159,17 @@ export default async function ProfessionalDetailPage({
             {alerts.length > 0 && (
               <ul className="grid gap-2 sm:grid-cols-2">
                 {alerts.map((a, i) => (
-                  <li
-                    key={i}
-                    style={{ borderLeftColor: a.level === 'bad' ? 'var(--bad-ink)' : a.level === 'warn' ? 'var(--warn-ink)' : 'var(--rule-strong)' }}
-                    className="border border-[color:var(--rule-subtle)] border-l-2 rounded-[8px] px-3 py-2.5 text-[13px] text-[color:var(--ink)]"
-                  >
-                    {a.text}
+                  <li key={i} className={`card px-3 py-2.5 flex items-start gap-2 text-xs ${
+                    a.level === 'bad' ? 'text-[color:var(--color-bad)]' : a.level === 'warn' ? 'text-[color:var(--color-warn)]' : 'text-muted'
+                  }`}>
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
+                    <span className="font-semibold">{a.text}</span>
                   </li>
                 ))}
               </ul>
             )}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {kpiCard('Faturamento 30d', brl(kpis.revenue30dCents), `total ${brl(kpis.revenueTotalCents)}`)}
               {kpiCard('Agendamentos 30d', String(kpis.appointments30d), `total ${kpis.appointmentsTotal}`)}
               {kpiCard('Clientes', String(kpis.clients))}
@@ -183,14 +180,16 @@ export default async function ProfessionalDetailPage({
               {kpiCard('Mensagens do bot (mês)', String(bot.messagesMonth))}
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-12">
-              <section className="lg:col-span-7">
-                <SectionHeader index="02" title="Agendamentos por mês" />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="card p-4 sm:p-5 rounded-3xl">
+                <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-muted" /> Agendamentos por mês
+                </h2>
                 <BarChart points={monthly.map(m => ({ label: m.label, value: m.count }))} format={v => String(Math.round(v))} />
               </section>
 
-              <section className="lg:col-span-5">
-                <SectionHeader index="03" title="Ativação da conta" />
+              <section className="card p-4 sm:p-5 rounded-3xl">
+                <h2 className="text-sm font-bold text-ink mb-3">Ativação da conta</h2>
                 <ul className="space-y-2">
                   {onboarding.map(step => (
                     <li key={step.label} className="flex items-center gap-2 text-xs">
@@ -210,7 +209,7 @@ export default async function ProfessionalDetailPage({
         {/* ————— Assinatura ————— */}
         {active === 'subscription' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {kpiCard('Plano', p.subscription_plan ? p.subscription_plan : 'Legada')}
               {kpiCard('Situação', p.subscription_status ?? '—')}
               {kpiCard('Trial termina', formatDateBR(p.trial_ends_at, '—'))}
@@ -302,7 +301,7 @@ export default async function ProfessionalDetailPage({
         {/* ————— Financeiro ————— */}
         {active === 'finance' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {kpiCard('Faturamento total', brl(kpis.revenueTotalCents))}
               {kpiCard('Últimos 30 dias', brl(kpis.revenue30dCents))}
               {kpiCard('Ticket médio', brl(kpis.ticketCents))}
@@ -327,7 +326,7 @@ export default async function ProfessionalDetailPage({
         {/* ————— Bot & IA ————— */}
         {active === 'bot' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {kpiCard('Conexão', bot.configured ? 'Configurada' : 'Não configurada')}
               {kpiCard('Bot', bot.enabled ? 'Ligado' : 'Desligado')}
               {kpiCard('Automações', bot.automationsOn ? 'Ativas' : 'Desligadas')}

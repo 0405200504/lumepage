@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, TrendingUp, CreditCard } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { StatCard } from '@/components/admin/primitives';
@@ -50,10 +50,12 @@ export default async function AdminPlansPage() {
           </p>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <StatCard label="MRR estimado" value={brl(mrrCents)} accent note="só contas com assinatura ativa" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label="MRR estimado" value={brl(mrrCents)} icon={<TrendingUp className="h-[18px] w-[18px]" />} tint="wine"
+            note="só contas com assinatura ativa" />
           {plans.map(p => (
             <StatCard key={p.key} label={p.name} value={String(subscribers[p.key] ?? 0)}
+              icon={<CreditCard className="h-[18px] w-[18px]" />} tint="indigo"
               note={`${brl(p.price_cents)}/${p.billing_cycle === 'yearly' ? 'ano' : 'mês'}`} />
           ))}
         </div>

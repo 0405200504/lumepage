@@ -53,7 +53,7 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
     <>
       <div className="flex flex-wrap items-center gap-2">
         {/* Entrar como: modo explícito e NOVA ABA — o admin não perde a tela onde estava. */}
-        <span className="inline-flex rounded-[4px] overflow-hidden border border-line">
+        <span className="inline-flex rounded-xl overflow-hidden">
           <button
             type="button" disabled={pending}
             title="Abre o painel desta profissional em nova aba, sessão de suporte de 30 min, sem poder alterar nada"

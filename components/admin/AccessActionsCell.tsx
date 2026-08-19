@@ -22,7 +22,7 @@ export function AccessActionsCell({ id, brandName, hasAuthUser }: {
   const [link, setLink] = useState<{ title: string; value: string; note: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const btn = 'inline-flex items-center gap-1 h-7 px-2 rounded-[4px] text-[11px] font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors disabled:opacity-40';
+  const btn = 'inline-flex items-center gap-1 h-7 px-2 rounded-xl text-[11px] font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors disabled:opacity-40';
 
   return (
     <>
@@ -60,9 +60,9 @@ export function AccessActionsCell({ id, brandName, hasAuthUser }: {
                 <h2 className="text-sm font-bold text-ink">{link.title}</h2>
                 <p className="text-xs text-muted mt-0.5">{brandName}</p>
               </div>
-              <button type="button" onClick={() => setLink(null)} aria-label="Fechar" className="p-1.5 rounded-[2px] text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setLink(null)} aria-label="Fechar" className="p-1.5 rounded-lg text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
             </div>
-            <p className="rounded-[4px] bg-surface-2 border border-line px-3 py-2.5 font-mono text-xs text-ink break-all select-all">{link.value}</p>
+            <p className="rounded-xl bg-surface-2 border border-line px-3 py-2.5 font-mono text-xs text-ink break-all select-all">{link.value}</p>
             <p className="text-[11px] text-[color:var(--color-warn)] font-semibold flex items-start gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" aria-hidden /> {link.note}
             </p>
@@ -70,7 +70,7 @@ export function AccessActionsCell({ id, brandName, hasAuthUser }: {
               <button
                 type="button"
                 onClick={async () => { await navigator.clipboard.writeText(link.value); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[4px] bg-forest hover:bg-forest-hover text-white text-xs font-bold"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold"
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copiado' : 'Copiar'}
               </button>

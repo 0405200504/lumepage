@@ -8,10 +8,10 @@ import { getAlertCount } from '@/lib/admin/alerts';
 /**
  * Casca do painel administrativo.
  *
- * `.admin-shell` é o que separa o sistema visual do admin do resto do produto: os
- * tokens de cor, raio, sombra e tipografia são redefinidos ali (ver o bloco
- * "PAINEL ADMINISTRATIVO" em app/globals.css) e, como as utilities do Tailwind v4
- * leem var(--…), tudo abaixo herda sem trocar uma classe sequer.
+ * O visual é o MESMO do painel da profissional: fundo creme com os halos bordô,
+ * cartões arredondados com sombra suave, Manrope, pills. Não existe paleta
+ * separada para o admin — é um produto só, com duas áreas. `.admin-shell` sobrou
+ * como gancho para uma coisa só: a densidade das tabelas.
  *
  * Três coisas vêm de cookie e são lidas no servidor, para a primeira pintura já
  * sair certa (sem pulo na hidratação): barra recolhida, tema e densidade.
@@ -34,7 +34,16 @@ export async function LayoutAdmin({ children, session, title, subtitle, actions 
   const density = (cookieStore.get('lume_admin_density')?.value ?? 'comfortable') as 'comfortable' | 'compact';
 
   return (
-    <div data-theme={theme} data-density={density} className="admin-shell flex min-h-screen">
+    <div
+      data-theme={theme}
+      data-density={density}
+      className="admin-shell flex min-h-screen bg-cream"
+      style={{
+        backgroundImage:
+          'radial-gradient(60% 50% at 100% 0%, rgba(140,36,56,0.04) 0%, transparent 60%), radial-gradient(50% 40% at 0% 100%, rgba(80,11,24,0.035) 0%, transparent 55%)',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <AdminSidebar name={session.name} email={session.email} initialCollapsed={collapsed} />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -49,9 +58,9 @@ export async function LayoutAdmin({ children, session, title, subtitle, actions 
           density={density}
         />
 
-        {/* 1680px: numa tela de 1568px o conteúdo ocupava ~880px e sobravam ~550px
-            vazios — desperdício num painel com tabelas de 8 colunas. */}
-        <main className="flex-1 w-full max-w-[1680px] mx-auto px-4 sm:px-6 py-6">
+        {/* 1600px em vez do max-w-7xl da profissional: as tabelas do admin têm 8
+            colunas e ficariam com centenas de pixels vazios de cada lado. */}
+        <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}
         </main>
       </div>
