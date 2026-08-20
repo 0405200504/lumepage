@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { Sora, Inter, Cormorant_Garamond } from 'next/font/google';
 import { authService } from '@/lib/auth/auth';
 
+import TopBanner from '@/components/lp/TopBanner';
 import Navbar from '@/components/lp/Navbar';
 import Hero from '@/components/lp/Hero';
 import StickyCTA from '@/components/lp/StickyCTA';
@@ -54,7 +55,7 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: 'Lume — Sua cliente não quer conversar. Ela quer agendar.',
   description:
-    'O Lume transforma o link da sua bio numa página com seus serviços, preços e horários — e deixa a cliente agendar sozinha, sem passar pelo seu direct. 7 dias grátis, sem cartão.',
+    'A Lume transforma o link da sua bio numa página com seus serviços, preços e horários — e deixa a cliente agendar sozinha, sem passar pelo seu direct. 7 dias grátis, sem cartão.',
   keywords: [
     'agendamento online estética',
     'link da bio com agendamento',
@@ -122,6 +123,7 @@ export default async function HomePage() {
         />
       </noscript>
 
+      <TopBanner />
       <Navbar />
       <main className="flex-1">
         {/* 1. Hero */}

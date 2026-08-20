@@ -55,7 +55,7 @@ export default function Comparison() {
               </div>
               <div className="bg-bordo px-6 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose">
-                  Com o Lume
+                  Com a Lume
                 </p>
               </div>
             </div>

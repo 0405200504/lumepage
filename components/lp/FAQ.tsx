@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "Eu gosto de falar com minha cliente antes.",
-    a: "Continue falando. O Lume tira do seu direct só o que é burocracia — preço, horário e confirmação. Sobra tempo pra conversa que interessa: a que cria vínculo e faz ela voltar.",
+    a: "Continue falando. A Lume tira do seu direct só o que é burocracia — preço, horário e confirmação. Sobra tempo pra conversa que interessa: a que cria vínculo e faz ela voltar.",
   },
   {
     q: "Minha agenda é bagunçada, meus horários mudam toda hora.",
@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     q: "Já tenho um linktree.",
-    a: "O linktree mostra links. O Lume fecha agendamento. Um manda a cliente embora pra outro app, o outro resolve ali mesmo.",
+    a: "O linktree mostra links. A Lume fecha agendamento. Um manda a cliente embora pra outro app, a outra resolve ali mesmo.",
   },
   {
     q: "E se eu quiser sair depois?",

@@ -649,6 +649,13 @@ body:has(.lp-page) {
     background-color: var(--color-offwhite);
     color: var(--color-grafite);
     font-family: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
+    /* compensa a altura da faixa fixa do teste grátis (h-9 = 2.25rem) */
+    padding-top: 2.25rem;
+  }
+
+  /* Âncoras da navegação: sem isso o título da seção para debaixo da faixa fixa. */
+  .lp-page section[id] {
+    scroll-margin-top: 3.5rem;
   }
 
   .container-lume {

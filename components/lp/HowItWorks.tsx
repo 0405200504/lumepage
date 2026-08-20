@@ -12,11 +12,11 @@ const passos = [
   {
     n: "2",
     titulo: "Você troca o link da bio",
-    desc: "Copia o link do Lume, cola na bio do Instagram. Pronto: seu perfil virou um lugar onde se compra, não onde se pergunta.",
+    desc: "Copia o link da Lume, cola na bio do Instagram. Pronto: seu perfil virou um lugar onde se compra, não onde se pergunta.",
   },
   {
     n: "3",
-    titulo: "Você atende. O Lume vende.",
+    titulo: "Você atende. A Lume vende.",
     desc: "A cliente entra, escolhe, agenda e recebe confirmação. Você recebe o aviso e vê tudo organizado no painel.",
   },
 ];

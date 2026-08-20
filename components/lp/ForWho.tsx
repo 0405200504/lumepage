@@ -37,7 +37,7 @@ export default function ForWho() {
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para quem é</SectionLabel>
             <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
-              O Lume é{" "}
+              A Lume é{" "}
               <span className="accent text-bordo">pra você se…</span>
             </h2>
           </div>

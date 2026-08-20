@@ -90,7 +90,7 @@ export default function CostSection() {
             </p>
 
             <div className="mx-auto mt-8 max-w-sm rounded-2xl bg-offwhite/10 px-6 py-5">
-              <p className="text-sm text-rose">O Lume custa</p>
+              <p className="text-sm text-rose">A Lume custa</p>
               <p className="mt-1 font-sora text-2xl font-semibold">
                 R$ 39 por mês
               </p>

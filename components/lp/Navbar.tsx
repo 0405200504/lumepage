@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Logo from "./Logo";
 import Button from "./Button";
 import { SITE } from "@/lib/lp/site";
@@ -13,24 +10,14 @@ const links = [
   { label: "Perguntas", href: "#faq" },
 ];
 
+/**
+ * Cabeçalho comum, que rola junto com a página. Quem fica fixo no topo é a
+ * faixa do teste grátis (TopBanner) — dois elementos grudados na tela roubavam
+ * altura demais no celular.
+ */
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
-        scrolled
-          ? "border-b border-rose/50 bg-offwhite/85 backdrop-blur-md"
-          : "border-b border-transparent"
-      }`}
-    >
+    <header className="relative z-30 border-b border-rose/40 bg-offwhite">
       <nav className="container-lume flex h-16 items-center justify-center sm:justify-between">
         <a href="#topo" aria-label="Lume — início" className="flex items-center">
           <Logo className="w-24 h-auto sm:w-28 sm:-ml-3" />

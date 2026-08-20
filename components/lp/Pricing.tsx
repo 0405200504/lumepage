@@ -5,8 +5,10 @@ import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import Sparkle from "./Sparkle";
 import Button from "./Button";
+import { CTA_LINK, checkoutLink, type PlanoId } from "@/lib/lp/site";
 
 type Plano = {
+  id: PlanoId;
   nome: string;
   anual: number;
   mensal: number;
@@ -20,6 +22,7 @@ type Plano = {
 
 const planos: Plano[] = [
   {
+    id: "start",
     nome: "Start",
     anual: 39,
     mensal: 49,
@@ -35,6 +38,7 @@ const planos: Plano[] = [
     ],
   },
   {
+    id: "pro",
     nome: "Pro",
     anual: 79,
     mensal: 99,
@@ -52,6 +56,7 @@ const planos: Plano[] = [
     selo: "Menos de R$ 2,70 por dia. Um café.",
   },
   {
+    id: "premium",
     nome: "Premium",
     anual: 149,
     mensal: 179,
@@ -92,14 +97,19 @@ export default function Pricing() {
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Planos e preços</SectionLabel>
             <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
-              Escolha seu plano. Teste 7 dias{" "}
-              <span className="accent text-bordo">
-                antes de pagar qualquer coisa.
-              </span>
+              Assine e comece hoje.{" "}
+              <span className="accent text-bordo">Sem fidelidade.</span>
             </h2>
             <p className="mt-5 text-base leading-relaxed text-grafite/70 sm:text-lg">
-              Sem cartão no cadastro. Sem fidelidade. Cancela quando quiser, em
-              dois cliques.
+              Aqui você contrata o plano de uma vez, direto no checkout. Se
+              prefere experimentar antes,{" "}
+              <a
+                href={CTA_LINK}
+                className="font-semibold text-bordo underline underline-offset-4 hover:text-bordo-soft"
+              >
+                use os 7 dias grátis
+              </a>{" "}
+              — esses não pedem cartão.
             </p>
           </div>
         </Reveal>
@@ -245,18 +255,20 @@ export default function Pricing() {
 
                   <div className="mt-8">
                     <Button
+                      href={checkoutLink(p.id, anual)}
                       className={`w-full ${
                         dark ? "bg-offwhite !text-bordo hover:bg-lp-cream" : ""
                       }`}
                     >
-                      Começar grátis
+                      Assinar o {p.nome}
                     </Button>
                     <p
                       className={`mt-3 text-center text-xs ${
                         dark ? "text-offwhite/60" : "text-grafite/50"
                       }`}
                     >
-                      7 dias grátis · Sem cartão
+                      {anual ? "Cobrança anual" : "Cobrança mensal"} · Cancela
+                      quando quiser
                     </p>
                   </div>
 
@@ -276,18 +288,18 @@ export default function Pricing() {
           <div className="mx-auto mt-10 max-w-3xl rounded-[2rem] border border-bordo/15 bg-lp-cream px-7 py-9 text-center sm:px-12">
             <p className="text-base leading-relaxed text-grafite/75 sm:text-lg">
               <strong className="font-semibold text-grafite">
-                Você não escolhe agora.
+                Assinar não te prende.
               </strong>{" "}
-              Comece o teste de 7 dias com acesso completo, use no seu dia real,
-              com suas clientes de verdade. Se no sétimo dia você achar que não
-              valeu, é só não continuar — não pedimos cartão, então não tem o que
-              cancelar.
+              Não tem fidelidade nem multa: você cancela quando quiser e leva sua
+              base de clientes junto. E se preferir ver funcionando antes de
+              pagar, o teste de 7 dias existe pra isso — acesso completo, no seu
+              dia real, sem cartão.
             </p>
 
             <div className="mt-7 flex items-center justify-center gap-3 border-t border-rose/50 pt-7">
               <Sparkle size={16} className="shrink-0 text-bordo" />
               <p className="font-sora text-lg font-medium leading-snug text-grafite sm:text-xl">
-                Uma cliente por mês paga o Lume.{" "}
+                Uma cliente por mês paga a Lume.{" "}
                 <span className="accent text-bordo">
                   A segunda em diante é sua.
                 </span>
