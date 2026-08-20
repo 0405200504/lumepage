@@ -1,6 +1,84 @@
+import type { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import Script from 'next/script';
+import { Sora, Inter, Cormorant_Garamond } from 'next/font/google';
 import { authService } from '@/lib/auth/auth';
-import Link from 'next/link';
+
+import Navbar from '@/components/lp/Navbar';
+import Hero from '@/components/lp/Hero';
+import StickyCTA from '@/components/lp/StickyCTA';
+import Footer from '@/components/lp/Footer';
+
+// Seções abaixo da dobra entram em chunks separados — o que importa pro
+// First Contentful Paint é o Hero.
+const MarqueeStrip = dynamic(() => import('@/components/lp/MarqueeStrip'));
+const PainSection = dynamic(() => import('@/components/lp/PainSection'));
+const CostSection = dynamic(() => import('@/components/lp/CostSection'));
+const TurningPoint = dynamic(() => import('@/components/lp/TurningPoint'));
+const HowItWorks = dynamic(() => import('@/components/lp/HowItWorks'));
+const ClientJourney = dynamic(() => import('@/components/lp/ClientJourney'));
+const DashboardSection = dynamic(() => import('@/components/lp/DashboardSection'));
+const Comparison = dynamic(() => import('@/components/lp/Comparison'));
+const Testimonials = dynamic(() => import('@/components/lp/Testimonials'));
+const ForWho = dynamic(() => import('@/components/lp/ForWho'));
+const Pricing = dynamic(() => import('@/components/lp/Pricing'));
+const Guarantee = dynamic(() => import('@/components/lp/Guarantee'));
+const FAQ = dynamic(() => import('@/components/lp/FAQ'));
+const FinalCTA = dynamic(() => import('@/components/lp/FinalCTA'));
+
+// A LP tem tipografia própria (o painel usa Manrope). As variáveis ficam
+// escopadas na casca da página, então nada disso vaza pro resto do app.
+const sora = Sora({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-lp-sora',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-lp-inter',
+  display: 'swap',
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['italic', 'normal'],
+  variable: '--font-lp-cormorant',
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  title: 'Lume — Sua cliente não quer conversar. Ela quer agendar.',
+  description:
+    'O Lume transforma o link da sua bio numa página com seus serviços, preços e horários — e deixa a cliente agendar sozinha, sem passar pelo seu direct. 7 dias grátis, sem cartão.',
+  keywords: [
+    'agendamento online estética',
+    'link da bio com agendamento',
+    'agenda para lash designer',
+    'sistema para manicure',
+    'software para esteticista',
+    'agendamento pelo Instagram',
+    'lembrete de agendamento WhatsApp',
+  ],
+  openGraph: {
+    title: 'Lume — Sua cliente não quer conversar. Ela quer agendar.',
+    description:
+      'Sua vitrine, sua agenda e seu WhatsApp no mesmo link. A cliente agenda sozinha em 40 segundos. 7 dias grátis, sem cartão.',
+    type: 'website',
+    locale: 'pt_BR',
+  },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#7B102B',
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export default async function HomePage() {
   // Admin tem precedência: com as duas sessões abertas (admin + conta teste),
@@ -11,41 +89,75 @@ export default async function HomePage() {
   const session = await authService.getCurrentUser('pro');
   if (session) redirect('/dashboard');
 
-  // Página pública para aprovação do Google (não redireciona mais forçadamente)
   return (
-    <div className="min-h-screen bg-cream flex flex-col font-sans">
-      <header className="py-6 px-8 flex justify-between items-center max-w-7xl mx-auto w-full">
-        <div className="text-2xl font-black text-forest">Lume.</div>
-        <Link 
-          href="/login" 
-          className="bg-forest text-white px-5 py-2 rounded-full font-semibold hover:bg-forest/90 transition-colors"
-        >
-          Acessar Painel
-        </Link>
-      </header>
+    <div
+      className={`lp-page flex min-h-screen flex-col ${sora.variable} ${inter.variable} ${cormorant.variable}`}
+    >
+      <Script
+        id="meta-pixel"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '1700853197905257');
+            fbq('track', 'PageView');
+          `,
+        }}
+      />
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          style={{ display: 'none' }}
+          src="https://www.facebook.com/tr?id=1700853197905257&ev=PageView&noscript=1"
+          alt=""
+        />
+      </noscript>
 
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto mt-20 mb-32">
-        <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">
-          Gestão inteligente para profissionais de estética.
-        </h1>
-        <p className="text-xl text-gray-600 mb-10 max-w-2xl leading-relaxed">
-          O Lume é uma plataforma completa de agendamentos e CRM. Permite que as profissionais gerenciem seus horários, clientes e recebam notificações automáticas, com integração bidirecional ao Google Calendar para evitar conflitos de horários.
-        </p>
-        <Link 
-          href="/login" 
-          className="bg-primary text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:scale-105 transition-transform"
-        >
-          Começar a usar
-        </Link>
+      <Navbar />
+      <main className="flex-1">
+        {/* 1. Hero */}
+        <Hero />
+        {/* 2. Faixa de frases */}
+        <MarqueeStrip />
+        {/* 3. A dor */}
+        <PainSection />
+        {/* 4. A conta que ninguém faz */}
+        <CostSection />
+        {/* 5. A virada — 3 pilares */}
+        <TurningPoint />
+        {/* 6. Como funciona — 3 passos */}
+        <HowItWorks />
+        {/* 7. O que a sua cliente vê */}
+        <ClientJourney />
+        {/* 8. O painel — gestão 360 */}
+        <DashboardSection />
+        {/* 9. Antes e depois */}
+        <Comparison />
+        {/* 10. Depoimentos */}
+        <Testimonials />
+        {/* 11. Para quem é / não é */}
+        <ForWho />
+        {/* 12. Planos */}
+        <Pricing />
+        {/* 13. Garantia */}
+        <Guarantee />
+        {/* 14. FAQ */}
+        <FAQ />
+        {/* 15. Fechamento */}
+        <FinalCTA />
       </main>
-
-      <footer className="py-8 border-t border-gray-200 text-center text-gray-500 text-sm">
-        <div className="space-x-4 mb-4">
-          <Link href="/privacidade" className="hover:text-forest underline">Política de Privacidade</Link>
-          <Link href="/termos" className="hover:text-forest underline">Termos de Serviço</Link>
-        </div>
-        <p>© {new Date().getFullYear()} Lume Agendamentos. Todos os direitos reservados.</p>
-      </footer>
+      {/* 16. Rodapé */}
+      <Footer />
+      <StickyCTA />
     </div>
   );
 }
