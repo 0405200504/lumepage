@@ -548,3 +548,185 @@ svg.lucide {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
+
+/* =========================================================
+   PÁGINA DE VENDAS (LP oficial — rota "/")
+   ---------------------------------------------------------
+   A LP tem identidade própria (bordô quente + off-white + Sora/Inter/Cormorant),
+   diferente do painel (neutros + Manrope). Os tokens ficam aqui, mas com nomes
+   que NÃO colidem com os do produto: onde havia colisão (`cream`, `shadow-soft`,
+   `shadow-card`, `shadow-glow`, `rounded-3xl`) o token da LP ganhou o prefixo
+   `lp-`. Tudo o que é exclusivo da LP (bordo, offwhite, grafite, rose, areia)
+   mantém o nome original do repositório da landing.
+   ========================================================= */
+
+@theme {
+  --color-bordo: #7b102b;
+  --color-bordo-deep: #5e0c20;
+  --color-bordo-soft: #8e1a37;
+  --color-offwhite: #f4efe7;
+  --color-lp-cream: #fbf8f3;
+  --color-grafite: #2c2527;
+  --color-rose: #d8c9c3;
+  --color-areia: #b89e95;
+
+  /* As fontes vêm do next/font na própria página, que expõe --font-lp-*.
+     O token do Tailwind aponta pra elas (não pode se auto-referenciar). */
+  --font-sora: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-cormorant: var(--font-lp-cormorant), ui-serif, Georgia, serif;
+
+  --shadow-lp-soft: 0 18px 50px -20px rgba(44, 37, 39, 0.18);
+  --shadow-lp-card: 0 10px 40px -18px rgba(44, 37, 39, 0.22);
+  --shadow-lp-glow: 0 30px 80px -30px rgba(123, 16, 43, 0.45);
+
+  --radius-lp-3xl: 1.5rem;
+
+  --animate-sparkle-pulse: sparkle-pulse 4s ease-in-out infinite;
+  --animate-float-slow: float-slow 6s ease-in-out infinite;
+  --animate-marquee: marquee 32s linear infinite;
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* A LP é a única tela do produto com rolagem suave (navegação por âncora).
+   O painel continua com rolagem instantânea — daí o escopo por :has(). */
+html:has(.lp-page) {
+  scroll-behavior: smooth;
+}
+html:has(.lp-page),
+body:has(.lp-page) {
+  overflow-x: hidden;
+}
+/* O body do painel é neutro (#fafafa); na LP a área de overscroll precisa
+   acompanhar o off-white quente, senão aparece uma faixa clara no topo/rodapé. */
+body:has(.lp-page) {
+  background-color: var(--color-offwhite);
+}
+
+/* As classes da LP entram na layer `components` do Tailwind: assim qualquer
+   utilitário aplicado no JSX (ex.: `bg-offwhite` sobre `.btn-primary` no cartão
+   do plano PRO) ainda vence, que é o comportamento do repositório original —
+   lá elas eram @layer components + @apply. Fora de layer, CSS sem camada ganha
+   das camadas e o botão saía bordô-no-bordô, ilegível. */
+@layer components {
+  /* Casca da LP: troca fundo, cor e fonte-base herdados do painel. */
+  .lp-page {
+    background-color: var(--color-offwhite);
+    color: var(--color-grafite);
+    font-family: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .lp-page h1,
+  .lp-page h2,
+  .lp-page h3,
+  .lp-page h4 {
+    font-family: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .container-lume {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 72rem;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 40rem) {
+    .container-lume { padding-inline: 2rem; }
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--color-bordo);
+  }
+
+  .accent {
+    font-family: var(--font-lp-cormorant), ui-serif, Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 1rem 1.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    transition: all 300ms;
+  }
+
+  .btn-primary {
+    background-color: var(--color-bordo);
+    color: var(--color-offwhite);
+    box-shadow: var(--shadow-lp-glow);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-bordo-soft);
+    transform: translateY(-0.125rem);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    border: 1px solid color-mix(in oklab, var(--color-grafite) 15%, transparent);
+    background-color: transparent;
+    color: var(--color-grafite);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-bordo);
+    color: var(--color-bordo);
+  }
+
+  .hairline {
+    height: 1px;
+    width: 100%;
+    background-image: linear-gradient(to right, transparent, var(--color-rose), transparent);
+  }
+
+  .card-soft {
+    border-radius: var(--radius-lp-3xl);
+    border: 1px solid color-mix(in oklab, var(--color-rose) 50%, transparent);
+    background-color: color-mix(in oklab, var(--color-lp-cream) 80%, transparent);
+    backdrop-filter: blur(4px);
+    box-shadow: var(--shadow-lp-soft);
+  }
+
+  /* Esconde a barra de rolagem dos trilhos horizontais decorativos */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Grão sutil: dá profundidade aos blocos bordô sem pesar */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+}
