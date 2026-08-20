@@ -570,12 +570,6 @@ svg.lucide {
   --color-rose: #d8c9c3;
   --color-areia: #b89e95;
 
-  /* As fontes vêm do next/font na própria página, que expõe --font-lp-*.
-     O token do Tailwind aponta pra elas (não pode se auto-referenciar). */
-  --font-sora: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-inter: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-cormorant: var(--font-lp-cormorant), ui-serif, Georgia, serif;
-
   --shadow-lp-soft: 0 18px 50px -20px rgba(44, 37, 39, 0.18);
   --shadow-lp-card: 0 10px 40px -18px rgba(44, 37, 39, 0.22);
   --shadow-lp-glow: 0 30px 80px -30px rgba(123, 16, 43, 0.45);
@@ -585,6 +579,23 @@ svg.lucide {
   --animate-sparkle-pulse: sparkle-pulse 4s ease-in-out infinite;
   --animate-float-slow: float-slow 6s ease-in-out infinite;
   --animate-marquee: marquee 32s linear infinite;
+}
+
+/* As fontes da LP NÃO podem virar token de @theme.
+   O next/font expõe --font-lp-* numa classe aplicada na div `.lp-page`, não no
+   :root. Um token `--font-sora: var(--font-lp-sora)` é resolvido lá no :root,
+   onde --font-lp-sora não existe: o token inteiro vira "guaranteed-invalid" e
+   `font-sora` não pinta nada — o h1 caía na Manrope herdada do body. Como
+   @utility, o var() é resolvido no próprio elemento, que está dentro da casca
+   e enxerga a variável. */
+@utility font-sora {
+  font-family: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
+}
+@utility font-inter {
+  font-family: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
+}
+@utility font-cormorant {
+  font-family: var(--font-lp-cormorant), ui-serif, Georgia, serif;
 }
 
 @keyframes sparkle-pulse {
@@ -620,20 +631,24 @@ body:has(.lp-page) {
    do plano PRO) ainda vence, que é o comportamento do repositório original —
    lá elas eram @layer components + @apply. Fora de layer, CSS sem camada ganha
    das camadas e o botão saía bordô-no-bordô, ilegível. */
+/* Os títulos da LP ficam FORA de layer de propósito. A regra `h1..h6` do painel
+   (lá em cima, também sem layer) impõe Manrope, e CSS sem camada vence qualquer
+   @layer — dentro de `components` esta regra perdia e a LP inteira renderizava
+   os títulos na fonte do painel. Sem layer e com especificidade maior, ganha. */
+.lp-page h1,
+.lp-page h2,
+.lp-page h3,
+.lp-page h4 {
+  font-family: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
 @layer components {
   /* Casca da LP: troca fundo, cor e fonte-base herdados do painel. */
   .lp-page {
     background-color: var(--color-offwhite);
     color: var(--color-grafite);
     font-family: var(--font-lp-inter), ui-sans-serif, system-ui, sans-serif;
-  }
-
-  .lp-page h1,
-  .lp-page h2,
-  .lp-page h3,
-  .lp-page h4 {
-    font-family: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: -0.02em;
   }
 
   .container-lume {
