@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Script from 'next/script';
-import { Sora, Inter, Cormorant_Garamond } from 'next/font/google';
 import { authService } from '@/lib/auth/auth';
+import { lpFontVars } from '@/lib/lp/fonts';
 
 import TopBanner from '@/components/lp/TopBanner';
 import Navbar from '@/components/lp/Navbar';
@@ -27,30 +27,6 @@ const Pricing = dynamic(() => import('@/components/lp/Pricing'));
 const Guarantee = dynamic(() => import('@/components/lp/Guarantee'));
 const FAQ = dynamic(() => import('@/components/lp/FAQ'));
 const FinalCTA = dynamic(() => import('@/components/lp/FinalCTA'));
-
-// A LP tem tipografia própria (o painel usa Manrope). As variáveis ficam
-// escopadas na casca da página, então nada disso vaza pro resto do app.
-const sora = Sora({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-lp-sora',
-  display: 'swap',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-lp-inter',
-  display: 'swap',
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  style: ['italic', 'normal'],
-  variable: '--font-lp-cormorant',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Lume — Sua cliente não quer conversar. Ela quer agendar.',
@@ -92,7 +68,7 @@ export default async function HomePage() {
 
   return (
     <div
-      className={`lp-page flex min-h-screen flex-col ${sora.variable} ${inter.variable} ${cormorant.variable}`}
+      className={`lp-page flex min-h-screen flex-col ${lpFontVars}`}
     >
       <Script
         id="meta-pixel"

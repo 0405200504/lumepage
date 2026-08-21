@@ -24,31 +24,29 @@ export type PlanoId = "start" | "pro" | "premium";
  * Checkout da Hubla por plano e periodicidade.
  *
  * A seção de planos NÃO é teste grátis: é compra direta, e o botão manda pro
- * checkout sem passar pelo cadastro. Enquanto um link estiver `null`, aquele
- * botão cai no SIGNUP_LINK — a pessoa nunca fica com um botão morto, mas
- * também não chega na Hubla. Preencha para ligar a compra de verdade.
+ * checkout sem passar pelo cadastro.
  *
- * Os dois links anuais já existiam no fluxo de upgrade dentro do painel
- * (lib/subscription/entitlements.ts) e foram reaproveitados aqui.
+ * Os mesmos links do fluxo de upgrade dentro do painel — anuais em
+ * lib/subscription/entitlements.ts, os seis em components/subscription/PlanosOverlay.tsx.
  */
-export const CHECKOUT: Record<PlanoId, { mensal: string | null; anual: string | null }> = {
+export const CHECKOUT: Record<PlanoId, { mensal: string; anual: string }> = {
   start: {
-    mensal: null, // TODO: link da Hubla — Start mensal
-    anual: null, // TODO: link da Hubla — Start anual
+    mensal: "https://pay.hub.la/W0OcCJoqELUskNPEhbdL",
+    anual: "https://pay.hub.la/AgzZbpcOki2gtS9voVrq",
   },
   pro: {
-    mensal: null, // TODO: link da Hubla — Pro mensal
+    mensal: "https://pay.hub.la/Ijgtp0VTZ3QXmyCvAPKe",
     anual: "https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok",
   },
   premium: {
-    mensal: null, // TODO: link da Hubla — Premium mensal
+    mensal: "https://pay.hub.la/G1EIrESSFgnth0kXxCPC",
     anual: "https://pay.hub.la/rqw8NXaLwSvl111uEMRH",
   },
 };
 
-/** Link de compra do plano, com o cadastro como rede de segurança. */
+/** Link de compra do plano. */
 export function checkoutLink(plano: PlanoId, anual: boolean): string {
-  return CHECKOUT[plano][anual ? "anual" : "mensal"] ?? SIGNUP_LINK;
+  return CHECKOUT[plano][anual ? "anual" : "mensal"];
 }
 
 // Contato — o WhatsApp deixou de ser CTA de conversão e ficou só no rodapé.
