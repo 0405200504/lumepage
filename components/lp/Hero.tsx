@@ -9,7 +9,7 @@ export default function Hero() {
   return (
     <section
       id="topo"
-      className="relative overflow-hidden bg-offwhite pt-28 pb-16 sm:pt-32 lg:pt-36"
+      className="relative overflow-hidden bg-offwhite pt-14 pb-16 sm:pt-16 lg:pt-20"
     >
       {/* gradiente sutil de fundo */}
       <div className="pointer-events-none absolute inset-0">
@@ -47,7 +47,7 @@ export default function Hero() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="mt-6 max-w-xl text-base leading-relaxed text-grafite/70 sm:text-lg"
           >
-            O Lume transforma o link da sua bio numa página que mostra seus
+            A Lume transforma o link da sua bio numa página que mostra seus
             serviços, seus preços e seus horários — e deixa a cliente agendar
             sozinha, em{" "}
             <strong className="font-semibold text-grafite">40 segundos</strong>,
@@ -62,7 +62,7 @@ export default function Hero() {
             className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
           >
             <Button>Testar 7 dias grátis</Button>
-            <Button href="#o-que-ela-ve" variant="ghost" whatsapp={false}>
+            <Button href="#o-que-ela-ve" variant="ghost">
               Ver uma página de exemplo →
             </Button>
           </motion.div>
