@@ -58,7 +58,7 @@ jobs:
           rm -f "backup-$STAMP.sql"   # nunca sobe o arquivo não criptografado
 
       - name: Guardar o backup criptografado (artefato)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: db-backup-${{ env.STAMP }}
           path: ${{ github.workspace }}/backup-${{ env.STAMP }}.sql.gpg
