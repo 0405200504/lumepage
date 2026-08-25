@@ -15,11 +15,13 @@ import {
   getWebhookUrlAction,
   diagnoseWhatsAppAction,
   sendTestMessageAction,
-  getQRCodeAction,
+  connectWhatsAppAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppPanelProps {
   initialSettings: WhatsAppSettings | null;
+  /** true quando o servidor cria a instância sozinho (UAZAPI_ADMIN_TOKEN configurado). */
+  canAutoProvision: boolean;
 }
 
 type ConnectionStatus = 'open' | 'connecting' | 'close' | 'qr' | 'error' | 'not_configured' | 'loading';
@@ -39,7 +41,7 @@ const statusLabel: Record<ConnectionStatus, string> = {
  * O atendimento por IA está desligado nesta versão (ver lib/whatsapp/flags.ts) —
  * os campos da persona continuam no banco e são preservados a cada salvamento.
  */
-export function WhatsAppPanel({ initialSettings }: WhatsAppPanelProps) {
+export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPanelProps) {
   const { success, error } = useToast();
   const [isPending, startTransition] = useTransition();
 
@@ -210,10 +212,15 @@ export function WhatsAppPanel({ initialSettings }: WhatsAppPanelProps) {
     setQrAsyncImgSrc(null);
     setQrConnected(false);
 
-    const res = await getQRCodeAction();
+    const res = await connectWhatsAppAction();
     setQrLoading(false);
 
-    if (!res.success) { setQrError(res.error || 'Erro ao gerar QR Code.'); return; }
+    if (!res.success) {
+      setQrError('limitReached' in res && res.limitReached
+        ? 'Não conseguimos preparar seu WhatsApp agora. Já avisamos a equipe — tente de novo em alguns minutos.'
+        : res.error || 'Erro ao gerar QR Code.');
+      return;
+    }
     if (res.alreadyConnected) { setQrConnected(true); setStatus('open'); return; }
     if (res.qrcode) { setQrRaw(res.qrcode); return; }
     if (res.paircode) { setQrPaircode(res.paircode); return; }
@@ -280,7 +287,8 @@ export function WhatsAppPanel({ initialSettings }: WhatsAppPanelProps) {
 
   const isConfigured = !!(uazapiUrl && uazapiToken);
   const isConnected = status === 'open';
-  const showCredentialsForm = !isConfigured || editingCredentials;
+  // Com provisionamento automático a profissional nunca vê URL nem token.
+  const showCredentialsForm = (!isConfigured && !canAutoProvision) || editingCredentials;
   const activeAutomations = [autoBookingEnabled, auto5daysEnabled, autoDayBeforeEnabled, autoDayOfEnabled, autoFollowupEnabled].filter(Boolean).length;
   const builtinVars = ['nome', 'servico', 'data', 'horario', 'profissional', 'preco', 'forma_pagamento'];
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
@@ -367,7 +375,7 @@ export function WhatsAppPanel({ initialSettings }: WhatsAppPanelProps) {
         )}
 
         {/* Estado da conexão */}
-        {isConfigured && !showCredentialsForm && (
+        {!showCredentialsForm && (
           isConnected ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-ok)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-ok)_8%,transparent)] px-4 py-3.5">
               <div className="flex items-center gap-3 min-w-0">
@@ -390,8 +398,14 @@ export function WhatsAppPanel({ initialSettings }: WhatsAppPanelProps) {
               <div className="flex items-start gap-3 min-w-0">
                 <Smartphone className="h-5 w-5 text-gray-450 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-heading">Seu WhatsApp está desconectado</p>
-                  <p className="text-xs text-gray-450">Leia o QR Code com o celular para reconectar. Nenhuma mensagem é enviada enquanto isso.</p>
+                  <p className="text-sm font-bold text-heading">
+                    {isConfigured ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
+                  </p>
+                  <p className="text-xs text-gray-450">
+                    {isConfigured
+                      ? 'Leia o QR Code com o celular para reconectar. Nenhuma mensagem é enviada enquanto isso.'
+                      : 'Leia um QR Code com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
+                  </p>
                 </div>
               </div>
               <button

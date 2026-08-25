@@ -250,3 +250,95 @@ export async function checkUazapiStatus(
     return { status: 'error', rawJson: e instanceof Error ? e.message : String(e) };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Administração do servidor (provisionamento automático de instância)
+//
+// O servidor uazapi é um só (UAZAPI_SERVER_URL) e cada profissional ganha uma
+// instância própria dentro dele, identificada pelo token devolvido na criação.
+// Endpoints confirmados na spec OpenAPI da uazapi (docs.uazapi.com):
+//   POST   /instance/create  → header `admintoken`, body { name } → { token, ... }
+//   GET    /instance/all     → header `admintoken`
+//   DELETE /instance         → header `token` (o da própria instância)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ADMIN_URL = (process.env.UAZAPI_SERVER_URL || '').trim().replace(/\/$/, '');
+const ADMIN_TOKEN = (process.env.UAZAPI_ADMIN_TOKEN || '').trim();
+
+/** true quando o servidor pode criar instâncias sozinho (sem a profissional colar nada). */
+export function uazapiAdminConfigured(): boolean {
+  return !!(ADMIN_URL && ADMIN_TOKEN);
+}
+
+export type CreateInstanceResult =
+  | { success: true; url: string; token: string }
+  | { success: false; error: string; limitReached?: boolean; debug?: string };
+
+/**
+ * Cria uma instância no servidor uazapi e devolve o token dela.
+ * `name` precisa ser único no servidor — quem chama monta com o id da profissional.
+ * Os adminFields guardam de quem é a instância (visível só via admintoken no painel).
+ */
+export async function createUazapiInstance(
+  name: string,
+  meta?: { adminField01?: string; adminField02?: string }
+): Promise<CreateInstanceResult> {
+  if (!uazapiAdminConfigured()) {
+    return { success: false, error: 'Provisionamento automático não configurado no servidor.' };
+  }
+  try {
+    const res = await fetch(`${ADMIN_URL}/instance/create`, {
+      method: 'POST',
+      headers: { admintoken: ADMIN_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, ...meta }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const text = await res.text();
+
+    if (!res.ok) {
+      // O servidor tem um teto de instâncias contratado (o painel mostra
+      // "Limite de dispositivos"). Estourou: é problema de plano, não da cliente.
+      const limitReached = /limit|limite|max|exceed|dispositiv/i.test(text) || res.status === 403;
+      return {
+        success: false,
+        limitReached,
+        error: limitReached
+          ? 'O servidor de WhatsApp atingiu o limite de números conectados.'
+          : `A uazapi recusou a criação (HTTP ${res.status}).`,
+        debug: text.slice(0, 300),
+      };
+    }
+
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(text); } catch {
+      return { success: false, error: 'Resposta inválida da uazapi.', debug: text.slice(0, 300) };
+    }
+
+    const instance = data.instance as Record<string, unknown> | undefined;
+    const token = [data.token, instance?.token].find(v => typeof v === 'string' && v.length > 0) as string | undefined;
+    if (!token) return { success: false, error: 'A uazapi criou a instância mas não devolveu o token.', debug: text.slice(0, 300) };
+
+    return { success: true, url: ADMIN_URL, token };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro de rede ao falar com a uazapi.' };
+  }
+}
+
+/**
+ * Apaga a instância no servidor, liberando o slot do plano. Autentica com o
+ * token da própria instância (não com o admintoken) — é o que a spec pede.
+ */
+export async function deleteUazapiInstance(baseUrl: string, token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/instance`, {
+      method: 'DELETE',
+      headers: { token },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) console.error('[uazapi] delete instance falhou:', res.status, (await res.text()).slice(0, 200));
+    return res.ok;
+  } catch (e) {
+    console.error('[uazapi] Erro ao apagar instância:', e);
+    return false;
+  }
+}

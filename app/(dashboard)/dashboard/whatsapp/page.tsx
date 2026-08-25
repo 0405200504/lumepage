@@ -2,6 +2,7 @@ import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { WhatsAppPanel } from '@/components/dashboard/WhatsAppPanel';
 import { professionalCan } from '@/lib/subscription/guard';
+import { uazapiAdminConfigured } from '@/lib/uazapi';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
@@ -21,5 +22,5 @@ export default async function WhatsAppPage() {
     // tabela ainda não existe — continua com null
   }
 
-  return <WhatsAppPanel initialSettings={waSettings} />;
+  return <WhatsAppPanel initialSettings={waSettings} canAutoProvision={uazapiAdminConfigured()} />;
 }
