@@ -44,7 +44,15 @@ export async function runWhatsAppHealthCheck(): Promise<HealthResult[]> {
   }
 
   for (const s of allSettings) {
-    if (!s.bot_enabled) continue;
+    // Monitora quem tem alguma automação ligada (ou a IA, quando voltar):
+    // é a conexão que faz os disparos chegarem na cliente.
+    const usesWhatsApp = s.bot_enabled
+      || s.automation_booking_enabled
+      || s.automation_day_before_enabled
+      || s.automation_day_of_enabled
+      || s.automation_5days_enabled
+      || s.automation_followup_enabled;
+    if (!usesWhatsApp) continue;
     const pid = s.professional_id;
     try {
       const state = await loadState(pid);
