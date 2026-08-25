@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition, useCallback } from 'react';
+import Link from 'next/link';
 import QRCode from 'qrcode';
 import {
   MessageCircle, Copy, Check, Settings2, RefreshCw, ChevronDown, ChevronUp, Smartphone,
@@ -385,13 +386,21 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                   <p className="text-xs text-gray-450">As mensagens ativas abaixo já estão sendo enviadas.</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleOpenQrModal}
-                className="shrink-0 rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors"
-              >
-                Trocar número
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href="/dashboard/whatsapp/conversas"
+                  className="rounded-xl bg-forest px-3 py-2 text-[11px] font-bold text-white shadow-soft transition-colors hover:bg-forest-hover"
+                >
+                  Abrir conversas
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleOpenQrModal}
+                  className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors"
+                >
+                  Trocar número
+                </button>
+              </div>
             </div>
           ) : (
             <div className="rounded-xl border border-line bg-surface-2 p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
