@@ -12,6 +12,7 @@ import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
 import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
 import { mustChangePassword } from '@/lib/auth/must-change-password';
 import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
+import type { CheckoutIdentity } from '@/lib/lp/site';
 
 /**
  * Casca persistente do app (PWA).
@@ -36,6 +37,8 @@ export default async function DashboardLayout({
   let subscriptionPlan: string | null = null;
   let subscriptionStatus: string | null = null;
   let enforcePlan = false;
+  // Carimbo do checkout: faz o pagamento na Hubla voltar pra ESTA conta.
+  let checkoutIdentity: CheckoutIdentity | null = null;
 
   if (session.professional_id) {
     try {
@@ -48,6 +51,12 @@ export default async function DashboardLayout({
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
         subscriptionStatus = prof.subscription_status ?? null;
+        checkoutIdentity = {
+          professionalId: prof.id,
+          email: prof.email,
+          name: prof.name || prof.brand_name,
+          phone: prof.whatsapp,
+        };
 
         const legacy = isLegacyAccount(prof.created_at);
         // Contas legadas nunca são bloqueadas/limitadas por plano.
@@ -82,7 +91,7 @@ export default async function DashboardLayout({
         backgroundAttachment: 'fixed',
       }}
     >
-      {isTrialExpired && <PlanosOverlay />}
+      {isTrialExpired && <PlanosOverlay identity={checkoutIdentity} />}
       {forcePasswordChange && <ForcePasswordChange />}
 
       <Sidebar

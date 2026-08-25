@@ -13,7 +13,7 @@ export default async function PendingConversationsPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!(await professionalCan(professionalId, 'conversations'))) return <UpgradeRequired capability="conversations" />;
+  if (!(await professionalCan(professionalId, 'conversations'))) return <UpgradeRequired capability="conversations" professionalId={professionalId} />;
 
   const pendingConvs = await dbService.getPausedConversations(professionalId).catch(() => []);
 

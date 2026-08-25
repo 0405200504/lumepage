@@ -14,7 +14,7 @@ export default async function WaitlistPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!(await professionalCan(professionalId, 'waitlist'))) return <UpgradeRequired capability="waitlist" />;
+  if (!(await professionalCan(professionalId, 'waitlist'))) return <UpgradeRequired capability="waitlist" professionalId={professionalId} />;
 
   const [entries, services] = await Promise.all([
     dbService.getWaitlistByProfessional(professionalId),

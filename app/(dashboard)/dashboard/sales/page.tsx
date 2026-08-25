@@ -14,7 +14,7 @@ export default async function SalesPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!(await professionalCan(professionalId, 'sales'))) return <UpgradeRequired capability="sales" />;
+  if (!(await professionalCan(professionalId, 'sales'))) return <UpgradeRequired capability="sales" professionalId={professionalId} />;
 
   const [appointments, services] = await Promise.all([
     dbService.getAppointmentsByProfessional(professionalId),

@@ -3,7 +3,7 @@ import Sparkle from '@/components/lp/Sparkle';
 import PricingPlans from '@/components/lp/PricingPlans';
 import { SairButton } from './SairButton';
 import { lpFontVars } from '@/lib/lp/fonts';
-import { WHATSAPP_LINK } from '@/lib/lp/site';
+import { WHATSAPP_LINK, type CheckoutIdentity } from '@/lib/lp/site';
 
 /**
  * Paywall de trial vencido (ou de plano pago vencido).
@@ -13,10 +13,14 @@ import { WHATSAPP_LINK } from '@/lib/lp/site';
  * da casca `.lp-page` — quem viu a página de vendas reconhece a tela, e preço,
  * texto e checkout nunca divergem entre os dois lugares.
  *
+ * `identity` carimba os seis checkouts com quem está comprando (id, e-mail,
+ * nome e telefone da conta logada) — é assim que o webhook da Hubla sabe qual
+ * conta liberar, mesmo se ela pagar com outro e-mail.
+ *
  * O `pt-0` anula o padding que a `.lp-page` reserva pra faixa fixa da LP, que
  * aqui não existe.
  */
-export function PlanosOverlay() {
+export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null }) {
   return (
     <div
       className={`lp-page fixed inset-0 z-[100] overflow-y-auto pt-0 select-none ${lpFontVars}`}
@@ -38,7 +42,7 @@ export function PlanosOverlay() {
           </p>
         </div>
 
-        <PricingPlans animate={false} />
+        <PricingPlans animate={false} identity={identity} />
 
         {/* reforço + contato */}
         <div className="mx-auto mt-10 max-w-3xl rounded-[2rem] border border-bordo/15 bg-lp-cream px-7 py-9 text-center sm:px-12">

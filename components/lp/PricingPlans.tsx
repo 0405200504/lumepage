@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import Reveal from "./Reveal";
 import Sparkle from "./Sparkle";
 import Button from "./Button";
-import { checkoutLink, type PlanoId } from "@/lib/lp/site";
+import { checkoutLink, type CheckoutIdentity, type PlanoId } from "@/lib/lp/site";
 
 /**
  * Toggle mensal/anual + os três cartões de plano.
@@ -17,6 +17,9 @@ import { checkoutLink, type PlanoId } from "@/lib/lp/site";
  * Depende dos tokens da LP (bordo, offwhite, grafite, rose) e das classes
  * `.grain`/`.accent`/`font-sora` — quem renderiza precisa estar dentro de uma
  * casca `.lp-page` com as variáveis de fonte da LP.
+ *
+ * `identity` só chega do painel (paywall): carimba o checkout com quem está
+ * comprando, pro webhook da Hubla achar a conta na hora de liberar o acesso.
  *
  * `animate` liga a entrada ao rolar (o comportamento da página de vendas).
  * O paywall passa `false`: lá a grade é a tela inteira e já nasce visível —
@@ -121,7 +124,13 @@ function Entra({
   return <Reveal delay={delay}>{children}</Reveal>;
 }
 
-export default function PricingPlans({ animate = true }: { animate?: boolean }) {
+export default function PricingPlans({
+  animate = true,
+  identity,
+}: {
+  animate?: boolean;
+  identity?: CheckoutIdentity | null;
+}) {
   const [anual, setAnual] = useState(true);
 
   return (
@@ -267,7 +276,7 @@ export default function PricingPlans({ animate = true }: { animate?: boolean }) 
 
                 <div className="mt-8">
                   <Button
-                    href={checkoutLink(p.id, anual)}
+                    href={checkoutLink(p.id, anual, identity)}
                     className={`w-full ${
                       dark ? "bg-offwhite !text-bordo hover:bg-lp-cream" : ""
                     }`}

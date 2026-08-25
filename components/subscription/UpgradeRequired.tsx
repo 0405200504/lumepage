@@ -3,15 +3,27 @@ import { Lock, ArrowRight, Sparkles } from 'lucide-react';
 import {
   CAPABILITY_LABEL, PLAN_LABEL, UPGRADE_CHECKOUT, requiredPlan, type Capability,
 } from '@/lib/subscription/entitlements';
+import { checkoutIdentityFor } from '@/lib/subscription/guard';
+import { checkoutLink } from '@/lib/lp/site';
 
 /**
  * Tela exibida no lugar de um módulo quando o plano da profissional não o inclui.
  * Bloqueio de rota (server-side): mesmo acessando pela URL, ela vê o convite ao
  * upgrade em vez do conteúdo.
+ *
+ * Com `professionalId`, o link do checkout leva o carimbo da conta (`sck`) — é
+ * o que o webhook da Hubla usa pra liberar o plano certo pra pessoa certa.
  */
-export function UpgradeRequired({ capability }: { capability: Capability }) {
+export async function UpgradeRequired({
+  capability,
+  professionalId,
+}: {
+  capability: Capability;
+  professionalId?: string;
+}) {
   const plan = requiredPlan(capability);
-  const url = UPGRADE_CHECKOUT[plan];
+  const identity = professionalId ? await checkoutIdentityFor(professionalId) : null;
+  const url = UPGRADE_CHECKOUT[plan] ? checkoutLink(plan, true, identity) : null;
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
