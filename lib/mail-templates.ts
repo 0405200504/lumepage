@@ -16,7 +16,6 @@ import { PLAN_LABEL, type PlanType } from '@/lib/subscription/entitlements';
 import { WHATSAPP_LINK } from '@/lib/lp/site';
 
 const BORDO = '#7b102b';
-const BORDO_DEEP = '#5e0c20';
 const CREME = '#fbf8f3';
 const OFFWHITE = '#f4efe7';
 const GRAFITE = '#2c2527';
@@ -64,30 +63,53 @@ function layout(opts: {
     .map(
       (d) => `
               <tr>
-                <td style="padding:6px 0;font-size:14px;color:${GRAFITE};opacity:0.65;">${escape(d.rotulo)}</td>
+                <td style="padding:6px 0;font-size:14px;color:#5c5254;">${escape(d.rotulo)}</td>
                 <td style="padding:6px 0;font-size:15px;color:${GRAFITE};font-weight:600;text-align:right;">${escape(d.valor)}</td>
               </tr>`,
     )
     .join('');
 
   const paragrafos = (opts.corpo || [])
-    .map((p) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:${GRAFITE};opacity:0.8;">${p}</p>`)
+    .map((p) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#4a4144;">${p}</p>`)
     .join('');
 
-  return `<!-- Lume -->
+  // Documento completo, e não um fragmento: é o `<head>` que carrega os metas de
+  // color-scheme. Sem eles, o modo escuro do Gmail e do Apple Mail inverte as
+  // cores por conta própria e o texto claro sobre a faixa bordo vira texto
+  // escuro sobre bordo — ilegível.
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>Lume</title>
+<style>
+  :root { color-scheme: light only; supported-color-schemes: light only; }
+  /* Alguns clientes repintam links por conta própria; o botão e o logo não. */
+  .lume-inverso, .lume-inverso a { color:#ffffff !important; }
+  a { color:${BORDO}; }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:${OFFWHITE};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${OFFWHITE};padding:32px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <tr>
     <td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 40px -18px rgba(44,37,39,0.22);">
         <tr>
-          <td style="background:linear-gradient(135deg,${BORDO} 0%,${BORDO_DEEP} 100%);padding:28px 32px;">
-            <p style="margin:0;font-size:20px;font-weight:600;letter-spacing:0.02em;color:${OFFWHITE};">Lume</p>
+          <!-- Cor SÓLIDA, sem gradiente. O modo escuro do Gmail decide o que
+               inverter olhando o background-color; com um linear-gradient por
+               cima ele lê o fundo como claro e escurece o texto branco — foi
+               exatamente assim que a faixa ficou ilegível no Android. -->
+          <td bgcolor="${BORDO}" class="lume-inverso" style="background-color:${BORDO};padding:28px 32px;">
+            <p class="lume-inverso" style="margin:0;font-size:20px;font-weight:700;letter-spacing:0.02em;color:#ffffff;mso-line-height-rule:exactly;">Lume</p>
           </td>
         </tr>
         <tr>
           <td style="padding:32px;">
             <h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;font-weight:600;color:${GRAFITE};">${opts.titulo}</h1>
-            <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:${GRAFITE};opacity:0.8;">${opts.intro}</p>
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#4a4144;">${opts.intro}</p>
             ${
               linhas
                 ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${CREME};border:1px solid ${ROSE};border-radius:14px;padding:16px 20px;margin:0 0 22px;">
@@ -100,8 +122,8 @@ function layout(opts: {
               opts.botao
                 ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;">
               <tr>
-                <td style="background:linear-gradient(135deg,${BORDO} 0%,${BORDO_DEEP} 100%);border-radius:12px;">
-                  <a href="${escape(opts.botao.url)}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:${OFFWHITE};text-decoration:none;">${escape(opts.botao.texto)}</a>
+                <td bgcolor="${BORDO}" class="lume-inverso" style="background-color:${BORDO};border-radius:12px;">
+                  <a href="${escape(opts.botao.url)}" class="lume-inverso" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">${escape(opts.botao.texto)}</a>
                 </td>
               </tr>
             </table>`
@@ -111,7 +133,7 @@ function layout(opts: {
         </tr>
         <tr>
           <td style="padding:20px 32px 28px;border-top:1px solid ${ROSE};">
-            <p style="margin:0;font-size:13px;line-height:1.6;color:${GRAFITE};opacity:0.55;">
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#6b6265;">
               ${opts.rodape || `Dúvida? É só responder este e-mail ou <a href="${WHATSAPP_LINK}" style="color:${BORDO};">falar com a gente no WhatsApp</a>.`}
             </p>
           </td>
@@ -119,7 +141,9 @@ function layout(opts: {
       </table>
     </td>
   </tr>
-</table>`;
+</table>
+</body>
+</html>`;
 }
 
 /** Conta criada — os 7 dias de teste começaram. */
