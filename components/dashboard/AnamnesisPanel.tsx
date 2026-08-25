@@ -410,7 +410,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
       {!whatsappConnected && (
         <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 leading-relaxed">
           <strong>WhatsApp não conectado:</strong> os links e PDFs serão gerados normalmente, mas o envio automático pelo seu número fica desativado.
-          Você ainda pode enviar o link manualmente (botão do WhatsApp) — para automatizar, conecte seu WhatsApp em <em>Bot WhatsApp</em>.
+          Você ainda pode enviar o link manualmente (botão do WhatsApp) — para automatizar, conecte seu WhatsApp em <em>WhatsApp</em>.
         </div>
       )}
 

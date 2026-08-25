@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db';
 import { sendWhatsAppText, phoneFromJid } from '@/lib/uazapi';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
+import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { getAvailableSlots } from '@/lib/appointments/slots';
 import { openai } from '@ai-sdk/openai';
 import { generateText, tool } from 'ai';
@@ -194,6 +195,10 @@ async function processMessage(professionalId: string, secret: string | null, bod
     if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
     if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
     if (msg.type && msg.type !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type); return; }
+
+    // Atendimento por IA desligado no produto — as mensagens automáticas
+    // (lembretes e confirmações) saem pelo cron e não passam por aqui.
+    if (!AI_ATTENDANCE_ENABLED) { console.log('[Bot] atendimento por IA desligado'); return; }
 
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
     if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }

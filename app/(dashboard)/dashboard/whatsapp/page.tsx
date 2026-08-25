@@ -1,14 +1,14 @@
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
-import { WhatsAppBotPanel } from '@/components/dashboard/WhatsAppBotPanel';
+import { WhatsAppPanel } from '@/components/dashboard/WhatsAppPanel';
 import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
-  title: 'Bot WhatsApp | Lume',
+  title: 'WhatsApp | Lume',
 };
 
-export default async function WhatsAppBotPage() {
+export default async function WhatsAppPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
@@ -21,5 +21,5 @@ export default async function WhatsAppBotPage() {
     // tabela ainda não existe — continua com null
   }
 
-  return <WhatsAppBotPanel initialSettings={waSettings} />;
+  return <WhatsAppPanel initialSettings={waSettings} />;
 }

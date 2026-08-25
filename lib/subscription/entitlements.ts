@@ -53,7 +53,7 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   blocks: 'Bloqueios de horário',
   sales: 'Módulo de Vendas',
   conversations: 'Central de Conversas',
-  whatsappBot: 'Bot de WhatsApp com IA',
+  whatsappBot: 'WhatsApp com mensagens automáticas',
   advancedReports: 'Relatórios avançados',
   commissions: 'Comissões automáticas',
 };

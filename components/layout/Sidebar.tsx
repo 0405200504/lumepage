@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, ExternalLink, Wallet, NotebookPen, Hourglass, Bot, MessageCircle,
+  LayoutDashboard, LogOut, Menu, ExternalLink, Wallet, NotebookPen, Hourglass, MessageCircle,
   PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact, ClipboardList, Globe
 } from 'lucide-react';
+import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
@@ -76,8 +77,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
       { href: '/dashboard/anamnese', label: 'Fichas de Anamnese', icon: ClipboardList },
       { href: '/dashboard/sales', label: 'Vendas', icon: ShoppingBag },
       { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
-      { href: '/dashboard/pending', label: 'Conversas', icon: MessageCircle },
-      { href: '/dashboard/whatsapp', label: 'Bot WhatsApp', icon: Bot },
+      // "Conversas" só existe por causa do atendimento por IA (bot pausado numa
+      // cliente). Volta junto com ele — ver lib/whatsapp/flags.ts.
+      ...(AI_ATTENDANCE_ENABLED ? [{ href: '/dashboard/pending', label: 'Conversas', icon: MessageCircle }] : []),
+      { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
     ];
   };

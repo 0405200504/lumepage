@@ -211,10 +211,7 @@ export async function diagnoseWhatsAppAction() {
     steps.push({ label: 'Token', ok: hasToken, detail: hasToken ? '••••••••' + waSettings.uazapi_token.slice(-4) : 'Token não configurado' });
     if (!hasUrl || !hasToken) return { ok: false, steps };
 
-    // 3. Bot ativado
-    steps.push({ label: 'Bot ativado', ok: !!waSettings.bot_enabled, detail: waSettings.bot_enabled ? 'Ativo' : 'Desativado — ligue o toggle e salve' });
-
-    // 4. Status da instância (informativo)
+    // 3. Status da instância (informativo)
     const { status } = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token);
     steps.push({
       label: 'Status da instância',
