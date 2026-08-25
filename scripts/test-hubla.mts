@@ -12,6 +12,8 @@
  *   EVENT                padrão invoice.payment_succeeded
  *                        (tente também subscription.deactivated, invoice.refunded)
  *   SCK                  id da profissional, pra testar o carimbo do checkout
+ *   SUB_ID               fixa o id da assinatura (pra encadear ativação → cancelamento)
+ *   IDEMPOTENCY          fixa o x-hubla-idempotency (pra testar a deduplicação)
  */
 
 import { randomUUID } from 'crypto';
@@ -42,7 +44,7 @@ if (!checkout) {
 }
 
 const offerId = checkout.split('/').pop()!;
-const subscriptionId = randomUUID();
+const subscriptionId = process.env.SUB_ID || randomUUID();
 const invoiceId = randomUUID();
 
 const payload = {
@@ -89,7 +91,7 @@ const res = await fetch(url, {
   headers: {
     'content-type': 'application/json',
     'x-hubla-token': token,
-    'x-hubla-idempotency': randomUUID(),
+    'x-hubla-idempotency': process.env.IDEMPOTENCY || randomUUID(),
     'x-hubla-sandbox': 'false',
   },
   body: JSON.stringify(payload),
