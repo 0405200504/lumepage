@@ -80,6 +80,14 @@ Na própria Hubla: na listagem de regras → mais opções → **Testar configur
 Os dados são fictícios, então o Lume responde `{"sandbox": true}` sem tocar em
 conta nenhuma — o que esse teste prova é que a URL e o token estão certos.
 
+O teste fica registrado em `hubla_webhook_events` com `result = 'sandbox'`, então
+dá pra confirmar que ele chegou sem abrir o painel:
+
+```sql
+select received_at, event_type, result from hubla_webhook_events
+where result = 'sandbox' order by received_at desc;
+```
+
 Para testar de verdade, com uma conta real:
 
 ```bash

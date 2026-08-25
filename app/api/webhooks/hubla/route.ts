@@ -71,10 +71,14 @@ export async function POST(req: NextRequest) {
     `[hubla] ${event.type}${sandbox ? ' (sandbox)' : ''} · email=${event.email ?? '—'} · ofertas=${event.offerIds.join(',') || '—'}`,
   );
 
+  const db = getSupabaseAdmin();
+
   // ---------- 2. sandbox ----------
   // "Testar configuração" no painel manda dados fictícios (john.doe@hub.la).
-  // Confirma a conexão sem encostar em conta nenhuma.
+  // Não encosta em conta nenhuma, mas FICA REGISTRADO: sem esse rastro, um teste
+  // que chegou e um que nunca saiu da Hubla são indistinguíveis do nosso lado.
   if (sandbox) {
+    if (db) await openLog(db, { idempotencyKey, event, payload, result: 'sandbox' });
     return NextResponse.json({ received: true, sandbox: true, type: event.type });
   }
 
@@ -83,7 +87,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, ignored: true, reason: `evento não tratado: ${event.type}` });
   }
 
-  const db = getSupabaseAdmin();
   if (!db) {
     console.error('[hubla] Supabase admin indisponível.');
     return NextResponse.json({ error: 'banco indisponível' }, { status: 500 });
@@ -259,7 +262,12 @@ async function findProfessional(db: Db, event: HublaEvent): Promise<Prof | null>
  */
 async function openLog(
   db: Db,
-  { idempotencyKey, event, payload }: { idempotencyKey: string | null; event: HublaEvent; payload: unknown },
+  {
+    idempotencyKey,
+    event,
+    payload,
+    result = 'processing',
+  }: { idempotencyKey: string | null; event: HublaEvent; payload: unknown; result?: string },
 ): Promise<string | null | 'duplicate'> {
   const id = idempotencyKey || `${event.type}:${event.invoiceId ?? event.subscriptionId ?? Date.now()}`;
   const { error } = await db.from('hubla_webhook_events').insert({
@@ -269,7 +277,9 @@ async function openLog(
     subscription_id: event.subscriptionId,
     invoice_id: event.invoiceId,
     payload,
-    result: 'processing',
+    result,
+    // Sandbox já nasce concluído: não há nada pra processar depois.
+    processed_at: result === 'processing' ? null : new Date().toISOString(),
   });
   if (!error) return id;
   if (error.code === '23505') return 'duplicate';
