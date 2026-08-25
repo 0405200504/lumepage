@@ -2,7 +2,10 @@
 
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
-import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode } from '@/lib/uazapi';
+import {
+  configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode,
+  createUazapiInstance, uazapiAdminConfigured,
+} from '@/lib/uazapi';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
 
 /**
@@ -134,6 +137,73 @@ export async function getQRCodeAction() {
     };
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao gerar QR Code.' };
+  }
+}
+
+/**
+ * Um clique só: garante que a profissional tem uma instância no servidor uazapi,
+ * registra o webhook e devolve o QR Code para ela ler no celular.
+ *
+ * Se o servidor tem admintoken (UAZAPI_SERVER_URL + UAZAPI_ADMIN_TOKEN), a
+ * instância é criada na hora — a profissional nunca vê URL nem token. Sem
+ * admintoken, cai no fluxo antigo: alguém precisa ter salvo as credenciais.
+ */
+export async function connectWhatsAppAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false as const, error: 'Sessão inválida. Faça login novamente.' };
+
+    let waSettings = await dbService.getWhatsAppSettings(professionalId).catch(() => null);
+
+    // 1. Sem credenciais? Cria a instância desta profissional no servidor.
+    if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) {
+      if (!uazapiAdminConfigured()) {
+        return { success: false as const, error: 'Configure e salve a URL e o token da uazapi primeiro.' };
+      }
+
+      const professional = await dbService.getProfessionalById(professionalId).catch(() => null);
+      // Nome único no servidor: slug ajuda a reconhecer no painel da uazapi, e o
+      // sufixo evita colisão com uma instância antiga de mesmo nome.
+      const base = (professional?.slug || professional?.brand_name || 'lume')
+        .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lume';
+      const instanceName = `${base}-${professionalId.slice(0, 8)}`;
+
+      const created = await createUazapiInstance(instanceName, {
+        adminField01: professionalId,
+        adminField02: professional?.email || '',
+      });
+      if (!created.success) {
+        console.error('[connectWhatsApp] falha ao criar instância:', created.error, created.debug ?? '');
+        return { success: false as const, error: created.error, limitReached: created.limitReached ?? false };
+      }
+
+      waSettings = await dbService.upsertWhatsAppSettings(professionalId, {
+        uazapi_url: created.url,
+        uazapi_token: created.token,
+      });
+      console.log('[connectWhatsApp] instância criada:', instanceName);
+    }
+
+    // 2. Webhook: best-effort, não impede a conexão se falhar.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (appUrl && !appUrl.includes('SEU_APP') && waSettings.webhook_secret) {
+      const webhookUrl = `${appUrl}/api/whatsapp/webhook?pid=${professionalId}&secret=${waSettings.webhook_secret}`;
+      await configureUazapiWebhook(waSettings.uazapi_url, waSettings.uazapi_token, webhookUrl).catch(() => null);
+    }
+
+    // 3. QR Code para ler no celular.
+    const result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
+    if (!result.success) return { success: false as const, error: result.error, debug: result.debug };
+
+    return {
+      success: true as const,
+      qrcode: result.qrcode ?? null,
+      paircode: result.paircode ?? null,
+      alreadyConnected: result.alreadyConnected ?? false,
+    };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao conectar o WhatsApp.' };
   }
 }
 
