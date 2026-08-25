@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import {
   listChatsAction, listMessagesAction, sendChatMessageAction, sendChatMediaAction, markChatReadAction,
-  type InboxChat, type InboxMessage,
 } from '@/app/actions/inbox';
+import type { InboxChat, InboxMessage } from '@/lib/uazapi';
 import { useToast } from '@/components/ui/Toast';
 
 // Ritmo do "tempo real": a lista respira devagar, a conversa aberta é mais
@@ -27,6 +27,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
   const [activeChat, setActiveChat] = useState<InboxChat | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -43,21 +44,36 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
   // Sem setState antes do await: o spinner inicial vem do estado inicial e os
   // refreshes silenciosos não devem piscar a lista.
   const loadChats = useCallback(async (term: string, quiet = false) => {
-    const res = await listChatsAction({ search: term || undefined });
-    if (res.success) {
-      setChats(res.chats);
-      setChatsError(null);
-    } else if (!quiet) {
-      setChatsError(res.error ?? 'Não foi possível carregar as conversas.');
+    try {
+      const res = await listChatsAction({ search: term || undefined });
+      if (res.success) {
+        setChats(res.chats);
+        setChatsError(null);
+      } else if (!quiet) {
+        setChatsError(res.error ?? 'Não foi possível carregar as conversas.');
+      }
+    } catch (e) {
+      // Server action que rejeita (rede, timeout, erro no servidor) não pode
+      // deixar o spinner girando para sempre — mostra o motivo e libera a tela.
+      console.error('[inbox] listChats falhou:', e);
+      if (!quiet) setChatsError(e instanceof Error ? e.message : 'Falha ao falar com o servidor.');
+    } finally {
+      setChatsLoading(false);
     }
-    setChatsLoading(false);
   }, []);
 
   const loadMessages = useCallback(async (chatid: string, quiet = false) => {
     if (!quiet) setMessagesLoading(true);
-    const res = await listMessagesAction(chatid);
-    if (res.success) setMessages(res.messages);
-    setMessagesLoading(false);
+    try {
+      const res = await listMessagesAction(chatid);
+      if (res.success) setMessages(res.messages);
+      else if (!quiet) setMessagesError(res.error ?? 'Não foi possível carregar as mensagens.');
+    } catch (e) {
+      console.error('[inbox] listMessages falhou:', e);
+      if (!quiet) setMessagesError(e instanceof Error ? e.message : 'Falha ao falar com o servidor.');
+    } finally {
+      setMessagesLoading(false);
+    }
   }, []);
 
   // Primeira carga e busca no mesmo efeito: a busca espera 350ms para não
@@ -106,6 +122,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
   async function openChat(chat: InboxChat) {
     setActiveChat(chat);
     setMessages([]);
+    setMessagesError(null);
     stickToBottom.current = true;
     void loadMessages(chat.chatid);
     if (chat.unread > 0) {
@@ -299,6 +316,20 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               {messagesLoading && messages.length === 0 && (
                 <div className="flex items-center justify-center gap-2 py-10 text-xs text-gray-450">
                   <Loader2 className="h-4 w-4 animate-spin" /> Carregando mensagens…
+                </div>
+              )}
+              {messagesError && messages.length === 0 && !messagesLoading && (
+                <div className="mx-auto flex max-w-sm items-start gap-2 rounded-xl border border-line bg-surface p-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-450">{messagesError}</p>
+                    <button
+                      onClick={() => { setMessagesError(null); void loadMessages(activeChat.chatid); }}
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-forest"
+                    >
+                      <RefreshCw className="h-3 w-3" /> Tentar de novo
+                    </button>
+                  </div>
                 </div>
               )}
               {messages.map((msg, i) => (
