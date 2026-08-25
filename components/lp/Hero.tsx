@@ -84,15 +84,17 @@ export default function Hero() {
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full relative rounded-2xl overflow-hidden shadow-2xl border-4 border-offwhite bg-lp-cream"
+            className="w-full relative mx-auto max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border-4 border-offwhite bg-lp-cream"
           >
+            {/* VSL vertical (9:16). O placeholder segura a proporção antes de o
+                player carregar — sem ele a página pula quando o vídeo entra. */}
             <div
               dangerouslySetInnerHTML={{
-                __html: `<vturb-smartplayer id="vid-6a275c5e135e043f2b6fc9db" style="display: block; margin: 0 auto; width: 100%; "></vturb-smartplayer>`,
+                __html: `<vturb-smartplayer id="vid-6a8e0016267f51fbe613aed0" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: 177.77777777777777% 0 0; z-index: 0; background-color: black;"></div></vturb-smartplayer>`,
               }}
             />
             <Script
-              src="https://scripts.converteai.net/ea6f933a-58f6-43de-ab88-f29019a12a63/players/6a275c5e135e043f2b6fc9db/v4/player.js"
+              src="https://scripts.converteai.net/ea6f933a-58f6-43de-ab88-f29019a12a63/players/6a8e0016267f51fbe613aed0/v4/player.js"
               strategy="afterInteractive"
             />
           </motion.div>

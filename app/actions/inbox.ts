@@ -4,10 +4,12 @@ import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
 import {
   findUazapiChats, findUazapiMessages, markUazapiChatRead, sendWhatsAppText, sendUazapiMedia,
-  type InboxChat, type InboxMessage,
 } from '@/lib/uazapi';
 
-export type { InboxChat, InboxMessage };
+// Nada de `export type` aqui: num módulo 'use server' o Next reescreve os
+// exports e o re-export de tipo vira referência de valor em runtime
+// ("ReferenceError: InboxChat is not defined"). Os tipos vivem em lib/uazapi e
+// a tela importa de lá.
 
 /**
  * Credenciais da instância desta profissional. `mutating` recusa a sessão de
