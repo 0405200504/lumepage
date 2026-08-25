@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase/client';
+import { sendMail } from '@/lib/mail';
+import {
+  subscriptionActivatedEmail,
+  paymentFailedEmail,
+  subscriptionEndedEmail,
+} from '@/lib/mail-templates';
+import { resolvePlan } from '@/lib/subscription/entitlements';
 import {
   parseHublaEvent,
   matchPlan,
@@ -35,11 +42,13 @@ type Db = SupabaseClient;
 
 type Prof = {
   id: string;
+  name: string | null;
   email: string | null;
   whatsapp: string | null;
   brand_name: string | null;
   subscription_plan: string | null;
   subscription_status: string | null;
+  subscription_ends_at: string | null;
   hubla_subscription_id: string | null;
 };
 
@@ -128,8 +137,25 @@ export async function POST(req: NextRequest) {
       };
       if (event.subscriptionId) patch.hubla_subscription_id = event.subscriptionId;
 
+      // Os três eventos de liberação (pagamento, assinatura ativada, acesso
+      // concedido) chegam pela MESMA compra. Sem esta checagem, a mesma venda
+      // renderia três e-mails de parabéns.
+      const jaEstavaAtiva =
+        prof.subscription_status === 'active' &&
+        prof.subscription_plan === plan &&
+        prof.hubla_subscription_id === event.subscriptionId;
+
       const { error } = await db.from('professionals').update(patch).eq('id', prof.id);
       if (error) throw error;
+
+      if (!jaEstavaAtiva) {
+        await notify(prof, subscriptionActivatedEmail({
+          name: prof.name,
+          plan: resolvePlan(plan),
+          endsAt: patch.subscription_ends_at as string,
+          months,
+        }));
+      }
 
       await history(db, prof.id, {
         plan,
@@ -155,11 +181,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, matched: true, action: 'ignored', reason: 'assinatura antiga' });
       }
 
+      const jaEstavaCancelada = prof.subscription_status === 'canceled';
+
       const { error } = await db
         .from('professionals')
         .update({ subscription_status: 'canceled', subscription_ends_at: new Date().toISOString() })
         .eq('id', prof.id);
       if (error) throw error;
+
+      if (!jaEstavaCancelada) await notify(prof, subscriptionEndedEmail({ name: prof.name }));
 
       await history(db, prof.id, {
         plan: prof.subscription_plan,
@@ -175,11 +205,17 @@ export async function POST(req: NextRequest) {
 
     // past_due — cobrança falhou. Não cortamos nada: o acesso segue até o
     // vencimento já gravado, e a Hubla ainda vai retentar o cartão.
+    const jaEstavaAtrasada = prof.subscription_status === 'past_due';
+
     const { error } = await db
       .from('professionals')
       .update({ subscription_status: 'past_due' })
       .eq('id', prof.id);
     if (error) throw error;
+
+    if (!jaEstavaAtrasada) {
+      await notify(prof, paymentFailedEmail({ name: prof.name, endsAt: prof.subscription_ends_at }));
+    }
 
     await history(db, prof.id, {
       plan: prof.subscription_plan,
@@ -200,6 +236,23 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * Avisa a profissional por e-mail. Best-effort de propósito: o e-mail vai para
+ * o endereço da CONTA (não o do pagador, que pode ser outro), e uma falha de
+ * envio nunca pode virar erro para a Hubla — o acesso já foi liberado, e um 500
+ * aqui faria ela reenviar o evento inteiro.
+ */
+async function notify(prof: Prof, email: { subject: string; text: string; html: string }) {
+  if (!prof.email) return;
+  try {
+    const r = await sendMail({ to: prof.email, ...email });
+    if (r.sent) console.log(`[hubla] E-mail enviado para ${prof.email}: ${email.subject}`);
+    else if (!r.skipped) console.warn(`[hubla] E-mail não enviado para ${prof.email}: ${r.error}`);
+  } catch (e) {
+    console.warn('[hubla] Falha ao enviar e-mail:', e instanceof Error ? e.message : e);
+  }
+}
+
 /** Comparação em tempo constante (o token tem tamanho variável). */
 function safeEqual(received: string | null, expected: string): boolean {
   if (!received) return false;
@@ -217,7 +270,8 @@ function safeEqual(received: string | null, expected: string): boolean {
  *   4. telefone — pra quem comprou com outro e-mail
  */
 async function findProfessional(db: Db, event: HublaEvent): Promise<Prof | null> {
-  const COLS = 'id, email, whatsapp, brand_name, subscription_plan, subscription_status, hubla_subscription_id';
+  const COLS =
+    'id, name, email, whatsapp, brand_name, subscription_plan, subscription_status, subscription_ends_at, hubla_subscription_id';
   const isUuid = (v: string | null) =>
     !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 

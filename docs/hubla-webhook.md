@@ -160,6 +160,29 @@ para as renovações caírem sozinhas.
 3. Rodando falha por dias seguidos, a Hubla **desativa a regra** e avisa por
    e-mail. Se parou tudo de uma vez, confira se a regra ainda está ativa.
 
+## E-mails disparados
+
+Com `RESEND_API_KEY` e `MAIL_FROM` configuradas (ver `.env.example`), cada
+mudança de estado avisa a profissional — no e-mail da **conta**, não no do
+pagador, que pode ser outro:
+
+| Evento | E-mail |
+| --- | --- |
+| Acesso liberado | *Parabéns! Seu plano X está ativo* |
+| `invoice.payment_failed` | *Não conseguimos confirmar seu pagamento* |
+| Cancelamento ou reembolso | *Sua assinatura da Lume foi encerrada* |
+
+O disparo só acontece quando o estado **muda de verdade**. Os três eventos de
+liberação (`invoice.payment_succeeded`, `subscription.activated`,
+`customer.member_added`) chegam pela mesma compra: o primeiro manda o e-mail, os
+outros atualizam o banco em silêncio.
+
+Falha de envio nunca vira erro para a Hubla — o acesso já foi liberado, e um 500
+faria ela reenviar o evento inteiro. Sem a chave configurada, tudo é pulado.
+
+Para conferir os textos: `npx tsx scripts/test-emails.mts voce@exemplo.com`
+(carregue o `.env` antes com `set -a && . ./.env && set +a`).
+
 ## O que o webhook não faz
 
 - **Não cria conta.** Quem compra sem ter cadastro precisa se cadastrar com o

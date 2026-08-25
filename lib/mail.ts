@@ -21,7 +21,18 @@ export interface MailResult {
   error?: string;
 }
 
-export async function sendMail(input: { to: string; subject: string; text: string }): Promise<MailResult> {
+export interface MailInput {
+  to: string;
+  subject: string;
+  /** Versão em texto — sempre obrigatória: é o que aparece em cliente sem HTML. */
+  text: string;
+  /** Versão em HTML (opcional). Use os templates de lib/mail/templates.ts. */
+  html?: string;
+  /** Para onde vai a resposta, quando o remetente é uma caixa que ninguém lê. */
+  replyTo?: string;
+}
+
+export async function sendMail(input: MailInput): Promise<MailResult> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.MAIL_FROM || 'Lume <onboarding@resend.dev>';
 
@@ -37,9 +48,24 @@ export async function sendMail(input: { to: string; subject: string; text: strin
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [input.to], subject: input.subject, text: input.text }),
+      body: JSON.stringify({
+        from,
+        to: [input.to],
+        subject: input.subject,
+        text: input.text,
+        ...(input.html ? { html: input.html } : {}),
+        ...(input.replyTo || process.env.MAIL_REPLY_TO
+          ? { reply_to: input.replyTo || process.env.MAIL_REPLY_TO }
+          : {}),
+      }),
     });
-    if (!res.ok) return { sent: false, error: `HTTP ${res.status}` };
+    if (!res.ok) {
+      // O corpo do erro do Resend diz o motivo (domínio não verificado, from
+      // inválido, chave sem permissão) — sem ele, todo problema vira "HTTP 4xx".
+      const detalhe = await res.text().catch(() => '');
+      console.warn(`[mail] Resend recusou o envio para ${input.to}: HTTP ${res.status} ${detalhe.slice(0, 300)}`);
+      return { sent: false, error: `HTTP ${res.status}` };
+    }
     return { sent: true };
   } catch (e) {
     return { sent: false, error: e instanceof Error ? e.message : 'falha de rede' };
