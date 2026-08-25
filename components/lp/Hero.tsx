@@ -90,11 +90,11 @@ export default function Hero() {
                 player carregar — sem ele a página pula quando o vídeo entra. */}
             <div
               dangerouslySetInnerHTML={{
-                __html: `<vturb-smartplayer id="vid-6a8e0016267f51fbe613aed0" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: 177.77777777777777% 0 0; z-index: 0; background-color: black;"></div></vturb-smartplayer>`,
+                __html: `<vturb-smartplayer id="vid-6a8e06d60d360e5354bf0e39" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: 177.77777777777777% 0 0; z-index: 0; background-color: black;"></div></vturb-smartplayer>`,
               }}
             />
             <Script
-              src="https://scripts.converteai.net/ea6f933a-58f6-43de-ab88-f29019a12a63/players/6a8e0016267f51fbe613aed0/v4/player.js"
+              src="https://scripts.converteai.net/ea6f933a-58f6-43de-ab88-f29019a12a63/players/6a8e06d60d360e5354bf0e39/v4/player.js"
               strategy="afterInteractive"
             />
           </motion.div>
