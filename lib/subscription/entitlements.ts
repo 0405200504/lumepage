@@ -7,6 +7,8 @@
  * Puro (sem dependências de servidor) — pode ser usado no client e no server.
  */
 
+import { CHECKOUT } from '@/lib/lp/site';
+
 export type PlanType = 'start' | 'pro' | 'premium';
 
 export type Capability =
@@ -56,11 +58,17 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   commissions: 'Comissões automáticas',
 };
 
-/** Checkout anual da Hubla por plano (usado no CTA de upgrade). */
+/**
+ * Checkout anual da Hubla por plano (usado no CTA de upgrade).
+ *
+ * Derivado de `CHECKOUT` de propósito: o webhook reconhece a compra pelo id do
+ * link (lib/subscription/hubla.ts). Link solto aqui viraria uma venda que o
+ * webhook não sabe mapear.
+ */
 export const UPGRADE_CHECKOUT: Record<PlanType, string | null> = {
   start: null,
-  pro: 'https://pay.hub.la/kp8OZWVfP7tLSWpMx5ok',
-  premium: 'https://pay.hub.la/rqw8NXaLwSvl111uEMRH',
+  pro: CHECKOUT.pro.anual,
+  premium: CHECKOUT.premium.anual,
 };
 
 /**

@@ -12,7 +12,7 @@ export default async function WhatsAppBotPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!(await professionalCan(professionalId, 'whatsappBot'))) return <UpgradeRequired capability="whatsappBot" />;
+  if (!(await professionalCan(professionalId, 'whatsappBot'))) return <UpgradeRequired capability="whatsappBot" professionalId={professionalId} />;
 
   let waSettings = null;
   try {

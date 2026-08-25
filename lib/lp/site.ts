@@ -44,9 +44,41 @@ export const CHECKOUT: Record<PlanoId, { mensal: string; anual: string }> = {
   },
 };
 
-/** Link de compra do plano. */
-export function checkoutLink(plano: PlanoId, anual: boolean): string {
-  return CHECKOUT[plano][anual ? "anual" : "mensal"];
+/**
+ * Quem está comprando. Só existe dentro do painel (paywall/upgrade), onde a
+ * profissional já está logada — na página de vendas ninguém se identificou ainda.
+ */
+export type CheckoutIdentity = {
+  professionalId?: string | null;
+  email?: string | null;
+  name?: string | null;
+  phone?: string | null;
+};
+
+/**
+ * Link de compra do plano.
+ *
+ * Com identidade, o checkout vai pré-preenchido e — o que importa de verdade —
+ * carimbado com `sck`, que a Hubla devolve no webhook. É esse carimbo que faz o
+ * pagamento cair na conta certa mesmo quando a pessoa paga com outro e-mail.
+ * Ver app/api/webhooks/hubla/route.ts.
+ */
+export function checkoutLink(
+  plano: PlanoId,
+  anual: boolean,
+  identity?: CheckoutIdentity | null,
+): string {
+  const base = CHECKOUT[plano][anual ? "anual" : "mensal"];
+  if (!identity) return base;
+
+  const q = new URLSearchParams();
+  if (identity.professionalId) q.set("sck", identity.professionalId);
+  if (identity.email) q.set("email", identity.email);
+  if (identity.name) q.set("name", identity.name);
+  if (identity.phone) q.set("phone", identity.phone);
+
+  const query = q.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 // Contato — o WhatsApp deixou de ser CTA de conversão e ficou só no rodapé.

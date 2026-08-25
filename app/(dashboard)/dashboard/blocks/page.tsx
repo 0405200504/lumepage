@@ -14,7 +14,7 @@ export default async function DashboardBlocksPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  if (!(await professionalCan(professionalId, 'blocks'))) return <UpgradeRequired capability="blocks" />;
+  if (!(await professionalCan(professionalId, 'blocks'))) return <UpgradeRequired capability="blocks" professionalId={professionalId} />;
 
   const blocks = await dbService.getTimeBlocksByProfessional(professionalId);
 
