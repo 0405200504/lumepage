@@ -10,6 +10,8 @@ import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { logAccessEvent } from '@/lib/access-tokens';
+import { sendMail } from '@/lib/mail';
+import { welcomeEmail } from '@/lib/mail-templates';
 
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
@@ -317,6 +319,27 @@ export async function loginAction(email: string, password?: string) {
 }
 
 // 9. Cadastro de profissional
+/**
+ * Boas-vindas do cadastro — best-effort.
+ *
+ * Nunca bloqueia nem falha o cadastro: a conta já existe, e um provedor de
+ * e-mail fora do ar não pode impedir alguém de entrar no painel. Sem
+ * RESEND_API_KEY configurada, o envio é simplesmente pulado.
+ *
+ * O e-mail NÃO leva a senha: quem se cadastra escolhe a própria senha e já a
+ * conhece. Mandar em texto num canal encaminhável só criaria risco.
+ */
+async function enviarBoasVindas(email: string, nome: string) {
+  try {
+    // Mesmo prazo do DEFAULT de `trial_ends_at` (migration v26).
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const r = await sendMail({ to: email, ...welcomeEmail({ name: nome, email, trialEndsAt }) });
+    if (r.sent) console.log(`[cadastro] Boas-vindas enviadas para ${email}.`);
+  } catch (e) {
+    console.warn('[cadastro] Falha ao enviar boas-vindas:', e instanceof Error ? e.message : e);
+  }
+}
+
 export async function registerProfessionalAction(data: {
   name: string;
   brandName: string;
@@ -404,6 +427,7 @@ export async function registerProfessionalAction(data: {
           }
         }
 
+        await enviarBoasVindas(cleanEmail, data.name);
         return { success: true, user: authData.user };
       }
 
@@ -435,6 +459,7 @@ export async function registerProfessionalAction(data: {
         }
       }
 
+      await enviarBoasVindas(cleanEmail, data.name);
       return { success: true, user: authData.user };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao realizar cadastro.' };
