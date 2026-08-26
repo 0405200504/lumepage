@@ -1,19 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabase/client';
 import { syncFromGoogle } from '@/lib/google/calendar';
+
+function sameToken(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 /**
  * POST /api/google/webhook
  * Recebe push notifications do Google Calendar quando eventos mudam.
  * Dispara sync incremental para a conexão correspondente.
+ *
+ * Responde 200 em quase todo caso: erro faz o Google reenviar com backoff e,
+ * depois de muitas falhas, derrubar o canal.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Google envia o channel ID no header
     const channelId = request.headers.get('x-goog-channel-id');
     const resourceState = request.headers.get('x-goog-resource-state');
+    const channelToken = request.headers.get('x-goog-channel-token');
 
-    // Ignorar notificação de "sync" (confirmação de registro)
+    // Notificação de "sync" = confirmação de que o canal foi criado.
     if (resourceState === 'sync') {
       return NextResponse.json({ ok: true });
     }
@@ -40,7 +50,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true }); // 200 para o Google não reenviar
     }
 
-    // Sync incremental
+    // O token do canal é o segredo combinado no watch. Canais criados antes da
+    // migração v38 não têm token salvo — esses seguem aceitos até renovarem.
+    if (conn.webhook_token && (!channelToken || !sameToken(conn.webhook_token, channelToken))) {
+      console.warn('[Google Webhook] Token do canal inválido:', channelId);
+      return NextResponse.json({ error: 'Token inválido' }, { status: 403 });
+    }
+
     const result = await syncFromGoogle(conn, conn.professional_id);
     console.log('[Google Webhook] Sync result:', result);
 

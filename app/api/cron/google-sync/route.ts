@@ -8,10 +8,15 @@ import { syncFromGoogle, setupWatch } from '@/lib/google/calendar';
  * Também renova watches próximos de expirar.
  */
 export async function GET(request: NextRequest) {
-  // Verificar token de segurança do cron
-  const authHeader = request.headers.get('authorization');
+  // Fail-closed, como /api/cron/reminders: sem CRON_SECRET o endpoint fica
+  // desligado. Antes, a env ausente deixava qualquer um disparar o sync de
+  // todas as contas (e queimar a cota da API do Google).
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    console.error('[cron/google-sync] CRON_SECRET não configurado — endpoint desabilitado.');
+    return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -50,11 +55,10 @@ export async function GET(request: NextRequest) {
         const hoursUntilExpiry = (watchExpiration - Date.now()) / (1000 * 60 * 60);
 
         if (hoursUntilExpiry < 24 || !conn.sync_channel_id) {
-          const origin = request.headers.get('x-forwarded-proto')
-            ? `${request.headers.get('x-forwarded-proto')}://${request.headers.get('host')}`
-            : new URL(request.url).origin;
-          const webhookUrl = `${origin}/api/google/webhook`;
-          await setupWatch(conn, webhookUrl);
+          // Endereço PÚBLICO do app: o Google precisa alcançar este webhook por
+          // HTTPS, então nunca derive do host do request (pode ser interno).
+          const origin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/+$/, '');
+          await setupWatch(conn, `${origin}/api/google/webhook`);
         }
       } catch (e) {
         console.error(`[Google Cron] Erro para ${conn.google_email}:`, e);

@@ -6,8 +6,15 @@ export const metadata = {
   title: 'Configurações | Lume',
 };
 
-export default async function DashboardSettingsPage() {
+interface PageProps {
+  // ?google=success|error|cancelado|conta_diferente|nao_configurado — vem do
+  // retorno do OAuth (/api/google/callback).
+  searchParams: Promise<{ google?: string }>;
+}
+
+export default async function DashboardSettingsPage({ searchParams }: PageProps) {
   const session = await requireProfessional();
+  const { google: googleStatus } = await searchParams;
   const professionalId = session.professional_id!;
 
   const [professional, settings, googleConnection] = await Promise.all([
@@ -24,5 +31,12 @@ export default async function DashboardSettingsPage() {
     );
   }
 
-  return <SettingsForm professional={professional} settings={settings} googleConnection={googleConnection} />;
+  return (
+    <SettingsForm
+      professional={professional}
+      settings={settings}
+      googleConnection={googleConnection}
+      googleStatus={googleStatus ?? null}
+    />
+  );
 }

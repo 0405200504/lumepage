@@ -5,6 +5,7 @@ import { Profile } from '@/types/database';
 import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
 import { signSession, verifySession } from './cookie';
 import { logAccessEvent } from '../access-tokens';
+import { precisaOnboarding, slugLivre } from './onboarding';
 
 /**
  * ESCOPOS DE SESSÃO
@@ -141,7 +142,7 @@ export const authService = {
    * resolvemos/criamos a profissional e montamos o MESMO cookie assinado do login
    * por senha. Conta nova via Google já nasce com o trial de 7 dias (default do banco).
    */
-  loginWithGoogle: async (accessToken: string): Promise<{ success: boolean; error?: string; role?: string }> => {
+  loginWithGoogle: async (accessToken: string): Promise<{ success: boolean; error?: string; role?: string; needsOnboarding?: boolean }> => {
     if (!isSupabaseConfigured) return { success: false, error: 'Login indisponível no momento.' };
     const admin = getSupabaseAdmin();
     if (!admin) return { success: false, error: 'Serviço de login indisponível.' };
@@ -162,6 +163,7 @@ export const authService = {
 
       // 3. Resolve a profissional vinculada (existente ou cria uma nova).
       let professionalId = profile?.professional_id ?? null;
+      let criouAgora = false;
       if (!professionalId) {
         const { data: existing } = await admin
           .from('professionals')
@@ -175,18 +177,15 @@ export const authService = {
           professionalId = existing.id;
         } else {
           professionalId = crypto.randomUUID();
-          const base = displayName.toLowerCase().normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)+/g, '') || 'lume';
           await dbService.createProfessional({
             id: professionalId, owner_user_id: null, name: displayName, brand_name: displayName,
-            slug: `${base}-${professionalId.slice(0, 4)}`, email: cleanEmail, whatsapp: '',
+            slug: await slugLivre(displayName, professionalId), email: cleanEmail, whatsapp: '',
             instagram: null, logo_url: null, profile_image_url: null,
             primary_color: '#500b18', secondary_color: '#eccbd2',
             address: null, city: null, state: null, description: null, public_bio: null,
             status: 'active',
           });
+          criouAgora = true;
         }
       }
 
@@ -215,7 +214,15 @@ export const authService = {
       const sessionData: SessionData = buildSession(profile, user.id);
       await writeSessionCookie(sessionData);
       await logAccessEvent({ professionalId, email: cleanEmail, method: 'google' });
-      return { success: true, role: profile.role };
+
+      // 6. Quem entra pelo Google pula o formulário de cadastro: chega sem nome
+      //    de negócio e sem WhatsApp. Sinaliza para a tela de boas-vindas
+      //    (/bem-vinda) coletar isso antes de soltar no painel.
+      const needsOnboarding = profile.role === 'professional' && !!professionalId
+        ? (criouAgora || await precisaOnboarding(professionalId))
+        : false;
+
+      return { success: true, role: profile.role, needsOnboarding };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao entrar com Google.' };
     }

@@ -36,6 +36,7 @@ export interface Professional {
   hubla_subscription_id?: string | null;
   subscription_plan?: 'start' | 'pro' | 'premium' | null;
   subscription_ends_at?: string | null; // vencimento do acesso pago (admin) — requer migração v28
+  onboarding_completed_at?: string | null; // null = ainda falta completar o cadastro (requer migração v38)
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +96,7 @@ export interface TimeBlock {
   end_time: string | null;
   reason: string | null;
   block_type: BlockType;
+  google_event_id?: string | null; // bloqueio espelhado do Google (requer migração v38)
   created_at: string;
   updated_at?: string;
 }
@@ -336,6 +338,9 @@ export interface GoogleCalendarConnection {
   sync_resource_id: string | null;
   sync_expiration: string | null;
   last_sync_token: string | null;
+  webhook_token?: string | null;   // segredo do canal de push (requer migração v38)
+  last_error?: string | null;      // último erro de sync (requer migração v38)
+  last_synced_at?: string | null;  // requer migração v38
   enabled: boolean;
   created_at: string;
   updated_at: string;

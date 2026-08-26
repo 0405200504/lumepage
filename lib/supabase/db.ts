@@ -26,6 +26,18 @@ function isMissingTable(error: { code?: string; message?: string } | null): bool
     || /does not exist|could not find the table|schema cache/i.test(error.message || '');
 }
 
+/**
+ * Coluna inexistente = migração ainda não rodada nesse banco. Serve para os
+ * campos novos (ex.: onboarding_completed_at, da v38) não quebrarem operações
+ * antigas antes de a migração ser aplicada.
+ */
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '42703'
+    || error.code === 'PGRST204'
+    || /column .* does not exist|could not find the '.*' column/i.test(error.message || '');
+}
+
 function warnMigration(table: string) {
   console.warn(`[${table}] Tabela ausente — rode supabase/migration_v3.sql no Supabase para ativar o módulo.`);
 }
@@ -152,12 +164,24 @@ export const dbService = {
       // campos NOT NULL não enviados (ex.: slug) — o que viola a constraint e quebra a
       // edição. A criação tem caminho próprio (createProfessional).
       const { id, ...patch } = data;
-      const { data: result, error } = await getDb()
+      let { data: result, error } = await getDb()
         .from('professionals')
         .update({ ...patch, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
+      // Banco sem a migração v38: salva o resto da edição em vez de perder tudo.
+      if (error && isMissingColumn(error) && 'onboarding_completed_at' in patch) {
+        const { onboarding_completed_at, ...resto } = patch as typeof patch & { onboarding_completed_at?: string | null };
+        void onboarding_completed_at;
+        warnMigration('professionals.onboarding_completed_at');
+        ({ data: result, error } = await getDb()
+          .from('professionals')
+          .update({ ...resto, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .select()
+          .single());
+      }
       if (error) throw error;
       return result;
     }
@@ -168,11 +192,23 @@ export const dbService = {
     if (isSupabaseConfigured) {
       const client = getSupabaseAdmin() || supabaseAdmin || supabase;
       // 1. Criar o profissional
-      const { data: result, error } = await client
+      let { data: result, error } = await client
         .from('professionals')
         .insert(data)
         .select()
         .single();
+      // Banco sem a migração v38: repete sem o campo de onboarding em vez de
+      // derrubar o cadastro inteiro.
+      if (error && isMissingColumn(error) && 'onboarding_completed_at' in data) {
+        const { onboarding_completed_at, ...semOnboarding } = data as typeof data & { onboarding_completed_at?: string | null };
+        void onboarding_completed_at;
+        warnMigration('professionals.onboarding_completed_at');
+        ({ data: result, error } = await client
+          .from('professionals')
+          .insert(semOnboarding)
+          .select()
+          .single());
+      }
       if (error) throw error;
 
       // 2. Criar as configurações padrão para o profissional

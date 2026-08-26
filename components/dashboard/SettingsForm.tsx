@@ -8,21 +8,38 @@ import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
 import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
 import { BookingDecor } from '@/components/booking/BookingDecor';
+import { formatDateTimeBR } from '@/lib/format';
 
 interface SettingsFormProps {
   professional: Professional;
   settings: Setting | null;
   googleConnection?: GoogleCalendarConnection | null;
+  /** Resultado do OAuth do Google (?google=... no retorno do callback). */
+  googleStatus?: string | null;
 }
+
+/** Recado para cada retorno possível da conexão com o Google. */
+const GOOGLE_STATUS: Record<string, { tipo: 'ok' | 'erro'; titulo: string; texto: string }> = {
+  success: { tipo: 'ok', titulo: 'Google Agenda conectada', texto: 'Seus agendamentos passam a aparecer na sua agenda do Google.' },
+  cancelado: { tipo: 'erro', titulo: 'Conexão cancelada', texto: 'Você fechou a tela do Google antes de autorizar.' },
+  conta_diferente: { tipo: 'erro', titulo: 'Conta diferente', texto: 'A autorização voltou para outra conta Lume. Entre na conta certa e tente de novo.' },
+  nao_configurado: { tipo: 'erro', titulo: 'Integração indisponível', texto: 'A conexão com o Google ainda não foi configurada no servidor.' },
+  error: { tipo: 'erro', titulo: 'Não deu certo', texto: 'Não foi possível concluir a conexão com o Google. Tente de novo.' },
+};
 
 export const SettingsForm: React.FC<SettingsFormProps> = ({
   professional,
   settings,
   googleConnection,
+  googleStatus,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'branding' | 'integrations'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'agenda' | 'branding' | 'integrations'>(
+    googleStatus ? 'integrations' : 'profile'
+  );
+  const [syncing, setSyncing] = useState(false);
+  const googleAviso = googleStatus ? GOOGLE_STATUS[googleStatus] ?? GOOGLE_STATUS.error : null;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estados de Cadastro
@@ -555,45 +572,95 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               <p className="text-xs text-gray-450 mt-1">Conecte sua conta Lume a outros serviços e plataformas.</p>
             </div>
 
+            {/* Retorno do OAuth do Google (?google=...) */}
+            {googleAviso && (
+              <div
+                className={`rounded-2xl border p-4 text-xs ${
+                  googleAviso.tipo === 'ok'
+                    ? 'bg-green-50 border-green-100 text-green-800'
+                    : 'bg-red-50 border-red-100 text-red-800'
+                }`}
+              >
+                <p className="font-bold">{googleAviso.titulo}</p>
+                <p className="mt-0.5 opacity-90">{googleAviso.texto}</p>
+              </div>
+            )}
+
             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center shrink-0 text-blue-500">
                   <Calendar className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-800">Google Calendar</h4>
+                  <h4 className="text-sm font-bold text-gray-800">Google Agenda</h4>
                   <p className="text-xs text-gray-500 mt-1 max-w-sm">
-                    Sincronize seus agendamentos da Lume com o seu Google Calendar em tempo real. Bloqueios criados no Google também refletem na Lume.
+                    Seus agendamentos da Lume aparecem na sua agenda do Google. E o que você marca no Google
+                    bloqueia o horário aqui — ninguém agenda em cima de um compromisso seu.
                   </p>
                   {googleConnection && (
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 text-green-700 text-[10px] font-bold">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      Conectado como {googleConnection.google_email}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 text-green-700 text-[10px] font-bold">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        Conectado como {googleConnection.google_email}
+                      </span>
+                      {googleConnection.last_synced_at && (
+                        <span className="text-[10px] text-gray-450">
+                          Última sincronização: {formatDateTimeBR(googleConnection.last_synced_at)}
+                        </span>
+                      )}
                     </div>
+                  )}
+                  {googleConnection?.last_error && (
+                    <p className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-2 py-1.5 max-w-sm">
+                      Última tentativa falhou: {googleConnection.last_error}. Se continuar, desconecte e conecte de novo.
+                    </p>
                   )}
                 </div>
               </div>
-              
-              <div className="shrink-0 w-full sm:w-auto">
+
+              <div className="shrink-0 w-full sm:w-auto flex flex-col sm:flex-row gap-2">
                 {googleConnection ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (window.confirm('Tem certeza que deseja desconectar o Google Calendar? Seus agendamentos pararão de sincronizar.')) {
+                  <>
+                    <button
+                      type="button"
+                      disabled={syncing}
+                      onClick={async () => {
+                        setSyncing(true);
                         try {
-                          const res = await fetch('/api/google/disconnect', { method: 'POST' });
-                          if (!res.ok) throw new Error();
-                          success('Desconectado', 'Sua conta Google Calendar foi desconectada.');
+                          const res = await fetch('/api/google/sync', { method: 'POST' });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data?.error || '');
+                          success('Sincronizado', `${data.created} bloqueio(s) criado(s), ${data.updated} atualizado(s).`);
                           router.refresh();
-                        } catch {
-                          error('Erro', 'Não foi possível desconectar o Google Calendar.');
+                        } catch (e) {
+                          error('Erro', e instanceof Error && e.message ? e.message : 'Não foi possível sincronizar agora.');
+                        } finally {
+                          setSyncing(false);
                         }
-                      }
-                    }}
-                    className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
-                  >
-                    Desconectar
-                  </button>
+                      }}
+                      className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-60"
+                    >
+                      {syncing ? 'Sincronizando…' : 'Sincronizar agora'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (window.confirm('Desconectar a Google Agenda? Os agendamentos param de sincronizar e os bloqueios vindos do Google são removidos daqui.')) {
+                          try {
+                            const res = await fetch('/api/google/disconnect', { method: 'POST' });
+                            if (!res.ok) throw new Error();
+                            success('Desconectado', 'Sua Google Agenda foi desconectada.');
+                            router.refresh();
+                          } catch {
+                            error('Erro', 'Não foi possível desconectar a Google Agenda.');
+                          }
+                        }
+                      }}
+                      className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                    >
+                      Desconectar
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -602,7 +669,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     }}
                     className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
                   >
-                    Conectar Conta Google
+                    Conectar Google Agenda
                   </button>
                 )}
               </div>
