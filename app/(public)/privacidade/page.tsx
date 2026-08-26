@@ -70,10 +70,37 @@ export default function PrivacidadePage() {
             <ul className="list-disc pl-5 space-y-1 mt-2">
               <li><strong>Supabase</strong> — banco de dados e autenticação;</li>
               <li><strong>Vercel</strong> — hospedagem da aplicação;</li>
-              <li><strong>Google Cloud (Google Calendar)</strong> — para sincronização bidirecional de agendas, nós acessamos e editamos apenas eventos criados através do Lume para evitar conflitos;</li>
+              <li><strong>Google Agenda (Google Calendar API)</strong> — quando a profissional conecta a própria conta Google, para manter as duas agendas iguais;</li>
               <li><strong>OpenAI</strong> — assistente de IA (quando usado pela profissional);</li>
               <li><strong>Provedor de mensageria do WhatsApp</strong> — envio das mensagens automáticas.</li>
             </ul>
+          </div>
+
+          <div>
+            <h2>4.1. Uso dos dados da Google Agenda</h2>
+            <p>
+              A conexão com a Google Agenda é <strong>opcional</strong> e só acontece quando a profissional autoriza,
+              na tela do próprio Google. Enquanto estiver conectada, o Lume:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-2">
+              <li>cria, edita e cancela na agenda do Google os eventos correspondentes aos agendamentos feitos no Lume;</li>
+              <li>lê os eventos da agenda conectada para saber quais horários já estão ocupados e impedir agendamento
+              em cima de um compromisso — desses eventos guardamos apenas data, horário e o identificador do evento,
+              nunca convidados, anexos ou o conteúdo da descrição;</li>
+              <li>não usa esses dados para publicidade, não os vende e não os compartilha com terceiros;</li>
+              <li>não os utiliza para treinar modelos de inteligência artificial, próprios ou de terceiros.</li>
+            </ul>
+            <p className="mt-2">
+              O uso das informações recebidas das APIs do Google segue a
+              {' '}<a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
+              Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado
+              (<em>Limited Use</em>).
+            </p>
+            <p className="mt-2">
+              A profissional pode desconectar quando quiser em <strong>Configurações → Integrações → Desconectar</strong>,
+              ou em <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.
+              Ao desconectar, apagamos os tokens de acesso e os bloqueios de horário que vieram do Google.
+            </p>
           </div>
 
           <div>

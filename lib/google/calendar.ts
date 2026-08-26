@@ -6,25 +6,70 @@
  * - CRUD de eventos (criar, atualizar, deletar)
  * - Sync incremental (Google → Lume)
  * - Watch (push notifications)
+ *
+ * Fuso: a agenda da Lume trabalha com data ("YYYY-MM-DD") e hora ("HH:MM:SS")
+ * SEM fuso — sempre horário de Brasília. O Google devolve instantes em UTC.
+ * Toda conversão passa por `toBrParts` (Intl); nunca use toISOString()/
+ * toTimeString() aqui: em produção o servidor roda em UTC e os horários
+ * chegariam 3h adiantados.
  */
 
 import { google, calendar_v3 } from 'googleapis';
 import { GoogleCalendarConnection, Appointment, Service } from '@/types/database';
 import { getSupabaseAdmin } from '@/lib/supabase/client';
+import { signSession, verifySession } from '@/lib/auth/cookie';
 
 // ─── Credenciais ──────────────────────────────────────────────
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
+// Lidas em runtime (não no topo do módulo) para funcionarem em qualquer
+// ambiente de deploy sem precisar rebuildar quando a env muda.
+function clientId() { return process.env.GOOGLE_CLIENT_ID || ''; }
+function clientSecret() { return process.env.GOOGLE_CLIENT_SECRET || ''; }
+
+/**
+ * URI de retorno do OAuth. Precisa bater EXATAMENTE com a cadastrada no
+ * Google Cloud Console. Se GOOGLE_REDIRECT_URI não estiver definida, derivamos
+ * da URL pública do app — assim basta configurar NEXT_PUBLIC_APP_URL.
+ */
+export function redirectUri(): string {
+  const explicit = process.env.GOOGLE_REDIRECT_URI;
+  if (explicit) return explicit;
+  const base = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
+  return base ? `${base}/api/google/callback` : '';
+}
+
+/** True quando as credenciais do Google estão configuradas. */
+export function isGoogleCalendarConfigured(): boolean {
+  return Boolean(clientId() && clientSecret() && redirectUri());
+}
+
+const TZ = 'America/Sao_Paulo';
 
 const SCOPES = [
-  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
+// ─── Fuso ─────────────────────────────────────────────────────
+
+/** Converte um instante (Date/UTC) para data e hora de Brasília. */
+function toBrParts(d: Date): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d);
+  const p: Record<string, string> = {};
+  for (const part of parts) p[part.type] = part.value;
+  return {
+    date: `${p.year}-${p.month}-${p.day}`,
+    time: `${p.hour}:${p.minute}:${p.second}`,
+  };
+}
+
 // ─── Helper: criar OAuth2 client ──────────────────────────────
 function createOAuth2Client() {
-  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  return new google.auth.OAuth2(clientId(), clientSecret(), redirectUri());
 }
 
 function getAuthenticatedClient(connection: GoogleCalendarConnection) {
@@ -39,14 +84,34 @@ function getAuthenticatedClient(connection: GoogleCalendarConnection) {
 
 // ─── OAuth ────────────────────────────────────────────────────
 
+/**
+ * `state` do OAuth — assinado.
+ *
+ * Antes o state era o professional_id cru: qualquer pessoa podia abrir a URL
+ * do Google com o id de OUTRA profissional e plugar a própria agenda na conta
+ * dela. Agora vai assinado (HMAC do SESSION_SECRET) e com validade curta.
+ */
+function makeState(professionalId: string): string {
+  return signSession({ pid: professionalId, iat: Date.now() });
+}
+
+/** Valida o state do callback. Retorna o professional_id ou null. */
+export function readState(state: string | null): string | null {
+  const data = verifySession<{ pid?: string; iat?: number }>(state);
+  if (!data?.pid || !data.iat) return null;
+  if (Date.now() - data.iat > 15 * 60 * 1000) return null; // 15 min
+  return data.pid;
+}
+
 /** Gera URL de autorização OAuth para redirecionar a profissional. */
 export function getAuthUrl(professionalId: string): string {
   const oauth2 = createOAuth2Client();
   return oauth2.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent', // garante refresh_token
+    include_granted_scopes: true,
     scope: SCOPES,
-    state: professionalId, // recupera no callback
+    state: makeState(professionalId),
   });
 }
 
@@ -64,15 +129,34 @@ export async function handleCallback(code: string, professionalId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase não configurado.');
 
-  // Upsert — se já tinha conexão, atualiza tokens
+  // Reconexão: o Google só devolve refresh_token na PRIMEIRA autorização de
+  // cada conta. Se não veio, reaproveitamos o que já está salvo — sobrescrever
+  // com null quebraria a renovação do token e a conexão morreria em 1h.
+  let refreshToken = tokens.refresh_token || null;
+  if (!refreshToken) {
+    const { data: existing } = await supabase
+      .from('google_calendar_connections')
+      .select('refresh_token')
+      .eq('professional_id', professionalId)
+      .maybeSingle();
+    refreshToken = existing?.refresh_token || null;
+  }
+  if (!refreshToken) {
+    throw new Error('O Google não devolveu a permissão de acesso contínuo. Remova o acesso da Lume em myaccount.google.com/permissions e conecte de novo.');
+  }
+
+  const expiresAt = tokens.expiry_date
+    ? new Date(tokens.expiry_date)
+    : new Date(Date.now() + 55 * 60 * 1000);
+
   const { error } = await supabase
     .from('google_calendar_connections')
     .upsert({
       professional_id: professionalId,
       google_email: googleEmail,
       access_token: tokens.access_token!,
-      refresh_token: tokens.refresh_token!,
-      token_expires_at: new Date(tokens.expiry_date!).toISOString(),
+      refresh_token: refreshToken,
+      token_expires_at: expiresAt.toISOString(),
       calendar_id: 'primary',
       enabled: true,
       updated_at: new Date().toISOString(),
@@ -102,7 +186,7 @@ export async function refreshIfNeeded(
   const updated = {
     ...connection,
     access_token: credentials.access_token!,
-    token_expires_at: new Date(credentials.expiry_date!).toISOString(),
+    token_expires_at: new Date(credentials.expiry_date || Date.now() + 55 * 60 * 1000).toISOString(),
   };
 
   await supabase
@@ -145,11 +229,11 @@ function appointmentToEvent(
     ].filter(Boolean).join('\n'),
     start: {
       dateTime: `${dateStr}T${startTime}:00`,
-      timeZone: 'America/Sao_Paulo',
+      timeZone: TZ,
     },
     end: {
       dateTime: `${dateStr}T${endTime}:00`,
-      timeZone: 'America/Sao_Paulo',
+      timeZone: TZ,
     },
     // Metadado privado para identificar que é da Lume
     extendedProperties: {
@@ -192,6 +276,7 @@ export async function createEvent(
     return data.id || null;
   } catch (e) {
     console.error('[GoogleCalendar] Erro ao criar evento:', e);
+    await noteError(connection, e);
     return null;
   }
 }
@@ -217,6 +302,7 @@ export async function updateEvent(
     return true;
   } catch (e) {
     console.error('[GoogleCalendar] Erro ao atualizar evento:', e);
+    await noteError(connection, e);
     return false;
   }
 }
@@ -237,7 +323,11 @@ export async function deleteEvent(
 
     return true;
   } catch (e) {
+    // 404/410 = já não existe no Google; não é erro de verdade.
+    const code = errorCode(e);
+    if (code === 404 || code === 410) return true;
     console.error('[GoogleCalendar] Erro ao deletar evento:', e);
+    await noteError(connection, e);
     return false;
   }
 }
@@ -273,6 +363,7 @@ export async function syncFromGoogle(
       calendarId: conn.calendar_id || 'primary',
       singleEvents: true,
       showDeleted: true,
+      maxResults: 250,
     };
 
     if (conn.last_sync_token) {
@@ -306,19 +397,19 @@ export async function syncFromGoogle(
     } while (nextPageToken);
 
     // Salvar o syncToken para a próxima rodada
-    if (nextSyncToken) {
-      await supabase
-        .from('google_calendar_connections')
-        .update({
-          last_sync_token: nextSyncToken,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', conn.id);
-    }
+    await supabase
+      .from('google_calendar_connections')
+      .update({
+        ...(nextSyncToken ? { last_sync_token: nextSyncToken } : {}),
+        last_synced_at: new Date().toISOString(),
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conn.id);
   } catch (e: unknown) {
     console.error('[GoogleCalendar] Erro no sync:', e);
-    // Se o syncToken ficou inválido, resetar
-    if (e && typeof e === 'object' && 'code' in e && (e as { code: number }).code === 410) {
+    // syncToken expirado (410) → zera para a próxima rodada refazer do zero.
+    if (errorCode(e) === 410) {
       const supabase = getSupabaseAdmin();
       if (supabase) {
         await supabase
@@ -327,21 +418,130 @@ export async function syncFromGoogle(
           .eq('id', connection.id);
       }
     }
+    await noteError(connection, e);
     result.errors++;
   }
 
   return result;
 }
 
+type Db = NonNullable<ReturnType<typeof getSupabaseAdmin>>;
+
+/** Linha de bloqueio a criar na Lume a partir de um evento do Google. */
+interface BlockRow {
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  block_type: 'full_day' | 'custom_time';
+}
+
+/**
+ * Sincroniza os bloqueios de UM evento do Google.
+ *
+ * Estratégia: apaga o que existia daquele evento e recria pelo estado atual.
+ * É idempotente e resolve sozinho eventos que mudaram de horário, viraram
+ * dia-inteiro, passaram a ocupar vários dias ou foram apagados.
+ */
+async function replaceGoogleBlocks(
+  supabase: Db,
+  professionalId: string,
+  eventId: string,
+  rows: BlockRow[]
+): Promise<'created' | 'deleted' | 'none'> {
+  const { data: existing, error: selErr } = await supabase
+    .from('time_blocks')
+    .select('id')
+    .eq('professional_id', professionalId)
+    .eq('google_event_id', eventId);
+
+  if (selErr) {
+    // Coluna ausente = migração v38 não rodou. Não dá para casar evento ↔
+    // bloqueio com segurança, então o sync de bloqueios fica desligado em vez
+    // de encher a agenda de duplicatas a cada rodada.
+    if (isMissingColumn(selErr)) {
+      console.warn('[GoogleCalendar] time_blocks.google_event_id ausente — rode a migração v38 para sincronizar bloqueios do Google.');
+      return 'none';
+    }
+    throw selErr;
+  }
+
+  const had = (existing?.length ?? 0) > 0;
+  if (had) {
+    await supabase
+      .from('time_blocks')
+      .delete()
+      .eq('professional_id', professionalId)
+      .eq('google_event_id', eventId);
+  }
+
+  if (!rows.length) return had ? 'deleted' : 'none';
+
+  const { error: insErr } = await supabase.from('time_blocks').insert(
+    rows.map(r => ({ professional_id: professionalId, google_event_id: eventId, ...r }))
+  );
+  if (insErr) throw insErr;
+
+  return 'created';
+}
+
+/** Um evento do Google deve ocupar a agenda? */
+function blocksAgenda(event: calendar_v3.Schema$Event): boolean {
+  if (event.status === 'cancelled') return false;
+  // "Disponível" no Google = não ocupa horário.
+  if (event.transparency === 'transparent') return false;
+  // Convite que a profissional recusou não bloqueia a agenda dela.
+  const self = event.attendees?.find(a => a.self);
+  if (self?.responseStatus === 'declined') return false;
+  return true;
+}
+
+/** Quebra um evento do Google nas linhas de bloqueio correspondentes. */
+function eventToBlocks(event: calendar_v3.Schema$Event): BlockRow[] {
+  // Evento com horário definido
+  if (event.start?.dateTime) {
+    const start = new Date(event.start.dateTime);
+    const end = event.end?.dateTime
+      ? new Date(event.end.dateTime)
+      : new Date(start.getTime() + 60 * 60 * 1000);
+    const s = toBrParts(start);
+    const e = toBrParts(end);
+    // Atravessa a meia-noite: bloqueia até o fim do dia (a agenda da Lume não
+    // comercializa madrugada; o dia seguinte fica livre de propósito).
+    const endTime = e.date === s.date ? e.time : '23:59:00';
+    return [{ date: s.date, start_time: s.time, end_time: endTime, block_type: 'custom_time' }];
+  }
+
+  // Evento de dia inteiro: start.date .. end.date (fim exclusivo)
+  if (event.start?.date) {
+    const rows: BlockRow[] = [];
+    const startDate = new Date(`${event.start.date}T12:00:00Z`);
+    const endDate = event.end?.date
+      ? new Date(`${event.end.date}T12:00:00Z`)
+      : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+    // Teto de segurança: um "evento" de anos (aniversários, feriados de
+    // calendários importados) não pode gerar milhares de bloqueios.
+    for (let i = 0, d = startDate; d < endDate && i < 62; i++, d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+      rows.push({
+        date: d.toISOString().slice(0, 10),
+        start_time: null,
+        end_time: null,
+        block_type: 'full_day',
+      });
+    }
+    return rows;
+  }
+
+  return [];
+}
+
 /** Processa um único evento do Google para sync → Lume. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function processGoogleEvent(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
+  supabase: Db,
   event: calendar_v3.Schema$Event,
   professionalId: string,
   result: SyncResult
 ) {
-  if (!supabase || !event.id) return;
+  if (!event.id) return;
 
   const isFromLume = event.extendedProperties?.private?.source === 'lume';
   const lumeApptId = event.extendedProperties?.private?.lume_appointment_id;
@@ -368,13 +568,12 @@ async function processGoogleEvent(
     if (event.start?.dateTime) {
       const start = new Date(event.start.dateTime);
       const end = event.end?.dateTime ? new Date(event.end.dateTime) : new Date(start.getTime() + 60 * 60 * 1000);
-      const date = start.toISOString().slice(0, 10);
-      const startTime = start.toTimeString().slice(0, 8);
-      const endTime = end.toTimeString().slice(0, 8);
+      const s = toBrParts(start);
+      const e = toBrParts(end);
 
       await supabase
         .from('appointments')
-        .update({ date, start_time: startTime, end_time: endTime, updated_at: new Date().toISOString() })
+        .update({ date: s.date, start_time: s.time, end_time: e.time, updated_at: new Date().toISOString() })
         .eq('id', lumeApptId)
         .eq('professional_id', professionalId);
       result.updated++;
@@ -382,55 +581,11 @@ async function processGoogleEvent(
     return;
   }
 
-  // Evento do Google (não da Lume) → criar/atualizar bloqueio de horário
-  if (event.status === 'cancelled') {
-    // Remover bloqueio associado
-    const { data: existing } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('google_event_id', event.id)
-      .eq('professional_id', professionalId)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase.from('appointments').delete().eq('id', existing.id);
-      result.deleted++;
-    }
-    return;
-  }
-
-  // Evento com horário definido → criar bloqueio de horário na Lume (time_blocks)
-  if (event.start?.dateTime && event.summary) {
-    const start = new Date(event.start.dateTime);
-    const end = event.end?.dateTime ? new Date(event.end.dateTime) : new Date(start.getTime() + 60 * 60 * 1000);
-    const date = start.toISOString().slice(0, 10);
-    const startTime = start.toTimeString().slice(0, 8);
-    const endTime = end.toTimeString().slice(0, 8);
-
-    // Verificar se já existe um bloqueio com esse google_event_id
-    const { data: existingBlock } = await supabase
-      .from('time_blocks')
-      .select('id')
-      .eq('professional_id', professionalId)
-      .eq('date', date)
-      .eq('start_time', startTime)
-      .maybeSingle();
-
-    if (!existingBlock) {
-      // Criar novo bloqueio
-      await supabase.from('time_blocks').insert({
-        professional_id: professionalId,
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        reason: `[Google] ${event.summary}`,
-        block_type: 'custom_time',
-      });
-      result.created++;
-    } else {
-      result.updated++;
-    }
-  }
+  // Evento do Google (não da Lume) → espelhar como bloqueio de horário
+  const rows = blocksAgenda(event) ? eventToBlocks(event) : [];
+  const outcome = await replaceGoogleBlocks(supabase, professionalId, event.id, rows);
+  if (outcome === 'created') result.created++;
+  else if (outcome === 'deleted') result.deleted++;
 }
 
 // ─── Watch (Push Notifications) ───────────────────────────────
@@ -441,9 +596,26 @@ export async function setupWatch(
   webhookUrl: string
 ): Promise<boolean> {
   try {
+    // O Google só entrega push em HTTPS com domínio público — em localhost
+    // não adianta tentar (o sync do cron cobre o desenvolvimento).
+    if (!webhookUrl.startsWith('https://')) return false;
+
     const conn = await refreshIfNeeded(connection);
     const cal = getCalendarClient(conn);
     const channelId = `lume-${conn.id}-${Date.now()}`;
+    // Segredo do canal: o Google devolve em X-Goog-Channel-Token e o webhook
+    // confere. Sem isso, qualquer um que descubra o channel-id dispara syncs.
+    const channelToken = crypto.randomUUID();
+
+    // Encerra o canal anterior — senão eles se acumulam e o Google entrega
+    // a mesma mudança várias vezes.
+    if (conn.sync_channel_id && conn.sync_resource_id) {
+      try {
+        await cal.channels.stop({
+          requestBody: { id: conn.sync_channel_id, resourceId: conn.sync_resource_id },
+        });
+      } catch { /* canal já expirado — segue */ }
+    }
 
     const { data } = await cal.events.watch({
       calendarId: conn.calendar_id || 'primary',
@@ -451,28 +623,36 @@ export async function setupWatch(
         id: channelId,
         type: 'web_hook',
         address: webhookUrl,
+        token: channelToken,
         expiration: String(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
       },
     });
 
     const supabase = getSupabaseAdmin();
     if (supabase && data.resourceId) {
-      await supabase
+      const patch = {
+        sync_channel_id: channelId,
+        sync_resource_id: data.resourceId,
+        sync_expiration: data.expiration
+          ? new Date(Number(data.expiration)).toISOString()
+          : null,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase
         .from('google_calendar_connections')
-        .update({
-          sync_channel_id: channelId,
-          sync_resource_id: data.resourceId,
-          sync_expiration: data.expiration
-            ? new Date(Number(data.expiration)).toISOString()
-            : null,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ ...patch, webhook_token: channelToken })
         .eq('id', conn.id);
+      // Sem a migração v38 a coluna do token não existe: grava o resto para o
+      // push continuar funcionando (o webhook aceita canal sem token salvo).
+      if (error && isMissingColumn(error)) {
+        await supabase.from('google_calendar_connections').update(patch).eq('id', conn.id);
+      }
     }
 
     return true;
   } catch (e) {
     console.error('[GoogleCalendar] Erro ao registrar watch:', e);
+    await noteError(connection, e);
     return false;
   }
 }
@@ -492,16 +672,10 @@ export async function disconnect(professionalId: string): Promise<boolean> {
       .maybeSingle();
 
     if (conn) {
-      // Revogar token
-      try {
-        const oauth2 = getAuthenticatedClient(conn);
-        await oauth2.revokeToken(conn.access_token);
-      } catch { /* ignore — token pode já estar inválido */ }
-
-      // Parar watch
+      // Parar watch ANTES de revogar o token (depois de revogar, a chamada falha).
       if (conn.sync_channel_id && conn.sync_resource_id) {
         try {
-          const cal = getCalendarClient(conn);
+          const cal = getCalendarClient(await refreshIfNeeded(conn));
           await cal.channels.stop({
             requestBody: {
               id: conn.sync_channel_id,
@@ -510,6 +684,12 @@ export async function disconnect(professionalId: string): Promise<boolean> {
           });
         } catch { /* ignore */ }
       }
+
+      // Revogar acesso da Lume na conta Google
+      try {
+        const oauth2 = getAuthenticatedClient(conn);
+        await oauth2.revokeToken(conn.refresh_token || conn.access_token);
+      } catch { /* ignore — token pode já estar inválido */ }
 
       // Remover do banco
       await supabase
@@ -523,6 +703,17 @@ export async function disconnect(professionalId: string): Promise<boolean> {
         .update({ google_event_id: null })
         .eq('professional_id', professionalId)
         .not('google_event_id', 'is', null);
+
+      // Remover os bloqueios que vieram do Google (sem a conexão eles nunca
+      // mais seriam atualizados e a agenda ficaria travada à toa).
+      const { error: blocksErr } = await supabase
+        .from('time_blocks')
+        .delete()
+        .eq('professional_id', professionalId)
+        .not('google_event_id', 'is', null);
+      if (blocksErr && !isMissingColumn(blocksErr)) {
+        console.error('[GoogleCalendar] Erro ao limpar bloqueios:', blocksErr);
+      }
     }
 
     return true;
@@ -533,6 +724,40 @@ export async function disconnect(professionalId: string): Promise<boolean> {
 }
 
 // ─── Helpers de banco ─────────────────────────────────────────
+
+/** Código HTTP de um erro da API do Google, quando houver. */
+function errorCode(e: unknown): number | null {
+  if (e && typeof e === 'object') {
+    const code = (e as { code?: unknown; status?: unknown }).code ?? (e as { status?: unknown }).status;
+    if (typeof code === 'number') return code;
+    if (typeof code === 'string' && /^\d+$/.test(code)) return Number(code);
+  }
+  return null;
+}
+
+/** Erro do Postgres por coluna inexistente (migração ainda não rodada). */
+function isMissingColumn(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { code, message } = error as { code?: string; message?: string };
+  return code === '42703' || code === 'PGRST204' || /column .* does not exist/i.test(message || '');
+}
+
+/** Guarda o último erro na conexão para o painel mostrar o que aconteceu. */
+async function noteError(connection: GoogleCalendarConnection, e: unknown) {
+  try {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return;
+    const message = e instanceof Error ? e.message : String(e);
+    const { error } = await supabase
+      .from('google_calendar_connections')
+      .update({ last_error: message.slice(0, 500), updated_at: new Date().toISOString() })
+      .eq('id', connection.id);
+    // Sem a migração v38 a coluna não existe — o erro já foi para o log de cima.
+    if (error && !isMissingColumn(error)) {
+      console.error('[GoogleCalendar] Falha ao registrar last_error:', error);
+    }
+  } catch { /* diagnóstico não pode derrubar o fluxo */ }
+}
 
 /** Busca a conexão Google Calendar de uma profissional. */
 export async function getConnection(

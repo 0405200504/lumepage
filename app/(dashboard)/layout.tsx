@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -11,6 +12,7 @@ import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
 import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
 import { mustChangePassword } from '@/lib/auth/must-change-password';
+import { professionalPrecisaOnboarding } from '@/lib/auth/onboarding';
 import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
 import type { CheckoutIdentity } from '@/lib/lp/site';
 
@@ -39,6 +41,7 @@ export default async function DashboardLayout({
   let enforcePlan = false;
   // Carimbo do checkout: faz o pagamento na Hubla voltar pra ESTA conta.
   let checkoutIdentity: CheckoutIdentity | null = null;
+  let precisaBoasVindas = false;
 
   if (session.professional_id) {
     try {
@@ -47,6 +50,11 @@ export default async function DashboardLayout({
         dbService.getPausedConversations(session.professional_id).catch(() => []),
       ]);
       if (prof) {
+        // Conta criada com o Google que ainda não passou pelas boas-vindas.
+        // O redirect acontece FORA do try: redirect() funciona lançando, e o
+        // catch aqui embaixo engoliria o desvio.
+        precisaBoasVindas = professionalPrecisaOnboarding(prof);
+
         brandName = prof.brand_name;
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
@@ -81,6 +89,9 @@ export default async function DashboardLayout({
       console.error('Erro ao buscar profissional no layout:', e);
     }
   }
+
+  // Sem negócio e sem WhatsApp o painel não tem o que mostrar — completa antes.
+  if (precisaBoasVindas) redirect('/bem-vinda');
 
   return (
     <div

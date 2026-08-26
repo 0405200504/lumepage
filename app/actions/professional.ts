@@ -12,6 +12,8 @@ import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { logAccessEvent } from '@/lib/access-tokens';
 import { sendMail } from '@/lib/mail';
 import { welcomeEmail } from '@/lib/mail-templates';
+import { normalizeWhatsapp } from '@/lib/whatsapp';
+import { validateSlug } from '@/lib/site/slug';
 
 /**
  * Valida se a sessão atual é do profissional dono da informação ou do Super Admin.
@@ -393,7 +395,10 @@ export async function registerProfessionalAction(data: {
         state: null,
         description: null,
         public_bio: null,
-        status: 'active'
+        status: 'active',
+        // Cadastro pelo formulário já traz negócio e WhatsApp — não precisa
+        // passar pela tela de boas-vindas (/bem-vinda), só quem entra pelo Google.
+        onboarding_completed_at: new Date().toISOString(),
       });
 
       // 3. Cadastrar no Supabase Auth via API Admin (sem rate limit de email)
@@ -508,3 +513,70 @@ export async function registerProfessionalAction(data: {
   }
 }
 
+
+// 12. Boas-vindas (/bem-vinda) — completa a conta criada com o Google
+/**
+ * Quem entra pelo Google não preenche o formulário de cadastro: a conta nasce
+ * com o nome do perfil Google, sem WhatsApp e com um endereço público chutado.
+ * Esta action recebe o que falta, marca a conta como completa e manda o e-mail
+ * de boas-vindas (que o cadastro por senha já enviava).
+ */
+export async function completeOnboardingAction(data: {
+  name: string;
+  brandName: string;
+  whatsapp: string;
+  slug: string;
+}) {
+  const session = await authService.getCurrentUser('pro');
+  const professionalId = session?.professional_id;
+  if (!professionalId) return { success: false, error: 'Sessão expirada. Entre de novo.' };
+  if (isDemo(professionalId)) return { success: true, slug: data.slug };
+
+  const name = data.name.trim();
+  const brandName = data.brandName.trim();
+  if (name.length < 2) return { success: false, error: 'Escreva o seu nome.' };
+  if (brandName.length < 2) return { success: false, error: 'Escreva o nome do seu negócio.' };
+
+  // WhatsApp: é por ele que saem confirmação e lembrete — sem número válido a
+  // conta fica muda, então validamos o tamanho (DDI 55 + DDD + 8 ou 9 dígitos).
+  const whatsapp = normalizeWhatsapp(data.whatsapp);
+  if (whatsapp.length < 12 || whatsapp.length > 13) {
+    return { success: false, error: 'Digite o WhatsApp com DDD. Ex.: (11) 91234-5678.' };
+  }
+
+  const check = validateSlug(data.slug);
+  if (!check.ok) return { success: false, error: check.error || 'Endereço inválido.' };
+
+  try {
+    const prof = await dbService.getProfessionalById(professionalId);
+    if (!prof) return { success: false, error: 'Conta não encontrada.' };
+
+    if (prof.slug !== check.slug && await dbService.isSlugTaken(check.slug, professionalId)) {
+      return { success: false, error: 'Esse endereço já está sendo usado. Tente outro.' };
+    }
+
+    await dbService.upsertProfessional({
+      id: professionalId,
+      name,
+      brand_name: brandName,
+      whatsapp,
+      slug: check.slug,
+      onboarding_completed_at: new Date().toISOString(),
+    });
+
+    // Mesmo e-mail do cadastro por senha — quem entrou pelo Google nunca recebia.
+    if (prof.email) await enviarBoasVindas(prof.email, name);
+
+    revalidatePath('/dashboard');
+    revalidatePath(`/${check.slug}`);
+    if (prof.slug && prof.slug !== check.slug) revalidatePath(`/${prof.slug}`);
+
+    return { success: true, slug: check.slug };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (/duplicate key|unique/i.test(msg)) {
+      return { success: false, error: 'Esse endereço acabou de ser reservado por outra pessoa. Tente outro.' };
+    }
+    return { success: false, error: 'Não foi possível salvar. Tente de novo.' };
+  }
+}
