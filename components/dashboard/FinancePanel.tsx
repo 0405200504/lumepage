@@ -381,7 +381,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                   ))}
                   <div className="flex items-center justify-between py-3">
                     <span className="text-label font-semibold text-heading">= Lucro líquido</span>
-                    <span className={`text-h2 font-semibold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>{brl(metrics.netProfit)}</span>
+                    <span className={`text-h3 sm:text-h2 font-semibold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>{brl(metrics.netProfit)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-1 pt-3 border-t border-line">
@@ -401,7 +401,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 <SectionHeader title="Projeção do mês" subtitle={isCurrentMonth ? 'Estimativa até o fim do mês' : 'Disponível só no mês corrente'} icon={<TrendingUp className="h-4 w-4" />} />
                 {isCurrentMonth ? (
                   <>
-                    <p className="text-h1 font-semibold text-heading mt-4 num">{brl(projection.projected)}</p>
+                    <p className="text-h2 sm:text-h1 font-semibold text-heading mt-4 num">{brl(projection.projected)}</p>
                     <div className="mt-4 space-y-2 text-caption">
                       <Row label="Já realizado" value={brl(projection.realized)} />
                       <Row label="Confirmados a vir" value={brl(projection.confirmedAhead)} />
@@ -432,10 +432,10 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                     por um retângulo colorido de 100×90px.
                     "A vencer" leva contorno tracejado: é previsto, e tracejado
                     quer dizer previsto em todo o produto. */}
-                <div className="grid grid-cols-2 mt-4 border border-line rounded-surface overflow-hidden">
-                  <button onClick={() => setDrill('receivable')} className="text-left p-4 border-r border-line transition-ui hover:bg-n-25">
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 mt-4 border border-line rounded-surface overflow-hidden">
+                  <button onClick={() => setDrill('receivable')} className="text-left p-4 border-b min-[420px]:border-b-0 min-[420px]:border-r border-line transition-ui hover:bg-n-25">
                     <StatusLabel tone="danger">Vencido</StatusLabel>
-                    <p className="text-h2 font-semibold text-danger mt-1.5 num leading-none">{brl(receivables.overdue.total)}</p>
+                    <p className="text-h3 sm:text-h2 font-semibold text-danger mt-1.5 num leading-none">{brl(receivables.overdue.total)}</p>
                     <MonoValue className="text-micro text-n-500 mt-1.5 block">
                       {receivables.overdue.items.length} AGENDAMENTO(S)
                     </MonoValue>
@@ -445,7 +445,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                       <span className="w-3 border-t border-dashed border-line-strong" aria-hidden />
                       <MonoLabel>A vencer</MonoLabel>
                     </span>
-                    <p className="text-h2 font-semibold text-ink mt-1.5 num leading-none">{brl(receivables.dueSoon.total)}</p>
+                    <p className="text-h3 sm:text-h2 font-semibold text-ink mt-1.5 num leading-none">{brl(receivables.dueSoon.total)}</p>
                     <MonoValue className="text-micro text-n-500 mt-1.5 block">
                       {receivables.dueSoon.items.length} AGENDAMENTO(S)
                     </MonoValue>
@@ -478,14 +478,14 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                      Viraram linhas divididas por hairline de ponta a ponta. */
                   <div className="mt-4 -mx-5 sm:-mx-6">
                     {payments.map(p => (
-                      <div key={p.method} className="flex items-center justify-between gap-2 px-5 sm:px-6 py-2.5 border-b border-line last:border-b-0">
+                      <div key={p.method} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 px-5 sm:px-6 py-3 sm:py-2.5 border-b border-line last:border-b-0">
                         <div className="min-w-0">
                           <p className="text-body-sm text-ink truncate">{p.label}</p>
                           <MonoValue className="text-micro text-n-500">
                             {p.count} VENDA(S) · TAXA {brl(p.fee)}
                           </MonoValue>
                         </div>
-                        <div className="text-right shrink-0">
+                        <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
                           <p className="text-body-sm font-semibold text-ink num">{brl(p.net)}</p>
                           <MonoValue className="text-micro text-n-500">LÍQ. DE {brl(p.gross)}</MonoValue>
                         </div>
@@ -516,7 +516,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
               <div className="mt-4">
                 <TechChart
                   labels={netSeries.map(p => p.label)}
-                  height={220}
+                  height={180}
                   format={(v) => brl(Math.round(v * 100))}
                   axisFormat={(v: number) => {
                     const r = Math.round(v);
@@ -609,7 +609,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             </div>
             <div className="mt-5">
               <TechChart
-                height={260}
+                height={220}
                 labels={netSeries.map(p => p.label)}
                 format={(v: number) => brl(Math.round(v * 100))}
                 axisFormat={(v: number) => {

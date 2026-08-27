@@ -231,7 +231,14 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                         <span className="font-bold text-ink num">{st.value} <span className="text-n-600 font-semibold">({st.pct.toFixed(0)}%)</span></span>
                       </div>
                       <div className="h-2.5 rounded-full bg-surface-2 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${Math.max(2, (st.value / funnelMax) * 100)}%`, background: i === 3 ? 'var(--color-bad)' : 'var(--color-wine-500)' }} />
+                        <div
+                          className="h-full rounded-full chart-bar-in"
+                          style={{
+                            width: `${Math.max(2, (st.value / funnelMax) * 100)}%`,
+                            background: i === 3 ? 'var(--color-bad)' : 'var(--color-wine-500)',
+                            '--bar-i': i,
+                          } as React.CSSProperties}
+                        />
                       </div>
                     </div>
                   ))}
@@ -266,7 +273,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 <ExportMenu onCSV={exportSalesCSV} />
               </div>
               {showFilters && (
-                <div className="mt-3 pt-3 border-t border-line grid grid-cols-2 lg:grid-cols-4 gap-2 animate-fade-up">
+                <div className="mt-3 pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 animate-fade-up">
                   <select value={fService} onChange={e => setFService(e.target.value)} className={inputCls}>
                     <option value="">Todos os serviços</option>
                     {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -294,8 +301,37 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 <h3 className="text-body font-bold text-heading">Histórico de vendas</h3>
                 <span className="text-caption font-bold text-n-600">{filteredRows.length} de {allRows.length}</span>
               </div>
-              <DataTable columns={columns} rows={filteredRows} rowKey={r => r.id} pageSize={25}
-                initialSort={{ key: 'date', dir: 'desc' }} emptyLabel="Nenhuma venda encontrada com esses filtros." />
+              {/* Desktop: tabela completa */}
+              <div className="hidden sm:block">
+                <DataTable columns={columns} rows={filteredRows} rowKey={r => r.id} pageSize={25}
+                  initialSort={{ key: 'date', dir: 'desc' }} emptyLabel="Nenhuma venda encontrada com esses filtros." />
+              </div>
+              {/* Mobile: cards compactos */}
+              <div className="sm:hidden divide-y divide-line">
+                {filteredRows.length === 0 ? (
+                  <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda encontrada.</p>
+                ) : filteredRows.slice(0, 25).map((r) => (
+                  <div key={r.id} className="p-4 hover:bg-n-25 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-label font-bold text-ink truncate">{r.client}</p>
+                        <p className="text-caption text-n-600 mt-0.5 truncate">{r.serviceName}{r.extra > 0 && <span className="text-wine-700 font-bold"> +{r.extra}</span>}</p>
+                      </div>
+                      <span className="text-label font-bold text-ink num shrink-0">{brl(r.amount)}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-caption text-n-500 font-semibold">{formatDateBR(r.date)}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-micro font-bold ${r.status === 'completed' ? 'text-success bg-success-bg' : 'bg-wine-50 text-wine-700'}`}>
+                        {STATUS_LABEL[r.status] ?? r.status}
+                      </span>
+                      {r.payment && <span className="text-caption text-n-500 capitalize">{r.payment}</span>}
+                    </div>
+                  </div>
+                ))}
+                {filteredRows.length > 25 && (
+                  <p className="text-caption text-n-500 text-center py-3">Mostrando 25 de {filteredRows.length}. Use filtros para refinar.</p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -308,7 +344,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             <div className="mt-5 space-y-2">
               {svcStats.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda no período.</p> : svcStats.map((s, idx) => (
                 <div key={s.id} className="rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
                     <div className="min-w-0">
                       <p className="text-label font-bold text-ink truncate">{idx + 1}. {s.name}</p>
                       <p className="text-caption text-n-600 mt-0.5">{s.count} vendas · ticket {brl(s.ticket)} · {s.share.toFixed(1)}% do faturamento</p>
@@ -318,8 +354,15 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                       <span className="text-label font-bold text-ink num">{brl(s.revenue)}</span>
                     </div>
                   </div>
-                  <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden mt-3">
-                    <div className="h-full rounded-full bg-wine-500" style={{ width: `${Math.max(2, (s.revenue / maxSvcRev) * 100)}%` }} />
+                  <div className="h-2 rounded-full bg-surface-2 overflow-hidden mt-3">
+                    <div
+                      className="h-full rounded-full chart-bar-in"
+                      style={{
+                        width: `${Math.max(2, (s.revenue / maxSvcRev) * 100)}%`,
+                        background: 'linear-gradient(90deg, var(--color-wine-500), var(--color-wine-400))',
+                        '--bar-i': idx,
+                      } as React.CSSProperties}
+                    />
                   </div>
                 </div>
               ))}
@@ -348,8 +391,15 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                       <p className="text-label font-bold text-ink truncate">{c.name}</p>
                       <p className="text-caption text-n-600">{c.visits} visita(s)</p>
                     </div>
-                    <div className="flex-1 max-w-[120px] h-1.5 rounded-full bg-surface-2 overflow-hidden hidden sm:block">
-                      <div className="h-full rounded-full bg-wine-500" style={{ width: `${Math.max(4, (c.spent / maxClient) * 100)}%` }} />
+                    <div className="flex-1 max-w-[40px] sm:max-w-[120px] h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full chart-bar-in"
+                        style={{
+                          width: `${Math.max(4, (c.spent / maxClient) * 100)}%`,
+                          background: 'linear-gradient(90deg, var(--color-wine-500), var(--color-wine-400))',
+                          '--bar-i': idx,
+                        } as React.CSSProperties}
+                      />
                     </div>
                     <span className="text-label font-bold text-ink num shrink-0">{brl(c.spent)}</span>
                   </div>

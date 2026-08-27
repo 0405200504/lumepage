@@ -908,6 +908,60 @@ select.field-input { padding-right: 34px; }
 .settle-in { animation: settle-in var(--dur-slow) var(--ease-out) both; }
 
 /* =========================================================
+   GRÁFICOS · animações de entrada
+   ---------------------------------------------------------
+   Cada gráfico anima UMA vez, na montagem. O `prefers-reduced-motion`
+   global já neutraliza tudo — aqui só declaram-se os keyframes.
+   ========================================================= */
+
+/* Linha que se "desenha" da esquerda para a direita via stroke-dashoffset */
+@keyframes chart-draw {
+  from { stroke-dashoffset: var(--chart-len, 1000); }
+  to   { stroke-dashoffset: 0; }
+}
+.chart-draw-in {
+  stroke-dasharray: var(--chart-len, 1000);
+  stroke-dashoffset: var(--chart-len, 1000);
+  animation: chart-draw 1s var(--ease-out) forwards;
+}
+
+/* Área que "sobe" via clip-path */
+@keyframes chart-area-reveal {
+  from { clip-path: inset(100% 0 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+.chart-area-in {
+  animation: chart-area-reveal 0.8s var(--ease-out) 0.3s both;
+}
+
+/* Barra horizontal que "cresce" da esquerda */
+@keyframes chart-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.chart-bar-in {
+  transform-origin: left center;
+  animation: chart-bar-grow 0.5s var(--ease-out) both;
+  animation-delay: calc(var(--bar-i, 0) * 60ms);
+}
+
+/* Donut: fatias rotam para dentro */
+@keyframes chart-donut-spin {
+  from { stroke-dashoffset: var(--donut-circ, 440); opacity: 0; }
+  to   { stroke-dashoffset: var(--donut-offset, 0); opacity: 1; }
+}
+.chart-donut-in {
+  animation: chart-donut-spin 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--slice-i, 0) * 80ms + 100ms);
+}
+
+/* Ponto de hover que pulsa suavemente */
+@keyframes chart-point-pulse {
+  0%, 100% { r: 4; opacity: 1; }
+  50% { r: 6; opacity: 0.7; }
+}
+
+/* =========================================================
    BOTTOM SHEET (mobile) · sem modal em tela pequena
    ========================================================= */
 .sheet-backdrop {
