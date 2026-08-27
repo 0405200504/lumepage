@@ -6,6 +6,7 @@ import {
   TrendingUp, CalendarCheck, CalendarX, UserX, Wallet, Ticket, Crown, Star, Clock,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { IndexGrid } from '@/components/ui/IndexGrid';
 
 interface PerformancePanelProps {
   appointments: Appointment[];
@@ -36,20 +37,15 @@ function rangeFor(period: Period, customStart: string, customEnd: string): { sta
   return { start: customStart || toISO(now), end: customEnd || toISO(now) };
 }
 
+import { BarChart } from '@/components/ui/charts/BarChart';
+
 const Bars: React.FC<{ data: { label: string; value: number }[]; format?: (v: number) => string }> = ({ data, format }) => {
-  const max = Math.max(1, ...data.map(d => d.value));
   return (
-    <div className="space-y-2">
-      {data.map((d) => (
-        <div key={d.label} className="flex items-center gap-3">
-          <span className="text-caption font-semibold text-n-600 w-16 shrink-0 truncate" title={d.label}>{d.label}</span>
-          <div className="flex-1 h-5 bg-n-25 rounded-full overflow-hidden">
-            <div className="h-full bg-wine-500 rounded-full transition-ui" style={{ width: `${(d.value / max) * 100}%` }} />
-          </div>
-          <span className="text-caption font-bold text-ink w-16 shrink-0 text-right">{format ? format(d.value) : d.value}</span>
-        </div>
-      ))}
-    </div>
+    <BarChart
+      data={data.map((d) => ({ label: d.label, value: d.value }))}
+      format={format}
+      barColor="var(--color-wine-500)"
+    />
   );
 };
 
@@ -168,16 +164,19 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Kpi icon={<Wallet className="h-4 w-4" />} label="Receita realizada" value={brl(data.realized)} />
-            <Kpi icon={<TrendingUp className="h-4 w-4" />} label="Receita prevista" value={brl(data.predicted)} muted />
-            <Kpi icon={<Ticket className="h-4 w-4" />} label="Ticket médio" value={brl(data.ticket)} />
-            <Kpi icon={<CalendarCheck className="h-4 w-4" />} label="Agendamentos" value={String(data.count)} />
-            <Kpi icon={<CalendarCheck className="h-4 w-4" />} label="Concluídos" value={String(data.completed)} />
-            <Kpi icon={<CalendarX className="h-4 w-4" />} label="Cancelados" value={String(data.cancelled)} />
-            <Kpi icon={<UserX className="h-4 w-4" />} label="Faltas" value={String(data.noShow)} />
-            <Kpi icon={<Wallet className="h-4 w-4" />} label="Saldo (caixa)" value={brl(data.txIn - data.txOut)} muted />
-          </div>
+          <IndexGrid
+            cols={4}
+            items={[
+              { label: 'Receita realizada', value: brl(data.realized), accent: true },
+              { label: 'Receita prevista', value: brl(data.predicted), hint: 'Pendentes + confirmados' },
+              { label: 'Ticket médio', value: brl(data.ticket) },
+              { label: 'Saldo (caixa)', value: brl(data.txIn - data.txOut), format: 'money' },
+              { label: 'Total agendamentos', value: String(data.count), format: 'mono' },
+              { label: 'Concluídos', value: String(data.completed), format: 'mono' },
+              { label: 'Cancelados', value: String(data.cancelled), format: 'mono' },
+              { label: 'Faltas', value: String(data.noShow), format: 'mono' },
+            ]}
+          />
 
           {/* Destaques */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -220,14 +219,6 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
     </div>
   );
 };
-
-const Kpi: React.FC<{ icon: React.ReactNode; label: string; value: string; muted?: boolean }> = ({ icon, label, value, muted }) => (
-  <div className="card p-4">
-    <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-n-100 text-n-600' : 'bg-wine-50 text-wine-700'}`}>{icon}</div>
-    <p className="mono-micro text-n-500">{label}</p>
-    <p className="text-h3 font-bold text-ink mt-0.5">{value}</p>
-  </div>
-);
 
 const ChartCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="card p-5">

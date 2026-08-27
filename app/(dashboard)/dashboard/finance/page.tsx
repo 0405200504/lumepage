@@ -2,7 +2,6 @@ import React from 'react';
 import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { FinancePanel } from '@/components/dashboard/FinancePanel';
-import { PerformancePanel } from '@/components/dashboard/PerformancePanel';
 
 export const metadata = {
   title: 'Contas | Lume',
@@ -22,11 +21,6 @@ export default async function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <PerformancePanel
-        appointments={appointments}
-        services={services}
-        transactions={transactions}
-      />
       <FinancePanel
         professionalId={professionalId}
         transactions={transactions}
