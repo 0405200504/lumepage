@@ -8,7 +8,7 @@ import {
   Plus, Trash2, X, ArrowDownRight, ArrowUpRight, Repeat, DollarSign,
   BarChart4, ReceiptText, PieChart, LineChart as LineIcon, ScrollText, Clock4,
   CreditCard, Sliders, Calculator, Sparkles, ArrowRight, CheckCircle2, AlertCircle,
-  HelpCircle, Eye, EyeOff
+  Eye, EyeOff, Activity, ShieldCheck, Zap
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import {
@@ -23,7 +23,6 @@ import {
   byPaymentMethod, monthlySeries, DEFAULT_PAYMENT_RATES, PaymentRates, paymentLabel,
 } from '@/lib/analytics';
 import { PageHeader } from '../ui/PageHeader';
-import { StatusLabel } from '../ui/StatusDot';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
@@ -32,6 +31,8 @@ import { EmptyState } from '../ui/EmptyState';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
 import { TechChart } from '../ui/charts/TechChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
+import { GaugeChart } from '../ui/charts/GaugeChart';
+import { MiniSparkArea } from '../ui/charts/MiniSparkArea';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
@@ -46,10 +47,7 @@ interface FinancePanelProps {
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const EXPENSE_CATS = ['Produtos e materiais', 'Aluguel', 'Energia/Água/Internet', 'Marketing', 'Salários/Comissões', 'Impostos', 'Equipamentos', 'Outros'];
 const INCOME_CATS = ['Serviço avulso', 'Venda de produto', 'Pacote/Plano', 'Outros'];
-
-const DONUT_COLORS = [
-  '#6B1525', '#8C2438', '#A94257', '#C66E84', '#DEA0B0', '#F0CBD5', '#CFCBCC', '#E3E0E1',
-];
+const DONUT_COLORS = ['#6B1525', '#8C2438', '#A94257', '#C66E84', '#DEA0B0', '#F0CBD5', '#CFCBCC', '#E3E0E1'];
 const RATES_KEY = 'lume-payment-rates';
 
 const pad = (n: number) => n.toString().padStart(2, '0');
@@ -81,7 +79,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const [drill, setDrill] = useState<DrillType>(null);
   const [showDreDetails, setShowDreDetails] = useState(false);
 
-  // Taxas por forma de pagamento
+  // Taxas
   const [rates, setRates] = useState<PaymentRates>(() => {
     if (typeof window === 'undefined') return DEFAULT_PAYMENT_RATES;
     try { const s = localStorage.getItem(RATES_KEY); if (s) return { ...DEFAULT_PAYMENT_RATES, ...JSON.parse(s) }; } catch { /* */ }
@@ -96,7 +94,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
     });
   };
 
-  // Modal de lançamento
+  // Formulário lançamento
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
@@ -106,7 +104,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Form contas fixas
+  // Contas fixas
   const [fxName, setFxName] = useState('');
   const [fxAmount, setFxAmount] = useState('');
   const [fxSaving, setFxSaving] = useState(false);
@@ -117,7 +115,6 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   };
   const monthFirst = `${cursor.y}-${pad(cursor.m + 1)}-01`;
 
-  // Contas fixas que valem para um mês
   const fixedForMonth = useCallback((y: number, m: number) =>
     fixedExpenses.filter(f => f.active).filter(f => {
       const c = new Date(f.created_at);
@@ -177,11 +174,6 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const cmpExpense = compare(expense, prevExpense);
   const cmpProfit = compare(metrics.netProfit, prevMetrics.netProfit);
 
-  // Proporções Visuais (Entradas vs Saídas)
-  const totalFlow = income + expense;
-  const incomePct = totalFlow > 0 ? Math.round((income / totalFlow) * 100) : 50;
-  const expensePct = totalFlow > 0 ? 100 - incomePct : 50;
-
   // Saldo acumulado
   const totalBalance = useMemo(() => {
     const today = new Date();
@@ -201,15 +193,20 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
     return incomeAll - manualExpenseAll - fixedAll;
   }, [appointments, transactions, fixedExpenses, byId]);
 
-  // Projeções & Pagamentos
+  // Projeção & Pagamentos
   const projection = useMemo(() => projectionForMonth(appointments, byId), [appointments, byId]);
   const receivables = useMemo(() => receivablesAging(appointments, byId), [appointments, byId]);
   const payments = useMemo(() => byPaymentMethod(appointments, byId, rates, range), [appointments, byId, rates, range]);
   const totalPaymentGross = useMemo(() => payments.reduce((acc, p) => acc + p.gross, 0), [payments]);
   const netSeries = useMemo(() => monthlySeries(appointments, transactions, fixedExpenses, services, 12), [appointments, transactions, fixedExpenses, services]);
 
-  // Progresso da projeção realizada
+  // Sparklines simulados para os cards de métricas
+  const incomeSpark = useMemo(() => netSeries.slice(-6).map(p => p.gross / 100), [netSeries]);
+  const profitSpark = useMemo(() => netSeries.slice(-6).map(p => Math.max(0, p.net) / 100), [netSeries]);
+  const expenseSpark = useMemo(() => netSeries.slice(-6).map(p => Math.max(0, (p.gross - p.net)) / 100), [netSeries]);
+
   const projDonePct = projection.projected > 0 ? Math.min(100, Math.round((projection.realized / projection.projected) * 100)) : 0;
+  const marginPct = Math.max(0, Math.min(100, Math.round(metrics.margin)));
 
   // Categorias
   const expenseByCat = useMemo(() => {
@@ -232,7 +229,6 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
     setCursor({ y, m });
   };
 
-  // Ações
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cents = parseCents(amount);
@@ -276,7 +272,6 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
     else error('Falha', res.error || 'Erro.');
   };
 
-  // Drill-down
   const drillData = useMemo((): { title: string; rows: DrillDownRow[] } => {
     if (drill === 'income') return {
       title: 'Entradas do mês',
@@ -322,7 +317,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho de Navegação com Seletor Mensal */}
+      {/* Cabeçalho de Navegação com Seletor de Mês */}
       <PageHeader
         className="no-print"
         trail={['Financeiro', `${monthItems.length} lançamentos`, `margem ${metrics.margin.toFixed(0)}%`]}
@@ -351,147 +346,239 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
       <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
 
       <div className="min-h-[400px]">
-        {/* ===================== 1. VISÃO GERAL MODERNA ===================== */}
+        {/* ===================== 1. VISÃO GERAL COCKPIT FUTURISTA ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
 
-            {/* HERO CARD FINANCEIRO: Destaque centralizado e visualmente limpo */}
-            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* HERO TELEMETRY: Cockpit Financeiro com Gauge de Margem */}
+            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm border border-line/60 relative overflow-hidden">
+              {/* Brilho sutil de fundo */}
+              <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-wine-50/50 pointer-events-none blur-3xl" />
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
                 
-                {/* Lado Esquerdo: Lucro Líquido em Destaque */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-caption font-semibold uppercase tracking-wider text-n-500">
-                      Resultado Líquido do Mês
+                {/* Lado Esquerdo: Foco no Lucro Líquido & Saldo */}
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-micro font-bold uppercase tracking-widest text-n-500 flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-wine-700" />
+                      Resultado Líquido Operacional
                     </span>
                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold ${
-                      metrics.netProfit >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+                      cmpProfit.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
                     }`}>
-                      {metrics.netProfit >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      {cmpProfit.deltaPct >= 0 ? `+${cmpProfit.deltaPct.toFixed(0)}%` : `${cmpProfit.deltaPct.toFixed(0)}%`} vs mês anterior
+                      {cmpProfit.deltaPct >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {cmpProfit.deltaPct >= 0 ? `+${cmpProfit.deltaPct.toFixed(0)}%` : `${cmpProfit.deltaPct.toFixed(0)}%`} vs anterior
                     </span>
                   </div>
 
-                  <div className="flex items-baseline gap-3">
-                    <p className={`text-display font-bold num leading-none ${
+                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+                    <p className={`text-display font-bold num tracking-tight leading-none ${
                       metrics.netProfit >= 0 ? 'text-heading' : 'text-danger'
                     }`}>
                       <AnimatedCounter value={metrics.netProfit} format={brl} />
                     </p>
-                    <span className={`text-caption font-bold px-2 py-0.5 rounded-md ${
-                      metrics.margin >= 40 ? 'bg-wine-50 text-wine-700' : 'bg-n-100 text-n-600'
-                    }`}>
-                      {metrics.margin.toFixed(0)}% de margem
+                    <span className="text-caption font-semibold text-n-500">
+                      Saldo em caixa hoje: <strong className="num text-heading">{brl(totalBalance)}</strong>
                     </span>
                   </div>
 
-                  <p className="text-caption text-n-500">
-                    {metrics.netProfit >= 0 
-                      ? 'Operação lucrativa e gerando excedente positivo.' 
-                      : 'Custos superaram as receitas neste mês.'}
+                  <p className="text-body-sm text-n-600 max-w-xl">
+                    {metrics.netProfit >= 0
+                      ? 'Desempenho excelente. Sua receita líquida está superando todos os custos fixos e operacionais.'
+                      : 'Atenção: as saídas superaram as entradas no período selecionado.'}
                   </p>
                 </div>
 
-                {/* Lado Direito: Saldo em Caixa Acumulado */}
-                <div className="md:text-right border-t md:border-t-0 md:border-l border-line pt-4 md:pt-0 md:pl-8 flex flex-col justify-center">
-                  <span className="text-caption font-semibold uppercase tracking-wider text-n-500 block">
-                    Saldo Total Acumulado
-                  </span>
-                  <p className="text-h2 font-bold num text-heading mt-1">
-                    {brl(totalBalance)}
-                  </p>
-                  <span className="text-micro text-n-400 block mt-0.5">
-                    Saldo em caixa acumulado até hoje
-                  </span>
-                </div>
-              </div>
-
-              {/* BARRA DE BALANÇO VISUAL: Entradas vs Saídas */}
-              <div className="mt-8 pt-6 border-t border-line">
-                <div className="flex justify-between items-center text-caption font-semibold mb-2">
-                  <span className="text-success flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-success inline-block" />
-                    Entradas: <strong className="num text-heading">{brl(income)}</strong> ({incomePct}%)
-                  </span>
-                  <span className="text-danger flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-danger inline-block" />
-                    Saídas: <strong className="num text-heading">{brl(expense)}</strong> ({expensePct}%)
-                  </span>
-                </div>
-
-                {/* Track visual de proporção */}
-                <div className="h-3 w-full bg-surface-2 rounded-full overflow-hidden flex p-0.5 gap-1">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 bg-success"
-                    style={{ width: `${incomePct}%` }}
-                    title={`Entradas: ${brl(income)}`}
+                {/* Lado Direito: Gauge Circular Futurista de Margem Operacional */}
+                <div className="lg:col-span-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-line/80 pt-4 lg:pt-0 lg:pl-6">
+                  <GaugeChart
+                    value={marginPct}
+                    label="Margem Líquida"
+                    sublabel={marginPct >= 50 ? 'Alta Rentabilidade' : 'Margem Moderada'}
+                    size={170}
+                    strokeWidth={13}
                   />
-                  <div
-                    className="h-full rounded-full transition-all duration-500 bg-danger/80"
-                    style={{ width: `${expensePct}%` }}
-                    title={`Saídas: ${brl(expense)}`}
-                  />
-                </div>
-
-                {/* Botões Rápidos para Drill-down */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <button
-                    onClick={() => setDrill('income')}
-                    className="tap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-n-50 text-caption font-semibold text-n-700 hover:bg-n-100 hover:text-heading transition-ui"
-                  >
-                    Ver detalhes de entradas ({monthAuto.length + monthManual.filter(m => m.kind === 'income').length}) →
-                  </button>
-                  <button
-                    onClick={() => setDrill('expense')}
-                    className="tap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-n-50 text-caption font-semibold text-n-700 hover:bg-n-100 hover:text-heading transition-ui"
-                  >
-                    Ver detalhes de saídas ({monthFixed.length + monthManual.filter(m => m.kind === 'expense').length}) →
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* GRADE SECUNDÁRIA: DRE Visual & Projeção */}
+            {/* CARDS DE ONDA TELEMÉTRICOS (Entradas, Saídas, Saldo) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Card 1: Entradas */}
+              <div
+                onClick={() => setDrill('income')}
+                className="card p-5 cursor-pointer hover:border-wine-300 transition-all duration-200 group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-micro font-bold uppercase tracking-wider text-n-500 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-success inline-block shadow-sm" />
+                      Entradas Totais
+                    </span>
+                    <span className="text-micro font-bold text-wine-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                      Ver tudo <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="text-h2 font-bold num text-heading mt-2">
+                    {brl(income)}
+                  </p>
+                  <span className="text-micro text-n-400 block mt-0.5">
+                    {monthAuto.length + monthManual.filter(m => m.kind === 'income').length} lançamentos no mês
+                  </span>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-semibold text-success flex items-center gap-1">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                    {cmpIncome.deltaPct >= 0 ? `+${cmpIncome.deltaPct.toFixed(0)}%` : `${cmpIncome.deltaPct.toFixed(0)}%`}
+                  </span>
+                  <MiniSparkArea data={incomeSpark} tone="emerald" width={100} height={32} />
+                </div>
+              </div>
+
+              {/* Card 2: Saídas */}
+              <div
+                onClick={() => setDrill('expense')}
+                className="card p-5 cursor-pointer hover:border-danger/40 transition-all duration-200 group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-micro font-bold uppercase tracking-wider text-n-500 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-danger inline-block shadow-sm" />
+                      Saídas & Despesas
+                    </span>
+                    <span className="text-micro font-bold text-danger opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                      Ver tudo <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="text-h2 font-bold num text-danger mt-2">
+                    − {brl(expense)}
+                  </p>
+                  <span className="text-micro text-n-400 block mt-0.5">
+                    Fixos ({brl(metrics.fixedCosts)}) + Insumos
+                  </span>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-semibold text-n-600">
+                    {metrics.fixedCosts > 0 ? `${Math.round((metrics.fixedCosts / (expense || 1)) * 100)}% fixo` : 'Variável'}
+                  </span>
+                  <MiniSparkArea data={expenseSpark} tone="rose" width={100} height={32} />
+                </div>
+              </div>
+
+              {/* Card 3: Lucro com Onda */}
+              <div
+                onClick={() => setDrill('profit')}
+                className="card p-5 cursor-pointer hover:border-wine-500 transition-all duration-200 group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-micro font-bold uppercase tracking-wider text-wine-700 flex items-center gap-1.5">
+                      <Activity className="h-3.5 w-3.5" />
+                      Eficiência Líquida
+                    </span>
+                    <span className="text-micro font-bold text-wine-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                      Detalhes <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="text-h2 font-bold num text-heading mt-2">
+                    {metrics.margin.toFixed(1)}%
+                  </p>
+                  <span className="text-micro text-n-400 block mt-0.5">
+                    Margem líquida de retenção
+                  </span>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-bold text-wine-700">
+                    {brl(metrics.netProfit)}
+                  </span>
+                  <MiniSparkArea data={profitSpark} tone="wine" width={100} height={32} />
+                </div>
+              </div>
+            </div>
+
+            {/* GRADE SECUNDÁRIA: Projeção com Gauge & DRE Visual */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              {/* DRE VISUAL E DESCOMPLICADO */}
+              {/* PROJEÇÃO INTELIGENTE COM GAUGE RADIAL */}
+              <div className="card p-5 sm:p-6 flex flex-col justify-between">
+                <div>
+                  <SectionHeader title="Meta & Projeção" subtitle={isCurrentMonth ? 'Estimativa de faturamento' : 'Histórico do mês'} icon={<TrendingUp className="h-4 w-4" />} />
+
+                  {isCurrentMonth ? (
+                    <div className="mt-5 flex flex-col sm:flex-row items-center gap-6">
+                      {/* Gauge de Progresso da Meta */}
+                      <GaugeChart
+                        value={projDonePct}
+                        centerValue={brl(projection.projected)}
+                        label="meta"
+                        size={170}
+                        strokeWidth={12}
+                      />
+
+                      {/* Dados de decomposição da meta */}
+                      <div className="flex-1 w-full space-y-2.5">
+                        <div className="p-3 rounded-2xl bg-surface-2/70 flex justify-between items-center">
+                          <span className="text-caption font-semibold text-n-600 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-wine-700" /> Já Realizado
+                          </span>
+                          <span className="text-label font-bold text-heading num">{brl(projection.realized)}</span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-surface-2/70 flex justify-between items-center">
+                          <span className="text-caption font-semibold text-n-600 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-wine-400" /> Confirmados a Vir
+                          </span>
+                          <span className="text-label font-bold text-heading num">{brl(projection.confirmedAhead)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center">
+                      <p className="text-caption text-n-500 max-w-xs mx-auto">
+                        Projeção disponível para o mês corrente ({MONTHS[now.getMonth()]}).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-line flex items-center justify-between text-caption mt-4">
+                  <span className="text-n-500">vs. mesmo período em {cursor.y - 1}</span>
+                  <span className="font-bold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)}</span>
+                </div>
+              </div>
+
+              {/* DRE VISUAL FLUIDO */}
               <div className="card p-5 sm:p-6 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between">
                     <SectionHeader title="Estrutura de Resultados (DRE)" subtitle={`${MONTHS[cursor.m]} ${cursor.y}`} icon={<Calculator className="h-4 w-4" />} />
                     <button
                       onClick={() => setShowDreDetails(!showDreDetails)}
-                      className="text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui inline-flex items-center gap-1"
+                      className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui inline-flex items-center gap-1"
                     >
                       {showDreDetails ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       {showDreDetails ? 'Resumido' : 'Detalhado'}
                     </button>
                   </div>
 
-                  {/* Visual Step-down */}
                   <div className="mt-5 space-y-3">
-                    {/* Receita Bruta */}
-                    <div className="p-3 rounded-xl bg-surface-2 flex items-center justify-between">
-                      <div>
-                        <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">1. Faturamento Total</span>
-                        <span className="text-body font-bold text-heading">Receita Bruta</span>
-                      </div>
+                    <div className="p-3 rounded-2xl bg-surface-2 flex items-center justify-between">
+                      <span className="text-caption font-bold text-heading">1. Receita Bruta</span>
                       <span className="text-h3 font-bold text-heading num">{brl(income)}</span>
                     </div>
 
-                    {/* Custos Totais */}
-                    <div className="p-3 rounded-xl bg-danger-bg/40 flex items-center justify-between">
-                      <div>
-                        <span className="text-micro font-bold text-danger uppercase tracking-wider block">2. Custos & Despesas</span>
-                        <span className="text-body-sm font-semibold text-n-700">Fixos + Insumos + Avulsos</span>
-                      </div>
-                      <span className="text-body font-bold text-danger num">− {brl(expense)}</span>
+                    <div className="p-3 rounded-2xl bg-danger-bg/40 flex items-center justify-between">
+                      <span className="text-caption font-semibold text-danger">2. Custos Totais</span>
+                      <span className="text-label font-bold text-danger num">− {brl(expense)}</span>
                     </div>
 
-                    {/* Detalhamento Expansível */}
                     {showDreDetails && (
-                      <div className="px-3 py-2 space-y-2 border-l-2 border-line ml-3 text-caption animate-fade-up">
+                      <div className="px-3 py-2 space-y-1.5 border-l-2 border-line ml-3 text-caption animate-fade-up">
                         <div className="flex justify-between text-n-600">
                           <span>Insumos & Produtos:</span>
                           <span className="num font-semibold">− {brl(metrics.variableCosts)}</span>
@@ -503,10 +590,9 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                       </div>
                     )}
 
-                    {/* Linha Final de Lucro */}
-                    <div className="p-3.5 rounded-xl border border-line bg-surface flex items-center justify-between shadow-xs">
+                    <div className="p-3.5 rounded-2xl border border-line bg-surface flex items-center justify-between shadow-xs">
                       <div>
-                        <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">= Saldo Final</span>
+                        <span className="text-micro font-bold text-n-400 uppercase tracking-wider block">Resultado Final</span>
                         <span className="text-body font-bold text-heading">Lucro Líquido</span>
                       </div>
                       <div className="text-right">
@@ -514,7 +600,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                           {brl(metrics.netProfit)}
                         </span>
                         <span className="block text-micro font-semibold text-n-500">
-                          {metrics.margin.toFixed(1)}% do faturamento
+                          {metrics.margin.toFixed(1)}% de margem
                         </span>
                       </div>
                     </div>
@@ -528,72 +614,6 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                   </p>
                 )}
               </div>
-
-              {/* PROJEÇÃO INTELIGENTE DO MÊS */}
-              <div className="card p-5 sm:p-6 flex flex-col justify-between">
-                <div>
-                  <SectionHeader title="Projeção & Metas" subtitle={isCurrentMonth ? 'Estimativa até o fim do mês' : 'Histórico do período'} icon={<TrendingUp className="h-4 w-4" />} />
-
-                  {isCurrentMonth ? (
-                    <div className="mt-5 space-y-4">
-                      {/* Grande Número Projetado */}
-                      <div className="flex items-baseline justify-between">
-                        <div>
-                          <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Faturamento Estimado</span>
-                          <p className="text-h1 font-bold text-heading num mt-0.5">{brl(projection.projected)}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-h2 font-bold text-wine-700 num">{projDonePct}%</span>
-                          <span className="block text-micro text-n-500">alcançado</span>
-                        </div>
-                      </div>
-
-                      {/* Barra de Progresso com 3 Fases */}
-                      <div className="space-y-1.5">
-                        <div className="h-2.5 w-full bg-surface-2 rounded-full overflow-hidden flex">
-                          <div
-                            className="h-full bg-wine-700 transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.round((projection.realized / (projection.projected || 1)) * 100))}%` }}
-                            title={`Já realizado: ${brl(projection.realized)}`}
-                          />
-                          <div
-                            className="h-full bg-wine-400 transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.round((projection.confirmedAhead / (projection.projected || 1)) * 100))}%` }}
-                            title={`Confirmados a vir: ${brl(projection.confirmedAhead)}`}
-                          />
-                        </div>
-                        <div className="flex justify-between text-micro text-n-500">
-                          <span>R$ 0</span>
-                          <span>Meta estimada {brl(projection.projected)}</span>
-                        </div>
-                      </div>
-
-                      {/* Mini Indicadores */}
-                      <div className="grid grid-cols-2 gap-2 pt-2">
-                        <div className="p-2.5 rounded-xl bg-surface-2">
-                          <span className="text-micro text-n-500 block">Já Realizado</span>
-                          <span className="text-label font-bold text-ink num">{brl(projection.realized)}</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-surface-2">
-                          <span className="text-micro text-n-500 block">Confirmados a Vir</span>
-                          <span className="text-label font-bold text-ink num">{brl(projection.confirmedAhead)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-12 text-center">
-                      <p className="text-caption text-n-500 max-w-xs mx-auto">
-                        Projeção calculada apenas para o mês corrente ({MONTHS[now.getMonth()]}).
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t border-line flex items-center justify-between text-caption mt-4">
-                  <span className="text-n-500">vs. mesmo período em {cursor.y - 1}</span>
-                  <span className="font-bold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)}</span>
-                </div>
-              </div>
             </div>
 
             {/* CONTAS A RECEBER + FORMAS DE PAGAMENTO */}
@@ -602,14 +622,13 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
               {/* CONTAS A RECEBER */}
               <div className="card p-5 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <SectionHeader title="Contas a Receber" subtitle="Valores futuros ou pendentes" icon={<ScrollText className="h-4 w-4" />} />
+                  <SectionHeader title="Contas a Receber" subtitle="Valores previstos e pendências" icon={<ScrollText className="h-4 w-4" />} />
                   <button onClick={() => setDrill('receivable')} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
                     Ver todos →
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {/* Vencidos */}
                   <div
                     onClick={() => setDrill('receivable')}
                     className="p-4 rounded-2xl border border-line bg-surface hover:bg-danger-bg/20 cursor-pointer transition-ui"
@@ -623,23 +642,22 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                     </span>
                   </div>
 
-                  {/* A Vencer */}
                   <div className="p-4 rounded-2xl border border-line bg-surface-2/60">
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-n-100 text-n-600 text-micro font-bold">
                       <Clock4 className="h-3 w-3" /> A Vencer
                     </span>
                     <p className="text-h2 font-bold text-heading mt-2 num">{brl(receivables.dueSoon.total)}</p>
                     <span className="text-micro text-n-500 mt-1 block">
-                      {receivables.dueSoon.items.length} agendamento(s) confirmados
+                      {receivables.dueSoon.items.length} confirmados
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* FORMAS DE PAGAMENTO COM BARRAS DE PROPORÇÃO */}
+              {/* FORMAS DE PAGAMENTO COM BARRAS DE ENERGIA */}
               <div className="card p-5 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <SectionHeader title="Formas de Pagamento" subtitle="Distribuição no mês" icon={<CreditCard className="h-4 w-4" />} />
+                  <SectionHeader title="Formas de Pagamento" subtitle="Participação no faturamento" icon={<CreditCard className="h-4 w-4" />} />
                   <button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
                     <Sliders className="h-3.5 w-3.5" /> Taxas
                   </button>
@@ -665,7 +683,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                 )}
 
                 {payments.length === 0 ? (
-                  <p className="text-caption text-n-500 py-8 text-center">Nenhum pagamento registrado neste mês.</p>
+                  <p className="text-caption text-n-500 py-8 text-center">Nenhum pagamento registrado no período.</p>
                 ) : (
                   <div className="mt-4 space-y-3">
                     {payments.map(p => {
@@ -684,7 +702,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                           </div>
                           <div className="h-2 w-full bg-surface-2 rounded-full overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-wine-600 transition-all duration-300"
+                              className="h-full rounded-full bg-gradient-to-r from-wine-700 to-wine-500 transition-all duration-500"
                               style={{ width: `${share}%` }}
                             />
                           </div>
@@ -696,13 +714,13 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
               </div>
             </div>
 
-            {/* GRÁFICO DE EVOLUÇÃO TEMPORAL */}
+            {/* GRÁFICO DE EVOLUÇÃO TEMPORAL (TechChart Holográfico) */}
             <div className="card p-5 sm:p-6">
-              <SectionHeader title="Evolução Financeira" subtitle="Faturamento x Lucro Líquido nos últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
+              <SectionHeader title="Telemetria & Evolução Anual" subtitle="Faturamento vs Lucro Líquido nos últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
               <div className="flex items-center gap-4 mt-3">
                 <span className="inline-flex items-center gap-1.5 text-caption">
                   <span className="w-3.5 h-1 rounded-full bg-wine-700" />
-                  <span className="font-semibold text-heading">Lucro Líquido</span>
+                  <span className="font-bold text-heading">Lucro Líquido</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-caption">
                   <span className="w-3.5 border-t border-dashed border-n-400" />
@@ -712,7 +730,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
               <div className="mt-4">
                 <TechChart
                   labels={netSeries.map(p => p.label)}
-                  height={200}
+                  height={220}
                   format={(v) => brl(Math.round(v * 100))}
                   axisFormat={(v: number) => {
                     const r = Math.round(v);
@@ -791,7 +809,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
             <div className="flex items-center gap-4 mt-3">
               <span className="inline-flex items-center gap-1.5 text-caption">
                 <span className="w-3.5 h-1 rounded-full bg-wine-700" />
-                <span className="font-semibold text-heading">Lucro Líquido</span>
+                <span className="font-bold text-heading">Lucro Líquido</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-caption">
                 <span className="w-3.5 border-t border-dashed border-n-400" />
@@ -800,7 +818,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
             </div>
             <div className="mt-5">
               <TechChart
-                height={240}
+                height={260}
                 labels={netSeries.map(p => p.label)}
                 format={(v: number) => brl(Math.round(v * 100))}
                 axisFormat={(v: number) => {
@@ -857,7 +875,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                   description="Aluguel, energia, internet — cadastre uma vez e o lançamento se repete sozinho todo mês."
                 />
               ) : fixedExpenses.filter(f => f.active).map(f => (
-                <div key={f.id} className="flex items-center justify-between rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
+                <div key={f.id} className="flex items-center justify-between rounded-2xl border border-line p-4 hover:bg-surface-2 transition-colors">
                   <div className="min-w-0 flex items-center gap-3">
                     <span className="icon-chip !text-danger"><Repeat className="h-4 w-4" /></span>
                     <div>
