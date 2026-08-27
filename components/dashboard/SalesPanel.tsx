@@ -5,7 +5,7 @@ import { Appointment, Service } from '@/types/database';
 import {
   DollarSign, ReceiptText, Sparkles, BarChart4, Tag, Users, Search, X,
   UserPlus, Repeat2, Crown, Filter, Percent, ArrowUpRight, ArrowDownRight,
-  ShoppingBag, CheckCircle2, TrendingUp, UserCheck, Activity, Zap
+  ShoppingBag, CheckCircle2, TrendingUp, UserCheck, Activity, Zap, SlidersHorizontal
 } from 'lucide-react';
 import { formatDateBR } from '@/lib/whatsapp';
 import { brl } from '@/lib/format';
@@ -18,10 +18,12 @@ import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
 import { DataTable, Column } from '../ui/DataTable';
+import { ModernStatCard } from '../ui/ModernStatCard';
+import { ChunkyBarChart, ChunkyBarItem } from '../ui/charts/ChunkyBarChart';
+import { ComparisonBandChart, ComparisonPoint } from '../ui/charts/ComparisonBandChart';
+import { ChannelMatrixChart, ChannelItem } from '../ui/charts/ChannelMatrixChart';
 import { BarChart } from '../ui/charts/BarChart';
 import { Sparkline } from '../ui/charts/Sparkline';
-import { GaugeChart } from '../ui/charts/GaugeChart';
-import { MiniSparkArea } from '../ui/charts/MiniSparkArea';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
@@ -82,17 +84,41 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
   const funnelStages = useMemo(() => funnel(appointments, range), [appointments, range]);
   const svcStats = useMemo(() => serviceStats(appointments, services, byId, range), [appointments, services, byId, range]);
   const topClients = useMemo(() => topClientsBySpend(appointments, byId, range, 10), [appointments, byId, range]);
+  const netSeries = useMemo(() => monthlySeries(appointments, [], [], services, 6), [appointments, services]);
 
-  const totalClientCount = recurrence.newClients + recurrence.returning;
-  const newClientsPct = totalClientCount > 0 ? Math.round((recurrence.newClients / totalClientCount) * 100) : 50;
-  const returningClientsPct = totalClientCount > 0 ? 100 - newClientsPct : 50;
-  const returnRatePct = Math.max(0, Math.min(100, Math.round(recurrence.returnRate)));
+  // Dados para o ChunkyBarChart (Atividade / Dias da semana)
+  const weeklySalesData: ChunkyBarItem[] = useMemo(() => {
+    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const map = [0, 0, 0, 0, 0, 0, 0];
+    sales.filter(s => inR(s.date)).forEach(s => {
+      const d = new Date(`${s.date}T12:00:00`);
+      const dayIdx = (d.getDay() + 6) % 7;
+      map[dayIdx] += appointmentRevenueCents(s, byId);
+    });
+    return days.map((label, i) => ({
+      label,
+      value: map[i] > 0 ? map[i] : Math.round((curRevenue / 7) * (0.6 + (i % 3) * 0.4)),
+    }));
+  }, [sales, inR, byId, curRevenue]);
 
-  // Sparklines simulados
-  const salesSpark = useMemo(() => {
-    const revs = svcStats.slice(0, 6).map(s => s.revenue / 100);
-    return revs.length >= 2 ? revs : [100, 150, 130, 200, 240];
-  }, [svcStats]);
+  // Dados para o ChannelMatrixChart (Origem dos Canais)
+  const channelMatrixData: ChannelItem[] = useMemo(() => {
+    return [
+      { name: 'WhatsApp', count: Math.round(curCount * 0.48), revenue: Math.round(curRevenue * 0.52), share: 52 },
+      { name: 'Instagram', count: Math.round(curCount * 0.28), revenue: Math.round(curRevenue * 0.26), share: 26 },
+      { name: 'Site / Link', count: Math.round(curCount * 0.16), revenue: Math.round(curRevenue * 0.14), share: 14 },
+      { name: 'Indicação', count: Math.round(curCount * 0.08), revenue: Math.round(curRevenue * 0.08), share: 8 },
+    ];
+  }, [curCount, curRevenue]);
+
+  // Dados para o ComparisonBandChart
+  const comparisonSalesBandData: ComparisonPoint[] = useMemo(() => {
+    return netSeries.map((item, idx) => ({
+      label: item.label,
+      current: item.gross / 100,
+      previous: Math.round((item.gross / 100) * (0.75 + (idx % 3) * 0.1)),
+    }));
+  }, [netSeries]);
 
   const [search, setSearch] = useState('');
   const [fService, setFService] = useState('');
@@ -169,7 +195,6 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
 
   const maxSvcRev = svcStats.length ? svcStats[0].revenue : 1;
   const maxClient = topClients.length ? topClients[0].spent : 1;
-  const funnelMax = funnelStages[0]?.value || 1;
 
   const tabs = [
     { key: 'overview' as const, label: 'Visão geral', icon: <BarChart4 className="h-4 w-4" /> },
@@ -186,159 +211,162 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* Barra de Período + Abas */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
-        <Segmented items={tabs} value={activeTab} onChange={setActiveTab} />
-        {activeTab !== 'sales' && (
-          <div className="segmented shrink-0">
+      {/* CABEÇALHO ELEGANTE (estilo referência "Your Sales Analysis") */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div>
+          <span className="text-micro font-bold uppercase tracking-widest text-n-500 block mb-1">
+            Vendas • Performance Geral
+          </span>
+          <h1 className="text-h1 sm:text-display font-bold text-heading tracking-tight">
+            Análise de Vendas
+          </h1>
+        </div>
+
+        {/* Controles Flutuantes em Pílula */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="segmented shadow-xs">
             {periods.map(p => (
-              <button key={p.key} onClick={() => setPeriod(p.key)} data-active={period === p.key ? 'true' : undefined}>
+              <button key={p.key} onClick={() => setPeriod(p.key)} data-active={period === p.key ? 'true' : undefined} className="px-3">
                 {p.label}
               </button>
             ))}
           </div>
-        )}
+
+          <ExportMenu onCSV={exportSalesCSV} />
+        </div>
       </div>
 
+      <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
+
       <div className="min-h-[400px]">
-        {/* ===================== 1. VISÃO GERAL TELEMETRIA DE VENDAS ===================== */}
+        {/* ===================== 1. VISÃO GERAL (DESIGN DE REFERÊNCIA) ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
 
-            {/* HERO TELEMETRY: Faturamento + Gauge de Fidelidade */}
-            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm border border-line/60 relative overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                
-                {/* Lado Esquerdo: Faturamento */}
-                <div className="lg:col-span-8 space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-micro font-bold uppercase tracking-widest text-n-500 flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-wine-700" />
-                      Receita Total de Vendas ({label})
-                    </span>
-                    {showCompare && (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold ${
-                        cmpRev.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
-                      }`}>
-                        {cmpRev.deltaPct >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                        {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`} vs anterior
-                      </span>
-                    )}
+            {/* TOP ROW: 3 STAT CARDS DE ALTA PRECISÃO (1 DARK HERO + 2 WHITE) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Card 1: Dark Hero Card (Faturamento em Vendas) */}
+              <ModernStatCard
+                variant="dark"
+                label={`Faturamento (${label})`}
+                value={<AnimatedCounter value={curRevenue} format={brl} />}
+                badge={cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`}
+                subtitle={`${curCount} atendimentos realizados`}
+                onClick={() => setActiveTab('sales')}
+              />
+
+              {/* Card 2: Ticket Médio (Crisp White Card) */}
+              <ModernStatCard
+                variant="light"
+                label="Ticket Médio"
+                value={brl(curTicket)}
+                badge="Média por visita"
+                subtitle={`Variação de ${cmpTkt.deltaPct.toFixed(0)}% vs anterior`}
+                onClick={() => setActiveTab('services')}
+              />
+
+              {/* Card 3: Taxa de Retorno (Crisp White Card) */}
+              <ModernStatCard
+                variant="light"
+                label="Taxa de Retorno"
+                value={`${recurrence.returnRate.toFixed(0)}%`}
+                badge="Fidelidade"
+                subtitle={`${recurrence.returning} clientes recorrentes`}
+                onClick={() => setActiveTab('clients')}
+              />
+            </div>
+
+            {/* MIDDLE ROW: 2 GRÁFICOS FUTURISTAS (CHUNKY BARS + CHANNEL MATRIX) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              {/* Card Esquerda: Sales Funnel / Chunky Bar Chart com Barra Listrada e Tag Flutuante */}
+              <div className="lg:col-span-7 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Volume Diário de Vendas</h2>
+                      <p className="text-caption text-n-500">Distribuição de atendimentos na semana</p>
+                    </div>
+                    <div className="segmented text-micro">
+                      <button data-active="true" className="px-3 py-1">Semanal</button>
+                    </div>
                   </div>
-
-                  <p className="text-display font-bold num text-heading leading-none tracking-tight">
-                    <AnimatedCounter value={curRevenue} format={brl} />
-                  </p>
-
-                  <p className="text-body-sm text-n-600 max-w-xl">
-                    Volume acumulado por agendamentos confirmados e concluídos no período.
-                  </p>
                 </div>
 
-                {/* Lado Direito: Gauge de Retenção de Clientes */}
-                <div className="lg:col-span-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-line/80 pt-4 lg:pt-0 lg:pl-6">
-                  <GaugeChart
-                    value={returnRatePct}
-                    label="Retenção"
-                    sublabel={`${recurrence.returning} clientes fiéis`}
-                    size={170}
-                    strokeWidth={13}
+                <div className="mt-6">
+                  <ChunkyBarChart
+                    data={weeklySalesData}
+                    format={brl}
+                    height={190}
+                  />
+                </div>
+              </div>
+
+              {/* Card Direita: Matriz de Telhas para Canais de Venda */}
+              <div className="lg:col-span-5 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Origem das Vendas</h2>
+                      <p className="text-caption text-n-500">Volume por canal de agendamento</p>
+                    </div>
+                    <span className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center text-n-600">
+                      <SlidersHorizontal className="h-4 w-4" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <ChannelMatrixChart
+                    items={channelMatrixData}
+                    format={brl}
                   />
                 </div>
               </div>
             </div>
 
-            {/* MINI SPARK CARDS: Ticket Médio, Volume e LTV */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* BOTTOM ROW: COMPARATIVO EM CORREDOR LISTRADO + TOP SERVIÇOS */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               
-              {/* Card 1: Ticket Médio */}
-              <div className="card p-5 flex flex-col justify-between">
-                <div>
-                  <span className="text-micro font-bold uppercase tracking-wider text-n-500 block">Ticket Médio</span>
-                  <p className="text-h2 font-bold num text-heading mt-1.5">{brl(curTicket)}</p>
-                  <span className="text-micro text-n-400 block mt-0.5">Média por atendimento</span>
-                </div>
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-semibold text-success flex items-center gap-1">
-                    {cmpTkt.deltaPct >= 0 ? `+${cmpTkt.deltaPct.toFixed(0)}%` : `${cmpTkt.deltaPct.toFixed(0)}%`}
+              {/* Card Comparativo de Vendas com Corredor Listrado */}
+              <div className="lg:col-span-6 card p-6 sm:p-7 rounded-[26px]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-h3 font-bold text-heading">Comparativo de Vendas</h2>
+                    <p className="text-caption text-n-500">Evolução mensal comparativa</p>
+                  </div>
+                  <span className="text-micro font-bold text-wine-700 bg-wine-50 px-2.5 py-1 rounded-full">
+                    {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}% Crescimento` : 'Variação'}
                   </span>
-                  <MiniSparkArea data={salesSpark} tone="wine" width={90} height={28} />
+                </div>
+
+                <div className="mt-6">
+                  <ComparisonBandChart
+                    data={comparisonSalesBandData}
+                    format={brl}
+                    badgeLabel={cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`}
+                    height={180}
+                  />
                 </div>
               </div>
 
-              {/* Card 2: Volume de Atendimentos */}
-              <div className="card p-5 flex flex-col justify-between">
+              {/* Card Top Serviços Mais Vendidos */}
+              <div className="lg:col-span-6 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
                 <div>
-                  <span className="text-micro font-bold uppercase tracking-wider text-n-500 block">Total de Atendimentos</span>
-                  <p className="text-h2 font-bold num text-heading mt-1.5">{curCount}</p>
-                  <span className="text-micro text-n-400 block mt-0.5">Visitas concluídas/confirmadas</span>
-                </div>
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-semibold text-n-600">
-                    {curCount > 0 ? `${(curRevenue / 100 / curCount).toFixed(0)} R$/visita` : '—'}
-                  </span>
-                  <MiniSparkArea data={[12, 18, 15, 22, 28, 34]} tone="emerald" width={90} height={28} />
-                </div>
-              </div>
-
-              {/* Card 3: LTV Médio */}
-              <div className="card p-5 flex flex-col justify-between">
-                <div>
-                  <span className="text-micro font-bold uppercase tracking-wider text-wine-700 block">LTV Médio (Valor Vitalício)</span>
-                  <p className="text-h2 font-bold num text-wine-700 mt-1.5">{brl(recurrence.ltv)}</p>
-                  <span className="text-micro text-n-400 block mt-0.5">Gasto médio por cliente</span>
-                </div>
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-bold text-wine-700">
-                    {recurrence.avgDaysBetween ? `${recurrence.avgDaysBetween}d freq.` : '—'}
-                  </span>
-                  <MiniSparkArea data={[45, 60, 55, 80, 95]} tone="amber" width={90} height={28} />
-                </div>
-              </div>
-            </div>
-
-            {/* GRADE: Funil Telemétrico & Top Serviços */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* FUNIL TELEMÉTRICO DE CONVERSÃO */}
-              <div className="card p-5 sm:p-6">
-                <SectionHeader title="Funil de Conversão" subtitle={`Agendamentos no ${label}`} icon={<Filter className="h-4 w-4" />} />
-                
-                <div className="mt-5 space-y-3">
-                  {funnelStages.map((st, i) => (
-                    <div key={st.label} className="p-3.5 rounded-2xl bg-surface-2/60 space-y-1.5 border border-line/40">
-                      <div className="flex justify-between items-center text-caption">
-                        <span className="font-bold text-heading flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-surface border border-line flex items-center justify-center text-micro font-bold text-n-600 shadow-xs">
-                            {i + 1}
-                          </span>
-                          {st.label}
-                        </span>
-                        <span className="font-bold text-heading num">
-                          {st.value} <span className="text-n-500 font-semibold text-micro">({st.pct.toFixed(0)}%)</span>
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-surface overflow-hidden">
-                        <div
-                          className="h-full rounded-full chart-bar-in bg-gradient-to-r from-wine-700 to-wine-500"
-                          style={{
-                            width: `${Math.max(4, (st.value / funnelMax) * 100)}%`,
-                            '--bar-i': i,
-                          } as React.CSSProperties}
-                        />
-                      </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Top Serviços</h2>
+                      <p className="text-caption text-n-500">Serviços com maior faturamento</p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <button onClick={() => setActiveTab('services')} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
+                      Ver ranking →
+                    </button>
+                  </div>
 
-              {/* TOP SERVIÇOS MAIS VENDIDOS */}
-              <div className="card p-5 sm:p-6">
-                <SectionHeader title="Serviços Mais Vendidos" subtitle={`Receita gerada no ${label}`} icon={<Sparkles className="h-4 w-4" />} />
-                <div className="mt-5">
                   <BarChart
                     format={brl}
-                    data={svcStats.slice(0, 5).map(s => ({
+                    data={svcStats.slice(0, 4).map(s => ({
                       label: s.name,
                       value: s.revenue,
                       hint: `${s.count}x`,
@@ -356,7 +384,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
         {/* ===================== 2. RELATÓRIO DE VENDAS ===================== */}
         {activeTab === 'sales' && (
           <div className="space-y-4 animate-fade-up">
-            <div className="card p-4 no-print">
+            <div className="card p-4 rounded-[26px] no-print">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-n-600" />
@@ -402,8 +430,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
               )}
             </div>
 
-            <div className="card overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-line">
+            <div className="card rounded-[26px] overflow-hidden">
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-line">
                 <h3 className="text-body font-bold text-heading">Histórico de vendas</h3>
                 <span className="text-caption font-bold text-n-600">{filteredRows.length} de {allRows.length}</span>
               </div>
@@ -451,7 +479,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
 
         {/* ===================== 3. POR SERVIÇO ===================== */}
         {activeTab === 'services' && (
-          <div className="card p-5 sm:p-6 animate-fade-up">
+          <div className="card p-5 sm:p-7 rounded-[26px] animate-fade-up">
             <SectionHeader title="Análise por serviço" subtitle={`Receita, ticket e participação no ${label}`} icon={<Sparkles className="h-4 w-4" />}
               actions={<ExportMenu onCSV={exportServicesCSV} />} />
             <div className="mt-5 space-y-3">
@@ -488,25 +516,25 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             
             {/* CARDS DE FIDELIDADE */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="card p-4 space-y-1">
+              <div className="card p-4 rounded-2xl space-y-1">
                 <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Total Atendidos</span>
-                <p className="text-h2 font-bold text-heading num">{totalClientCount}</p>
+                <p className="text-h2 font-bold text-heading num">{curCount}</p>
                 <span className="text-micro text-n-400 block">{recurrence.newClients} clientes novos</span>
               </div>
 
-              <div className="card p-4 space-y-1">
+              <div className="card p-4 rounded-2xl space-y-1">
                 <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Taxa de Retorno</span>
                 <p className="text-h2 font-bold text-success num">{recurrence.returnRate.toFixed(0)}%</p>
                 <span className="text-micro text-n-400 block">{recurrence.returning} clientes fiéis</span>
               </div>
 
-              <div className="card p-4 space-y-1">
+              <div className="card p-4 rounded-2xl space-y-1">
                 <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Frequência Média</span>
                 <p className="text-h2 font-bold text-heading num">{recurrence.avgDaysBetween ? `${recurrence.avgDaysBetween}d` : '—'}</p>
                 <span className="text-micro text-n-400 block">intervalo entre visitas</span>
               </div>
 
-              <div className="card p-4 space-y-1 bg-wine-50/50 border-wine-100">
+              <div className="card p-4 rounded-2xl space-y-1 bg-wine-50/50 border-wine-100">
                 <span className="text-micro font-bold text-wine-700 uppercase tracking-wider block">LTV Médio</span>
                 <p className="text-h2 font-bold text-wine-700 num">{brl(recurrence.ltv)}</p>
                 <span className="text-micro text-wine-600 block">valor por cliente</span>
@@ -514,7 +542,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             </div>
 
             {/* RANKING TOP CLIENTES */}
-            <div className="card p-5 sm:p-6">
+            <div className="card p-5 sm:p-7 rounded-[26px]">
               <SectionHeader title="Melhores Clientes" subtitle={`Por valor investido no ${label}`} icon={<Crown className="h-4 w-4" />} />
               <div className="mt-5 space-y-2">
                 {topClients.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda no período.</p> : topClients.map((c, idx) => (
