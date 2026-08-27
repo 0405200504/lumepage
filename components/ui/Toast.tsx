@@ -62,7 +62,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           acima da tab bar, onde o polegar alcança o botão de desfazer. */}
       <div
         className="fixed z-55 flex flex-col gap-3 pointer-events-none no-print
-          left-4 right-4 bottom-[calc(76px+env(safe-area-inset-bottom))]
+          left-4 right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]
           sm:left-auto sm:right-6 sm:top-6 sm:bottom-auto sm:w-[380px]"
       >
         {toasts.map((toast) => {

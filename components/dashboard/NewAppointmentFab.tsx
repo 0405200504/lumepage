@@ -52,7 +52,7 @@ export const NewAppointmentFab: React.FC<Props> = ({ professionalId, services, c
           onClick={() => setOpen(true)}
           aria-label="Novo agendamento"
           data-visible={visible || undefined}
-          className="lg:hidden no-print fixed right-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-40
+          className="lg:hidden no-print fixed right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40
             h-14 w-14 rounded-full bg-wine-700 text-white shadow-wine
             flex items-center justify-center
             transition-[opacity,transform] duration-[220ms] ease-out

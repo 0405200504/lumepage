@@ -121,7 +121,7 @@ export function PushNotificationBanner() {
     <div
       role="status"
       className="fixed z-45 no-print toast-in
-        left-4 right-4 bottom-[calc(76px+env(safe-area-inset-bottom))]
+        left-4 right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]
         lg:left-auto lg:right-6 lg:bottom-6 lg:w-[380px]"
     >
       <div className="card p-4 flex items-start gap-3">

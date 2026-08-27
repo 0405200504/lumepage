@@ -4,11 +4,15 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Appointment, Setting, AppointmentStatus, Service, Client } from '@/types/database';
 import {
-  Search, Clock, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus, Pencil, RotateCcw
+  Search, MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus, Pencil, RotateCcw
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
 import { QuickAddFab } from '../ui/QuickAddFab';
+import { Button } from '../ui/Button';
+import { PillGroup } from '../ui/PillGroup';
+import { StatusPill } from '../ui/StatusPill';
+import { EmptyState } from '../ui/EmptyState';
 import {
   updateAppointmentStatusAction, deleteAppointmentAction, updateAppointmentAction,
   getTrashedAppointmentsAction, restoreAppointmentAction, purgeAppointmentAction,
@@ -200,6 +204,56 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     const matchesDate = !dateFilter || app.date === dateFilter;
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  /* A busca e a data continuam valendo na contagem; só o status é ignorado.
+     Se a contagem ignorasse os outros filtros, a pílula prometeria 12
+     pendentes e a lista entregaria 2. */
+  const semStatus = initialAppointments.filter(app => {
+    const matchesSearch =
+      app.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.client_whatsapp.includes(searchTerm) ||
+      (app.service?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch && (!dateFilter || app.date === dateFilter);
+  });
+  const contar = (st: string) => st === 'all' ? semStatus.length : semStatus.filter(a => a.status === st).length;
+
+  const STATUS_TABS = [
+    { key: 'all', label: 'Todos' },
+    { key: 'pending', label: 'Pendentes' },
+    { key: 'confirmed', label: 'Confirmados' },
+    { key: 'completed', label: 'Finalizados' },
+    { key: 'cancelled', label: 'Cancelados' },
+    { key: 'no_show', label: 'Faltas' },
+  ].map(t => ({ ...t, label: `${t.label} (${contar(t.key)})` }));
+
+  /* Lista plana vira lista POR DIA. É a mudança que mais se sente: em vez de
+     56 linhas soltas, a profissional lê "Hoje / Amanhã / Sexta" e sabe onde
+     está sem conferir data em cada linha. */
+  const hojeISO = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const amanhaISO = (() => { const d = new Date(); d.setDate(d.getDate()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const rotuloDoDia = (iso: string) => {
+    if (iso === hojeISO) return 'Hoje';
+    if (iso === amanhaISO) return 'Amanhã';
+    const [y, m, d] = iso.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return `${DIAS[dt.getDay()].charAt(0).toUpperCase()}${DIAS[dt.getDay()].slice(1)}, ${formatDateBR(iso)}`;
+  };
+  const porDia = (() => {
+    const mapa = new Map<string, Appointment[]>();
+    for (const a of filteredAppointments) {
+      const arr = mapa.get(a.date) ?? [];
+      arr.push(a);
+      mapa.set(a.date, arr);
+    }
+    return [...mapa.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([iso, apps]) => ({
+        iso,
+        rotulo: rotuloDoDia(iso),
+        apps: apps.sort((x, y) => x.start_time.localeCompare(y.start_time)),
+      }));
+  })();
 
   const handleUpdateStatus = async (id: string, status: AppointmentStatus, reason?: string, prevStatus?: AppointmentStatus) => {
     setUpdatingId(id);
@@ -412,185 +466,144 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   );
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* Ações: lixeira + novo agendamento manual */}
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={openTrash}
-          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-n-200 text-n-600 text-caption font-bold rounded-xl hover:bg-n-50 transition-ui"
-        >
-          <Trash2 className="h-4 w-4" /> Lixeira
-        </button>
-        <button
-          onClick={openNew}
-          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl shadow-soft hover:opacity-95 transition-ui"
-        >
-          <Plus className="h-4 w-4" /> Novo agendamento
-        </button>
+    <div className="space-y-5">
+      {/* ---- Cabeçalho de ações ---- */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="secondary" size="sm" onClick={openTrash} leadingIcon={<Trash2 className="h-4 w-4" />}>
+          Lixeira
+        </Button>
+        <Button size="sm" onClick={openNew} leadingIcon={<Plus className="h-4 w-4" />}>
+          Novo agendamento
+        </Button>
       </div>
 
       <QuickAddFab actions={[{ label: 'Novo agendamento', icon: Plus, onClick: openNew }]} />
 
-      {/* Barra de Filtros e Busca */}
-      <div className="flex flex-col lg:flex-row gap-4 items-center justify-between card p-4">
-        <div className="relative w-full lg:max-w-xs">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-n-600" />
+      {/* ---- Filtros ----
+          O status era um <select> escondido dentro de um cartão cinza. Virou
+          pílula COM CONTAGEM: a profissional vê que há 3 pendentes antes de
+          decidir filtrar, em vez de abrir o menu para descobrir. */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-n-500" aria-hidden />
+            <input
+              type="text"
+              placeholder="Buscar por cliente, WhatsApp ou serviço…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Buscar agendamentos"
+              className="w-full h-11 pl-9 pr-3 bg-surface border border-line rounded-control text-label text-ink placeholder-n-400 transition-ui hover:border-n-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Buscar por cliente, whatsapp ou serviço..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-9 pr-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-caption font-semibold text-n-600 whitespace-nowrap">Data:</span>
+          <div className="flex items-center gap-2 shrink-0">
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              aria-label="Filtrar por data"
+              className="num h-11 px-3 bg-surface border border-line rounded-control text-label text-ink transition-ui hover:border-n-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
             />
             {dateFilter && (
-              <button onClick={() => setDateFilter('')} className="text-caption font-bold text-wine-500 hover:underline">Limpar</button>
+              <Button variant="ghost" size="sm" onClick={() => setDateFilter('')}>Limpar</Button>
             )}
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-caption font-semibold text-n-600">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
-            >
-              <option value="all">Todos os Status</option>
-              <option value="pending">Pendentes</option>
-              <option value="confirmed">Confirmados</option>
-              <option value="completed">Finalizados</option>
-              <option value="cancelled">Cancelados</option>
-              <option value="no_show">Faltas</option>
-            </select>
-          </div>
         </div>
+
+        <PillGroup
+          ariaLabel="Filtrar por status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          items={STATUS_TABS}
+          className="max-w-full"
+        />
       </div>
 
-      {/* Cards (mobile) */}
-      <div className="lg:hidden space-y-3">
-        {filteredAppointments.length > 0 ? (
-          filteredAppointments.map((app) => {
-            const m = statusMeta(app.status);
-            return (
-              <div key={app.id} className="card p-4 active:scale-[0.99] transition-transform">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-caption font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-md whitespace-nowrap">
-                        {formatDateBR(app.date)}
-                      </span>
-                      <span className="flex items-center gap-1 text-caption font-semibold text-n-600">
-                        <Clock className="h-3.5 w-3.5" />
-                        {app.start_time.substring(0, 5)}–{app.end_time.substring(0, 5)}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-ink mt-2 truncate">{app.client_name}</h4>
-                    <p className="text-caption text-n-600 mt-0.5 truncate">{apptServiceLabel(app)} · {realDurationMin(app)} min{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
-                    <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-caption text-n-600 mt-0.5 inline-block">{app.client_whatsapp}</a>
-                  </div>
-                  <span className={`shrink-0 text-caption font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
-                </div>
-
-                {app.notes && (
-                  <p className="mt-2 text-caption font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-lg px-2 py-1">Nota: {app.notes}</p>
-                )}
-                {app.cancellation_reason && (
-                  <p className="mt-2 text-caption text-n-600">Motivo: {app.cancellation_reason}</p>
-                )}
-
-                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-n-200 flex-wrap">
-                  <AppointmentActions app={app} />
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="card py-12 text-center text-caption text-n-600">
-            Nenhum agendamento atende aos filtros aplicados.
-          </div>
-        )}
-      </div>
-
-      {/* Tabela de Agendamentos (desktop) */}
-      <div className="hidden lg:block card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-n-200 text-left">
-            <thead className="bg-n-50 text-caption font-semibold text-n-600 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4">Data e Hora</th>
-                <th className="px-6 py-4">Cliente</th>
-                <th className="px-6 py-4">Serviço</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-n-200 text-label text-ink">
-              {filteredAppointments.length > 0 ? (
-                filteredAppointments.map((app) => {
-                  const m = statusMeta(app.status);
-                  return (
-                    <tr key={app.id} className="hover:bg-n-50/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="font-bold text-ink">{formatDateBR(app.date)}</p>
-                        <div className="flex items-center gap-1 text-caption text-n-600 mt-0.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          <span>{app.start_time.substring(0, 5)} - {app.end_time.substring(0, 5)}</span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-ink">{app.client_name}</p>
-                        <p className="text-caption text-n-600 mt-0.5">{app.client_whatsapp}</p>
-                        {app.notes && (
-                          <span className="text-caption font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-md px-1.5 py-0.5 mt-1 inline-block max-w-[180px] truncate" title={app.notes}>
-                            Nota: {app.notes}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-ink">{apptServiceLabel(app)}</p>
-                        <p className="text-caption text-n-600 mt-0.5">{realDurationMin(app)} minutos{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className={`text-caption font-bold rounded-full px-2.5 py-0.5 ${m.badge}`}>{m.label}</span>
-                        {app.cancellation_reason && (
-                          <p className="text-caption text-n-600 font-medium mt-1 leading-tight max-w-[160px]">Motivo: {app.cancellation_reason}</p>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <AppointmentActions app={app} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+      {/* ---- Lista, agrupada por dia ---- */}
+      {porDia.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            title={searchTerm || dateFilter || statusFilter !== 'all' ? 'Nenhum agendamento com esses filtros' : 'Nenhum agendamento ainda'}
+            description={
+              searchTerm || dateFilter || statusFilter !== 'all'
+                ? 'Tente limpar a busca, a data ou o status para ver mais.'
+                : 'Quando uma cliente marcar pela sua página, o horário aparece aqui.'
+            }
+            action={
+              (searchTerm || dateFilter || statusFilter !== 'all') ? (
+                <Button variant="secondary" size="sm" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter('all'); }}>
+                  Limpar filtros
+                </Button>
               ) : (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-caption text-n-600">
-                    Nenhum agendamento atende aos filtros aplicados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                <Button size="sm" onClick={openNew} leadingIcon={<Plus className="h-4 w-4" />}>Novo agendamento</Button>
+              )
+            }
+          />
         </div>
-      </div>
+      ) : (
+        <div className="space-y-6">
+          {porDia.map(({ iso, rotulo, apps }) => (
+            <section key={iso}>
+              {/* Cabeçalho do dia: gruda no topo enquanto o dia rola. */}
+              <div className="sticky top-[52px] lg:top-16 z-10 -mx-4 px-4 lg:mx-0 lg:px-0 py-2 bg-bg/85 backdrop-blur-[20px] flex items-baseline gap-2">
+                <h2 className="text-label font-semibold text-heading">{rotulo}</h2>
+                <span className="num text-caption text-n-500">
+                  {apps.length} {apps.length === 1 ? 'horário' : 'horários'}
+                </span>
+              </div>
+
+              <div className="card p-0 overflow-hidden mt-1">
+                <ul className="divide-y divide-line">
+                  {apps.map((app) => {
+                    const m = statusMeta(app.status);
+                    return (
+                      <li key={app.id} className="group transition-ui hover:bg-n-25">
+                        <div className="flex items-start gap-4 p-4">
+                          {/* Horário: coluna fixa, dígito de largura fixa —
+                              é por ele que a lista é lida de cima a baixo. */}
+                          <span className="num shrink-0 w-[52px] text-label font-semibold text-heading pt-0.5">
+                            {app.start_time.substring(0, 5)}
+                          </span>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-label font-semibold text-heading truncate">{app.client_name}</p>
+                                <p className="num text-caption text-n-500 truncate mt-0.5">
+                                  {apptServiceLabel(app)} · {realDurationMin(app)} min
+                                  {apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}
+                                </p>
+                              </div>
+                              <StatusPill tone={m.tone} className="shrink-0">{m.label}</StatusPill>
+                            </div>
+
+                            {app.notes && (
+                              <p className="mt-2 text-caption text-wine-700 bg-wine-50 border border-wine-100 rounded-chip px-2 py-1">
+                                Nota: {app.notes}
+                              </p>
+                            )}
+                            {app.cancellation_reason && (
+                              <p className="mt-2 text-caption text-n-500">Motivo: {app.cancellation_reason}</p>
+                            )}
+
+                            {/* No desktop as ações só aparecem na linha sob o
+                                mouse — a lista em repouso mostra dado, não
+                                seis botões repetidos em cada linha. */}
+                            <div className="flex items-center gap-1.5 flex-wrap mt-3 lg:mt-2 lg:opacity-0 lg:transition-opacity lg:duration-[160ms] lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                              <AppointmentActions app={app} />
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
 
       {/* Modal de Cancelamento */}
       {showCancelDialog && selectedApp && (

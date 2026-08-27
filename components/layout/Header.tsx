@@ -3,8 +3,9 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { RefreshCw, HelpCircle, ChevronRight, ShieldAlert } from 'lucide-react';
+import { RefreshCw, HelpCircle, ChevronRight, ShieldAlert, Menu } from 'lucide-react';
 import { OPEN_ONBOARDING_EVENT } from '@/components/onboarding/OnboardingTour';
+import { OPEN_NAV_EVENT } from '@/components/layout/Sidebar';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 
@@ -125,6 +126,20 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
           h-[76px] data-[scrolled]:h-[52px] lg:h-16 lg:data-[scrolled]:h-16 transition-[height] duration-[220ms] ease-out"
         data-scrolled={scrolled || undefined}
       >
+        {/* No celular a navegação inteira vive atrás deste botão — não há
+            mais barra fixa no rodapé comendo 60px de tela. */}
+        {role === 'professional' && (
+          <Button
+            variant="ghost"
+            size="md"
+            iconOnly
+            className="lg:hidden -ml-2"
+            aria-label="Abrir menu de navegação"
+            onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
+            leadingIcon={<Menu className="h-5 w-5" />}
+          />
+        )}
+
         <div className="min-w-0 flex-1" data-tour="page-header">
           {crumb && (
             <p className="hidden lg:flex items-center gap-1 text-caption text-n-500 mb-0.5">

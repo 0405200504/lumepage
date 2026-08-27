@@ -131,7 +131,7 @@ export default async function DashboardLayout({
 
         {/* A rolagem é da JANELA, não de um contêiner interno: é o que faz a
             topbar colapsar e a barra do navegador sumir no celular. */}
-        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-8 pt-2 pb-32 lg:pb-10">
+        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-8 pt-2 pb-24 lg:pb-10">
           <RouteTransition>{children}</RouteTransition>
         </main>
       </div>
