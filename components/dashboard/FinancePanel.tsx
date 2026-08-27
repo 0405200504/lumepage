@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Transaction, Appointment, TransactionType, FixedExpense, Service } from '@/types/database';
 import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, PiggyBank,
-  Plus, Trash2, X, ArrowDownCircle, ArrowUpCircle, Repeat, DollarSign,
+  Plus, Trash2, X, ArrowDownRight, ArrowUpRight, Repeat, DollarSign,
   BarChart4, ReceiptText, PieChart, LineChart as LineIcon, ScrollText, Clock4,
-  CreditCard, Sliders, Calculator,
+  CreditCard, Sliders, Calculator, Sparkles, ArrowRight, CheckCircle2, AlertCircle,
+  HelpCircle, Eye, EyeOff
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import {
@@ -21,9 +22,7 @@ import {
   monthRange, metricsForRange, compare, projectionForMonth, receivablesAging,
   byPaymentMethod, monthlySeries, DEFAULT_PAYMENT_RATES, PaymentRates, paymentLabel,
 } from '@/lib/analytics';
-import { IndexGrid } from '../ui/IndexGrid';
 import { PageHeader } from '../ui/PageHeader';
-import { MonoLabel, MonoValue } from '../ui/Mono';
 import { StatusLabel } from '../ui/StatusDot';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
@@ -33,6 +32,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
 import { TechChart } from '../ui/charts/TechChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
+import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
 interface FinancePanelProps {
@@ -46,13 +46,9 @@ interface FinancePanelProps {
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const EXPENSE_CATS = ['Produtos e materiais', 'Aluguel', 'Energia/Água/Internet', 'Marketing', 'Salários/Comissões', 'Impostos', 'Equipamentos', 'Outros'];
 const INCOME_CATS = ['Serviço avulso', 'Venda de produto', 'Pacote/Plano', 'Outros'];
-// Paleta reduzida: tons de bordô + neutros (sem arco-íris).
-// Monocromática dentro da escala vinho, com dois neutros no fim para as fatias
-// de cauda longa. Nenhum arco-íris: a categoria não muda de significado por cor.
+
 const DONUT_COLORS = [
-  'var(--color-wine-700)', 'var(--color-wine-600)', 'var(--color-wine-500)',
-  'var(--color-wine-400)', 'var(--color-wine-300)', 'var(--color-wine-200)',
-  'var(--color-n-400)', 'var(--color-n-300)',
+  '#6B1525', '#8C2438', '#A94257', '#C66E84', '#DEA0B0', '#F0CBD5', '#CFCBCC', '#E3E0E1',
 ];
 const RATES_KEY = 'lume-payment-rates';
 
@@ -71,7 +67,9 @@ interface LedgerItem {
 type TabType = 'overview' | 'ledger' | 'cashflow' | 'categories' | 'fixed';
 type DrillType = null | 'income' | 'expense' | 'profit' | 'receivable';
 
-export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, transactions, appointments, fixedExpenses, services }) => {
+export const FinancePanel: React.FC<FinancePanelProps> = ({
+  professionalId, transactions, appointments, fixedExpenses, services
+}) => {
   const router = useRouter();
   const { success, error } = useToast();
   const now = new Date();
@@ -81,8 +79,9 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [drill, setDrill] = useState<DrillType>(null);
+  const [showDreDetails, setShowDreDetails] = useState(false);
 
-  // Taxas por forma de pagamento (editáveis, persistidas localmente)
+  // Taxas por forma de pagamento
   const [rates, setRates] = useState<PaymentRates>(() => {
     if (typeof window === 'undefined') return DEFAULT_PAYMENT_RATES;
     try { const s = localStorage.getItem(RATES_KEY); if (s) return { ...DEFAULT_PAYMENT_RATES, ...JSON.parse(s) }; } catch { /* */ }
@@ -90,7 +89,11 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
   });
   const [showRates, setShowRates] = useState(false);
   const updateRate = (method: string, value: number) => {
-    setRates(prev => { const next = { ...prev, [method]: value }; try { localStorage.setItem(RATES_KEY, JSON.stringify(next)); } catch { /* */ } return next; });
+    setRates(prev => {
+      const next = { ...prev, [method]: value };
+      try { localStorage.setItem(RATES_KEY, JSON.stringify(next)); } catch { /* */ }
+      return next;
+    });
   };
 
   // Modal de lançamento
@@ -114,14 +117,14 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
   };
   const monthFirst = `${cursor.y}-${pad(cursor.m + 1)}-01`;
 
-  // Contas fixas que valem para um mês (a partir do mês de cadastro)
+  // Contas fixas que valem para um mês
   const fixedForMonth = useCallback((y: number, m: number) =>
     fixedExpenses.filter(f => f.active).filter(f => {
       const c = new Date(f.created_at);
       return idxOf(y, m) >= idxOf(c.getFullYear(), c.getMonth());
     }), [fixedExpenses]);
 
-  // --- Itens do mês selecionado (extrato + categorias + drill-down) ---
+  // Itens do mês
   const monthAuto: LedgerItem[] = useMemo(() =>
     appointments
       .filter(a => (a.status === 'completed' || a.status === 'confirmed') && inMonth(a.date, cursor.y, cursor.m))
@@ -149,7 +152,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     [monthAuto, monthManual, monthFixed]
   );
 
-  // --- Métricas do mês (atual / anterior / mesmo mês ano passado) ---
+  // Métricas
   const range = useMemo(() => monthRange(cursor.y, cursor.m), [cursor]);
   const metrics = useMemo(
     () => metricsForRange(appointments, transactions, fixedForMonth(cursor.y, cursor.m), byId, range),
@@ -174,7 +177,12 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
   const cmpExpense = compare(expense, prevExpense);
   const cmpProfit = compare(metrics.netProfit, prevMetrics.netProfit);
 
-  // Saldo acumulado (até o mês real atual)
+  // Proporções Visuais (Entradas vs Saídas)
+  const totalFlow = income + expense;
+  const incomePct = totalFlow > 0 ? Math.round((income / totalFlow) * 100) : 50;
+  const expensePct = totalFlow > 0 ? 100 - incomePct : 50;
+
+  // Saldo acumulado
   const totalBalance = useMemo(() => {
     const today = new Date();
     const realIdx = idxOf(today.getFullYear(), today.getMonth());
@@ -193,18 +201,23 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     return incomeAll - manualExpenseAll - fixedAll;
   }, [appointments, transactions, fixedExpenses, byId]);
 
-  // Projeção, a receber, formas de pagamento, evolução do lucro
+  // Projeções & Pagamentos
   const projection = useMemo(() => projectionForMonth(appointments, byId), [appointments, byId]);
   const receivables = useMemo(() => receivablesAging(appointments, byId), [appointments, byId]);
   const payments = useMemo(() => byPaymentMethod(appointments, byId, rates, range), [appointments, byId, rates, range]);
+  const totalPaymentGross = useMemo(() => payments.reduce((acc, p) => acc + p.gross, 0), [payments]);
   const netSeries = useMemo(() => monthlySeries(appointments, transactions, fixedExpenses, services, 12), [appointments, transactions, fixedExpenses, services]);
 
-  // Categorias (mês)
+  // Progresso da projeção realizada
+  const projDonePct = projection.projected > 0 ? Math.min(100, Math.round((projection.realized / projection.projected) * 100)) : 0;
+
+  // Categorias
   const expenseByCat = useMemo(() => {
     const map: Record<string, number> = {};
     monthItems.filter(i => i.kind === 'expense').forEach(i => { map[i.category] = (map[i.category] || 0) + i.amount_cents; });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [monthItems]);
+
   const incomeByCat = useMemo(() => {
     const map: Record<string, number> = {};
     monthItems.filter(i => i.kind === 'income').forEach(i => { map[i.category] = (map[i.category] || 0) + i.amount_cents; });
@@ -219,7 +232,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     setCursor({ y, m });
   };
 
-  // ---- Ações ----
+  // Ações
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cents = parseCents(amount);
@@ -263,7 +276,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     else error('Falha', res.error || 'Erro.');
   };
 
-  // ---- Drill-down ----
+  // Drill-down
   const drillData = useMemo((): { title: string; rows: DrillDownRow[] } => {
     if (drill === 'income') return {
       title: 'Entradas do mês',
@@ -307,19 +320,9 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     { key: 'fixed' as const, label: 'Contas fixas', icon: <Repeat className="h-4 w-4" /> },
   ];
 
-  // DRE
-  const dreLines = [
-    { label: 'Receita bruta', value: income, tone: 'pos' as const, strong: true },
-    { label: '(−) Custos variáveis (insumos)', value: -metrics.variableCosts, tone: 'neg' as const },
-    { label: '(−) Custos fixos', value: -metrics.fixedCosts, tone: 'neg' as const },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* O seletor de mês virou um controle de RÉGUA: setas encostadas no
-          rótulo, dentro da mesma moldura retangular, como um contador de
-          instrumento. Antes eram dois botões fantasma soltos ao lado de um
-          h2 — nada indicava que o mês era navegável. */}
+      {/* Cabeçalho de Navegação com Seletor Mensal */}
       <PageHeader
         className="no-print"
         trail={['Financeiro', `${monthItems.length} lançamentos`, `margem ${metrics.margin.toFixed(0)}%`]}
@@ -348,175 +351,368 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
       <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
 
       <div className="min-h-[400px]">
-        {/* ===================== VISÃO GERAL ===================== */}
+        {/* ===================== 1. VISÃO GERAL MODERNA ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
-            {/* ARQUÉTIPO 3 · os quatro índices dividem UMA superfície, separados
-                por hairline, sem ícone e sem sombra. Eram quatro cards soltos
-                com um iconezinho num quadrado cinza cada — o rótulo "Entradas
-                do mês" já dizia o que o cifrãozinho diria, e o gap entre eles
-                transformava uma leitura contínua em quatro leituras. */}
-            <IndexGrid
-              items={[
-                { label: 'Entradas do mês', value: brl(income), accent: true, hint: 'Serviços + avulsos',
-                  delta: { pct: cmpIncome.deltaPct }, onClick: () => setDrill('income') },
-                { label: 'Saídas do mês', value: brl(expense), hint: 'Insumos + fixas + lançamentos',
-                  delta: { pct: cmpExpense.deltaPct, good: cmpExpense.deltaPct <= 0 }, onClick: () => setDrill('expense') },
-                { label: 'Lucro do mês', value: brl(metrics.netProfit), hint: `Margem ${metrics.margin.toFixed(0)}%`,
-                  delta: { pct: cmpProfit.deltaPct }, onClick: () => setDrill('profit') },
-                { label: 'Saldo acumulado', value: brl(totalBalance), hint: 'Sobrou até hoje' },
-              ]}
-            />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* DRE */}
-              <div className="card p-5 sm:p-6">
-                <SectionHeader title="DRE simplificado" subtitle={`${MONTHS[cursor.m]} ${cursor.y}`} icon={<Calculator className="h-4 w-4" />} />
-                <div className="mt-4 divide-y divide-line">
-                  {dreLines.map((l) => (
-                    <div key={l.label} className="flex items-center justify-between py-2.5">
-                      <span className={`text-label ${l.strong ? 'font-semibold text-ink' : 'text-n-600 font-medium'}`}>{l.label}</span>
-                      <span className={`text-label font-semibold num ${l.value < 0 ? 'text-danger' : 'text-ink'}`}>{l.value < 0 ? '−' : ''}{brl(Math.abs(l.value))}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between py-3">
-                    <span className="text-label font-semibold text-heading">= Lucro líquido</span>
-                    <span className={`text-h3 sm:text-h2 font-semibold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>{brl(metrics.netProfit)}</span>
+            {/* HERO CARD FINANCEIRO: Destaque centralizado e visualmente limpo */}
+            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                
+                {/* Lado Esquerdo: Lucro Líquido em Destaque */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-caption font-semibold uppercase tracking-wider text-n-500">
+                      Resultado Líquido do Mês
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold ${
+                      metrics.netProfit >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+                    }`}>
+                      {metrics.netProfit >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {cmpProfit.deltaPct >= 0 ? `+${cmpProfit.deltaPct.toFixed(0)}%` : `${cmpProfit.deltaPct.toFixed(0)}%`} vs mês anterior
+                    </span>
                   </div>
+
+                  <div className="flex items-baseline gap-3">
+                    <p className={`text-display font-bold num leading-none ${
+                      metrics.netProfit >= 0 ? 'text-heading' : 'text-danger'
+                    }`}>
+                      <AnimatedCounter value={metrics.netProfit} format={brl} />
+                    </p>
+                    <span className={`text-caption font-bold px-2 py-0.5 rounded-md ${
+                      metrics.margin >= 40 ? 'bg-wine-50 text-wine-700' : 'bg-n-100 text-n-600'
+                    }`}>
+                      {metrics.margin.toFixed(0)}% de margem
+                    </span>
+                  </div>
+
+                  <p className="text-caption text-n-500">
+                    {metrics.netProfit >= 0 
+                      ? 'Operação lucrativa e gerando excedente positivo.' 
+                      : 'Custos superaram as receitas neste mês.'}
+                  </p>
                 </div>
-                <div className="flex items-center justify-between mt-1 pt-3 border-t border-line">
-                  <span className="overline text-n-500">Margem líquida</span>
-                  <span className={`text-label font-semibold ${metrics.margin >= 0 ? 'text-success' : 'text-danger'}`}>{metrics.margin.toFixed(1)}%</span>
+
+                {/* Lado Direito: Saldo em Caixa Acumulado */}
+                <div className="md:text-right border-t md:border-t-0 md:border-l border-line pt-4 md:pt-0 md:pl-8 flex flex-col justify-center">
+                  <span className="text-caption font-semibold uppercase tracking-wider text-n-500 block">
+                    Saldo Total Acumulado
+                  </span>
+                  <p className="text-h2 font-bold num text-heading mt-1">
+                    {brl(totalBalance)}
+                  </p>
+                  <span className="text-micro text-n-400 block mt-0.5">
+                    Saldo em caixa acumulado até hoje
+                  </span>
                 </div>
-                {metrics.lostRevenue > 0 && (
-                  <p className="mt-3 text-caption text-n-600">Receita perdida com cancelamentos/faltas no mês: <strong className="text-danger">{brl(metrics.lostRevenue)}</strong> (não entra no cálculo, é informativo).</p>
-                )}
-                {metrics.variableCosts === 0 && (
-                  <p className="mt-2 text-caption text-n-600">Dica: informe o <strong>custo de insumos</strong> de cada serviço (tela Serviços) para o DRE calcular os custos variáveis.</p>
-                )}
               </div>
 
-              {/* Projeção + comparativo anual */}
-              <div className="card p-5 sm:p-6 flex flex-col">
-                <SectionHeader title="Projeção do mês" subtitle={isCurrentMonth ? 'Estimativa até o fim do mês' : 'Disponível só no mês corrente'} icon={<TrendingUp className="h-4 w-4" />} />
-                {isCurrentMonth ? (
-                  <>
-                    <p className="text-h2 sm:text-h1 font-semibold text-heading mt-4 num">{brl(projection.projected)}</p>
-                    <div className="mt-4 space-y-2 text-caption">
-                      <Row label="Já realizado" value={brl(projection.realized)} />
-                      <Row label="Confirmados a vir" value={brl(projection.confirmedAhead)} />
-                      <Row label="Estimativa (média histórica)" value={brl(projection.historicalRunRate)} muted />
-                    </div>
-                    <p className="mt-3 text-caption text-n-600">Soma o que já foi concluído, os agendamentos confirmados que ainda vão acontecer e uma estimativa dos dias restantes pela sua média diária dos últimos 90 dias.</p>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-center py-8">
-                    <p className="text-caption text-n-600 max-w-[220px]">A projeção é calculada para o mês atual. Volte para {MONTHS[now.getMonth()]} para vê-la.</p>
-                  </div>
-                )}
-                <div className="mt-auto pt-4 border-t border-line flex items-center justify-between text-caption">
-                  <span className="text-n-600 font-semibold">vs. mesmo mês de {cursor.y - 1}</span>
-                  <span className="font-semibold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)} → {compare(income, lyMetrics.grossRevenue + lyMetrics.manualIncome).deltaPct.toFixed(0)}%</span>
+              {/* BARRA DE BALANÇO VISUAL: Entradas vs Saídas */}
+              <div className="mt-8 pt-6 border-t border-line">
+                <div className="flex justify-between items-center text-caption font-semibold mb-2">
+                  <span className="text-success flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-success inline-block" />
+                    Entradas: <strong className="num text-heading">{brl(income)}</strong> ({incomePct}%)
+                  </span>
+                  <span className="text-danger flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-danger inline-block" />
+                    Saídas: <strong className="num text-heading">{brl(expense)}</strong> ({expensePct}%)
+                  </span>
+                </div>
+
+                {/* Track visual de proporção */}
+                <div className="h-3 w-full bg-surface-2 rounded-full overflow-hidden flex p-0.5 gap-1">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-success"
+                    style={{ width: `${incomePct}%` }}
+                    title={`Entradas: ${brl(income)}`}
+                  />
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-danger/80"
+                    style={{ width: `${expensePct}%` }}
+                    title={`Saídas: ${brl(expense)}`}
+                  />
+                </div>
+
+                {/* Botões Rápidos para Drill-down */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <button
+                    onClick={() => setDrill('income')}
+                    className="tap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-n-50 text-caption font-semibold text-n-700 hover:bg-n-100 hover:text-heading transition-ui"
+                  >
+                    Ver detalhes de entradas ({monthAuto.length + monthManual.filter(m => m.kind === 'income').length}) →
+                  </button>
+                  <button
+                    onClick={() => setDrill('expense')}
+                    className="tap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-n-50 text-caption font-semibold text-n-700 hover:bg-n-100 hover:text-heading transition-ui"
+                  >
+                    Ver detalhes de saídas ({monthFixed.length + monthManual.filter(m => m.kind === 'expense').length}) →
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* A receber + formas de pagamento */}
+            {/* GRADE SECUNDÁRIA: DRE Visual & Projeção */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="card p-5 sm:p-6">
-                <SectionHeader title="Contas a receber" subtitle="Valores previstos ainda não realizados" icon={<ScrollText className="h-4 w-4" />}
-                  actions={<button onClick={() => setDrill('receivable')} className="text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui">Ver tudo →</button>} />
-                {/* Os dois blocos perderam o fundo (salmão e cinza) e dividem
-                    uma moldura só, separados por hairline. O "vencido" continua
-                    marcado — mas por um PONTO e pelo número em --danger, não
-                    por um retângulo colorido de 100×90px.
-                    "A vencer" leva contorno tracejado: é previsto, e tracejado
-                    quer dizer previsto em todo o produto. */}
-                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 mt-4 border border-line rounded-surface overflow-hidden">
-                  <button onClick={() => setDrill('receivable')} className="text-left p-4 border-b min-[420px]:border-b-0 min-[420px]:border-r border-line transition-ui hover:bg-n-25">
-                    <StatusLabel tone="danger">Vencido</StatusLabel>
-                    <p className="text-h3 sm:text-h2 font-semibold text-danger mt-1.5 num leading-none">{brl(receivables.overdue.total)}</p>
-                    <MonoValue className="text-micro text-n-500 mt-1.5 block">
-                      {receivables.overdue.items.length} AGENDAMENTO(S)
-                    </MonoValue>
-                  </button>
-                  <div className="p-4">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-3 border-t border-dashed border-line-strong" aria-hidden />
-                      <MonoLabel>A vencer</MonoLabel>
-                    </span>
-                    <p className="text-h3 sm:text-h2 font-semibold text-ink mt-1.5 num leading-none">{brl(receivables.dueSoon.total)}</p>
-                    <MonoValue className="text-micro text-n-500 mt-1.5 block">
-                      {receivables.dueSoon.items.length} AGENDAMENTO(S)
-                    </MonoValue>
+
+              {/* DRE VISUAL E DESCOMPLICADO */}
+              <div className="card p-5 sm:p-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <SectionHeader title="Estrutura de Resultados (DRE)" subtitle={`${MONTHS[cursor.m]} ${cursor.y}`} icon={<Calculator className="h-4 w-4" />} />
+                    <button
+                      onClick={() => setShowDreDetails(!showDreDetails)}
+                      className="text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui inline-flex items-center gap-1"
+                    >
+                      {showDreDetails ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showDreDetails ? 'Resumido' : 'Detalhado'}
+                    </button>
+                  </div>
+
+                  {/* Visual Step-down */}
+                  <div className="mt-5 space-y-3">
+                    {/* Receita Bruta */}
+                    <div className="p-3 rounded-xl bg-surface-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">1. Faturamento Total</span>
+                        <span className="text-body font-bold text-heading">Receita Bruta</span>
+                      </div>
+                      <span className="text-h3 font-bold text-heading num">{brl(income)}</span>
+                    </div>
+
+                    {/* Custos Totais */}
+                    <div className="p-3 rounded-xl bg-danger-bg/40 flex items-center justify-between">
+                      <div>
+                        <span className="text-micro font-bold text-danger uppercase tracking-wider block">2. Custos & Despesas</span>
+                        <span className="text-body-sm font-semibold text-n-700">Fixos + Insumos + Avulsos</span>
+                      </div>
+                      <span className="text-body font-bold text-danger num">− {brl(expense)}</span>
+                    </div>
+
+                    {/* Detalhamento Expansível */}
+                    {showDreDetails && (
+                      <div className="px-3 py-2 space-y-2 border-l-2 border-line ml-3 text-caption animate-fade-up">
+                        <div className="flex justify-between text-n-600">
+                          <span>Insumos & Produtos:</span>
+                          <span className="num font-semibold">− {brl(metrics.variableCosts)}</span>
+                        </div>
+                        <div className="flex justify-between text-n-600">
+                          <span>Custos Fixos Mensais:</span>
+                          <span className="num font-semibold">− {brl(metrics.fixedCosts)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Linha Final de Lucro */}
+                    <div className="p-3.5 rounded-xl border border-line bg-surface flex items-center justify-between shadow-xs">
+                      <div>
+                        <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">= Saldo Final</span>
+                        <span className="text-body font-bold text-heading">Lucro Líquido</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-h2 font-bold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
+                          {brl(metrics.netProfit)}
+                        </span>
+                        <span className="block text-micro font-semibold text-n-500">
+                          {metrics.margin.toFixed(1)}% do faturamento
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <p className="mt-3 text-caption text-n-600">Baseado em agendamentos pendentes/confirmados (data passada = vencido).</p>
+
+                {metrics.lostRevenue > 0 && (
+                  <p className="mt-4 pt-3 border-t border-line text-caption text-n-500 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-danger shrink-0" />
+                    Cancelamentos/faltas no mês: <strong className="text-danger">{brl(metrics.lostRevenue)}</strong>
+                  </p>
+                )}
               </div>
 
+              {/* PROJEÇÃO INTELIGENTE DO MÊS */}
+              <div className="card p-5 sm:p-6 flex flex-col justify-between">
+                <div>
+                  <SectionHeader title="Projeção & Metas" subtitle={isCurrentMonth ? 'Estimativa até o fim do mês' : 'Histórico do período'} icon={<TrendingUp className="h-4 w-4" />} />
+
+                  {isCurrentMonth ? (
+                    <div className="mt-5 space-y-4">
+                      {/* Grande Número Projetado */}
+                      <div className="flex items-baseline justify-between">
+                        <div>
+                          <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Faturamento Estimado</span>
+                          <p className="text-h1 font-bold text-heading num mt-0.5">{brl(projection.projected)}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-h2 font-bold text-wine-700 num">{projDonePct}%</span>
+                          <span className="block text-micro text-n-500">alcançado</span>
+                        </div>
+                      </div>
+
+                      {/* Barra de Progresso com 3 Fases */}
+                      <div className="space-y-1.5">
+                        <div className="h-2.5 w-full bg-surface-2 rounded-full overflow-hidden flex">
+                          <div
+                            className="h-full bg-wine-700 transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.round((projection.realized / (projection.projected || 1)) * 100))}%` }}
+                            title={`Já realizado: ${brl(projection.realized)}`}
+                          />
+                          <div
+                            className="h-full bg-wine-400 transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.round((projection.confirmedAhead / (projection.projected || 1)) * 100))}%` }}
+                            title={`Confirmados a vir: ${brl(projection.confirmedAhead)}`}
+                          />
+                        </div>
+                        <div className="flex justify-between text-micro text-n-500">
+                          <span>R$ 0</span>
+                          <span>Meta estimada {brl(projection.projected)}</span>
+                        </div>
+                      </div>
+
+                      {/* Mini Indicadores */}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <div className="p-2.5 rounded-xl bg-surface-2">
+                          <span className="text-micro text-n-500 block">Já Realizado</span>
+                          <span className="text-label font-bold text-ink num">{brl(projection.realized)}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-surface-2">
+                          <span className="text-micro text-n-500 block">Confirmados a Vir</span>
+                          <span className="text-label font-bold text-ink num">{brl(projection.confirmedAhead)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center">
+                      <p className="text-caption text-n-500 max-w-xs mx-auto">
+                        Projeção calculada apenas para o mês corrente ({MONTHS[now.getMonth()]}).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-line flex items-center justify-between text-caption mt-4">
+                  <span className="text-n-500">vs. mesmo período em {cursor.y - 1}</span>
+                  <span className="font-bold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CONTAS A RECEBER + FORMAS DE PAGAMENTO */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* CONTAS A RECEBER */}
               <div className="card p-5 sm:p-6">
-                <SectionHeader title="Por forma de pagamento" subtitle="Bruto, taxa e líquido no mês" icon={<CreditCard className="h-4 w-4" />}
-                  actions={<button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui"><Sliders className="h-3.5 w-3.5" /> Taxas</button>} />
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Contas a Receber" subtitle="Valores futuros ou pendentes" icon={<ScrollText className="h-4 w-4" />} />
+                  <button onClick={() => setDrill('receivable')} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
+                    Ver todos →
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                  {/* Vencidos */}
+                  <div
+                    onClick={() => setDrill('receivable')}
+                    className="p-4 rounded-2xl border border-line bg-surface hover:bg-danger-bg/20 cursor-pointer transition-ui"
+                  >
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-danger-bg text-danger text-micro font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-danger inline-block" /> Vencidos
+                    </span>
+                    <p className="text-h2 font-bold text-danger mt-2 num">{brl(receivables.overdue.total)}</p>
+                    <span className="text-micro text-n-500 mt-1 block">
+                      {receivables.overdue.items.length} agendamento(s)
+                    </span>
+                  </div>
+
+                  {/* A Vencer */}
+                  <div className="p-4 rounded-2xl border border-line bg-surface-2/60">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-n-100 text-n-600 text-micro font-bold">
+                      <Clock4 className="h-3 w-3" /> A Vencer
+                    </span>
+                    <p className="text-h2 font-bold text-heading mt-2 num">{brl(receivables.dueSoon.total)}</p>
+                    <span className="text-micro text-n-500 mt-1 block">
+                      {receivables.dueSoon.items.length} agendamento(s) confirmados
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* FORMAS DE PAGAMENTO COM BARRAS DE PROPORÇÃO */}
+              <div className="card p-5 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Formas de Pagamento" subtitle="Distribuição no mês" icon={<CreditCard className="h-4 w-4" />} />
+                  <button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
+                    <Sliders className="h-3.5 w-3.5" /> Taxas
+                  </button>
+                </div>
+
                 {showRates && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-3">
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-3 animate-fade-up">
                     {['pix', 'debito', 'credito', 'dinheiro'].map(m => (
                       <label key={m} className="flex items-center justify-between gap-2 text-caption">
                         <span className="text-n-600 font-semibold">{paymentLabel(m)}</span>
                         <span className="flex items-center gap-1">
-                          <input type="number" min={0} step={0.1} value={rates[m] ?? 0} onChange={e => updateRate(m, parseFloat(e.target.value) || 0)}
-                            className="w-14 px-1.5 py-1 text-right border border-line rounded-md bg-surface text-ink font-semibold" />
+                          <input
+                            type="number" min={0} step={0.1}
+                            value={rates[m] ?? 0}
+                            onChange={e => updateRate(m, parseFloat(e.target.value) || 0)}
+                            className="w-14 px-1.5 py-1 text-right border border-line rounded-lg bg-surface text-ink font-semibold"
+                          />
                           <span className="text-n-600">%</span>
                         </span>
                       </label>
                     ))}
                   </div>
                 )}
+
                 {payments.length === 0 ? (
-                  <p className="text-caption text-n-600 py-8 text-center">Sem vendas com forma de pagamento no mês.</p>
+                  <p className="text-caption text-n-500 py-8 text-center">Nenhum pagamento registrado neste mês.</p>
                 ) : (
-                  /* Uma moldura por forma de pagamento era card dentro de card.
-                     Viraram linhas divididas por hairline de ponta a ponta. */
-                  <div className="mt-4 -mx-5 sm:-mx-6">
-                    {payments.map(p => (
-                      <div key={p.method} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 px-5 sm:px-6 py-3 sm:py-2.5 border-b border-line last:border-b-0">
-                        <div className="min-w-0">
-                          <p className="text-body-sm text-ink truncate">{p.label}</p>
-                          <MonoValue className="text-micro text-n-500">
-                            {p.count} VENDA(S) · TAXA {brl(p.fee)}
-                          </MonoValue>
+                  <div className="mt-4 space-y-3">
+                    {payments.map(p => {
+                      const share = totalPaymentGross > 0 ? Math.round((p.gross / totalPaymentGross) * 100) : 0;
+                      return (
+                        <div key={p.method} className="space-y-1">
+                          <div className="flex items-center justify-between text-caption">
+                            <span className="font-semibold text-heading flex items-center gap-2">
+                              {p.label}
+                              <span className="text-micro text-n-400 font-normal">({p.count} vendas)</span>
+                            </span>
+                            <span className="font-bold text-heading num">
+                              {brl(p.net)}
+                              <span className="text-n-400 font-normal text-micro ml-1.5">({share}%)</span>
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-surface-2 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-wine-600 transition-all duration-300"
+                              style={{ width: `${share}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
-                          <p className="text-body-sm font-semibold text-ink num">{brl(p.net)}</p>
-                          <MonoValue className="text-micro text-n-500">LÍQ. DE {brl(p.gross)}</MonoValue>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Evolução do lucro líquido */}
+            {/* GRÁFICO DE EVOLUÇÃO TEMPORAL */}
             <div className="card p-5 sm:p-6">
-              <SectionHeader title="Evolução do lucro líquido" subtitle="Faturamento x lucro · últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
-              {/* Legenda em mono, sólido × tracejado. O faturamento (a linha
-                  de referência) virou tracejada e o LUCRO ficou sólido em
-                  vinho: o dado que a tela existe para mostrar é o que ganha o
-                  traço cheio, e o outro passa a ser a régua ao fundo. */}
+              <SectionHeader title="Evolução Financeira" subtitle="Faturamento x Lucro Líquido nos últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
               <div className="flex items-center gap-4 mt-3">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 h-px bg-wine-700" aria-hidden />
-                  <MonoLabel>Lucro líquido</MonoLabel>
+                <span className="inline-flex items-center gap-1.5 text-caption">
+                  <span className="w-3.5 h-1 rounded-full bg-wine-700" />
+                  <span className="font-semibold text-heading">Lucro Líquido</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 border-t border-dashed border-line-strong" aria-hidden />
-                  <MonoLabel>Faturamento</MonoLabel>
+                <span className="inline-flex items-center gap-1.5 text-caption">
+                  <span className="w-3.5 border-t border-dashed border-n-400" />
+                  <span className="font-semibold text-n-500">Faturamento</span>
                 </span>
               </div>
               <div className="mt-4">
                 <TechChart
                   labels={netSeries.map(p => p.label)}
-                  height={180}
+                  height={200}
                   format={(v) => brl(Math.round(v * 100))}
                   axisFormat={(v: number) => {
                     const r = Math.round(v);
@@ -529,21 +725,16 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 />
               </div>
             </div>
+
           </div>
         )}
 
-        {/* ===================== EXTRATO ===================== */}
+        {/* ===================== 2. EXTRATO ===================== */}
         {activeTab === 'ledger' && (
           <div className="card p-5 sm:p-6 space-y-4 animate-fade-up">
             <SectionHeader title="Extrato do mês" subtitle={`${monthItems.length} lançamentos`} icon={<ReceiptText className="h-4 w-4" />}
               actions={<ExportMenu onCSV={exportLedgerCSV} />} />
-            {/* Extrato = ARQUÉTIPO 2 em forma de lista: linha de 44px,
-                divisória de ponta a ponta, valor à direita em tabular.
-                O quadradinho colorido com a setinha (menta para entrada,
-                salmão para saída) saiu: o SINAL do valor (+/−) e a cor do
-                próprio número já dizem a direção, e a seta repetia isso 40
-                vezes numa coluna de manchas. Sobrou uma barra de 3px à
-                esquerda — a mesma gramática do bloco da agenda. */}
+
             <div className="max-h-[600px] overflow-y-auto scroll-touch -mx-5 sm:-mx-6">
               {monthItems.length === 0 ? (
                 <div className="px-5 sm:px-6">
@@ -560,19 +751,19 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 return (
                   <div key={i.id} className="flex items-stretch gap-3 border-b border-line last:border-b-0 hover:bg-n-25 transition-ui group">
                     <span className={`w-[3px] shrink-0 ${inc ? 'bg-success' : 'bg-danger'}`} aria-hidden />
-                    <div className="flex-1 min-w-0 flex items-center gap-3 pr-5 sm:pr-6 py-2.5">
+                    <div className="flex-1 min-w-0 flex items-center gap-3 pr-5 sm:pr-6 py-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-body-sm text-ink truncate">{i.category}</p>
-                        <p className="mono-micro text-n-500 truncate">
+                        <p className="text-body-sm font-semibold text-heading truncate">{i.category}</p>
+                        <p className="text-caption text-n-500 truncate">
                           {formatDateBR(i.date)}{i.description ? ` · ${i.description}` : ''}
                         </p>
                       </div>
-                      <span className={`text-body-sm font-semibold shrink-0 num ${inc ? 'text-success' : 'text-danger'}`}>
+                      <span className={`text-body-sm font-bold shrink-0 num ${inc ? 'text-success' : 'text-danger'}`}>
                         {inc ? '+' : '−'}{brl(i.amount_cents)}
                       </span>
-                      <span className="shrink-0 w-16 text-right no-print">
+                      <span className="shrink-0 w-12 text-right no-print">
                         {i.auto ? (
-                          <span className="mono-micro text-n-400">{isFixed ? 'FIXA' : 'AUTO'}</span>
+                          <span className="text-micro font-bold text-n-400">{isFixed ? 'FIXA' : 'AUTO'}</span>
                         ) : (
                           <Button
                             variant="ghost" size="sm" iconOnly
@@ -593,23 +784,23 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
           </div>
         )}
 
-        {/* ===================== FLUXO & LUCRO ===================== */}
+        {/* ===================== 3. FLUXO & LUCRO ===================== */}
         {activeTab === 'cashflow' && (
           <div className="card p-5 sm:p-6 animate-fade-up">
             <SectionHeader title="Fluxo de caixa e lucro" subtitle="Faturamento x lucro líquido · últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
             <div className="flex items-center gap-4 mt-3">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-4 h-px bg-wine-700" aria-hidden />
-                <MonoLabel>Lucro líquido</MonoLabel>
+              <span className="inline-flex items-center gap-1.5 text-caption">
+                <span className="w-3.5 h-1 rounded-full bg-wine-700" />
+                <span className="font-semibold text-heading">Lucro Líquido</span>
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-4 border-t border-dashed border-line-strong" aria-hidden />
-                <MonoLabel>Faturamento</MonoLabel>
+              <span className="inline-flex items-center gap-1.5 text-caption">
+                <span className="w-3.5 border-t border-dashed border-n-400" />
+                <span className="font-semibold text-n-500">Faturamento</span>
               </span>
             </div>
             <div className="mt-5">
               <TechChart
-                height={220}
+                height={240}
                 labels={netSeries.map(p => p.label)}
                 format={(v: number) => brl(Math.round(v * 100))}
                 axisFormat={(v: number) => {
@@ -625,13 +816,13 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
           </div>
         )}
 
-        {/* ===================== CATEGORIAS ===================== */}
+        {/* ===================== 4. CATEGORIAS ===================== */}
         {activeTab === 'categories' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-up">
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Saídas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
-                {expenseByCat.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Sem saídas no mês.</p> : (
+                {expenseByCat.length === 0 ? <p className="text-caption text-n-500 py-8 text-center">Sem saídas no mês.</p> : (
                   <DonutChart format={brl} data={expenseByCat.map(([cat, val], i): DonutSlice => ({ label: cat, value: val, color: DONUT_COLORS[i % DONUT_COLORS.length] }))} />
                 )}
               </div>
@@ -639,7 +830,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Entradas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
-                {incomeByCat.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Sem entradas no mês.</p> : (
+                {incomeByCat.length === 0 ? <p className="text-caption text-n-500 py-8 text-center">Sem entradas no mês.</p> : (
                   <DonutChart format={brl} data={incomeByCat.map(([cat, val], i): DonutSlice => ({ label: cat, value: val, color: DONUT_COLORS[i % DONUT_COLORS.length] }))} />
                 )}
               </div>
@@ -647,10 +838,10 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
           </div>
         )}
 
-        {/* ===================== CONTAS FIXAS ===================== */}
+        {/* ===================== 5. CONTAS FIXAS ===================== */}
         {activeTab === 'fixed' && (
           <div className="card p-5 sm:p-6 max-w-2xl mx-auto animate-fade-up">
-            <SectionHeader title="Contas fixas mensais" subtitle="Lançadas como saída todo mês, a partir do cadastro" icon={<Repeat className="h-4 w-4" />} />
+            <SectionHeader title="Contas fixas mensais" subtitle="Lançadas como saída todo mês automaticamente" icon={<Repeat className="h-4 w-4" />} />
             <form onSubmit={addFixed} className="flex flex-col sm:flex-row gap-2 my-5 no-print">
               <input placeholder="Ex: Aluguel do espaço" value={fxName} onChange={(e) => setFxName(e.target.value)}
                 className="flex-1 min-w-0 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
@@ -663,7 +854,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 <EmptyState
                   icon={<Repeat className="h-6 w-6" />}
                   title="Nenhuma conta fixa"
-                  description="Aluguel, energia, internet — o que sai todo mês. Cadastre uma vez e o lançamento passa a se repetir sozinho."
+                  description="Aluguel, energia, internet — cadastre uma vez e o lançamento se repete sozinho todo mês."
                 />
               ) : fixedExpenses.filter(f => f.active).map(f => (
                 <div key={f.id} className="flex items-center justify-between rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
@@ -717,24 +908,24 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                   className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${formType === 'income' ? 'bg-success text-white' : 'text-n-600 hover:text-heading'}`}>Entrada</button>
               </div>
               <div>
-                <label className="block overline text-n-500 mb-1.5">Valor (R$)</label>
+                <label className="block text-micro font-bold text-n-500 uppercase tracking-wider mb-1.5">Valor (R$)</label>
                 <input inputMode="decimal" required placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)}
                   className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-control text-h2 font-semibold num text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
               </div>
               <div>
-                <label className="block overline text-n-500 mb-1.5">Categoria</label>
+                <label className="block text-micro font-bold text-n-500 uppercase tracking-wider mb-1.5">Categoria</label>
                 <input list="fin-cats" placeholder="Selecione ou digite" value={category} onChange={(e) => setCategory(e.target.value)}
                   className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 <datalist id="fin-cats">{(formType === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c} />)}</datalist>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block overline text-n-500 mb-1.5">Data</label>
+                  <label className="block text-micro font-bold text-n-500 uppercase tracking-wider mb-1.5">Data</label>
                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                     className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 </div>
                 <div>
-                  <label className="block overline text-n-500 mb-1.5">Descrição</label>
+                  <label className="block text-micro font-bold text-n-500 uppercase tracking-wider mb-1.5">Descrição</label>
                   <input placeholder="Opcional" value={description} onChange={(e) => setDescription(e.target.value)}
                     className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 </div>
@@ -747,12 +938,5 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
     </div>
   );
 };
-
-const Row: React.FC<{ label: string; value: string; muted?: boolean }> = ({ label, value, muted }) => (
-  <div className="flex items-center justify-between">
-    <span className={`${muted ? 'text-n-600' : 'text-ink'} font-medium`}>{label}</span>
-    <span className={`font-semibold num ${muted ? 'text-n-600' : 'text-ink'}`}>{value}</span>
-  </div>
-);
 
 export default FinancePanel;
