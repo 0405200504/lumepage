@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import {
   MessageCircle, Copy, Check, Settings2, RefreshCw, ChevronDown, ChevronUp, Smartphone,
   XCircle, CheckCircle2, Loader2, AlertCircle, Plus, Trash2, Zap,
+  AlertTriangle, CalendarClock, BellRing, Sunrise, Mail,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { WhatsAppSettings } from '@/types/database';
@@ -96,7 +97,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState<Awaited<ReturnType<typeof diagnoseWhatsAppAction>> | null>(null);
   const [testPhone, setTestPhone] = useState('');
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // ── QR ────────────────────────────────────────────────────────────────────
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -265,8 +266,8 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
     startTransition(async () => {
       const res = await sendTestMessageAction(testPhone);
       setTestResult(res.success
-        ? '✅ Mensagem enviada! Se chegou no WhatsApp, está tudo certo.'
-        : `❌ Falha: ${res.error}`);
+        ? { ok: true, msg: 'Mensagem enviada. Se chegou no WhatsApp, está tudo certo.' }
+        : { ok: false, msg: `Falha: ${res.error}` });
     });
   }
 
@@ -295,8 +296,8 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
 
   // Campo dentro de um bloco cinza (bg-surface-2) x campo direto no cartão branco.
-  const fieldOnTint = 'w-full px-4 py-3 bg-surface border border-line rounded-xl text-sm text-heading outline-none focus:ring-2 focus:ring-wine-500/25 placeholder:text-faint';
-  const fieldOnCard = 'w-full px-4 py-2.5 bg-surface-2 border border-line rounded-xl text-sm text-heading outline-none focus:ring-2 focus:ring-wine-500/25 placeholder:text-faint';
+  const fieldOnTint = 'w-full px-4 py-3 bg-surface border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 placeholder:text-faint';
+  const fieldOnCard = 'w-full px-4 py-2.5 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 placeholder:text-faint';
 
   return (
     <div className="space-y-5">
@@ -304,19 +305,19 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
       <section className="card p-5 md:p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-gray-450 shrink-0">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-n-600 shrink-0">
               <MessageCircle className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-base font-bold text-heading tracking-tight">WhatsApp</h2>
-              <p className="text-xs text-gray-450 mt-0.5">Conecte seu número para o Lume enviar as mensagens automáticas por você.</p>
+              <h2 className="text-body font-bold text-heading tracking-tight">WhatsApp</h2>
+              <p className="text-caption text-n-600 mt-0.5">Conecte seu número para o Lume enviar as mensagens automáticas por você.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={refreshStatus}
             title="Verificar conexão"
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[11px] font-semibold text-gray-450 hover:bg-surface-2 transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
           >
             <span className={`h-1.5 w-1.5 rounded-full ${
               isConnected ? 'bg-ok' : status === 'loading' ? 'bg-faint' : status === 'not_configured' ? 'bg-n-300' : 'bg-bad'
@@ -330,8 +331,8 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
         {showCredentialsForm && (
           <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
             <div>
-              <p className="text-sm font-bold text-heading">Credenciais da sua instância</p>
-              <p className="text-xs text-gray-450 mt-0.5">
+              <p className="text-label font-bold text-heading">Credenciais da sua instância</p>
+              <p className="text-caption text-n-600 mt-0.5">
                 Você recebe esses dados junto com o acesso. Em caso de dúvida, fale com o suporte.
               </p>
             </div>
@@ -354,7 +355,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 type="button"
                 disabled={isPending || !uazapiUrl || !uazapiToken}
                 onClick={() => handleSaveCredentials(true)}
-                className="flex-1 py-3 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60"
+                className="flex-1 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60"
               >
                 {isPending ? 'Salvando…' : 'Salvar e conectar'}
               </button>
@@ -366,7 +367,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                     setUazapiToken(initialSettings?.uazapi_token || '');
                     setEditingCredentials(false);
                   }}
-                  className="px-4 py-3 rounded-xl border border-line text-xs font-bold text-gray-450 hover:bg-surface transition-colors"
+                  className="px-4 py-3 rounded-xl border border-line text-caption font-bold text-n-600 hover:bg-surface transition-colors"
                 >
                   Cancelar
                 </button>
@@ -382,21 +383,21 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <div className="flex items-center gap-3 min-w-0">
                 <CheckCircle2 className="h-5 w-5 text-ok shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-heading">WhatsApp conectado</p>
-                  <p className="text-xs text-gray-450">As mensagens ativas abaixo já estão sendo enviadas.</p>
+                  <p className="text-label font-bold text-heading">WhatsApp conectado</p>
+                  <p className="text-caption text-n-600">As mensagens ativas abaixo já estão sendo enviadas.</p>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Link
                   href="/dashboard/whatsapp/conversas"
-                  className="rounded-xl bg-forest px-3 py-2 text-[11px] font-bold text-white shadow-soft transition-colors hover:bg-forest-hover"
+                  className="rounded-xl bg-wine-700 px-3 py-2 text-caption font-bold text-white shadow-soft transition-colors hover:bg-wine-800"
                 >
                   Abrir conversas
                 </Link>
                 <button
                   type="button"
                   onClick={handleOpenQrModal}
-                  className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors"
+                  className="rounded-xl border border-line bg-surface px-3 py-2 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors"
                 >
                   Trocar número
                 </button>
@@ -405,12 +406,12 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           ) : (
             <div className="rounded-xl border border-line bg-surface-2 p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <div className="flex items-start gap-3 min-w-0">
-                <Smartphone className="h-5 w-5 text-gray-450 shrink-0 mt-0.5" />
+                <Smartphone className="h-5 w-5 text-n-600 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-heading">
+                  <p className="text-label font-bold text-heading">
                     {isConfigured ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
                   </p>
-                  <p className="text-xs text-gray-450">
+                  <p className="text-caption text-n-600">
                     {isConfigured
                       ? 'Leia o QR Code com o celular para reconectar. Nenhuma mensagem é enviada enquanto isso.'
                       : 'Leia um QR Code com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
@@ -420,7 +421,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <button
                 type="button"
                 onClick={handleOpenQrModal}
-                className="shrink-0 px-5 py-3 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-soft transition-colors"
+                className="shrink-0 px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-soft transition-colors"
               >
                 Conectar WhatsApp
               </button>
@@ -434,7 +435,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             <button
               type="button"
               onClick={() => setShowAdvanced(v => !v)}
-              className="flex items-center gap-2 text-xs font-semibold text-gray-450 hover:text-heading transition-colors"
+              className="flex items-center gap-2 text-caption font-semibold text-n-600 hover:text-heading transition-colors"
             >
               <Settings2 className="h-3.5 w-3.5" />
               Configurações avançadas
@@ -446,13 +447,13 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 {!editingCredentials && (
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-heading">Credenciais</p>
-                      <p className="text-xs text-gray-450 truncate">{uazapiUrl} · token ••••{uazapiToken.slice(-4)}</p>
+                      <p className="text-caption font-semibold text-heading">Credenciais</p>
+                      <p className="text-caption text-n-600 truncate">{uazapiUrl} · token ••••{uazapiToken.slice(-4)}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => { setEditingCredentials(true); setShowAdvanced(false); }}
-                      className="shrink-0 rounded-xl border border-line px-3 py-2 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors"
+                      className="shrink-0 rounded-xl border border-line px-3 py-2 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors"
                     >
                       Editar
                     </button>
@@ -461,7 +462,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 
                 {/* Testar envio */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-heading">Testar envio</p>
+                  <p className="text-caption font-semibold text-heading">Testar envio</p>
                   <div className="flex gap-2">
                     <input
                       type="tel"
@@ -474,25 +475,28 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                       type="button"
                       onClick={handleTestMessage}
                       disabled={isPending || !testPhone}
-                      className="shrink-0 px-4 py-2.5 rounded-xl border border-line text-xs font-bold text-gray-450 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="shrink-0 px-4 py-2.5 rounded-xl border border-line text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       Enviar
                     </button>
                   </div>
                   {testResult && (
-                    <p className={`text-xs font-medium ${testResult.startsWith('✅') ? 'text-ok' : 'text-bad'}`}>{testResult}</p>
+                    <p className={`flex items-center gap-1.5 text-caption font-medium ${testResult.ok ? 'text-success' : 'text-danger'}`}>
+                      {testResult.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden /> : <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />}
+                      {testResult.msg}
+                    </p>
                   )}
                 </div>
 
                 {/* Diagnóstico */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-heading">Verificar configuração</p>
+                    <p className="text-caption font-semibold text-heading">Verificar configuração</p>
                     <button
                       type="button"
                       onClick={handleDiagnose}
                       disabled={diagnosing}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       {diagnosing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                       {diagnosing ? 'Verificando…' : 'Verificar'}
@@ -500,9 +504,9 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                   </div>
                   {diagResult && (
                     <div className="space-y-1.5">
-                      {'error' in diagResult && diagResult.error && <p className="text-xs text-bad">{diagResult.error}</p>}
+                      {'error' in diagResult && diagResult.error && <p className="text-caption text-bad">{diagResult.error}</p>}
                       {diagResult.steps?.map((step, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
+                        <div key={i} className="flex items-start gap-2 text-caption">
                           {step.ok && !step.warn
                             ? <CheckCircle2 className="h-4 w-4 text-ok shrink-0 mt-0.5" />
                             : step.warn
@@ -511,11 +515,11 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                           }
                           <div>
                             <span className="font-medium text-heading">{step.label}: </span>
-                            <span className={step.ok && !step.warn ? 'text-gray-450' : step.warn ? 'text-warn' : 'text-bad'}>{step.detail}</span>
+                            <span className={step.ok && !step.warn ? 'text-n-600' : step.warn ? 'text-warn' : 'text-bad'}>{step.detail}</span>
                           </div>
                         </div>
                       ))}
-                      {diagResult.ok && <p className="text-xs font-medium text-ok mt-1">Tudo certo por aqui.</p>}
+                      {diagResult.ok && <p className="text-caption font-medium text-ok mt-1">Tudo certo por aqui.</p>}
                     </div>
                   )}
                 </div>
@@ -524,14 +528,14 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-heading">Integração com a uazapi</p>
-                      <p className="text-xs text-gray-450">É configurada sozinha ao conectar. Use se o suporte pedir.</p>
+                      <p className="text-caption font-semibold text-heading">Integração com a uazapi</p>
+                      <p className="text-caption text-n-600">É configurada sozinha ao conectar. Use se o suporte pedir.</p>
                     </div>
                     <button
                       type="button"
                       onClick={handleSetupWebhook}
                       disabled={isPending}
-                      className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-[11px] font-bold text-gray-450 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       <Zap className="h-3.5 w-3.5" />
                       Reconfigurar
@@ -539,7 +543,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                   </div>
                   {webhookUrl && (
                     <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2">
-                      <p className="flex-1 truncate font-mono text-[11px] text-gray-450">{webhookUrl}</p>
+                      <p className="flex-1 truncate font-mono text-caption text-n-600">{webhookUrl}</p>
                       <button type="button" onClick={handleCopy} className="shrink-0 text-faint hover:text-heading transition-colors">
                         {copied ? <Check className="h-4 w-4 text-ok" /> : <Copy className="h-4 w-4" />}
                       </button>
@@ -556,13 +560,13 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
       <section className="card p-5 md:p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-heading tracking-tight">Mensagens automáticas</h2>
-            <p className="text-xs text-gray-450 mt-0.5">
+            <h2 className="text-body font-bold text-heading tracking-tight">Mensagens automáticas</h2>
+            <p className="text-caption text-n-600 mt-0.5">
               Ligue o que quiser enviar e escreva o texto. O Lume dispara na hora certa, sem você fazer nada.
             </p>
           </div>
           {activeAutomations > 0 && (
-            <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-bold text-gray-450">
+            <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-caption font-bold text-n-600">
               {activeAutomations} ativa{activeAutomations > 1 ? 's' : ''}
             </span>
           )}
@@ -571,7 +575,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
         {isConfigured && !isConnected && (
           <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-warn)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-warn)_8%,transparent)] px-4 py-3">
             <AlertCircle className="h-4 w-4 text-warn shrink-0 mt-0.5" />
-            <p className="text-xs text-warn">
+            <p className="text-caption text-warn">
               Seu WhatsApp está desconectado — as mensagens abaixo só voltam a ser enviadas depois de reconectar.
             </p>
           </div>
@@ -579,7 +583,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 
         <div className="space-y-3">
           <AutomationCard
-            icon="✅"
+            icon={CheckCircle2}
             title="Confirmação de agendamento"
             description="Assim que a cliente agenda"
             enabled={autoBookingEnabled}
@@ -587,20 +591,20 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           >
             <MessageField value={autoBookingMessage} onChange={setAutoBookingMessage} />
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs font-medium text-gray-450 shrink-0">Enviar após</label>
+              <label className="text-caption font-medium text-n-600 shrink-0">Enviar após</label>
               <input
                 type="number" min={0} max={3600} value={autoBookingDelay}
                 onChange={e => setAutoBookingDelay(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-sm text-center text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+                className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
               />
-              <span className="text-xs text-gray-450">
-                {autoBookingDelay === 0 ? 'segundos — envio instantâneo ⚡' : 'segundo(s) do agendamento'}
+              <span className="text-caption text-n-600">
+                {autoBookingDelay === 0 ? 'segundos — envio instantâneo' : 'segundo(s) do agendamento'}
               </span>
             </div>
           </AutomationCard>
 
           <AutomationCard
-            icon="🗓️"
+            icon={CalendarClock}
             title="Lembrete — 5 dias antes"
             description="Cinco dias antes do atendimento"
             enabled={auto5daysEnabled}
@@ -611,7 +615,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           </AutomationCard>
 
           <AutomationCard
-            icon="🔔"
+            icon={BellRing}
             title="Lembrete — dia anterior"
             description="Na véspera do atendimento"
             enabled={autoDayBeforeEnabled}
@@ -622,7 +626,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           </AutomationCard>
 
           <AutomationCard
-            icon="☀️"
+            icon={Sunrise}
             title="Lembrete — no dia"
             description="Na manhã do atendimento"
             enabled={autoDayOfEnabled}
@@ -633,7 +637,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           </AutomationCard>
 
           <AutomationCard
-            icon="💌"
+            icon={Mail}
             title="Follow-up — cliente sem retorno"
             description="Reengaja quem não volta há um tempo"
             enabled={autoFollowupEnabled}
@@ -646,13 +650,13 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             />
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-450 shrink-0">Enviar após</label>
+                <label className="text-caption font-medium text-n-600 shrink-0">Enviar após</label>
                 <input
                   type="number" min={1} max={365} value={autoFollowupDays}
                   onChange={e => setAutoFollowupDays(Math.max(1, parseInt(e.target.value) || 30))}
-                  className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-sm text-center text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+                  className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                 />
-                <span className="text-xs text-gray-450">dias sem retornar</span>
+                <span className="text-caption text-n-600">dias sem retornar</span>
               </div>
               <TimeField value={autoFollowupTime} onChange={setAutoFollowupTime} label="Horário" />
             </div>
@@ -664,7 +668,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           <button
             type="button"
             onClick={() => setVarsOpen(v => !v)}
-            className="flex items-center gap-2 text-xs font-semibold text-gray-450 hover:text-heading transition-colors"
+            className="flex items-center gap-2 text-caption font-semibold text-n-600 hover:text-heading transition-colors"
           >
             Variáveis nas mensagens
             {varsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -674,13 +678,13 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap gap-1.5">
                 {builtinVars.map(v => (
-                  <span key={v} className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-gray-450">{`{${v}}`}</span>
+                  <span key={v} className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-caption text-n-600">{`{${v}}`}</span>
                 ))}
                 {customVarNames.map(v => (
-                  <span key={v} className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 font-mono text-[10px] text-forest">{`{${v}}`}</span>
+                  <span key={v} className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 font-mono text-caption text-wine-700">{`{${v}}`}</span>
                 ))}
               </div>
-              <p className="text-xs text-gray-450">
+              <p className="text-caption text-n-600">
                 Crie variáveis suas com dados do estúdio — como {'{endereco}'} ou {'{instagram}'} — e use em qualquer mensagem.
               </p>
 
@@ -689,18 +693,18 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                   {varRows.map((row, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="relative w-36 shrink-0">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 select-none font-mono text-xs text-faint">{'{'}</span>
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 select-none font-mono text-caption text-faint">{'{'}</span>
                         <input
                           type="text" placeholder="nome_var" value={row.key}
                           onChange={e => updateVarRow(i, 'key', e.target.value)}
-                          className="w-full rounded-xl border border-line bg-surface-2 py-2 pl-5 pr-5 font-mono text-xs text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+                          className="w-full rounded-xl border border-line bg-surface-2 py-2 pl-5 pr-5 font-mono text-caption text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                         />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 select-none font-mono text-xs text-faint">{'}'}</span>
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 select-none font-mono text-caption text-faint">{'}'}</span>
                       </div>
                       <input
                         type="text" placeholder="Valor que aparece na mensagem" value={row.value}
                         onChange={e => updateVarRow(i, 'value', e.target.value)}
-                        className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 text-sm text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+                        className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                       />
                       <button type="button" onClick={() => removeVarRow(i)} className="shrink-0 text-faint hover:text-bad transition-colors">
                         <Trash2 className="h-4 w-4" />
@@ -713,7 +717,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <button
                 type="button"
                 onClick={addVarRow}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-forest hover:opacity-70 transition-opacity"
+                className="inline-flex items-center gap-1.5 text-caption font-bold text-wine-700 hover:opacity-70 transition-opacity"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Adicionar variável
@@ -726,7 +730,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           type="button"
           disabled={isPending}
           onClick={handleSaveAutomations}
-          className="w-full py-3.5 bg-forest hover:bg-forest-hover text-white text-sm font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60"
+          className="w-full py-3.5 bg-wine-700 hover:bg-wine-800 text-white text-label font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60"
         >
           {isPending ? 'Salvando…' : 'Salvar mensagens'}
         </button>
@@ -737,7 +741,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setQrModalOpen(false)}>
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-surface p-6 shadow-lg" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-heading">Conectar WhatsApp</p>
+              <p className="text-label font-bold text-heading">Conectar WhatsApp</p>
               <button type="button" onClick={() => setQrModalOpen(false)} className="text-faint hover:text-heading transition-colors">
                 <XCircle className="h-5 w-5" />
               </button>
@@ -746,14 +750,14 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             {qrLoading && (
               <div className="flex flex-col items-center gap-2 py-10">
                 <Loader2 className="h-6 w-6 animate-spin text-faint" />
-                <p className="text-xs text-gray-450">Gerando QR Code…</p>
+                <p className="text-caption text-n-600">Gerando QR Code…</p>
               </div>
             )}
 
             {qrError && !qrLoading && (
               <div className="space-y-3 py-2">
-                <p className="text-xs text-bad">{qrError}</p>
-                <button type="button" onClick={handleOpenQrModal} className="text-xs font-bold text-forest underline">
+                <p className="text-caption text-bad">{qrError}</p>
+                <button type="button" onClick={handleOpenQrModal} className="text-caption font-bold text-wine-700 underline">
                   Tentar novamente
                 </button>
               </div>
@@ -762,7 +766,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             {qrConnected && !qrLoading && (
               <div className="flex flex-col items-center gap-2 py-10">
                 <CheckCircle2 className="h-10 w-10 text-ok" />
-                <p className="text-sm font-bold text-heading">WhatsApp conectado!</p>
+                <p className="text-label font-bold text-heading">WhatsApp conectado!</p>
               </div>
             )}
 
@@ -770,10 +774,10 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <div className="flex flex-col items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrImgSrc} alt="QR Code do WhatsApp" className="h-64 w-64 rounded-xl border border-line bg-white" />
-                <p className="text-center text-xs text-gray-450">
+                <p className="text-center text-caption text-n-600">
                   No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar um aparelho → aponte a câmera para este código.
                 </p>
-                <p className="flex items-center gap-1.5 text-xs text-faint">
+                <p className="flex items-center gap-1.5 text-caption text-faint">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Aguardando leitura…
                 </p>
@@ -782,13 +786,13 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 
             {qrPaircode && !qrConnected && !qrLoading && (
               <div className="flex flex-col items-center gap-3">
-                <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 font-mono text-2xl font-bold tracking-widest text-forest">
+                <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 font-mono text-h2 font-bold tracking-widest text-wine-700">
                   {qrPaircode}
                 </p>
-                <p className="text-center text-xs text-gray-450">
+                <p className="text-center text-caption text-n-600">
                   No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar com número de telefone → digite este código.
                 </p>
-                <p className="flex items-center gap-1.5 text-xs text-faint">
+                <p className="flex items-center gap-1.5 text-caption text-faint">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Aguardando confirmação…
                 </p>
@@ -804,14 +808,14 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 function MessageField({ value, onChange, hint }: { value: string; onChange: (v: string) => void; hint?: string }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-450">Mensagem</label>
+      <label className="mb-1 block text-caption font-medium text-n-600">Mensagem</label>
       <textarea
         rows={3}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+        className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2.5 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
       />
-      {hint && <p className="mt-1 text-[11px] text-faint">{hint}</p>}
+      {hint && <p className="mt-1 text-caption text-faint">{hint}</p>}
     </div>
   );
 }
@@ -819,21 +823,24 @@ function MessageField({ value, onChange, hint }: { value: string; onChange: (v: 
 function TimeField({ value, onChange, label = 'Horário de envio' }: { value: string; onChange: (v: string) => void; label?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <label className="shrink-0 text-xs font-medium text-gray-450">{label}</label>
+      <label className="shrink-0 text-caption font-medium text-n-600">{label}</label>
       <input
         type="time"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-heading outline-none focus:ring-2 focus:ring-wine-500/25"
+        className="rounded-xl border border-line bg-surface px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
       />
     </div>
   );
 }
 
 function AutomationCard({
-  icon, title, description, enabled, onToggle, children,
+  icon: Icon, title, description, enabled, onToggle, children,
 }: {
-  icon: string;
+  /** Ícone lucide 20px. Era um emoji em string — família gráfica que não é a
+      nossa, tamanho que não obedece à escala e desenho que muda por sistema
+      operacional. */
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
   enabled: boolean;
@@ -841,15 +848,18 @@ function AutomationCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl border overflow-hidden transition-colors ${enabled ? 'border-line-strong' : 'border-line'}`}>
-      <label className="flex cursor-pointer items-center justify-between gap-3 bg-surface-2 px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-heading">{icon} {title}</p>
-          <p className="mt-0.5 text-xs text-gray-450">{description}</p>
+    <div className={`rounded-control border overflow-hidden transition-ui ${enabled ? 'border-n-300' : 'border-line'}`}>
+      <label className="flex cursor-pointer items-center justify-between gap-3 bg-n-50 px-4 py-3">
+        <span className="icon-chip shrink-0" data-accent={enabled ? 'true' : undefined} aria-hidden>
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-label font-semibold text-heading">{title}</p>
+          <p className="mt-0.5 text-caption text-n-500">{description}</p>
         </div>
         <span className="relative inline-flex shrink-0 items-center">
           <input type="checkbox" className="sr-only" checked={enabled} onChange={e => onToggle(e.target.checked)} />
-          <span className={`block h-6 w-10 rounded-full transition-colors ${enabled ? 'bg-forest' : 'bg-n-300'}`}>
+          <span className={`block h-6 w-10 rounded-full transition-colors ${enabled ? 'bg-wine-700' : 'bg-n-300'}`}>
             <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-1'}`} />
           </span>
         </span>

@@ -360,14 +360,14 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     window.open(buildWhatsappLink(app.client_whatsapp, msg), '_blank');
   };
 
-  const iconBtn = 'tap flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all-custom disabled:opacity-40';
-  const iconLabel = 'text-[9px] font-bold leading-none';
+  const iconBtn = 'tap flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-ui disabled:opacity-40';
+  const iconLabel = 'text-caption font-bold leading-none';
 
   // Ações de um agendamento — reutilizadas na tabela (desktop) e nos cards (mobile)
   const AppointmentActions = ({ app }: { app: Appointment }) => (
     <>
       {app.status === 'pending' && (
-        <button onClick={() => handleUpdateStatus(app.id, 'confirmed', undefined, app.status)} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045]`}>
+        <button onClick={() => handleUpdateStatus(app.id, 'confirmed', undefined, app.status)} disabled={updatingId === app.id} title="Confirmar" className={`${iconBtn} hover:bg-success-bg text-success`}>
           <Check className="h-4 w-4" />
           <span className={iconLabel}>Confirmar</span>
         </button>
@@ -379,32 +379,32 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         </button>
       )}
       {(app.status === 'confirmed' || app.status === 'pending') && (
-        <button onClick={() => handleUpdateStatus(app.id, 'no_show', undefined, app.status)} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-[#b23a48]/10 text-[#b23a48]`}>
+        <button onClick={() => handleUpdateStatus(app.id, 'no_show', undefined, app.status)} disabled={updatingId === app.id} title="Marcar falta (não compareceu)" className={`${iconBtn} hover:bg-danger-bg text-danger`}>
           <Ban className="h-4 w-4" />
           <span className={iconLabel}>Falta</span>
         </button>
       )}
       {['pending', 'confirmed'].includes(app.status) && (
-        <button onClick={() => { setSelectedApp(app); setShowCancelDialog(true); }} disabled={updatingId === app.id} title="Cancelar" className={`${iconBtn} hover:bg-gray-150 text-gray-450`}>
+        <button onClick={() => { setSelectedApp(app); setShowCancelDialog(true); }} disabled={updatingId === app.id} title="Cancelar" className={`${iconBtn} hover:bg-n-200 text-n-600`}>
           <X className="h-4 w-4" />
           <span className={iconLabel}>Cancelar</span>
         </button>
       )}
       {app.status !== 'cancelled' && app.status !== 'no_show' && (
-        <button onClick={() => handleReminder(app)} title="Enviar lembrete no WhatsApp" className={`${iconBtn} hover:bg-[#2e7d5b]/10 text-[#226045] border border-gray-150`}>
+        <button onClick={() => handleReminder(app)} title="Enviar lembrete no WhatsApp" className={`${iconBtn} hover:bg-success-bg text-success border border-n-200`}>
           <Bell className="h-4 w-4" />
           <span className={iconLabel}>Lembrete</span>
         </button>
       )}
-      <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-cream text-gray-450 border border-gray-150`}>
+      <button onClick={() => window.open(buildWhatsappLink(app.client_whatsapp, ''), '_blank')} title="Abrir conversa no WhatsApp" className={`${iconBtn} hover:bg-n-50 text-n-600 border border-n-200`}>
         <MessageCircle className="h-4 w-4" />
         <span className={iconLabel}>WhatsApp</span>
       </button>
-      <button onClick={() => openEdit(app)} title="Editar agendamento" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-wine-700 border border-gray-150`}>
+      <button onClick={() => openEdit(app)} title="Editar agendamento" className={`${iconBtn} hover:bg-n-50 text-n-600 hover:text-wine-700 border border-n-200`}>
         <Pencil className="h-4 w-4" />
         <span className={iconLabel}>Editar</span>
       </button>
-      <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir" className={`${iconBtn} hover:bg-cream text-gray-450 hover:text-[#b23a48] border border-gray-150`}>
+      <button onClick={() => handleDeleteAppt(app.id)} disabled={updatingId === app.id} title="Excluir" className={`${iconBtn} hover:bg-n-50 text-n-600 hover:text-danger border border-n-200`}>
         <Trash2 className="h-4 w-4" />
         <span className={iconLabel}>Excluir</span>
       </button>
@@ -417,13 +417,13 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       <div className="flex justify-end gap-2">
         <button
           onClick={openTrash}
-          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-150 text-gray-600 text-xs font-bold rounded-xl hover:bg-cream transition-all-custom"
+          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-n-200 text-n-600 text-caption font-bold rounded-xl hover:bg-n-50 transition-ui"
         >
           <Trash2 className="h-4 w-4" /> Lixeira
         </button>
         <button
           onClick={openNew}
-          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom"
+          className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl shadow-soft hover:opacity-95 transition-ui"
         >
           <Plus className="h-4 w-4" /> Novo agendamento
         </button>
@@ -435,37 +435,37 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between card p-4">
         <div className="relative w-full lg:max-w-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-450" />
+            <Search className="h-4 w-4 text-n-600" />
           </div>
           <input
             type="text"
             placeholder="Buscar por cliente, whatsapp ou serviço..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-9 pr-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+            className="block w-full pl-9 pr-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-450 whitespace-nowrap">Data:</span>
+            <span className="text-caption font-semibold text-n-600 whitespace-nowrap">Data:</span>
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="text-xs font-semibold text-ink bg-cream/60 border border-gray-150 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
             />
             {dateFilter && (
-              <button onClick={() => setDateFilter('')} className="text-xs font-bold text-wine-500 hover:underline">Limpar</button>
+              <button onClick={() => setDateFilter('')} className="text-caption font-bold text-wine-500 hover:underline">Limpar</button>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-450">Status:</span>
+            <span className="text-caption font-semibold text-n-600">Status:</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs font-semibold text-ink bg-cream/60 border border-gray-150 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
             >
               <option value="all">Todos os Status</option>
               <option value="pending">Pendentes</option>
@@ -488,36 +488,36 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-md whitespace-nowrap">
+                      <span className="text-caption font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-md whitespace-nowrap">
                         {formatDateBR(app.date)}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-450">
+                      <span className="flex items-center gap-1 text-caption font-semibold text-n-600">
                         <Clock className="h-3.5 w-3.5" />
                         {app.start_time.substring(0, 5)}–{app.end_time.substring(0, 5)}
                       </span>
                     </div>
                     <h4 className="font-bold text-ink mt-2 truncate">{app.client_name}</h4>
-                    <p className="text-xs text-gray-450 mt-0.5 truncate">{apptServiceLabel(app)} · {realDurationMin(app)} min{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
-                    <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-xs text-gray-450 mt-0.5 inline-block">{app.client_whatsapp}</a>
+                    <p className="text-caption text-n-600 mt-0.5 truncate">{apptServiceLabel(app)} · {realDurationMin(app)} min{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
+                    <a href={buildWhatsappLink(app.client_whatsapp, '')} target="_blank" rel="noreferrer" className="text-caption text-n-600 mt-0.5 inline-block">{app.client_whatsapp}</a>
                   </div>
-                  <span className={`shrink-0 text-[10px] font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
+                  <span className={`shrink-0 text-caption font-bold rounded-full px-2.5 py-1 ${m.badge}`}>{m.label}</span>
                 </div>
 
                 {app.notes && (
-                  <p className="mt-2 text-[11px] font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-lg px-2 py-1">Nota: {app.notes}</p>
+                  <p className="mt-2 text-caption font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-lg px-2 py-1">Nota: {app.notes}</p>
                 )}
                 {app.cancellation_reason && (
-                  <p className="mt-2 text-[11px] text-gray-450">Motivo: {app.cancellation_reason}</p>
+                  <p className="mt-2 text-caption text-n-600">Motivo: {app.cancellation_reason}</p>
                 )}
 
-                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-150 flex-wrap">
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-n-200 flex-wrap">
                   <AppointmentActions app={app} />
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="card py-12 text-center text-xs text-gray-450">
+          <div className="card py-12 text-center text-caption text-n-600">
             Nenhum agendamento atende aos filtros aplicados.
           </div>
         )}
@@ -526,8 +526,8 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {/* Tabela de Agendamentos (desktop) */}
       <div className="hidden lg:block card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-150 text-left">
-            <thead className="bg-cream/60 text-[10px] font-black text-gray-450 uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-n-200 text-left">
+            <thead className="bg-n-50 text-caption font-semibold text-n-600 uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Data e Hora</th>
                 <th className="px-6 py-4">Cliente</th>
@@ -536,15 +536,15 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 text-sm text-ink">
+            <tbody className="divide-y divide-n-200 text-label text-ink">
               {filteredAppointments.length > 0 ? (
                 filteredAppointments.map((app) => {
                   const m = statusMeta(app.status);
                   return (
-                    <tr key={app.id} className="hover:bg-cream/50 transition-colors">
+                    <tr key={app.id} className="hover:bg-n-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <p className="font-bold text-ink">{formatDateBR(app.date)}</p>
-                        <div className="flex items-center gap-1 text-xs text-gray-450 mt-0.5">
+                        <div className="flex items-center gap-1 text-caption text-n-600 mt-0.5">
                           <Clock className="h-3.5 w-3.5" />
                           <span>{app.start_time.substring(0, 5)} - {app.end_time.substring(0, 5)}</span>
                         </div>
@@ -552,9 +552,9 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
                       <td className="px-6 py-4">
                         <p className="font-bold text-ink">{app.client_name}</p>
-                        <p className="text-xs text-gray-450 mt-0.5">{app.client_whatsapp}</p>
+                        <p className="text-caption text-n-600 mt-0.5">{app.client_whatsapp}</p>
                         {app.notes && (
-                          <span className="text-[10px] font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-md px-1.5 py-0.5 mt-1 inline-block max-w-[180px] truncate" title={app.notes}>
+                          <span className="text-caption font-semibold text-wine-600 bg-wine-50 border border-wine-100 rounded-md px-1.5 py-0.5 mt-1 inline-block max-w-[180px] truncate" title={app.notes}>
                             Nota: {app.notes}
                           </span>
                         )}
@@ -562,13 +562,13 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
                       <td className="px-6 py-4">
                         <p className="font-semibold text-ink">{apptServiceLabel(app)}</p>
-                        <p className="text-xs text-gray-450 mt-0.5">{realDurationMin(app)} minutos{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
+                        <p className="text-caption text-n-600 mt-0.5">{realDurationMin(app)} minutos{apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}</p>
                       </td>
 
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold rounded-full px-2.5 py-0.5 ${m.badge}`}>{m.label}</span>
+                        <span className={`text-caption font-bold rounded-full px-2.5 py-0.5 ${m.badge}`}>{m.label}</span>
                         {app.cancellation_reason && (
-                          <p className="text-[10px] text-gray-450 font-medium mt-1 leading-tight max-w-[160px]">Motivo: {app.cancellation_reason}</p>
+                          <p className="text-caption text-n-600 font-medium mt-1 leading-tight max-w-[160px]">Motivo: {app.cancellation_reason}</p>
                         )}
                       </td>
 
@@ -582,7 +582,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-xs text-gray-450">
+                  <td colSpan={5} className="py-12 text-center text-caption text-n-600">
                     Nenhum agendamento atende aos filtros aplicados.
                   </td>
                 </tr>
@@ -596,31 +596,31 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {showCancelDialog && selectedApp && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#1a0e12]/40 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)} />
           <div className="relative card p-6 max-w-md w-full mx-4 z-10 animate-fade-up">
-            <h3 className="text-lg font-black text-ink tracking-tight">Cancelar Agendamento</h3>
-            <p className="mt-2 text-xs text-gray-450 leading-relaxed">
+            <h3 className="text-h3 font-semibold text-ink tracking-tight">Cancelar Agendamento</h3>
+            <p className="mt-2 text-caption text-n-600 leading-relaxed">
               Você está prestes a cancelar o agendamento de <strong className="text-ink">{selectedApp.client_name}</strong> em{' '}
               {formatDateBR(selectedApp.date)} às {selectedApp.start_time.substring(0, 5)}.
             </p>
 
             <div className="mt-4">
-              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Motivo (opcional)</label>
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Motivo (opcional)</label>
               <textarea
                 value={cancellationReason}
                 onChange={(e) => setCancellationReason(e.target.value)}
                 rows={2}
                 placeholder="Ex: imprevisto, readequação de agenda..."
-                className="block w-full px-3 py-2 bg-cream/60 border border-gray-150 rounded-xl text-xs placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                className="block w-full px-3 py-2 bg-n-50 border border-n-200 rounded-xl text-caption placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
               />
             </div>
 
             <div className="mt-6 flex justify-end gap-2.5">
-              <button onClick={() => setShowCancelDialog(false)} className="px-4 py-2 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Voltar</button>
+              <button onClick={() => setShowCancelDialog(false)} className="px-4 py-2 border border-n-200 rounded-xl text-caption font-bold text-n-600 hover:bg-n-50">Voltar</button>
               <button
                 onClick={() => { handleCancelWhatsApp(selectedApp, cancellationReason); handleUpdateStatus(selectedApp.id, 'cancelled', cancellationReason); }}
                 disabled={updatingId === selectedApp.id}
-                className="px-4 py-2 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95"
+                className="px-4 py-2 surface-wine text-white text-caption font-bold rounded-xl hover:opacity-95"
               >
                 Cancelar e avisar no WhatsApp
               </button>
@@ -633,15 +633,15 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {showNew && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowNew(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setShowNew(false)} />
           <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-ink tracking-tight">Novo agendamento</h3>
-              <button onClick={() => setShowNew(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h3 font-semibold text-ink tracking-tight">Novo agendamento</h3>
+              <button onClick={() => setShowNew(false)} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
 
             {activeServices.length === 0 ? (
-              <p className="text-sm text-gray-450 py-6 text-center">
+              <p className="text-label text-n-600 py-6 text-center">
                 Cadastre ao menos um serviço para criar agendamentos manuais.
               </p>
             ) : (
@@ -649,7 +649,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 {!nAllowOverlap ? (
                   <>
                     <div className="relative">
-                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Cliente *</label>
+                      <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Cliente *</label>
                       <input
                         required
                         autoComplete="off"
@@ -658,31 +658,31 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                         onFocus={() => setShowSuggestions(true)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                         placeholder="Buscar cliente cadastrada ou digitar nome"
-                        className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                        className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                       />
                       {showSuggestions && clientSuggestions.length > 0 && (
-                        <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-48 overflow-y-auto">
+                        <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-n-200 rounded-xl shadow-glow max-h-48 overflow-y-auto">
                           {clientSuggestions.map(c => (
                             <li key={c.id} onMouseDown={() => { setNName(c.name); setNPhone(c.whatsapp); setShowSuggestions(false); }}
-                              className="flex items-center justify-between px-3 py-2.5 hover:bg-cream cursor-pointer">
-                              <span className="text-sm font-semibold text-ink">{c.name}</span>
-                              <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
+                              className="flex items-center justify-between px-3 py-2.5 hover:bg-n-50 cursor-pointer">
+                              <span className="text-label font-semibold text-ink">{c.name}</span>
+                              <span className="text-caption text-n-600 ml-2">{c.whatsapp}</span>
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
+                      <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">WhatsApp *</label>
                       <input required inputMode="tel" value={nPhone} onChange={(e) => setNPhone(e.target.value)} placeholder="11999999999"
-                        className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                        className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                     </div>
                   </>
                 ) : (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider">Clientes *</label>
-                      <span className="text-[11px] font-black text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-full">
+                      <label className="block text-caption font-bold text-n-600 uppercase tracking-wider">Clientes *</label>
+                      <span className="text-caption font-semibold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-full">
                         {nClients.filter(c => c.name.trim()).length} cliente{nClients.filter(c => c.name.trim()).length !== 1 ? 's' : ''} neste horário
                       </span>
                     </div>
@@ -691,7 +691,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                         const rowSuggestions = getSuggestions(client.name);
                         return (
                           <div key={idx} className="flex gap-1.5 items-start">
-                            <span className="text-[10px] font-bold text-gray-450 mt-3.5 w-5 shrink-0 text-right">{idx + 1}.</span>
+                            <span className="text-caption font-bold text-n-600 mt-3.5 w-5 shrink-0 text-right">{idx + 1}.</span>
                             <div className="flex-1 relative">
                               <input
                                 required={idx < 2}
@@ -705,19 +705,19 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                                 }}
                                 onFocus={() => setActiveSuggestionIdx(idx)}
                                 onBlur={() => setTimeout(() => setActiveSuggestionIdx(null), 150)}
-                                className="block w-full px-2.5 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                                className="block w-full px-2.5 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                               />
                               {activeSuggestionIdx === idx && rowSuggestions.length > 0 && (
-                                <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-paper border border-gray-150 rounded-xl shadow-glow max-h-40 overflow-y-auto">
+                                <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-n-200 rounded-xl shadow-glow max-h-40 overflow-y-auto">
                                   {rowSuggestions.map(c => (
                                     <li key={c.id}
                                       onMouseDown={() => {
                                         const updated = nClients.map((cl, i) => i === idx ? { name: c.name, phone: c.whatsapp } : cl);
                                         setNClients(updated); setActiveSuggestionIdx(null);
                                       }}
-                                      className="flex items-center justify-between px-3 py-2 hover:bg-cream cursor-pointer">
-                                      <span className="text-sm font-semibold text-ink">{c.name}</span>
-                                      <span className="text-xs text-gray-450 ml-2">{c.whatsapp}</span>
+                                      className="flex items-center justify-between px-3 py-2 hover:bg-n-50 cursor-pointer">
+                                      <span className="text-label font-semibold text-ink">{c.name}</span>
+                                      <span className="text-caption text-n-600 ml-2">{c.whatsapp}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -733,13 +733,13 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                                   const updated = nClients.map((c, i) => i === idx ? { ...c, phone: e.target.value } : c);
                                   setNClients(updated);
                                 }}
-                                className="block w-full px-2.5 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+                                className="block w-full px-2.5 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
                               />
                             </div>
                             {nClients.length > 2 && (
                               <button type="button"
                                 onClick={() => setNClients(nClients.filter((_, i) => i !== idx))}
-                                className="mt-2 p-1.5 text-gray-450 hover:text-[#b23a48] rounded-lg hover:bg-cream transition-colors shrink-0">
+                                className="mt-2 p-1.5 text-n-600 hover:text-danger rounded-lg hover:bg-n-50 transition-colors shrink-0">
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             )}
@@ -749,51 +749,51 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                     </div>
                     <button type="button"
                       onClick={() => setNClients([...nClients, { name: '', phone: '' }])}
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-wine-700 hover:text-wine-800 transition-colors">
+                      className="mt-2 inline-flex items-center gap-1.5 text-caption font-bold text-wine-700 hover:text-wine-800 transition-colors">
                       <Plus className="h-3.5 w-3.5" /> Adicionar outra cliente
                     </button>
                   </div>
                 )}
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviços * <span className="text-gray-400 normal-case font-medium">(pode escolher mais de um)</span></label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Serviços * <span className="text-n-400 normal-case font-medium">(pode escolher mais de um)</span></label>
                   <div className="grid grid-cols-1 gap-1.5">
                     {activeServices.map(s => {
                       const sel = nServiceIds.includes(s.id);
                       return (
                         <button key={s.id} type="button" onClick={() => toggleService(s.id)}
-                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
-                            sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-caption font-semibold border transition-ui text-left ${
+                            sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-n-600 border-n-200 hover:border-wine-700/40'
                           }`}>
                           <span>{s.name} · {s.duration_minutes} min</span>
-                          <span className={sel ? 'text-white/90' : 'text-gray-400'}>{formatPriceBRL(s.price_cents)}</span>
+                          <span className={sel ? 'text-white/90' : 'text-n-400'}>{formatPriceBRL(s.price_cents)}</span>
                         </button>
                       );
                     })}
                   </div>
                   {nServiceIds.length > 0 && (
-                    <p className="text-[11px] font-bold text-wine-700 mt-1.5">
+                    <p className="text-caption font-bold text-wine-700 mt-1.5">
                       Total: {formatPriceBRL(nTotalCents)} · {nServiceIds.length} serviço{nServiceIds.length !== 1 ? 's' : ''}
                     </p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Data *</label>
+                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Data *</label>
                     <input required type="date" value={nDate} onChange={(e) => setNDate(e.target.value)}
-                      className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                      className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Início *</label>
+                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Início *</label>
                     <input required type="time" value={nTime} onChange={(e) => setNTime(e.target.value)}
-                      className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                      className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Duração deste atendimento (min) *</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Duração deste atendimento (min) *</label>
                   <input required type="number" min={5} step={5} value={nDuration}
                     onChange={(e) => { setNDurationTouched(true); setNDuration(Math.max(5, parseInt(e.target.value, 10) || 0)); }}
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
-                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                  <span className="text-caption text-n-400 mt-1 block">
                     Vale só para este agendamento — não altera a duração padrão do serviço.
                     {nTime && nDuration > 0 && (
                       <> Ocupa <strong className="text-ink">{nTime}</strong> → <strong className="text-ink">{addMinutes(nTime, nDuration)}</strong>.</>
@@ -801,17 +801,17 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   </span>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
                   <div className="grid grid-cols-2 gap-2">
                     {PAYMENT_METHODS.map(method => (
                       <button
                         key={method}
                         type="button"
                         onClick={() => setNPaymentMethod(nPaymentMethod === method ? '' : method)}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
+                        className={`py-2 px-3 rounded-xl text-caption font-semibold border transition-ui text-left ${
                           nPaymentMethod === method
                             ? 'bg-wine-700 text-white border-wine-700'
-                            : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                            : 'bg-white text-n-600 border-n-200 hover:border-wine-700/40'
                         }`}
                       >
                         {method}
@@ -820,11 +820,11 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Observações do atendimento</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Observações do atendimento</label>
                   <textarea value={nNotes} onChange={(e) => setNNotes(e.target.value)} rows={2} placeholder="Opcional"
-                    className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
+                    className="block w-full px-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y" />
                 </div>
-                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-gray-150 bg-cream/40 px-3 py-2.5">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-n-200 bg-n-50 px-3 py-2.5">
                   <input
                     type="checkbox"
                     checked={nAllowOverlap}
@@ -841,14 +841,14 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                     }}
                     className="mt-0.5 h-4 w-4 rounded accent-wine-700 shrink-0"
                   />
-                  <span className="text-xs text-ink leading-snug">
+                  <span className="text-caption text-ink leading-snug">
                     <span className="font-bold">Permitir horário simultâneo</span>
-                    <span className="text-gray-450"> — agenda mais de uma cliente no mesmo horário (ex.: procedimentos em grupo)</span>
+                    <span className="text-n-600"> — agenda mais de uma cliente no mesmo horário (ex.: procedimentos em grupo)</span>
                   </span>
                 </label>
                 <div className="flex justify-end gap-2.5 pt-1">
-                  <button type="button" onClick={() => setShowNew(false)} className="px-4 py-2.5 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
-                  <button type="submit" disabled={savingNew} className="tap px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                  <button type="button" onClick={() => setShowNew(false)} className="px-4 py-2.5 border border-n-200 rounded-xl text-caption font-bold text-n-600 hover:bg-n-50">Cancelar</button>
+                  <button type="submit" disabled={savingNew} className="tap px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
                     {savingNew ? 'Salvando…' : 'Criar agendamento'}
                   </button>
                 </div>
@@ -863,64 +863,64 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {editApp && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setEditApp(null)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setEditApp(null)} />
           <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-ink tracking-tight">Editar agendamento</h3>
-              <button onClick={() => setEditApp(null)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h3 font-semibold text-ink tracking-tight">Editar agendamento</h3>
+              <button onClick={() => setEditApp(null)} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
-            <p className="text-xs text-gray-450 mb-4">Cliente: <strong className="text-ink">{editApp.client_name}</strong></p>
+            <p className="text-caption text-n-600 mb-4">Cliente: <strong className="text-ink">{editApp.client_name}</strong></p>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Serviços * <span className="text-gray-400 normal-case font-medium">(pode escolher mais de um)</span></label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Serviços * <span className="text-n-400 normal-case font-medium">(pode escolher mais de um)</span></label>
                 <div className="grid grid-cols-1 gap-1.5">
                   {activeServices.map(s => {
                     const sel = eServiceIds.includes(s.id);
                     return (
                       <button key={s.id} type="button" onClick={() => toggleEditService(s.id)}
-                        className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
-                          sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                        className={`flex items-center justify-between py-2 px-3 rounded-xl text-caption font-semibold border transition-ui text-left ${
+                          sel ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-n-600 border-n-200 hover:border-wine-700/40'
                         }`}>
                         <span>{s.name} · {s.duration_minutes} min</span>
-                        <span className={sel ? 'text-white/90' : 'text-gray-400'}>{formatPriceBRL(s.price_cents)}</span>
+                        <span className={sel ? 'text-white/90' : 'text-n-400'}>{formatPriceBRL(s.price_cents)}</span>
                       </button>
                     );
                   })}
                 </div>
                 {eServiceIds.length > 0 && (
-                  <p className="text-[11px] font-bold text-wine-700 mt-1.5">Total: {formatPriceBRL(eTotalCents)}</p>
+                  <p className="text-caption font-bold text-wine-700 mt-1.5">Total: {formatPriceBRL(eTotalCents)}</p>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Data *</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Data *</label>
                   <input type="date" value={eDate} onChange={(e) => setEDate(e.target.value)}
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Início *</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Início *</label>
                   <input type="time" value={eTime} onChange={(e) => setETime(e.target.value)}
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Duração (min) *</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Duração (min) *</label>
                 <input type="number" min={5} step={5} value={eDuration}
                   onChange={(e) => setEDuration(Math.max(5, parseInt(e.target.value, 10) || 0))}
-                  className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 {eTime && eDuration > 0 && (
-                  <span className="text-[10px] text-gray-400 mt-1 block">Ocupa <strong className="text-ink">{eTime}</strong> → <strong className="text-ink">{addMinutes(eTime, eDuration)}</strong>.</span>
+                  <span className="text-caption text-n-400 mt-1 block">Ocupa <strong className="text-ink">{eTime}</strong> → <strong className="text-ink">{addMinutes(eTime, eDuration)}</strong>.</span>
                 )}
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
                 <div className="grid grid-cols-2 gap-2">
                   {PAYMENT_METHODS.map(method => (
                     <button key={method} type="button"
                       onClick={() => setEPaymentMethod(ePaymentMethod === method ? '' : method)}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-left ${
-                        ePaymentMethod === method ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-gray-600 border-gray-150 hover:border-wine-700/40'
+                      className={`py-2 px-3 rounded-xl text-caption font-semibold border transition-ui text-left ${
+                        ePaymentMethod === method ? 'bg-wine-700 text-white border-wine-700' : 'bg-white text-n-600 border-n-200 hover:border-wine-700/40'
                       }`}>
                       {method}
                     </button>
@@ -928,13 +928,13 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Observações</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Observações</label>
                 <textarea value={eNotes} onChange={(e) => setENotes(e.target.value)} rows={2} placeholder="Opcional"
-                  className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
+                  className="block w-full px-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y" />
               </div>
               <div className="flex justify-end gap-2.5 pt-1">
-                <button type="button" onClick={() => setEditApp(null)} className="px-4 py-2.5 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
-                <button type="button" onClick={saveEdit} disabled={savingEdit} className="tap px-4 py-2.5 surface-wine text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+                <button type="button" onClick={() => setEditApp(null)} className="px-4 py-2.5 border border-n-200 rounded-xl text-caption font-bold text-n-600 hover:bg-n-50">Cancelar</button>
+                <button type="button" onClick={saveEdit} disabled={savingEdit} className="tap px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
                   {savingEdit ? 'Salvando…' : 'Salvar alterações'}
                 </button>
               </div>
@@ -948,32 +948,32 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       {showTrash && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
           <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-ink tracking-tight">Lixeira de agendamentos</h3>
-              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h3 font-semibold text-ink tracking-tight">Lixeira de agendamentos</h3>
+              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
 
             {trashLoading ? (
-              <p className="text-sm text-gray-450 py-8 text-center">Carregando…</p>
+              <p className="text-label text-n-600 py-8 text-center">Carregando…</p>
             ) : trashedAppts.length === 0 ? (
-              <p className="text-sm text-gray-450 py-8 text-center">A lixeira está vazia.</p>
+              <p className="text-label text-n-600 py-8 text-center">A lixeira está vazia.</p>
             ) : (
               <div className="space-y-2">
                 {trashedAppts.map(app => (
-                  <div key={app.id} className="flex items-center justify-between gap-3 bg-cream/50 border border-gray-150 rounded-xl px-3 py-2.5">
+                  <div key={app.id} className="flex items-center justify-between gap-3 bg-n-50 border border-n-200 rounded-xl px-3 py-2.5">
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-ink truncate">{app.client_name}</p>
-                      <p className="text-[11px] text-gray-450 truncate">{formatDateBR(app.date)} {app.start_time.substring(0, 5)} · {apptServiceLabel(app)}</p>
+                      <p className="text-label font-bold text-ink truncate">{app.client_name}</p>
+                      <p className="text-caption text-n-600 truncate">{formatDateBR(app.date)} {app.start_time.substring(0, 5)} · {apptServiceLabel(app)}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => handleRestore(app.id)} disabled={trashBusyId === app.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#226045] text-white text-[11px] font-bold hover:opacity-95 disabled:opacity-50">
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-success text-white text-caption font-bold hover:opacity-95 disabled:opacity-50">
                         <RotateCcw className="h-3.5 w-3.5" /> Restaurar
                       </button>
                       <button onClick={() => handlePurge(app.id)} disabled={trashBusyId === app.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-150 text-[#b23a48] text-[11px] font-bold hover:bg-white disabled:opacity-50">
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-n-200 text-danger text-caption font-bold hover:bg-white disabled:opacity-50">
                         <Trash2 className="h-3.5 w-3.5" /> Excluir
                       </button>
                     </div>

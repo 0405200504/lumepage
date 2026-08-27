@@ -45,13 +45,13 @@ export function AppSettingsForm({ initial }: { initial: Record<string, unknown> 
 
   return (
     <section className="card overflow-hidden">
-      <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">Configurações globais</h2>
+      <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Configurações globais</h2>
       <ul className="divide-y divide-line">
         {FIELDS.map(f => (
           <li key={f.key} className="px-4 py-3 flex flex-wrap items-center gap-3">
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-semibold text-ink">{f.label}</span>
-              <span className="block text-[11px] text-muted">{f.hint}</span>
+              <span className="block text-caption font-semibold text-ink">{f.label}</span>
+              <span className="block text-caption text-muted">{f.hint}</span>
             </span>
             {f.type === 'boolean' ? (
               <input type="checkbox" checked={Boolean(values[f.key])} aria-label={f.label}
@@ -60,10 +60,10 @@ export function AppSettingsForm({ initial }: { initial: Record<string, unknown> 
             ) : (
               <input type={f.type} value={String(values[f.key] ?? '')} aria-label={f.label}
                 onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                className="h-9 px-3 w-40 rounded-xl border border-line bg-surface text-sm text-ink" />
+                className="h-9 px-3 w-40 rounded-xl border border-line bg-surface text-label text-ink" />
             )}
             <button type="button" onClick={() => save(f.key)} disabled={saving === f.key}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2 disabled:opacity-50">
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 disabled:opacity-50">
               {saving === f.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Salvar
             </button>
           </li>

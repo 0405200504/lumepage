@@ -30,10 +30,10 @@ export function Segmented<T extends string>({ items, value, onChange, size = 'md
             role="tab"
             aria-selected={active}
             onClick={() => onChange(it.key)}
-            className={`flex items-center gap-2 px-3.5 ${padY} rounded-lg text-xs font-semibold whitespace-nowrap transition-all-custom ${
+            className={`flex items-center gap-2 px-3.5 ${padY} rounded-lg text-caption font-semibold whitespace-nowrap transition-ui ${
               active
-                ? 'bg-[color:var(--color-accent-soft)] text-forest shadow-soft ring-1 ring-[color:var(--color-accent-soft-border)]'
-                : 'text-gray-450 hover:bg-surface-2 hover:text-ink'
+                ? 'bg-[color:var(--color-accent-soft)] text-wine-700 shadow-soft ring-1 ring-[color:var(--color-accent-soft-border)]'
+                : 'text-n-600 hover:bg-surface-2 hover:text-ink'
             }`}
           >
             {it.icon && <span className="shrink-0">{it.icon}</span>}

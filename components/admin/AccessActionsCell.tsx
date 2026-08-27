@@ -22,7 +22,7 @@ export function AccessActionsCell({ id, brandName, hasAuthUser }: {
   const [link, setLink] = useState<{ title: string; value: string; note: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const btn = 'inline-flex items-center gap-1 h-7 px-2 rounded-xl text-[11px] font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors disabled:opacity-40';
+  const btn = 'inline-flex items-center gap-1 h-7 px-2 rounded-xl text-caption font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors disabled:opacity-40';
 
   return (
     <>
@@ -53,24 +53,24 @@ export function AccessActionsCell({ id, brandName, hasAuthUser }: {
 
       {link && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label={link.title}>
-          <div className="absolute inset-0 bg-[#1a0e12]/60" onClick={() => setLink(null)} />
+          <div className="absolute inset-0 bg-wine-950/45" onClick={() => setLink(null)} />
           <div className="relative w-full max-w-lg card p-5 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-bold text-ink">{link.title}</h2>
-                <p className="text-xs text-muted mt-0.5">{brandName}</p>
+                <h2 className="text-label font-bold text-ink">{link.title}</h2>
+                <p className="text-caption text-muted mt-0.5">{brandName}</p>
               </div>
               <button type="button" onClick={() => setLink(null)} aria-label="Fechar" className="p-1.5 rounded-lg text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
             </div>
-            <p className="rounded-xl bg-surface-2 border border-line px-3 py-2.5 font-mono text-xs text-ink break-all select-all">{link.value}</p>
-            <p className="text-[11px] text-[color:var(--color-warn)] font-semibold flex items-start gap-1.5">
+            <p className="rounded-xl bg-surface-2 border border-line px-3 py-2.5 font-mono text-caption text-ink break-all select-all">{link.value}</p>
+            <p className="text-caption text-warning font-semibold flex items-start gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" aria-hidden /> {link.note}
             </p>
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={async () => { await navigator.clipboard.writeText(link.value); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold"
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copiado' : 'Copiar'}
               </button>

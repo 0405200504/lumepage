@@ -302,15 +302,15 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
     const base = s.total + s.noShows;
     if (base < 2) return null;
     const ratio = s.noShows / base;
-    if (ratio === 0) return { label: 'Pontual', cls: 'bg-[#2e7d5b]/10 text-[#226045] border-[#2e7d5b]/20', icon: ShieldCheck };
+    if (ratio === 0) return { label: 'Pontual', cls: 'bg-success-bg text-success border-success-border', icon: ShieldCheck };
     if (ratio <= 0.25) return { label: 'Confiável', cls: 'bg-wine-700/8 text-wine-700 border-wine-700/15', icon: ShieldCheck };
-    return { label: 'Atenção: faltas', cls: 'bg-[#b23a48]/10 text-[#b23a48] border-[#b23a48]/25', icon: AlertTriangle };
+    return { label: 'Atenção: faltas', cls: 'bg-danger-bg text-danger border-danger-border', icon: AlertTriangle };
   };
 
   return (
     <div className="space-y-6 select-none animate-fade-up">
       {/* Sub-abas de navegação */}
-      <div className="flex items-center gap-1 bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 bg-surface border border-n-200 rounded-2xl p-1 shadow-soft overflow-x-auto scrollbar-none">
         {[
           { key: 'all' as const, label: 'Todos', icon: Contact, count: initialClients.length },
           { key: 'birthday' as const, label: 'Aniversariantes', icon: Cake, count: birthdayCount },
@@ -323,17 +323,17 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             <button
               key={tab.key}
               onClick={() => setFilter(active && tab.key !== 'all' ? 'all' : tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all-custom ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-caption font-bold whitespace-nowrap transition-ui ${
                 active
                   ? 'bg-wine-700 text-white shadow-soft'
-                  : 'text-gray-450 hover:bg-cream hover:text-ink'
+                  : 'text-n-600 hover:bg-n-50 hover:text-ink'
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
-                  active ? 'bg-white/20 text-white' : 'bg-gray-150 text-gray-450'
+                <span className={`text-caption font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                  active ? 'bg-white/20 text-white' : 'bg-n-200 text-n-600'
                 }`}>
                   {tab.count}
                 </span>
@@ -347,29 +347,29 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       <div className="flex items-center gap-3 card p-4 flex-wrap">
         <div className="relative w-full sm:max-w-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-450" />
+            <Search className="h-4 w-4 text-n-600" />
           </div>
           <input
             type="text"
             placeholder="Buscar por nome, whatsapp, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-9 pr-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700"
+            className="block w-full pl-9 pr-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
           />
         </div>
         {filter !== 'all' && (
-          <button onClick={() => setFilter('all')} className="text-xs font-bold text-wine-500 hover:underline whitespace-nowrap">
+          <button onClick={() => setFilter('all')} className="text-caption font-bold text-wine-500 hover:underline whitespace-nowrap">
             Limpar filtro
           </button>
         )}
         <div className="ml-auto flex gap-2">
-          <button onClick={openTrash} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-paper border border-gray-150 text-gray-600 text-xs font-bold rounded-xl hover:bg-cream transition-all-custom whitespace-nowrap">
+          <button onClick={openTrash} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-surface border border-n-200 text-n-600 text-caption font-bold rounded-xl hover:bg-n-50 transition-ui whitespace-nowrap">
             <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Lixeira</span>
           </button>
-          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-paper border border-gray-150 text-forest text-xs font-bold rounded-xl hover:bg-cream transition-all-custom whitespace-nowrap">
+          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-surface border border-n-200 text-wine-700 text-caption font-bold rounded-xl hover:bg-n-50 transition-ui whitespace-nowrap">
             <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Importar lista</span>
           </button>
-          <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 surface-wine text-white text-xs font-bold rounded-xl shadow-soft hover:opacity-95 transition-all-custom whitespace-nowrap">
+          <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2.5 surface-wine text-white text-caption font-bold rounded-xl shadow-soft hover:opacity-95 transition-ui whitespace-nowrap">
             <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Adicionar contato</span>
           </button>
         </div>
@@ -383,18 +383,18 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {/* Barra de ações em lote */}
       {sortedClients.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 card p-3">
-          <span className="text-xs font-bold text-ink">
+          <span className="text-caption font-bold text-ink">
             {selected.size > 0 ? `${selected.size} selecionado(s)` : 'Edição em lote'}
           </span>
           {selected.size > 0 && (
             <>
-              <button onClick={clearSel} className="text-[11px] font-bold text-gray-450 hover:underline">Limpar seleção</button>
-              <button onClick={bulkDelete} disabled={bulkBusy} className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#b23a48] text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+              <button onClick={clearSel} className="text-caption font-bold text-n-600 hover:underline">Limpar seleção</button>
+              <button onClick={bulkDelete} disabled={bulkBusy} className="inline-flex items-center gap-1.5 px-3 py-2 bg-danger text-white text-caption font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
                 <Trash2 className="h-3.5 w-3.5" /> Excluir selecionados ({selected.size})
               </button>
             </>
           )}
-          <button onClick={() => setConfirmDeleteAll(true)} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 border border-[#b23a48]/30 text-[#b23a48] text-xs font-bold rounded-xl hover:bg-[#b23a48]/10">
+          <button onClick={() => setConfirmDeleteAll(true)} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 border border-danger-border text-danger text-caption font-bold rounded-xl hover:bg-danger-bg">
             <Trash2 className="h-3.5 w-3.5" /> Excluir todos
           </button>
         </div>
@@ -415,41 +415,41 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                     aria-label={`Selecionar ${client.name}`}
                     checked={selected.has(client.id)}
                     onChange={() => toggleSel(client.id)}
-                    className="h-5 w-5 mt-0.5 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700 shrink-0"
+                    className="h-5 w-5 mt-0.5 rounded border-n-300 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer accent-wine-700 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-ink truncate">{client.name}</p>
-                      {away && <span className="text-[9px] font-bold text-[#b23a48] bg-[#b23a48]/10 border border-[#b23a48]/20 rounded-full px-1.5 py-0.5">Sumida</span>}
+                      {away && <span className="text-caption font-bold text-danger bg-danger-bg border border-danger-border rounded-full px-1.5 py-0.5">Sumida</span>}
                       {birthdayMonth(client) === currentMonth && <Cake className="h-3.5 w-3.5 text-wine-500" />}
                     </div>
-                    <a href={buildWhatsappLink(client.whatsapp, '')} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-450 mt-0.5 inline-block">{client.whatsapp}</a>
-                    {client.email && <p className="text-xs text-gray-450 truncate">{client.email}</p>}
+                    <a href={buildWhatsappLink(client.whatsapp, '')} target="_blank" rel="noreferrer" className="text-caption font-semibold text-n-600 mt-0.5 inline-block">{client.whatsapp}</a>
+                    {client.email && <p className="text-caption text-n-600 truncate">{client.email}</p>}
 
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      <span className="font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-full text-[11px]">{s.total} visitas</span>
+                      <span className="font-bold text-wine-700 bg-wine-700/8 px-2 py-0.5 rounded-full text-caption">{s.total} visitas</span>
                       {s.noShows > 0 && (
-                        <span className="font-bold text-[#b23a48] bg-[#b23a48]/10 px-2 py-0.5 rounded-full text-[11px]">{s.noShows} falta{s.noShows > 1 ? 's' : ''}</span>
+                        <span className="font-bold text-danger bg-danger-bg px-2 py-0.5 rounded-full text-caption">{s.noShows} falta{s.noShows > 1 ? 's' : ''}</span>
                       )}
                       {rel && (
-                        <span className={`inline-flex items-center gap-1 text-[9px] font-bold rounded-full px-1.5 py-0.5 border ${rel.cls}`}>
+                        <span className={`inline-flex items-center gap-1 text-caption font-bold rounded-full px-1.5 py-0.5 border ${rel.cls}`}>
                           <rel.icon className="h-2.5 w-2.5" /> {rel.label}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-gray-450 mt-1.5">
+                    <p className="text-caption text-n-600 mt-1.5">
                       Última visita: {s.lastVisitISO ? `${formatDateBR(s.lastVisitISO)}${s.daysSince !== null ? ` · há ${s.daysSince} dias` : ''}` : 'Nunca'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-150">
-                  <button onClick={() => setDetail(client)} className="tap flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-cream border border-gray-150 text-forest text-xs font-bold rounded-xl">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-n-200">
+                  <button onClick={() => setDetail(client)} className="tap flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-n-25 border border-n-200 text-wine-700 text-caption font-bold rounded-xl">
                     <History className="h-4 w-4" /> Histórico
                   </button>
                   <button
                     onClick={() => window.open(buildWhatsappLink(client.whatsapp, away ? `Oi, ${client.name.split(' ')[0]}! Senti sua falta por aqui 💛 Que tal agendar um horário?` : ''), '_blank')}
-                    className="tap flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-[#2e7d5b]/10 text-[#226045] text-xs font-bold rounded-xl border border-[#2e7d5b]/20"
+                    className="tap flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-success-bg text-success text-caption font-bold rounded-xl border border-success-border"
                   >
                     <MessageCircle className="h-4 w-4" /> WhatsApp
                   </button>
@@ -458,7 +458,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
             );
           })
         ) : (
-          <div className="card py-12 text-center text-xs text-gray-450">
+          <div className="card py-12 text-center text-caption text-n-600">
             {filter === 'all' ? 'Nenhum contato cadastrado ainda.' : 'Nenhum contato neste filtro.'}
           </div>
         )}
@@ -467,8 +467,8 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {/* Tabela (desktop) */}
       <div className="hidden lg:block card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-150 text-left">
-            <thead className="bg-cream/60 text-[10px] font-black text-gray-450 uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-n-200 text-left">
+            <thead className="bg-n-50 text-caption font-semibold text-n-600 uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-4 w-10">
                   <input
@@ -476,7 +476,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                     aria-label="Selecionar todos"
                     checked={sortedClients.length > 0 && sortedClients.every(c => selected.has(c.id))}
                     onChange={(e) => setSelected(e.target.checked ? new Set(sortedClients.map(c => c.id)) : new Set())}
-                    className="h-4 w-4 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700"
+                    className="h-4 w-4 rounded border-n-300 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer accent-wine-700"
                   />
                 </th>
                 <th className="px-6 py-4">Contato</th>
@@ -486,60 +486,60 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 text-sm text-ink">
+            <tbody className="divide-y divide-n-200 text-label text-ink">
               {sortedClients.length > 0 ? (
                 sortedClients.map((client) => {
                   const s = getStats(client);
                   const rel = reliability(s);
                   const away = isAway(s);
                   return (
-                    <tr key={client.id} className={`transition-colors ${selected.has(client.id) ? 'bg-wine-50' : 'hover:bg-cream/50'}`}>
+                    <tr key={client.id} className={`transition-colors ${selected.has(client.id) ? 'bg-wine-50' : 'hover:bg-n-50/50'}`}>
                       <td className="px-4 py-4 w-10">
                         <input
                           type="checkbox"
                           aria-label={`Selecionar ${client.name}`}
                           checked={selected.has(client.id)}
                           onChange={() => toggleSel(client.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-wine-700 focus:ring-wine-700/20 cursor-pointer accent-wine-700"
+                          className="h-4 w-4 rounded border-n-300 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer accent-wine-700"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-ink">{client.name}</p>
-                          {away && <span className="text-[9px] font-bold text-[#b23a48] bg-[#b23a48]/10 border border-[#b23a48]/20 rounded-full px-1.5 py-0.5">Sumida</span>}
+                          {away && <span className="text-caption font-bold text-danger bg-danger-bg border border-danger-border rounded-full px-1.5 py-0.5">Sumida</span>}
                           {birthdayMonth(client) === currentMonth && <Cake className="h-3.5 w-3.5 text-wine-500" />}
                         </div>
-                        {client.email && <p className="text-xs text-gray-450 mt-0.5">{client.email}</p>}
+                        {client.email && <p className="text-caption text-n-600 mt-0.5">{client.email}</p>}
                         {rel && (
-                          <span className={`mt-1 inline-flex items-center gap-1 text-[9px] font-bold rounded-full px-1.5 py-0.5 border ${rel.cls}`}>
+                          <span className={`mt-1 inline-flex items-center gap-1 text-caption font-bold rounded-full px-1.5 py-0.5 border ${rel.cls}`}>
                             <rel.icon className="h-2.5 w-2.5" /> {rel.label}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap font-semibold text-ink">{client.whatsapp}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-bold text-wine-700 bg-wine-700/8 px-2.5 py-0.5 rounded-full text-xs">{s.total} visitas</span>
+                        <span className="font-bold text-wine-700 bg-wine-700/8 px-2.5 py-0.5 rounded-full text-caption">{s.total} visitas</span>
                         {s.noShows > 0 && (
-                          <span className="ml-1.5 font-bold text-[#b23a48] bg-[#b23a48]/10 px-2 py-0.5 rounded-full text-xs">{s.noShows} falta{s.noShows > 1 ? 's' : ''}</span>
+                          <span className="ml-1.5 font-bold text-danger bg-danger-bg px-2 py-0.5 rounded-full text-caption">{s.noShows} falta{s.noShows > 1 ? 's' : ''}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-gray-450">
+                      <td className="px-6 py-4 whitespace-nowrap text-caption font-semibold text-n-600">
                         {s.lastVisitISO ? (
                           <>
                             {formatDateBR(s.lastVisitISO)}
-                            {s.daysSince !== null && <span className="block text-[10px] text-gray-450/70">há {s.daysSince} dias</span>}
+                            {s.daysSince !== null && <span className="block text-caption text-n-600/70">há {s.daysSince} dias</span>}
                           </>
                         ) : 'Nunca'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => setDetail(client)} title="Ver histórico" className="p-2 hover:bg-cream text-gray-450 hover:text-forest rounded-xl transition-all-custom border border-gray-150">
+                          <button onClick={() => setDetail(client)} title="Ver histórico" className="p-2 hover:bg-n-50 text-n-600 hover:text-wine-700 rounded-xl transition-ui border border-n-200">
                             <History className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => window.open(buildWhatsappLink(client.whatsapp, away ? `Oi, ${client.name.split(' ')[0]}! Senti sua falta por aqui 💛 Que tal agendar um horário?` : ''), '_blank')}
                             title="Falar no WhatsApp"
-                            className="p-2 hover:bg-[#2e7d5b]/10 text-[#226045] rounded-xl transition-all-custom border border-gray-150"
+                            className="p-2 hover:bg-success-bg text-success rounded-xl transition-ui border border-n-200"
                           >
                             <MessageCircle className="h-4 w-4" />
                           </button>
@@ -550,7 +550,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-gray-450">
+                  <td colSpan={6} className="py-12 text-center text-caption text-n-600">
                     {filter === 'all' ? 'Nenhum contato cadastrado ainda.' : 'Nenhum contato neste filtro.'}
                   </td>
                 </tr>
@@ -566,15 +566,15 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
         return (
           <Portal>
           <div className="fixed inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setDetail(null)} />
-            <aside className="relative w-full max-w-md h-full bg-paper shadow-glow flex flex-col animate-slide-right">
+            <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setDetail(null)} />
+            <aside className="relative w-full max-w-md h-full bg-surface shadow-glow flex flex-col animate-slide-right">
               <div className="surface-wine text-white p-6 flex items-start justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Ficha do contato</p>
-                  <h3 className="text-lg font-black mt-1">{detail.name}</h3>
-                  <p className="text-xs text-white/70 mt-0.5">{detail.whatsapp}{detail.email ? ` · ${detail.email}` : ''}</p>
+                  <p className="text-caption font-bold uppercase tracking-[0.18em] text-white/55">Ficha do contato</p>
+                  <h3 className="text-h2 mt-1">{detail.name}</h3>
+                  <p className="text-caption text-white/70 mt-0.5">{detail.whatsapp}{detail.email ? ` · ${detail.email}` : ''}</p>
                   {detail.birthday && (
-                    <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/12 rounded-full px-2.5 py-1">
+                    <span className="mt-2 inline-flex items-center gap-1.5 text-caption font-bold bg-white/12 rounded-full px-2.5 py-1">
                       <Cake className="h-3 w-3" /> Nasc.: {formatDateBR(detail.birthday)}
                     </span>
                   )}
@@ -582,11 +582,11 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 <button onClick={() => setDetail(null)} className="p-2 rounded-xl hover:bg-white/10 transition-colors"><X className="h-5 w-5" /></button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 p-5 border-b border-gray-150">
+              <div className="grid grid-cols-3 gap-2 p-5 border-b border-n-200">
                 {[['Visitas', s.total], ['Finalizados', s.completed], ['Faltas', s.noShows]].map(([k, v]) => (
-                  <div key={k as string} className="text-center bg-cream/60 rounded-2xl py-3">
-                    <p className="text-xl font-black text-forest">{v as number}</p>
-                    <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{k as string}</p>
+                  <div key={k as string} className="text-center bg-n-50 rounded-2xl py-3">
+                    <p className="text-h2 font-semibold text-wine-700">{v as number}</p>
+                    <p className="text-caption font-bold text-n-600 uppercase tracking-wider">{k as string}</p>
                   </div>
                 ))}
               </div>
@@ -595,11 +595,11 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                 {/* Ficha técnica / observações da cliente */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Ficha do contato</p>
+                    <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Ficha do contato</p>
                     <button
                       onClick={saveNote}
                       disabled={savingNote}
-                      className="tap text-[11px] font-bold text-white bg-wine-700 hover:bg-wine-800 rounded-lg px-3 py-1.5 disabled:opacity-60 transition-all-custom"
+                      className="tap text-caption font-bold text-white bg-wine-700 hover:bg-wine-800 rounded-lg px-3 py-1.5 disabled:opacity-60 transition-ui"
                     >
                       {savingNote ? 'Salvando…' : 'Salvar ficha'}
                     </button>
@@ -609,27 +609,27 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
                     onChange={(e) => setNoteDraft(e.target.value)}
                     rows={5}
                     placeholder="Observações gerais, preferências, cuidados especiais, produtos usados, alergias/sensibilidades, informações para os próximos atendimentos…"
-                    className="block w-full px-3 py-2.5 bg-cream/50 border border-gray-150 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y"
+                    className="block w-full px-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y"
                   />
-                  <span className="text-[10px] text-gray-400 mt-1 block">
+                  <span className="text-caption text-n-400 mt-1 block">
                     Fica salva nesta cliente. Para observações de um atendimento específico, use as notas do agendamento.
                   </span>
                 </div>
 
-                <p className="text-xs font-bold text-gray-450 uppercase tracking-wider">Histórico de atendimentos</p>
+                <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Histórico de atendimentos</p>
                 {s.history.length === 0 ? (
-                  <p className="text-xs text-gray-450 py-8 text-center">Sem agendamentos registrados.</p>
+                  <p className="text-caption text-n-600 py-8 text-center">Sem agendamentos registrados.</p>
                 ) : s.history.map((a) => {
                   const m = statusMeta(a.status);
                   return (
-                    <div key={a.id} className="rounded-2xl border border-gray-150 p-3 flex items-center justify-between">
+                    <div key={a.id} className="rounded-2xl border border-n-200 p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-ink flex items-center gap-1.5">
-                          <Clock className="h-3 w-3 text-gray-450" /> {formatDateBR(a.date)} · {a.start_time.substring(0, 5)}
+                        <p className="text-caption font-bold text-ink flex items-center gap-1.5">
+                          <Clock className="h-3 w-3 text-n-600" /> {formatDateBR(a.date)} · {a.start_time.substring(0, 5)}
                         </p>
-                        <p className="text-[11px] text-gray-450 mt-0.5">{a.service?.name}</p>
+                        <p className="text-caption text-n-600 mt-0.5">{a.service?.name}</p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
+                      <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
                     </div>
                   );
                 })}
@@ -643,18 +643,18 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {/* Modal: excluir TODOS os clientes */}
       {confirmDeleteAll && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => !bulkBusy && setConfirmDeleteAll(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => !bulkBusy && setConfirmDeleteAll(false)} />
           <div className="relative card p-6 max-w-md w-full z-10 animate-slide-up">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2.5 rounded-2xl bg-[#b23a48]/10 text-[#b23a48]"><Trash2 className="h-5 w-5" /></div>
-              <h3 className="text-lg font-black text-ink tracking-tight">Excluir todos os clientes</h3>
+              <div className="p-2.5 rounded-2xl bg-danger-bg text-danger"><Trash2 className="h-5 w-5" /></div>
+              <h3 className="text-h2 text-ink tracking-tight">Excluir todos os clientes</h3>
             </div>
-            <p className="text-xs text-gray-450 leading-relaxed">
-              Isso remove <strong className="text-[#b23a48]">todos os {initialClients.length} clientes</strong> da sua carteira. O histórico de agendamentos é mantido, mas os contatos somem. <strong>Esta ação é irreversível.</strong>
+            <p className="text-caption text-n-600 leading-relaxed">
+              Isso remove <strong className="text-danger">todos os {initialClients.length} clientes</strong> da sua carteira. O histórico de agendamentos é mantido, mas os contatos somem. <strong>Esta ação é irreversível.</strong>
             </p>
             <div className="mt-6 flex justify-end gap-2.5">
-              <button onClick={() => setConfirmDeleteAll(false)} disabled={bulkBusy} className="px-4 py-2 border border-gray-150 rounded-xl text-xs font-bold text-gray-450 hover:bg-cream">Cancelar</button>
-              <button onClick={deleteAll} disabled={bulkBusy} className="px-4 py-2 bg-[#b23a48] text-white text-xs font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
+              <button onClick={() => setConfirmDeleteAll(false)} disabled={bulkBusy} className="px-4 py-2 border border-n-200 rounded-xl text-caption font-bold text-n-600 hover:bg-n-50">Cancelar</button>
+              <button onClick={deleteAll} disabled={bulkBusy} className="px-4 py-2 bg-danger text-white text-caption font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
                 {bulkBusy ? 'Excluindo...' : 'Sim, excluir todos'}
               </button>
             </div>
@@ -666,42 +666,42 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {showAdd && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
           <div className="relative card w-full max-w-md rounded-3xl p-6 z-10 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-ink tracking-tight">Adicionar cliente</h3>
-              <button onClick={() => setShowAdd(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h2 text-ink tracking-tight">Adicionar cliente</h3>
+              <button onClick={() => setShowAdd(false)} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={addClient} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Nome *</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Nome *</label>
                 <input required value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Ex: Marina Alves"
-                  className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">WhatsApp *</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">WhatsApp *</label>
                   <input required inputMode="tel" value={fPhone} onChange={(e) => setFPhone(e.target.value)} placeholder="11999999999"
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Aniversário</label>
+                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Aniversário</label>
                   <input type="date" value={fBday} onChange={(e) => setFBday(e.target.value)}
-                    className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">E-mail (opcional)</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">E-mail (opcional)</label>
                 <input type="email" value={fEmail} onChange={(e) => setFEmail(e.target.value)} placeholder="cliente@email.com"
-                  className="block w-full px-3 py-3 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
+                  className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Ficha técnica / observações (opcional)</label>
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Ficha técnica / observações (opcional)</label>
                 <textarea value={fNotes} onChange={(e) => setFNotes(e.target.value)} rows={3}
                   placeholder="Preferências, cuidados especiais, alergias/sensibilidades, produtos usados…"
-                  className="block w-full px-3 py-2.5 bg-cream/60 border border-gray-150 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 resize-y" />
+                  className="block w-full px-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y" />
               </div>
-              <button type="submit" disabled={saving} className="w-full py-4 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60">
+              <button type="submit" disabled={saving} className="w-full py-4 surface-wine text-white text-label font-bold rounded-2xl shadow-soft hover:opacity-95 transition-ui disabled:opacity-60">
                 {saving ? 'Salvando...' : 'Cadastrar cliente'}
               </button>
             </form>
@@ -713,40 +713,40 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {/* Modal: Importar lista (CSV) */}
       {showImport && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => { setShowImport(false); setImportPreview([]); }} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => { setShowImport(false); setImportPreview([]); }} />
           <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-lg font-black text-ink tracking-tight">Importar lista de clientes</h3>
-              <button onClick={() => { setShowImport(false); setImportPreview([]); }} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h2 text-ink tracking-tight">Importar lista de clientes</h3>
+              <button onClick={() => { setShowImport(false); setImportPreview([]); }} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
-            <p className="text-xs text-gray-450 mb-4">
+            <p className="text-caption text-n-600 mb-4">
               Envie um arquivo <strong>CSV</strong> com as colunas <em>nome, whatsapp, email, nascimento</em>.
               Aceita também planilhas exportadas como CSV (separador vírgula ou ponto-e-vírgula).
             </p>
 
             {importPreview.length === 0 ? (
-              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-250 rounded-2xl py-10 cursor-pointer hover:bg-cream/50 transition-colors">
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-n-300 rounded-2xl py-10 cursor-pointer hover:bg-n-50/50 transition-colors">
                 <FileSpreadsheet className="h-8 w-8 text-wine-300" />
-                <span className="text-sm font-bold text-forest">Selecionar arquivo CSV</span>
-                <span className="text-[11px] text-gray-450">Clique para escolher</span>
+                <span className="text-label font-bold text-wine-700">Selecionar arquivo CSV</span>
+                <span className="text-caption text-n-600">Clique para escolher</span>
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
               </label>
             ) : (
               <>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-ink">{importPreview.length} cliente(s) detectada(s)</span>
-                  <button onClick={() => setImportPreview([])} className="text-[11px] font-bold text-wine-500 hover:underline">Trocar arquivo</button>
+                  <span className="text-caption font-bold text-ink">{importPreview.length} cliente(s) detectada(s)</span>
+                  <button onClick={() => setImportPreview([])} className="text-caption font-bold text-wine-500 hover:underline">Trocar arquivo</button>
                 </div>
-                <div className="max-h-56 overflow-y-auto rounded-2xl border border-gray-150 divide-y divide-gray-150">
+                <div className="max-h-56 overflow-y-auto rounded-2xl border border-n-200 divide-y divide-n-200">
                   {importPreview.slice(0, 50).map((r, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
-                      <span className="font-semibold text-ink truncate">{r.name || <em className="text-[#b23a48]">sem nome</em>}</span>
-                      <span className="text-gray-450 shrink-0">{r.whatsapp || '—'}</span>
+                    <div key={i} className="flex items-center justify-between px-3 py-2 text-caption">
+                      <span className="font-semibold text-ink truncate">{r.name || <em className="text-danger">sem nome</em>}</span>
+                      <span className="text-n-600 shrink-0">{r.whatsapp || '—'}</span>
                     </div>
                   ))}
-                  {importPreview.length > 50 && <p className="px-3 py-2 text-[11px] text-gray-450">+{importPreview.length - 50} não exibidas…</p>}
+                  {importPreview.length > 50 && <p className="px-3 py-2 text-caption text-n-600">+{importPreview.length - 50} não exibidas…</p>}
                 </div>
-                <button onClick={confirmImport} disabled={importing} className="mt-4 w-full py-4 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft hover:opacity-95 transition-all-custom disabled:opacity-60">
+                <button onClick={confirmImport} disabled={importing} className="mt-4 w-full py-4 surface-wine text-white text-label font-bold rounded-2xl shadow-soft hover:opacity-95 transition-ui disabled:opacity-60">
                   {importing ? 'Importando...' : `Importar ${importPreview.length} cliente(s)`}
                 </button>
               </>
@@ -759,32 +759,32 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
       {showTrash && (
         <Portal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm" onClick={() => setShowTrash(false)} />
           <div className="relative card w-full sm:max-w-lg mx-0 sm:mx-4 rounded-b-none sm:rounded-4xl p-6 z-10 animate-slide-up max-h-[92vh] overflow-y-auto safe-sheet">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-ink tracking-tight">Lixeira de clientes</h3>
-              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-cream text-gray-450"><X className="h-5 w-5" /></button>
+              <h3 className="text-h2 text-ink tracking-tight">Lixeira de clientes</h3>
+              <button onClick={() => setShowTrash(false)} className="p-2 rounded-xl hover:bg-n-50 text-n-600"><X className="h-5 w-5" /></button>
             </div>
 
             {trashLoading ? (
-              <p className="text-sm text-gray-450 py-8 text-center">Carregando…</p>
+              <p className="text-label text-n-600 py-8 text-center">Carregando…</p>
             ) : trashedClients.length === 0 ? (
-              <p className="text-sm text-gray-450 py-8 text-center">A lixeira está vazia.</p>
+              <p className="text-label text-n-600 py-8 text-center">A lixeira está vazia.</p>
             ) : (
               <div className="space-y-2">
                 {trashedClients.map(c => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 bg-cream/50 border border-gray-150 rounded-xl px-3 py-2.5">
+                  <div key={c.id} className="flex items-center justify-between gap-3 bg-n-50 border border-n-200 rounded-xl px-3 py-2.5">
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-ink truncate">{c.name}</p>
-                      <p className="text-[11px] text-gray-450 truncate">{c.whatsapp}</p>
+                      <p className="text-label font-bold text-ink truncate">{c.name}</p>
+                      <p className="text-caption text-n-600 truncate">{c.whatsapp}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => restoreOne(c.id)} disabled={trashBusyId === c.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#226045] text-white text-[11px] font-bold hover:opacity-95 disabled:opacity-50">
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-success text-white text-caption font-bold hover:opacity-95 disabled:opacity-50">
                         <RotateCcw className="h-3.5 w-3.5" /> Restaurar
                       </button>
                       <button onClick={() => purgeOne(c.id)} disabled={trashBusyId === c.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-150 text-[#b23a48] text-[11px] font-bold hover:bg-white disabled:opacity-50">
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-n-200 text-danger text-caption font-bold hover:bg-white disabled:opacity-50">
                         <Trash2 className="h-3.5 w-3.5" /> Excluir
                       </button>
                     </div>

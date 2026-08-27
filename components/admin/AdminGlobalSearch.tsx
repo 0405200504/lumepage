@@ -88,16 +88,16 @@ export function AdminGlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-xl border border-line bg-surface text-xs text-muted hover:text-ink hover:border-gray-250 transition-colors min-w-[200px]"
+        className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-xl border border-line bg-surface text-caption text-muted hover:text-ink hover:border-n-300 transition-colors min-w-[200px]"
       >
         <Search className="h-4 w-4" aria-hidden />
         <span className="flex-1 text-left">Buscar na rede…</span>
-        <kbd className="hidden sm:inline text-[10px] font-bold text-muted bg-surface-2 border border-line rounded px-1.5 py-0.5">⌘K</kbd>
+        <kbd className="hidden sm:inline text-caption font-bold text-muted bg-surface-2 border border-line rounded px-1.5 py-0.5">⌘K</kbd>
       </button>
 
       {open && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4" role="dialog" aria-modal="true" aria-label="Busca global">
-          <div className="absolute inset-0 bg-[#1a0e12]/50" onClick={close} />
+          <div className="absolute inset-0 bg-wine-950/45" onClick={close} />
 
           <div className="relative w-full max-w-xl card shadow-lg overflow-hidden animate-slide-up">
             <div className="flex items-center gap-2 px-4 border-b border-line">
@@ -109,16 +109,16 @@ export function AdminGlobalSearch() {
                 onKeyDown={onKeyDown}
                 placeholder="Profissional, cliente ou agendamento…"
                 aria-label="Buscar na rede"
-                className="flex-1 h-12 bg-transparent text-sm text-ink placeholder-faint focus:outline-none"
+                className="flex-1 h-12 bg-transparent text-label text-ink placeholder-faint "
               />
               {loading && <Loader2 className="h-4 w-4 animate-spin text-muted" aria-hidden />}
             </div>
 
             <div className="max-h-[52vh] overflow-y-auto">
               {query.trim().length < 2 ? (
-                <p className="px-4 py-8 text-center text-xs text-muted">Digite ao menos 2 caracteres.</p>
+                <p className="px-4 py-8 text-center text-caption text-muted">Digite ao menos 2 caracteres.</p>
               ) : hits.length === 0 && !loading ? (
-                <p className="px-4 py-8 text-center text-xs text-muted">Nada encontrado para “{query}”.</p>
+                <p className="px-4 py-8 text-center text-caption text-muted">Nada encontrado para “{query}”.</p>
               ) : (
                 <ul>
                   {hits.map((hit, i) => {
@@ -133,10 +133,10 @@ export function AdminGlobalSearch() {
                         >
                           <Icon className="h-4 w-4 text-muted shrink-0" aria-hidden />
                           <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-ink truncate">{hit.title}</span>
-                            <span className="block text-[11px] text-muted truncate">{hit.subtitle}</span>
+                            <span className="block text-label font-semibold text-ink truncate">{hit.title}</span>
+                            <span className="block text-caption text-muted truncate">{hit.subtitle}</span>
                           </span>
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted shrink-0">
+                          <span className="text-caption font-bold uppercase tracking-wide text-muted shrink-0">
                             {KIND_META[hit.kind].label}
                           </span>
                           {i === cursor && <CornerDownLeft className="h-3.5 w-3.5 text-muted shrink-0" aria-hidden />}

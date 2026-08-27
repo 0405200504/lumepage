@@ -31,14 +31,14 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
       key: 'client', header: 'Cliente', primary: true, className: 'min-w-[16rem]',
       cell: r => (
         <span className="block min-w-0">
-          <span className="block font-semibold text-ink tabular-nums truncate">{r.clientPhone}</span>
-          <span className="block text-[11px] text-muted truncate">{r.lastMessage || 'sem mensagens'}</span>
+          <span className="block font-semibold text-ink num truncate">{r.clientPhone}</span>
+          <span className="block text-caption text-muted truncate">{r.lastMessage || 'sem mensagens'}</span>
         </span>
       ),
     },
     {
       key: 'prof', header: 'Profissional', menuLabel: 'Profissional', className: 'min-w-[9rem] max-w-[14rem]',
-      cell: r => <span className="block text-xs text-muted truncate" title={r.professionalName}>{r.professionalName}</span>,
+      cell: r => <span className="block text-caption text-muted truncate" title={r.professionalName}>{r.professionalName}</span>,
     },
     {
       key: 'state', header: 'Situação',
@@ -50,7 +50,7 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
       cell: r => r.botPaused
         ? <span
             title={`Sem resposta desde ${formatDateTimeBR(r.lastMessageAt)}`}
-            className={r.waitingHours >= 48 ? 'text-[color:var(--color-bad)] font-bold' : r.waitingHours >= 24 ? 'text-[color:var(--color-warn)] font-bold' : 'text-ink'}
+            className={r.waitingHours >= 48 ? 'text-danger font-bold' : r.waitingHours >= 24 ? 'text-warning font-bold' : 'text-ink'}
           >
             {formatDurationBR(r.waitingHours * 3_600_000)}
           </span>
@@ -60,7 +60,7 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
     {
       key: 'last', header: 'Última mensagem', menuLabel: 'Última mensagem', className: 'min-w-[10rem]',
       cell: r => (
-        <span className="text-xs text-muted tabular-nums whitespace-nowrap" title={formatDateTimeBR(r.lastMessageAt)}>
+        <span className="text-caption text-muted num whitespace-nowrap" title={formatDateTimeBR(r.lastMessageAt)}>
           {formatRelativeBR(r.lastMessageAt)}
         </span>
       ),
@@ -75,7 +75,7 @@ export default async function AdminConversationsPage({ searchParams }: { searchP
     >
       <div className="space-y-4">
         {longWait.length > 0 && (
-          <p className="card px-4 py-3 text-xs font-semibold text-[color:var(--color-bad)] flex items-start gap-2">
+          <p className="card px-4 py-3 text-caption font-semibold text-danger flex items-start gap-2">
             <Clock className="h-4 w-4 shrink-0 mt-px" aria-hidden />
             {longWait.length} conversa(s) esperando atendimento humano há mais de 48 horas — a mais antiga
             está parada há {formatDurationBR(Math.max(...longWait.map(r => r.waitingHours)) * 3_600_000)}.

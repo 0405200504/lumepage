@@ -40,8 +40,8 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
   if (data.every(p => p.value === 0)) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10" style={{ minHeight: height }}>
-        <p className="text-xs font-semibold text-muted">Sem movimento no período</p>
-        <p className="text-[11px] text-faint mt-0.5">Quando houver dados, o gráfico aparece aqui.</p>
+        <p className="text-caption font-semibold text-muted">Sem movimento no período</p>
+        <p className="text-caption text-faint mt-0.5">Quando houver dados, o gráfico aparece aqui.</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
     <figure className="w-full">
       <div className="flex gap-2" style={{ height }}>
         {/* Eixo Y */}
-        <div className="flex flex-col justify-between text-[10px] text-faint tabular-nums shrink-0 pb-4">
+        <div className="flex flex-col justify-between text-caption text-faint num shrink-0 pb-4">
           {ticks.map((t, i) => <span key={i}>{format(t)}</span>)}
         </div>
 
@@ -65,7 +65,7 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
               <li key={i} className="flex-1 min-w-0 flex flex-col justify-end h-full group" title={p.hint ?? `${p.label}: ${format(p.value)}`}>
                 {/* O valor exato aparece no hover — não é decoração, é a informação
                     que o eixo aproxima. */}
-                <span className="block text-[10px] text-center tabular-nums text-ink font-semibold opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                <span className="block text-caption text-center num text-ink font-semibold opacity-0 group-hover:opacity-100 transition-opacity truncate">
                   {format(p.value)}
                 </span>
                 <span
@@ -80,12 +80,12 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
           {/* Eixo X */}
           <ul className="absolute bottom-0 left-0 right-0 flex gap-1.5">
             {data.map((p, i) => (
-              <li key={i} className="flex-1 min-w-0 text-center text-[10px] text-muted truncate">{p.label}</li>
+              <li key={i} className="flex-1 min-w-0 text-center text-caption text-muted truncate">{p.label}</li>
             ))}
           </ul>
         </div>
       </div>
-      {caption && <figcaption className="mt-2 text-[11px] text-muted">{caption}</figcaption>}
+      {caption && <figcaption className="mt-2 text-caption text-muted">{caption}</figcaption>}
     </figure>
   );
 }

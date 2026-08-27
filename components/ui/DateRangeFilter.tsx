@@ -57,7 +57,7 @@ export function DateRangeFilter({ basePath, presets, hideCustom, className = '' 
               type="button"
               onClick={() => applyPreset(preset.key)}
               aria-pressed={active}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-2.5 py-1.5 rounded-lg text-caption font-bold transition-colors ${
                 active ? 'bg-accent-soft text-accent-link ring-1 ring-accent-soft-border' : 'text-muted hover:text-ink hover:bg-surface-2'
               }`}
             >
@@ -71,7 +71,7 @@ export function DateRangeFilter({ basePath, presets, hideCustom, className = '' 
             type="button"
             onClick={() => setShowCustom(v => !v)}
             aria-pressed={showCustom || currentRange === 'custom'}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-2.5 py-1.5 rounded-lg text-caption font-bold transition-colors ${
               showCustom || currentRange === 'custom'
                 ? 'bg-accent-soft text-accent-link ring-1 ring-accent-soft-border'
                 : 'text-muted hover:text-ink hover:bg-surface-2'
@@ -86,23 +86,23 @@ export function DateRangeFilter({ basePath, presets, hideCustom, className = '' 
         <div className="flex items-center gap-1.5">
           <input
             type="date" value={from} onChange={e => setFrom(e.target.value)} aria-label="Data inicial"
-            className="h-8 px-2 rounded-lg border border-line bg-surface text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
           />
-          <span className="text-muted text-xs">até</span>
+          <span className="text-muted text-caption">até</span>
           <input
             type="date" value={to} onChange={e => setTo(e.target.value)} aria-label="Data final"
-            className="h-8 px-2 rounded-lg border border-line bg-surface text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
           />
           <button
             type="button" onClick={applyCustom}
-            className="h-8 px-3 rounded-lg bg-forest hover:bg-forest-hover text-white text-xs font-bold transition-colors"
+            className="h-8 px-3 rounded-lg bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold transition-colors"
           >
             Aplicar
           </button>
         </div>
       )}
 
-      {pending && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" aria-hidden />}
+      {pending && <Loader2 className="h-4 w-4 animate-spin text-muted" aria-hidden />}
     </div>
   );
 }

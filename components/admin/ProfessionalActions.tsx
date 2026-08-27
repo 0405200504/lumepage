@@ -47,7 +47,7 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
       success('Sessão de suporte aberta', `${brandName} · ${mode === 'read' ? 'somente leitura' : 'pode editar'} · 30 min`);
     });
 
-  const btn = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold transition-colors disabled:opacity-50';
+  const btn = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold transition-colors disabled:opacity-50';
 
   return (
     <>
@@ -58,7 +58,7 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
             type="button" disabled={pending}
             title="Abre o painel desta profissional em nova aba, sessão de suporte de 30 min, sem poder alterar nada"
             onClick={() => enter('read')}
-            className={`${btn} rounded-none bg-forest hover:bg-forest-hover text-white`}
+            className={`${btn} rounded-none bg-wine-700 hover:bg-wine-800 text-white`}
           >
             {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
             Entrar como · só olhar
@@ -67,7 +67,7 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
             type="button" disabled={pending}
             title="Mesma sessão, mas com permissão de alterar dados desta conta"
             onClick={() => { if (confirm(`Entrar na conta de ${brandName} PODENDO EDITAR? Toda alteração fica registrada no seu nome.`)) enter('edit'); }}
-            className={`${btn} rounded-none border-l border-white/20 bg-forest hover:bg-forest-hover text-white px-2.5`}
+            className={`${btn} rounded-none border-l border-white/20 bg-wine-700 hover:bg-wine-800 text-white px-2.5`}
           >
             <Pencil className="h-3.5 w-3.5" /> editar
           </button>
@@ -89,7 +89,7 @@ export function ProfessionalActions({ id, brandName, status, plan, subscriptionS
           </button>
         )}
 
-        <button type="button" disabled={pending} className={`${btn} text-[color:var(--color-bad)] hover:bg-[color:var(--color-bad)]/10`}
+        <button type="button" disabled={pending} className={`${btn} text-danger hover:bg-danger-bg`}
           onClick={() => { if (confirm(`Mover ${brandName} para a lixeira? Reversível.`)) run(() => bulkTrashAction([id]), 'Movida para a lixeira.', '/admin/professionals'); }}>
           <Trash2 className="h-3.5 w-3.5" /> Lixeira
         </button>
@@ -130,22 +130,22 @@ function PlanDialog({ id, brandName, plan, subscriptionStatus, endsAt, onClose, 
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15';
+  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label="Mudar plano">
-      <div className="absolute inset-0 bg-[#1a0e12]/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-wine-950/45" onClick={onClose} />
       <div className="relative w-full max-w-md card p-5 space-y-4 animate-slide-up">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-ink">Mudar plano</h2>
-            <p className="text-xs text-muted mt-0.5">{brandName}</p>
+            <h2 className="text-label font-bold text-ink">Mudar plano</h2>
+            <p className="text-caption text-muted mt-0.5">{brandName}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="p-1.5 rounded-lg text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
         </div>
 
         <label className="block">
-          <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-1">Plano</span>
+          <span className="block text-caption font-bold uppercase tracking-[0.08em] text-muted mb-1">Plano</span>
           <select className={field} value={form.plan ?? ''} onChange={e => setForm(f => ({ ...f, plan: (e.target.value || null) as PlanChange['plan'] }))}>
             <option value="">Sem plano (legada)</option>
             <option value="start">Start</option>
@@ -155,7 +155,7 @@ function PlanDialog({ id, brandName, plan, subscriptionStatus, endsAt, onClose, 
         </label>
 
         <label className="block">
-          <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-1">Situação</span>
+          <span className="block text-caption font-bold uppercase tracking-[0.08em] text-muted mb-1">Situação</span>
           <select className={field} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as PlanChange['status'] }))}>
             <option value="trialing">Em teste</option>
             <option value="active">Ativa (paga)</option>
@@ -165,18 +165,18 @@ function PlanDialog({ id, brandName, plan, subscriptionStatus, endsAt, onClose, 
         </label>
 
         <label className="block">
-          <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-1">Acesso vence em</span>
+          <span className="block text-caption font-bold uppercase tracking-[0.08em] text-muted mb-1">Acesso vence em</span>
           <input type="date" className={field} value={form.endsAt ?? ''} onChange={e => setForm(f => ({ ...f, endsAt: e.target.value || null }))} />
         </label>
 
         <label className="block">
-          <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-1">Observação (vai para o histórico)</span>
+          <span className="block text-caption font-bold uppercase tracking-[0.08em] text-muted mb-1">Observação (vai para o histórico)</span>
           <input className={field} value={form.note ?? ''} placeholder="ex.: cupom de lançamento, cortesia, upgrade" onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
         </label>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="h-9 px-3 rounded-xl text-xs font-bold text-muted hover:bg-surface-2">Cancelar</button>
-          <button type="button" disabled={saving} onClick={save} className="h-9 px-4 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold disabled:opacity-50">
+          <button type="button" onClick={onClose} className="h-9 px-3 rounded-xl text-caption font-bold text-muted hover:bg-surface-2">Cancelar</button>
+          <button type="button" disabled={saving} onClick={save} className="h-9 px-4 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold disabled:opacity-50">
             {saving ? 'Salvando…' : 'Salvar'}
           </button>
         </div>

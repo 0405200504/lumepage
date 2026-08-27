@@ -132,7 +132,7 @@ export function ThemePanel({ config, set }: PanelProps) {
               type="button"
               onClick={() => set(d => { d.theme.radius = opt.id; })}
               className={`px-3 py-3 text-[11px] font-bold border transition-colors cursor-pointer ${
-                t.radius === opt.id ? 'border-forest bg-accent-soft text-forest' : 'border-gray-150 bg-white text-gray-500 hover:border-gray-250'
+                t.radius === opt.id ? 'border-wine-700 bg-accent-soft text-wine-700' : 'border-n-200 bg-white text-n-500 hover:border-n-300'
               }`}
               style={{ borderRadius: opt.r }}
             >
@@ -230,8 +230,8 @@ export function ServicesPanel({ config, set, services }: PanelProps & { services
   return (
     <div className="space-y-7">
       <div className="flex items-start gap-2.5 rounded-2xl border border-accent-soft-border bg-accent-soft px-3.5 py-3">
-        <Info className="h-4 w-4 text-forest shrink-0 mt-0.5" />
-        <p className="text-[11px] text-gray-600 leading-relaxed">
+        <Info className="h-4 w-4 text-wine-700 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-n-600 leading-relaxed">
           Os serviços da página são os mesmos de <b>Serviços</b> no painel — você não cadastra nada duas vezes.
           Mudou o preço, a duração ou desativou um serviço lá? A página muda junto, na hora, sem republicar.
         </p>
@@ -262,20 +262,20 @@ export function ServicesPanel({ config, set, services }: PanelProps & { services
         hint="Só entram aqui os serviços ativos e marcados como visíveis para a cliente."
       >
         {services.length === 0 ? (
-          <p className="text-[11px] text-gray-400 bg-sand border border-gray-150 rounded-xl px-3 py-3 leading-relaxed">
+          <p className="text-[11px] text-n-400 bg-n-100 border border-n-200 rounded-xl px-3 py-3 leading-relaxed">
             Você ainda não tem serviços visíveis para a cliente. Enquanto não tiver, a seção de serviços
             não aparece na página.
           </p>
         ) : (
           <ul className="space-y-2">
             {services.map(sv => (
-              <li key={sv.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-150 bg-white px-3 py-2.5">
-                <span className="text-[12px] font-semibold text-gray-700 truncate">{sv.name}</span>
+              <li key={sv.id} className="flex items-center justify-between gap-3 rounded-xl border border-n-200 bg-white px-3 py-2.5">
+                <span className="text-[12px] font-semibold text-n-700 truncate">{sv.name}</span>
                 <span className="flex items-center gap-3 shrink-0">
-                  <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                  <span className="text-[11px] text-n-400 flex items-center gap-1">
                     <Clock className="h-3 w-3" />{formatDuration(sv.durationMinutes)}
                   </span>
-                  <span className="text-[12px] font-bold text-gray-800">{formatPrice(sv.priceCents)}</span>
+                  <span className="text-[12px] font-bold text-n-800">{formatPrice(sv.priceCents)}</span>
                 </span>
               </li>
             ))}
@@ -418,12 +418,12 @@ export function TestimonialsPanel({ config, set, professionalId, onError }: Pane
                 <TextField label="Nome da cliente" value={item.name} max={LIMITS.name}
                   onChange={name => update({ name })} placeholder="Juliana Prado" />
                 <div>
-                  <label className="text-[11px] font-bold text-gray-600 block mb-1.5">Estrelas</label>
+                  <label className="text-[11px] font-bold text-n-600 block mb-1.5">Estrelas</label>
                   <div className="flex gap-1">
                     {[0, 1, 2, 3, 4, 5].map(n => (
                       <button key={n} type="button" onClick={() => update({ rating: n })}
                         className={`h-9 flex-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
-                          item.rating === n ? 'border-forest bg-accent-soft text-forest' : 'border-gray-150 bg-white text-gray-400 hover:border-gray-250'
+                          item.rating === n ? 'border-wine-700 bg-accent-soft text-wine-700' : 'border-n-200 bg-white text-n-400 hover:border-n-300'
                         }`}>
                         {n === 0 ? '—' : n}
                       </button>
@@ -531,9 +531,9 @@ export function SectionsPanel({ config, set, templateId }: PanelProps & { templa
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-2.5 rounded-2xl border border-gray-150 bg-sand px-3.5 py-3">
-        <Sparkles className="h-4 w-4 text-gray-450 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-gray-600 leading-relaxed">
+      <div className="flex items-start gap-2.5 rounded-2xl border border-n-200 bg-n-100 px-3.5 py-3">
+        <Sparkles className="h-4 w-4 text-n-600 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-n-600 leading-relaxed">
           Ligue, desligue e reordene as seções. Uma seção ligada mas sem conteúdo (galeria sem fotos,
           por exemplo) simplesmente não aparece — a página nunca fica com um buraco.
         </p>
@@ -543,8 +543,8 @@ export function SectionsPanel({ config, set, templateId }: PanelProps & { templa
         {order.map((id, i) => {
           const required = SITE_REQUIRED_SECTIONS.includes(id);
           return (
-            <li key={id} className="flex items-center gap-2 rounded-xl border border-gray-150 bg-white px-3 py-2.5">
-              <GripVertical className="h-4 w-4 text-gray-250 shrink-0" />
+            <li key={id} className="flex items-center gap-2 rounded-xl border border-n-200 bg-white px-3 py-2.5">
+              <GripVertical className="h-4 w-4 text-n-300 shrink-0" />
               <div className="flex-1 min-w-0">
                 <Toggle
                   label={SITE_SECTION_LABEL[id]}
@@ -556,11 +556,11 @@ export function SectionsPanel({ config, set, templateId }: PanelProps & { templa
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
                 <button type="button" onClick={() => move(id, -1)} disabled={i === 0} aria-label="Subir"
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 disabled:opacity-30 cursor-pointer">
+                  className="p-1.5 rounded-lg text-n-400 hover:bg-n-50 disabled:opacity-30 cursor-pointer">
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
                 <button type="button" onClick={() => move(id, 1)} disabled={i === order.length - 1} aria-label="Descer"
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 disabled:opacity-30 cursor-pointer">
+                  className="p-1.5 rounded-lg text-n-400 hover:bg-n-50 disabled:opacity-30 cursor-pointer">
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
               </div>

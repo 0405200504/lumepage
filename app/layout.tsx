@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#500b18',
+  themeColor: '#6B1525', // = --wine-700 (marca)
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -40,9 +40,14 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+        {/* Manrope = corpo/UI. Instrument Sans = títulos e NÚMEROS (dígito de
+            largura fixa e desenho mais firme no valor grande do faturamento). */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Instrument+Sans:wght@500;600;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="antialiased min-h-screen bg-cream">
+      <body className="antialiased min-h-screen bg-bg">
         <ToastProvider>
           {children}
         </ToastProvider>

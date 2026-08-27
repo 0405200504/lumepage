@@ -22,7 +22,7 @@ export function SairButton() {
   return (
     <button
       onClick={handleLogout}
-      className="tap inline-flex items-center gap-1.5 rounded-full border border-grafite/15 bg-lp-cream px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-grafite/50 transition-colors hover:border-bordo hover:text-bordo"
+      className="tap inline-flex items-center gap-1.5 rounded-full border border-grafite/15 bg-lp-cream px-3.5 py-1.5 text-caption font-semibold uppercase tracking-[0.15em] text-grafite/50 transition-colors hover:border-bordo hover:text-bordo"
     >
       <LogOut className="h-3 w-3" />
       <span>Sair</span>

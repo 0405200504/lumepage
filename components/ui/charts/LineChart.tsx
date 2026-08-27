@@ -72,28 +72,28 @@ export const LineChart: React.FC<LineChartProps> = ({ labels, series, height = 2
           <rect key={i} x={xOf(i) - stepX / 2} y={0} width={stepX || innerW} height={H} fill="transparent" onMouseEnter={() => setHover(i)} />
         ))}
         {hover !== null && (
-          <line x1={xOf(hover)} x2={xOf(hover)} y1={padT} y2={padT + innerH} stroke="var(--color-gray-450)" strokeWidth="1" strokeDasharray="3 3" />
+          <line x1={xOf(hover)} x2={xOf(hover)} y1={padT} y2={padT + innerH} stroke="var(--color-n-600)" strokeWidth="1" strokeDasharray="3 3" />
         )}
       </svg>
 
       {/* labels do eixo X */}
       <div className="flex justify-between mt-1 px-1">
         {labels.map((l, i) => (
-          <span key={i} className={`text-[9px] font-semibold ${hover === i ? 'text-ink' : 'text-gray-450'}`}>{l}</span>
+          <span key={i} className={`text-caption font-semibold ${hover === i ? 'text-ink' : 'text-n-600'}`}>{l}</span>
         ))}
       </div>
 
       {/* tooltip */}
       {hover !== null && (
         <div
-          className="pointer-events-none absolute z-10 rounded-xl border border-gray-150 bg-paper shadow-md px-3 py-2 text-[11px]"
+          className="pointer-events-none absolute z-10 rounded-xl border border-n-200 bg-surface shadow-md px-3 py-2 text-caption"
           style={{ left: `${(xOf(hover) / W) * 100}%`, top: 4, transform: 'translateX(-50%)' }}
         >
           <p className="font-bold text-ink mb-1">{labels[hover]}</p>
           {series.map((s, si) => (
             <div key={si} className="flex items-center gap-1.5 whitespace-nowrap">
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
-              <span className="text-gray-450">{s.name}:</span>
+              <span className="text-n-600">{s.name}:</span>
               <span className="font-bold text-ink">{format(s.values[hover])}</span>
             </div>
           ))}
@@ -106,7 +106,7 @@ export const LineChart: React.FC<LineChartProps> = ({ labels, series, height = 2
           {series.map((s, si) => (
             <div key={si} className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
-              <span className="text-[11px] font-semibold text-gray-450">{s.name}</span>
+              <span className="text-caption font-semibold text-n-600">{s.name}</span>
             </div>
           ))}
         </div>

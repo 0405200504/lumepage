@@ -200,8 +200,8 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
       <div className="card flex flex-col items-center justify-center gap-3 p-10 text-center">
         <MessageCircle className="h-8 w-8 text-faint" />
         <div>
-          <p className="text-sm font-bold text-heading">WhatsApp desconectado</p>
-          <p className="mt-1 text-xs text-gray-450">Conecte seu número na aba WhatsApp para ver as conversas aqui.</p>
+          <p className="text-label font-bold text-heading">WhatsApp desconectado</p>
+          <p className="mt-1 text-caption text-n-600">Conecte seu número na aba WhatsApp para ver as conversas aqui.</p>
         </div>
       </div>
     );
@@ -218,14 +218,14 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar conversa"
-              className="w-full rounded-xl border border-line bg-surface-2 py-2.5 pl-9 pr-3 text-sm text-heading outline-none placeholder:text-faint focus:ring-2 focus:ring-wine-500/25"
+              className="w-full rounded-xl border border-line bg-surface-2 py-2.5 pl-9 pr-3 text-label text-heading outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {chatsLoading && chats.length === 0 && (
-            <div className="flex items-center justify-center gap-2 py-10 text-xs text-gray-450">
+            <div className="flex items-center justify-center gap-2 py-10 text-caption text-n-600">
               <Loader2 className="h-4 w-4 animate-spin" /> Carregando conversas…
             </div>
           )}
@@ -234,10 +234,10 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
             <div className="m-3 flex items-start gap-2 rounded-xl border border-line bg-surface-2 p-3">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
               <div className="min-w-0">
-                <p className="text-xs text-gray-450">{chatsError}</p>
+                <p className="text-caption text-n-600">{chatsError}</p>
                 <button
                   onClick={() => { setChatsLoading(true); void loadChats(search); }}
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-forest"
+                  className="mt-1 inline-flex items-center gap-1 text-caption font-bold text-wine-700"
                 >
                   <RefreshCw className="h-3 w-3" /> Tentar de novo
                 </button>
@@ -246,7 +246,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
           )}
 
           {!chatsLoading && !chatsError && chats.length === 0 && (
-            <p className="px-4 py-10 text-center text-xs text-gray-450">
+            <p className="px-4 py-10 text-center text-caption text-n-600">
               {search ? 'Nenhuma conversa com esse nome.' : 'Nenhuma conversa ainda.'}
             </p>
           )}
@@ -262,17 +262,17 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               <Avatar chat={chat} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-sm font-bold text-heading">{chat.name}</p>
+                  <p className="truncate text-label font-bold text-heading">{chat.name}</p>
                   {chat.lastMessageAt && (
-                    <span className="shrink-0 text-[10px] text-faint">{shortTime(chat.lastMessageAt)}</span>
+                    <span className="shrink-0 text-caption text-faint">{shortTime(chat.lastMessageAt)}</span>
                   )}
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <p className="truncate text-xs text-gray-450">
+                  <p className="truncate text-caption text-n-600">
                     {previewText(chat.lastPreview, chat.lastMessageType)}
                   </p>
                   {chat.unread > 0 && (
-                    <span className="shrink-0 rounded-full bg-ok px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    <span className="shrink-0 rounded-full bg-ok px-1.5 py-0.5 text-caption font-bold text-white">
                       {chat.unread > 99 ? '99+' : chat.unread}
                     </span>
                   )}
@@ -288,8 +288,8 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
         {!activeChat ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 bg-surface-2 text-center">
             <MessageCircle className="h-10 w-10 text-faint" />
-            <p className="text-sm font-bold text-heading">Suas conversas do WhatsApp</p>
-            <p className="max-w-xs text-xs text-gray-450">
+            <p className="text-label font-bold text-heading">Suas conversas do WhatsApp</p>
+            <p className="max-w-xs text-caption text-n-600">
               Escolha uma conversa à esquerda para ler e responder sem sair do Lume.
             </p>
           </div>
@@ -297,12 +297,12 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
           <>
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
               <button onClick={() => setActiveChat(null)} className="md:hidden" aria-label="Voltar">
-                <ArrowLeft className="h-5 w-5 text-gray-450" />
+                <ArrowLeft className="h-5 w-5 text-n-600" />
               </button>
               <Avatar chat={activeChat} />
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-heading">{activeChat.name}</p>
-                <p className="truncate text-xs text-gray-450">
+                <p className="truncate text-label font-bold text-heading">{activeChat.name}</p>
+                <p className="truncate text-caption text-n-600">
                   {activeChat.isGroup ? 'Grupo' : formatPhone(activeChat.phone)}
                 </p>
               </div>
@@ -314,7 +314,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               className="flex-1 space-y-1 overflow-y-auto bg-surface-2 px-4 py-4"
             >
               {messagesLoading && messages.length === 0 && (
-                <div className="flex items-center justify-center gap-2 py-10 text-xs text-gray-450">
+                <div className="flex items-center justify-center gap-2 py-10 text-caption text-n-600">
                   <Loader2 className="h-4 w-4 animate-spin" /> Carregando mensagens…
                 </div>
               )}
@@ -322,10 +322,10 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                 <div className="mx-auto flex max-w-sm items-start gap-2 rounded-xl border border-line bg-surface p-3">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-450">{messagesError}</p>
+                    <p className="text-caption text-n-600">{messagesError}</p>
                     <button
                       onClick={() => { setMessagesError(null); void loadMessages(activeChat.chatid); }}
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-forest"
+                      className="mt-1 inline-flex items-center gap-1 text-caption font-bold text-wine-700"
                     >
                       <RefreshCw className="h-3 w-3" /> Tentar de novo
                     </button>
@@ -336,7 +336,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                 <React.Fragment key={msg.id || `${msg.timestamp}-${i}`}>
                   {showDaySeparator(messages, i) && (
                     <div className="flex justify-center py-3">
-                      <span className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold text-gray-450 shadow-xs">
+                      <span className="rounded-full bg-surface px-3 py-1 text-caption font-semibold text-n-600 shadow-xs">
                         {dayLabel(msg.timestamp)}
                       </span>
                     </div>
@@ -352,7 +352,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={sending}
-                className="shrink-0 rounded-full p-2 text-gray-450 transition-colors hover:bg-surface-2 disabled:opacity-50"
+                className="shrink-0 rounded-full p-2 text-n-600 transition-colors hover:bg-surface-2 disabled:opacity-50"
                 aria-label="Anexar arquivo"
               >
                 <Paperclip className="h-5 w-5" />
@@ -365,13 +365,13 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
                 }}
                 placeholder="Escreva uma mensagem"
-                className="max-h-32 min-h-[2.75rem] flex-1 resize-none rounded-2xl border border-line bg-surface-2 px-4 py-3 text-sm text-heading outline-none placeholder:text-faint focus:ring-2 focus:ring-wine-500/25"
+                className="max-h-32 min-h-[2.75rem] flex-1 resize-none rounded-2xl border border-line bg-surface-2 px-4 py-3 text-label text-heading outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
               />
               <button
                 type="button"
                 onClick={() => void handleSend()}
                 disabled={sending || !draft.trim()}
-                className="shrink-0 rounded-full bg-forest p-3 text-white shadow-soft transition-colors hover:bg-forest-hover disabled:opacity-50"
+                className="shrink-0 rounded-full bg-wine-700 p-3 text-white shadow-soft transition-colors hover:bg-wine-800 disabled:opacity-50"
                 aria-label="Enviar"
               >
                 {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -393,7 +393,7 @@ function Avatar({ chat }: { chat: InboxChat }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={chat.image} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
   ) : (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-3 text-xs font-bold text-gray-450">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-3 text-caption font-bold text-n-600">
       {chat.isGroup ? <Users className="h-5 w-5" /> : initials}
     </span>
   );
@@ -411,17 +411,17 @@ function Bubble({ msg, isGroup }: { msg: InboxMessage; isGroup: boolean }) {
         }`}
       >
         {isGroup && !mine && msg.senderName && (
-          <p className="mb-0.5 text-[11px] font-bold text-forest">{msg.senderName}</p>
+          <p className="mb-0.5 text-caption font-bold text-wine-700">{msg.senderName}</p>
         )}
 
         {msg.hasMedia && <Media msg={msg} />}
 
         {msg.text && (
-          <p className="whitespace-pre-wrap break-words text-sm text-heading">{msg.text}</p>
+          <p className="whitespace-pre-wrap break-words text-label text-heading">{msg.text}</p>
         )}
 
         <div className="mt-0.5 flex items-center justify-end gap-1">
-          <span className="text-[10px] text-faint">{clock(msg.timestamp)}</span>
+          <span className="text-caption text-faint">{clock(msg.timestamp)}</span>
           {mine && <Status status={msg.status} />}
         </div>
       </div>
@@ -446,15 +446,15 @@ function Media({ msg }: { msg: InboxMessage }) {
   if (t.includes('audio') || t.includes('ptt')) {
     return (
       <div className="mb-1 flex items-center gap-2">
-        <Mic className="h-4 w-4 shrink-0 text-gray-450" />
+        <Mic className="h-4 w-4 shrink-0 text-n-600" />
         <audio src={src} controls className="h-9 max-w-[15rem]" />
       </div>
     );
   }
   return (
     <a href={src} target="_blank" rel="noreferrer"
-       className="mb-1 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-heading hover:bg-surface-3">
-      <FileText className="h-4 w-4 shrink-0 text-gray-450" />
+       className="mb-1 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-caption font-semibold text-heading hover:bg-surface-3">
+      <FileText className="h-4 w-4 shrink-0 text-n-600" />
       Abrir arquivo
     </a>
   );
@@ -470,16 +470,19 @@ function Status({ status }: { status: string | null }) {
 
 // ── Formatação ──────────────────────────────────────────────────────────────
 
+/** Prévia da última mensagem quando ela não tem texto.
+ *  Os emojis que abriam cada rótulo saíram: em lista densa eles roubavam a
+ *  largura do nome da cliente e desenhavam diferente em cada aparelho. */
 function previewText(text: string, type: string | null): string {
   if (text) return text;
   const t = (type ?? '').toLowerCase();
-  if (t.includes('image')) return '📷 Foto';
-  if (t.includes('video')) return '🎥 Vídeo';
-  if (t.includes('audio') || t.includes('ptt')) return '🎤 Áudio';
-  if (t.includes('document')) return '📄 Documento';
-  if (t.includes('sticker')) return '🌟 Figurinha';
-  if (t.includes('location')) return '📍 Localização';
-  if (t.includes('contact')) return '👤 Contato';
+  if (t.includes('image')) return 'Foto';
+  if (t.includes('video')) return 'Vídeo';
+  if (t.includes('audio') || t.includes('ptt')) return 'Áudio';
+  if (t.includes('document')) return 'Documento';
+  if (t.includes('sticker')) return 'Figurinha';
+  if (t.includes('location')) return 'Localização';
+  if (t.includes('contact')) return 'Contato';
   return 'Mensagem';
 }
 

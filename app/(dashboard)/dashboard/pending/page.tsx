@@ -20,8 +20,8 @@ export default async function PendingConversationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Conversas Pendentes</h1>
-        <p className="text-sm text-gray-400">Atendimentos que aguardam seu contato direto.</p>
+        <h1 className="text-h2 font-bold text-n-900">Conversas Pendentes</h1>
+        <p className="text-label text-n-400">Atendimentos que aguardam seu contato direto.</p>
       </div>
       <PendingConversationsWidget initialConversations={pendingConvs} showEmptyState />
     </div>

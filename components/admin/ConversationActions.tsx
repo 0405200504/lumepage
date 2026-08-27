@@ -35,7 +35,7 @@ export function ResolveConversationButton({ id, paused }: { id: string; paused: 
 
   return (
     <button type="button" onClick={run}
-      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold transition-colors">
+      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold transition-colors">
       {paused ? <><CheckCircle2 className="h-3.5 w-3.5" /> Marcar como resolvida</> : <><PauseCircle className="h-3.5 w-3.5" /> Passar para humano</>}
     </button>
   );

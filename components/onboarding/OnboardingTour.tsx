@@ -277,14 +277,14 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
       {/* Bloqueia interação com o app. Sem alvo, ele mesmo escurece a tela;
           com spotlight, o escurecimento vem do box-shadow do buraco. */}
       <div
-        className={`fixed inset-0 z-[85] ${hasSpotlight ? '' : 'bg-[#1a0e12]/55 backdrop-blur-[2px]'}`}
+        className={`fixed inset-0 z-[85] ${hasSpotlight ? '' : 'bg-wine-950/45 backdrop-blur-[2px]'}`}
         onClick={(e) => e.stopPropagation()}
       />
 
       {/* Spotlight — buraco iluminado sobre o alvo. */}
       {hasSpotlight && rect && (
         <div
-          className="fixed z-[86] rounded-2xl ring-2 ring-white/80 pointer-events-none transition-all duration-300"
+          className="fixed z-[86] rounded-2xl ring-2 ring-white/80 pointer-events-none transition-ui duration-300"
           style={{
             top: rect.top - 6,
             left: rect.left - 6,
@@ -297,16 +297,16 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
 
       {/* Enquanto navega/procura o alvo, uma pílula discreta evita tela vazia. */}
       {!ready && (
-        <div className="fixed left-1/2 top-1/2 z-[87] -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-paper px-4 py-2 shadow-2xl">
+        <div className="fixed left-1/2 top-1/2 z-[87] -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-surface px-4 py-2 shadow-2xl">
           <span className="h-4 w-4 rounded-full border-2 border-wine-700 border-t-transparent animate-spin" />
-          <span className="text-xs font-bold text-ink">Abrindo módulo…</span>
+          <span className="text-caption font-bold text-ink">Abrindo módulo…</span>
         </div>
       )}
 
       {/* Card do passo */}
       <div
         ref={cardRef}
-        className="fixed z-[88] w-[min(360px,calc(100vw-32px))] bg-paper rounded-3xl shadow-2xl border border-gray-150 animate-fade-up"
+        className="fixed z-[88] w-[min(360px,calc(100vw-32px))] bg-surface rounded-3xl shadow-2xl border border-n-200 animate-fade-up"
         style={{
           top: pos?.top ?? -9999,
           left: pos?.left ?? -9999,
@@ -316,7 +316,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
         {/* Seta apontando para o alvo */}
         {pos?.arrow && (
           <span
-            className={`absolute h-3.5 w-3.5 rotate-45 bg-paper border-gray-150 ${
+            className={`absolute h-3.5 w-3.5 rotate-45 bg-surface border-n-200 ${
               pos.arrow === 'top' ? '-top-[7px] border-l border-t' : '-bottom-[7px] border-r border-b'
             }`}
             style={{ left: pos.arrowLeft - 7 }}
@@ -325,24 +325,24 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
 
         <div className="p-5">
           <div className="flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-wine-700">
+            <span className="inline-flex items-center gap-1.5 text-caption font-semibold uppercase tracking-[0.16em] text-wine-700">
               <Sparkles className="h-3 w-3" /> {step.eyebrow}
             </span>
             <button
               type="button"
               onClick={finish}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold text-gray-450 hover:text-ink hover:bg-sand transition-all-custom"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-caption font-bold text-n-600 hover:text-ink hover:bg-n-150 transition-ui"
             >
               Pular <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <h2 className="mt-3 text-lg font-black leading-tight tracking-tight text-ink">{step.title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-ink/75">{step.body}</p>
+          <h2 className="mt-3 text-h3 font-semibold leading-tight tracking-tight text-ink">{step.title}</h2>
+          <p className="mt-2 text-label leading-relaxed text-ink/75">{step.body}</p>
 
           {step.tip && (
             <div className="mt-3 rounded-2xl bg-accent-soft border border-accent-soft-border px-3.5 py-2.5">
-              <p className="text-[13px] font-semibold text-wine-700 break-words">{step.tip}</p>
+              <p className="text-caption font-semibold text-wine-700 break-words">{step.tip}</p>
             </div>
           )}
 
@@ -354,8 +354,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
                 type="button"
                 aria-label={`Ir para o passo ${i + 1}`}
                 onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-all-custom ${
-                  i === index ? 'w-5 bg-wine-700' : 'w-1.5 bg-gray-250 hover:bg-gray-450'
+                className={`h-1.5 rounded-full transition-ui ${
+                  i === index ? 'w-5 bg-wine-700' : 'w-1.5 bg-n-300 hover:bg-n-600'
                 }`}
               />
             ))}
@@ -367,7 +367,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
               type="button"
               onClick={() => setIndex((i) => Math.max(i - 1, 0))}
               disabled={index === 0}
-              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-sm font-bold text-ink/70 hover:bg-sand disabled:opacity-0 disabled:pointer-events-none transition-all-custom"
+              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-label font-bold text-ink/70 hover:bg-n-150 disabled:opacity-0 disabled:pointer-events-none transition-ui"
             >
               <ArrowLeft className="h-4 w-4" /> Voltar
             </button>
@@ -376,7 +376,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
               <button
                 type="button"
                 onClick={() => setIndex((i) => Math.min(i + 1, total - 1))}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-forest text-white text-sm font-bold shadow-soft hover:bg-forest-hover transition-all-custom"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-wine-700 text-white text-label font-bold shadow-soft hover:bg-wine-800 transition-ui"
               >
                 Próximo <ArrowRight className="h-4 w-4" />
               </button>
@@ -384,7 +384,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
               <button
                 type="button"
                 onClick={goServices}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-forest text-white text-sm font-bold shadow-soft hover:bg-forest-hover transition-all-custom"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-wine-700 text-white text-label font-bold shadow-soft hover:bg-wine-800 transition-ui"
               >
                 <Check className="h-4 w-4" /> Cadastrar serviços
               </button>

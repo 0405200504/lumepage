@@ -8,16 +8,16 @@ type Tone = 'ok' | 'warn' | 'bad' | 'neutral' | 'accent';
 /* Pills — os mesmos do painel da profissional: fundo em 10% do tom, texto no tom
    cheio e anel de 1px. */
 const TONE: Record<Tone, string> = {
-  ok: 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)] ring-[color:var(--color-ok)]/20',
-  warn: 'bg-[color:var(--color-warn)]/10 text-[color:var(--color-warn)] ring-[color:var(--color-warn)]/20',
-  bad: 'bg-[color:var(--color-bad)]/10 text-[color:var(--color-bad)] ring-[color:var(--color-bad)]/20',
+  ok: 'bg-success-bg text-success ring-success-border',
+  warn: 'bg-warning-bg text-warning ring-warning-border',
+  bad: 'bg-danger-bg text-danger ring-danger-border',
   neutral: 'bg-surface-2 text-muted ring-line',
   accent: 'bg-accent-soft text-accent-link ring-accent-soft-border',
 };
 
 export function Badge({ tone = 'neutral', children, title }: { tone?: Tone; children: React.ReactNode; title?: string }) {
   return (
-    <span title={title} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ring-1 whitespace-nowrap ${TONE[tone]}`}>
+    <span title={title} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-bold ring-1 whitespace-nowrap ${TONE[tone]}`}>
       {children}
     </span>
   );
@@ -48,7 +48,7 @@ export function DeadlineText({ account }: { account: AccountStateInput }) {
   const s = accountState(account);
   if (!s.deadlineLabel) return null;
   return (
-    <span className="text-[11px] text-muted tabular-nums whitespace-nowrap" title={s.deadline ?? undefined}>
+    <span className="text-caption text-muted num whitespace-nowrap" title={s.deadline ?? undefined}>
       {s.deadlineLabel}
     </span>
   );

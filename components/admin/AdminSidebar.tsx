@@ -96,7 +96,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
         <Link href="/admin" className={mini ? '' : 'px-1'} aria-label="Painel administrativo Lume">
           <LumeLogo variant="light" className={mini ? 'h-5' : 'h-7'} />
           {!mini && (
-            <span className="text-[9px] text-white/55 font-bold uppercase tracking-[0.22em] mt-1.5 block pl-0.5">
+            <span className="text-caption text-white/55 font-bold uppercase tracking-[0.22em] mt-1.5 block pl-0.5">
               Super Admin
             </span>
           )}
@@ -120,7 +120,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
             {mini ? (
               <div className="mx-auto mb-2 h-px w-6 bg-white/12" aria-hidden />
             ) : (
-              <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{group.title}</p>
+              <p className="px-3 mb-1.5 text-caption font-bold uppercase tracking-[0.18em] text-white/40">{group.title}</p>
             )}
             <ul className="space-y-1">
               {group.items.map(item => {
@@ -133,7 +133,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
                       onClick={onNavigate}
                       title={mini ? item.label : undefined}
                       aria-current={active ? 'page' : undefined}
-                      className={`group relative flex items-center rounded-xl text-[13px] font-semibold transition-colors ${
+                      className={`group relative flex items-center rounded-xl text-caption font-semibold transition-colors ${
                         mini ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-3 py-2.5'
                       } ${active ? 'bg-white text-wine-700 shadow-[0_8px_20px_-12px_rgba(0,0,0,0.7)]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
                     >
@@ -141,7 +141,7 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
                       {!mini && <span>{item.label}</span>}
                       {/* Tooltip do modo recolhido — a barra antiga não tinha nenhum. */}
                       {mini && (
-                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-lg bg-wine-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-lg bg-wine-900 px-2 py-1 text-caption font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                           {item.label}
                         </span>
                       )}
@@ -157,15 +157,15 @@ function AdminNav({ mini, pathname, name, email, onNavigate, onToggleCollapsed, 
       <div className="mt-6 pt-4 border-t border-white/10">
         {!mini && (
           <div className="px-3 pb-3">
-            <p className="text-xs font-bold text-white truncate" title={name}>{name}</p>
-            <p className="text-[10px] text-white/50 truncate" title={email}>{email}</p>
+            <p className="text-caption font-bold text-white truncate" title={name}>{name}</p>
+            <p className="text-caption text-white/50 truncate" title={email}>{email}</p>
           </div>
         )}
         <button
           type="button"
           onClick={onLogout}
           title={mini ? 'Sair do admin' : undefined}
-          className={`flex items-center text-xs font-bold text-white/55 hover:bg-white/10 hover:text-white rounded-xl transition-colors ${
+          className={`flex items-center text-caption font-bold text-white/55 hover:bg-white/10 hover:text-white rounded-xl transition-colors ${
             mini ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 w-full px-3 py-2.5'
           }`}
         >
@@ -225,7 +225,7 @@ export function AdminSidebar({ name, email, initialCollapsed }: { name: string; 
 
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-[#1a0e12]/70" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-0 bg-wine-950/45" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-64 h-full shadow-2xl animate-slide-right">
             <button
               type="button"

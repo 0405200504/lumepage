@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
-  LayoutDashboard, LogOut, Menu, ExternalLink, Wallet, NotebookPen, Hourglass, MessageCircle, Smartphone, Bot,
-  PanelLeftClose, PanelLeftOpen, ShoppingBag, Contact, ClipboardList, Globe
+  LayoutDashboard, LogOut, ExternalLink, Wallet, NotebookPen, Hourglass,
+  MessageCircle, Smartphone, Bot, ShoppingBag, Contact, ClipboardList, Globe,
+  MoreHorizontal, X,
 } from 'lucide-react';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
+import { Avatar } from '../ui/Avatar';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
 
 interface SidebarProps {
@@ -25,28 +28,76 @@ interface SidebarProps {
   pendingConversations?: number;
 }
 
+type NavLink = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+
+/** Menu completo, agrupado. É a fonte de verdade — o rail e a folha "Mais" leem daqui. */
+const GROUPS: { title: string; links: NavLink[] }[] = [
+  {
+    title: 'Atendimento',
+    links: [
+      { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
+      { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
+      { href: '/dashboard/appointments', label: 'Agendamentos', icon: CalendarDays },
+      { href: '/dashboard/waitlist', label: 'Lista de espera', icon: Hourglass },
+      { href: '/dashboard/tasks', label: 'Tarefas e notas', icon: NotebookPen },
+    ],
+  },
+  {
+    title: 'Clientes',
+    links: [
+      { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
+      { href: '/dashboard/anamnese', label: 'Fichas de anamnese', icon: ClipboardList },
+      { href: '/dashboard/whatsapp/conversas', label: 'Conversas', icon: MessageCircle },
+      { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: Smartphone },
+      ...(AI_ATTENDANCE_ENABLED ? [{ href: '/dashboard/pending', label: 'Atendimento IA', icon: Bot }] : []),
+    ],
+  },
+  {
+    title: 'Dinheiro',
+    links: [
+      { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
+      { href: '/dashboard/sales', label: 'Vendas', icon: ShoppingBag },
+    ],
+  },
+  {
+    title: 'Seu negócio',
+    links: [
+      { href: '/dashboard/site', label: 'Minha Página', icon: Globe },
+      { href: '/dashboard/services', label: 'Serviços', icon: Sparkles },
+      { href: '/dashboard/availability', label: 'Disponibilidade', icon: Clock },
+      { href: '/dashboard/blocks', label: 'Bloqueios', icon: Lock },
+      { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
+    ],
+  },
+];
+
+const ALL_LINKS = GROUPS.flatMap((g) => g.links);
+
+/** O rail mostra só os destinos do dia a dia. O resto vive em "Mais", com rótulo. */
+const RAIL_HREFS = [
+  '/dashboard',
+  '/dashboard/agenda',
+  '/dashboard/appointments',
+  '/dashboard/clients',
+  '/dashboard/finance',
+  '/dashboard/whatsapp/conversas',
+  '/dashboard/site',
+];
+
+/** Tab bar do celular: CINCO itens. Seis não cabem no polegar nem na largura. */
+const TAB_HREFS = ['/dashboard', '/dashboard/agenda', '/dashboard/finance', '/dashboard/clients'];
+
+function isActiveHref(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard';
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, plan, enforcePlan, pendingConversations }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { success, error } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  // Desktop: rail minimizado por padrão que expande no hover.
-  // `pinned` = profissional fixou aberto (persiste entre sessões).
-  // `hovered` = mouse sobre a barra. Expandido = pinned || hovered.
-  const [pinned, setPinned] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const expanded = pinned || hovered;
-
-  // Lembra a preferência de barra fixada aberta entre sessões.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (localStorage.getItem('lume_sidebar_pinned') === '1') setPinned(true);
-  }, []);
-  const togglePinned = () => setPinned((p) => {
-    const next = !p;
-    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch {}
-    return next;
-  });
+  const reduced = useReducedMotion();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -63,217 +114,262 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
     }
   };
 
-  const getLinks = () => {
-    return [
-      { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
-      { href: '/dashboard/site', label: 'Minha Página', icon: Globe },
-      { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
-      { href: '/dashboard/appointments', label: 'Agendamentos', icon: CalendarDays },
-      { href: '/dashboard/waitlist', label: 'Lista de espera', icon: Hourglass },
-      { href: '/dashboard/services', label: 'Serviços', icon: Sparkles },
-      { href: '/dashboard/availability', label: 'Disponibilidade', icon: Clock },
-      { href: '/dashboard/blocks', label: 'Bloqueios', icon: Lock },
-      { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
-      { href: '/dashboard/anamnese', label: 'Fichas de Anamnese', icon: ClipboardList },
-      { href: '/dashboard/sales', label: 'Vendas', icon: ShoppingBag },
-      { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
-      { href: '/dashboard/whatsapp/conversas', label: 'Conversas', icon: MessageCircle },
-      { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: Smartphone },
-      // A fila de "bot pausado" só faz sentido com o atendimento por IA ligado.
-      ...(AI_ATTENDANCE_ENABLED ? [{ href: '/dashboard/pending', label: 'Atendimento IA', icon: Bot }] : []),
-      { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
-    ];
-  };
-
-  // Itens principais da barra inferior (mobile)
-  const bottomLinks = [
-    { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
-    { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarRange },
-    { href: '/dashboard/tasks', label: 'Tarefas', icon: NotebookPen },
-    { href: '/dashboard/finance', label: 'Financeiro', icon: Wallet },
-    { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
-  ];
-
-  const links = getLinks();
   const displayName = brandName || name;
-  // Slug real da profissional (corrige link público quebrado)
   const publicSlug = slug || name.toLowerCase().trim().replace(/\s+/g, '-');
 
-  const SidebarContent = ({ collapsed: isCollapsed = false, showToggle = false }: { collapsed?: boolean; showToggle?: boolean }) => (
-    <div className={`flex flex-col h-full surface-wine text-white select-none overflow-y-auto overflow-x-hidden scrollbar-none ${isCollapsed ? 'px-2.5 py-5 items-center' : 'p-5'}`}>
-      <div className={`w-full ${isCollapsed ? 'space-y-5' : 'space-y-7'}`}>
-        {/* Logo / Header */}
-        <div className={`flex items-center ${isCollapsed ? 'flex-col gap-3' : 'justify-between'}`}>
-          <div className={isCollapsed ? '' : 'px-1'}>
-            {isCollapsed ? (
-              <LumeLogo variant="light" className="h-5" />
-            ) : (
-              <>
-                <LumeLogo variant="light" className="h-8" />
-                <span className="text-[9px] text-white/55 font-bold uppercase tracking-[0.22em] mt-2 block pl-0.5">
-                  Agenda
-                </span>
-              </>
-            )}
-          </div>
-          {showToggle && (
-            <button
-              onClick={togglePinned}
-              title={pinned ? 'Desafixar (recolher ao tirar o mouse)' : 'Fixar menu aberto'}
-              aria-label={pinned ? 'Desafixar menu' : 'Fixar menu aberto'}
-              aria-pressed={pinned}
-              className={`p-2 rounded-xl transition-all-custom shrink-0 ${pinned ? 'text-white bg-white/12' : 'text-white/55 hover:text-white hover:bg-white/8'}`}
-            >
-              {pinned ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
-            </button>
-          )}
-        </div>
+  const lockedFor = (href: string) => {
+    const capability = enforcePlan && role === 'professional' ? ROUTE_CAPABILITY[href] : undefined;
+    return !!capability && !can(plan, capability);
+  };
 
-        {/* Info Profissional */}
-        {!isCollapsed && (
-          <div className="relative overflow-hidden bg-white/[0.07] rounded-2xl p-4 border border-white/10 ring-hairline">
-            <span className="pointer-events-none absolute -top-8 -right-6 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
-            <p className="text-[9px] uppercase font-bold text-white/45 tracking-[0.18em]">Profissional</p>
-            <p className="text-sm font-bold text-white truncate mt-1" title={displayName}>{displayName}</p>
-          </div>
-        )}
+  const badgeFor = (href: string) =>
+    href === '/dashboard/pending' && pendingConversations ? pendingConversations : 0;
 
-        {/* Links de Navegação */}
-        <nav className="space-y-1">
-          {links.map((link) => {
-            const Icon = link.icon;
-            const isActive = pathname === link.href || (link.href !== '/dashboard' && link.href !== '/admin' && pathname.startsWith(link.href));
-
-            // Recurso fora do plano da profissional → mostra cadeado. O link continua
-            // navegando: a própria rota renderiza a tela de upgrade (bloqueio no servidor).
-            const capability = enforcePlan && role === 'professional' ? ROUTE_CAPABILITY[link.href] : undefined;
-            const locked = !!capability && !can(plan, capability);
-
-            const badge = !locked && link.href === '/dashboard/pending' && pendingConversations && pendingConversations > 0
-              ? pendingConversations
-              : null;
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                title={isCollapsed ? link.label : undefined}
-                className={`group relative flex items-center rounded-2xl text-[13px] font-semibold transition-all-custom ${
-                  isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 px-4 py-2.5'
-                } ${
-                  isActive
-                    ? 'bg-gradient-to-br from-white to-white/92 text-[#500b18] shadow-[0_10px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/40'
-                    : `text-white/70 hover:bg-white/10 hover:text-white ${locked ? 'opacity-60' : ''}`
-                }`}
-              >
-                {isActive && !isCollapsed && (
-                  <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#8c2438]" />
-                )}
-                <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#500b18]' : 'text-white/55 group-hover:text-white'}`} />
-                {!isCollapsed && <span className="flex-1">{link.label}</span>}
-                {locked && !isCollapsed && (
-                  <Lock className="h-3.5 w-3.5 shrink-0 text-white/40" />
-                )}
-                {locked && isCollapsed && (
-                  <span className="absolute top-1 right-1"><Lock className="h-2.5 w-2.5 text-white/50" /></span>
-                )}
-                {badge && (
-                  <span className={`text-[10px] font-bold text-white bg-amber-500 rounded-full leading-none text-center ${isCollapsed ? 'absolute top-1 right-1 h-2 w-2 p-0' : 'px-1.5 py-0.5 min-w-[18px]'}`}>
-                    {isCollapsed ? '' : badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Footer / Logout */}
-      <div className={`mt-auto pt-6 w-full ${isCollapsed ? 'space-y-2' : 'space-y-2.5'}`}>
-        <Link
-            href={`/agendar/${publicSlug}`}
-            target="_blank"
-            title={isCollapsed ? 'Ver Página Pública' : undefined}
-            className={`flex items-center justify-center gap-2 bg-white/10 hover:bg-white/16 text-xs font-bold rounded-2xl text-white transition-all-custom border border-white/10 ${isCollapsed ? 'h-11 w-11 mx-auto' : 'w-full py-3'}`}
-          >
-            <ExternalLink className="h-4 w-4 shrink-0" />
-            {!isCollapsed && 'Ver Página Pública'}
-        </Link>
-        <button
-          onClick={handleLogout}
-          title={isCollapsed ? 'Sair da Conta' : undefined}
-          className={`flex items-center text-xs font-bold text-white/55 hover:bg-white/8 hover:text-white rounded-2xl transition-all-custom cursor-pointer ${isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'gap-3 w-full px-4 py-3'}`}
-        >
-          <LogOut className="h-[18px] w-[18px] shrink-0" />
-          {!isCollapsed && <span>Sair da Conta</span>}
-        </button>
-      </div>
-    </div>
-  );
+  const railLinks = RAIL_HREFS.map((h) => ALL_LINKS.find((l) => l.href === h)!).filter(Boolean);
+  const tabLinks = TAB_HREFS.map((h) => ALL_LINKS.find((l) => l.href === h)!).filter(Boolean);
+  // "Mais" acende quando a rota atual não está na tab bar.
+  const moreActive = !TAB_HREFS.some((h) => isActiveHref(pathname, h));
 
   return (
     <>
-      {/* Sidebar Desktop — rail minimizado que expande no hover (overlay).
-          O <aside> reserva a largura do rail (80px), ou 256px quando fixado;
-          o painel interno é fixo e expande sobre o conteúdo, sem empurrá-lo. */}
-      <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className={`hidden lg:block h-screen shrink-0 transition-[width] duration-200 ${pinned ? 'w-64' : 'w-20'}`}
-      >
-        <div
-          className={`fixed top-0 left-0 h-screen z-40 shadow-glow transition-[width] duration-200 ease-out ${expanded ? 'w-64' : 'w-20'}`}
-        >
-          {SidebarContent({ collapsed: !expanded, showToggle: expanded })}
+      {/* ================= RAIL (desktop ≥1024px) =================
+          72px, flutuando com 12px de margem. Só ícone + tooltip: os
+          rótulos completos moram em "Mais". */}
+      <aside className="hidden lg:block shrink-0 w-24" aria-label="Navegação principal">
+        <div className="fixed left-3 top-3 bottom-3 z-40 w-[72px] flex flex-col items-center gap-2 py-4 bg-surface border border-line rounded-hero shadow-sm">
+          <Link
+            href="/dashboard"
+            className="shrink-0 h-10 flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 rounded-chip"
+            aria-label="Lume — Início"
+          >
+            <LumeLogo variant="wine" className="h-5" />
+          </Link>
+
+          <nav className="flex-1 flex flex-col items-center gap-1 mt-2 overflow-y-auto scrollbar-none w-full">
+            {railLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isActiveHref(pathname, link.href);
+              const locked = lockedFor(link.href);
+              return (
+                <RailItem
+                  key={link.href}
+                  href={link.href}
+                  label={link.label}
+                  active={active}
+                  locked={locked}
+                >
+                  <Icon className="h-5 w-5" />
+                </RailItem>
+              );
+            })}
+            <RailButton label="Mais" onClick={() => setMoreOpen(true)} active={moreOpen}>
+              <MoreHorizontal className="h-5 w-5" />
+            </RailButton>
+          </nav>
+
+          <div className="shrink-0 flex flex-col items-center gap-1 w-full pt-2 border-t border-line">
+            <RailItem href={`/agendar/${publicSlug}`} label="Ver página pública" external>
+              <ExternalLink className="h-5 w-5" />
+            </RailItem>
+            <RailButton label="Sair da conta" onClick={handleLogout}>
+              <LogOut className="h-5 w-5" />
+            </RailButton>
+            <span className="mt-1" title={displayName}>
+              <Avatar name={displayName} size="sm" />
+            </span>
+          </div>
         </div>
       </aside>
 
-      {/* Barra de navegação inferior (mobile · profissional) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-gray-150 px-2 pt-2 pb-safe shadow-[0_-8px_24px_-16px_rgba(38,4,10,0.25)]">
-        <div className="flex items-stretch justify-around gap-1">
-          {bottomLinks.map((link) => {
+      {/* ================= TAB BAR (mobile <1024px) =================
+          Cinco itens. O indicador desliza entre eles. */}
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/85 backdrop-blur-[20px] pb-safe"
+        aria-label="Navegação principal"
+      >
+        <div className="flex items-stretch h-[60px]">
+          {tabLinks.map((link) => {
             const Icon = link.icon;
-            const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href));
+            const active = isActiveHref(pathname, link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setIsOpen(false)}
-                className={`tap relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-2xl transition-colors ${
-                  active ? 'text-wine-700' : 'text-gray-450'
-                }`}
+                aria-current={active ? 'page' : undefined}
+                className={`tap relative flex-1 flex flex-col items-center justify-center gap-1 min-w-11
+                  focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600
+                  ${active ? 'text-wine-700' : 'text-n-500'}`}
               >
-                {active && <span className="absolute top-0 h-1 w-7 rounded-full bg-gradient-to-r from-wine-500 to-wine-700 shadow-[0_2px_8px_-1px_rgba(80,11,24,0.5)]" />}
-                <span className={`flex items-center justify-center h-8 w-12 rounded-2xl transition-all-custom ${active ? 'bg-gradient-to-br from-wine-700/12 to-wine-500/8' : ''}`}>
-                  <Icon className={`h-[22px] w-[22px] transition-transform ${active ? 'text-wine-700 scale-110' : ''}`} strokeWidth={active ? 2.5 : 2} />
+                {active && (
+                  <motion.span
+                    layoutId="tab-indicator"
+                    className="absolute top-0 h-[3px] w-8 rounded-full bg-wine-700"
+                    transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                    aria-hidden
+                  />
+                )}
+                <Icon className="h-5 w-5" />
+                <span className={`text-caption leading-none ${active ? 'font-semibold' : 'font-medium'}`}>
+                  {link.label}
                 </span>
-                <span className={`text-[10px] tracking-tight ${active ? 'font-bold' : 'font-semibold'}`}>{link.label}</span>
               </Link>
             );
           })}
           <button
-            onClick={() => setIsOpen(true)}
-            className="tap relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-2xl text-gray-450"
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            className={`tap relative flex-1 flex flex-col items-center justify-center gap-1 min-w-11
+              focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600
+              ${moreActive ? 'text-wine-700' : 'text-n-500'}`}
           >
-            <span className="flex items-center justify-center h-8 w-12 rounded-2xl">
-              <Menu className="h-[22px] w-[22px]" />
-            </span>
-            <span className="text-[10px] tracking-tight font-semibold">Mais</span>
+            {moreActive && (
+              <motion.span
+                layoutId="tab-indicator"
+                className="absolute top-0 h-[3px] w-8 rounded-full bg-wine-700"
+                transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                aria-hidden
+              />
+            )}
+            <MoreHorizontal className="h-5 w-5" />
+            <span className={`text-caption leading-none ${moreActive ? 'font-semibold' : 'font-medium'}`}>Mais</span>
           </button>
         </div>
       </nav>
 
-      {/* Sidebar Mobile Overlay */}
-      {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-[#1a0e12]/70" onClick={() => setIsOpen(false)} />
-          <aside className="relative w-64 h-full shadow-2xl animate-slide-right">
-            {SidebarContent({})}
-          </aside>
+      {/* ================= FOLHA "MAIS" =================
+          Bottom sheet no celular, painel lateral no desktop. Lista TUDO com
+          rótulo — nada some do produto por não caber no rail. */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 flex items-end lg:items-stretch lg:justify-start" role="dialog" aria-modal="true" aria-label="Todo o menu">
+          <div className="sheet-backdrop absolute inset-0" onClick={() => setMoreOpen(false)} />
+          <div className="sheet-panel relative w-full lg:w-80 lg:h-full lg:rounded-none lg:ml-[96px] max-h-[85vh] lg:max-h-none overflow-y-auto scroll-touch safe-sheet lg:pb-6">
+            <div className="sticky top-0 bg-surface px-5 pt-3 pb-3 flex items-center justify-between gap-3 border-b border-line">
+              <div className="flex-1 flex justify-center lg:hidden">
+                <span className="sheet-handle" aria-hidden />
+              </div>
+              <p className="hidden lg:block text-h3 text-heading">Menu</p>
+              <button
+                onClick={() => setMoreOpen(false)}
+                aria-label="Fechar menu"
+                className="tap absolute right-4 top-3 lg:static h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-4 py-4 space-y-6">
+              {GROUPS.map((group) => (
+                <div key={group.title}>
+                  <p className="overline text-n-500 px-2 mb-1.5">{group.title}</p>
+                  <div className="space-y-0.5">
+                    {group.links.map((link) => {
+                      const Icon = link.icon;
+                      const active = isActiveHref(pathname, link.href);
+                      const locked = lockedFor(link.href);
+                      const badge = badgeFor(link.href);
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMoreOpen(false)}
+                          className={`tap flex items-center gap-3 min-h-11 px-2.5 rounded-control text-label transition-ui
+                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600
+                            ${active ? 'bg-wine-50 text-wine-700 font-semibold' : 'text-ink hover:bg-n-100'}`}
+                        >
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span className="flex-1">{link.label}</span>
+                          {locked && <Lock className="h-4 w-4 text-n-400 shrink-0" />}
+                          {badge > 0 && (
+                            <span className="num text-caption font-semibold text-warning bg-warning-bg border border-warning-border rounded-full px-2 leading-5">
+                              {badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div className="pt-2 border-t border-line space-y-0.5">
+                <Link
+                  href={`/agendar/${publicSlug}`}
+                  target="_blank"
+                  onClick={() => setMoreOpen(false)}
+                  className="tap flex items-center gap-3 min-h-11 px-2.5 rounded-control text-label text-ink hover:bg-n-100 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                >
+                  <ExternalLink className="h-5 w-5 shrink-0" />
+                  <span className="flex-1">Ver página pública</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="tap flex w-full items-center gap-3 min-h-11 px-2.5 rounded-control text-label text-n-600 hover:bg-n-100 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                >
+                  <LogOut className="h-5 w-5 shrink-0" />
+                  <span className="flex-1 text-left">Sair da conta</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
   );
 };
+
+/* ---------------------------------------------------------------
+   Itens do rail. O tooltip aparece com 400ms de atraso — imediato,
+   ele pisca a cada passagem de mouse rumo ao conteúdo.
+   --------------------------------------------------------------- */
+
+const RAIL_ITEM =
+  'group relative flex items-center justify-center h-11 w-11 rounded-control transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+
+const Tooltip: React.FC<{ label: string }> = ({ label }) => (
+  <span
+    role="tooltip"
+    className="rail-tooltip"
+  >
+    {label}
+  </span>
+);
+
+const RailItem: React.FC<{
+  href: string;
+  label: string;
+  active?: boolean;
+  locked?: boolean;
+  external?: boolean;
+  children: React.ReactNode;
+}> = ({ href, label, active, locked, external, children }) => (
+  <Link
+    href={href}
+    target={external ? '_blank' : undefined}
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+    className={`${RAIL_ITEM} ${active ? 'bg-wine-700 text-white' : 'text-n-500 hover:bg-n-100 hover:text-heading'}`}
+  >
+    {children}
+    {locked && <Lock className="absolute top-0.5 right-0.5 h-4 w-4 text-n-400" aria-hidden />}
+    <Tooltip label={label} />
+  </Link>
+);
+
+const RailButton: React.FC<{
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}> = ({ label, active, onClick, children }) => (
+  <button
+    onClick={onClick}
+    aria-label={label}
+    className={`${RAIL_ITEM} ${active ? 'bg-wine-700 text-white' : 'text-n-500 hover:bg-n-100 hover:text-heading'}`}
+  >
+    {children}
+    <Tooltip label={label} />
+  </button>
+);
+
 export default Sidebar;

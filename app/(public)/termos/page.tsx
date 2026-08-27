@@ -11,17 +11,17 @@ const LAST_UPDATE = '22 de junho de 2026';
 
 export default function TermosPage() {
   return (
-    <div className="min-h-screen bg-cream py-10 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-[#efe9e6] shadow-sm p-7 sm:p-10">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-forest hover:opacity-80 transition-opacity">
+    <div className="min-h-screen bg-n-25 py-10 px-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-n-200 shadow-sm p-7 sm:p-10">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-wine-700 hover:opacity-80 transition-opacity">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Link>
 
-        <h1 className="mt-5 text-2xl font-black text-gray-900 tracking-tight">Termos de Uso</h1>
-        <p className="mt-1 text-xs text-gray-450">Última atualização: {LAST_UPDATE}</p>
+        <h1 className="mt-5 text-2xl font-black text-n-900 tracking-tight">Termos de Uso</h1>
+        <p className="mt-1 text-xs text-n-600">Última atualização: {LAST_UPDATE}</p>
 
-        <div className="mt-7 space-y-6 text-sm text-gray-600 leading-relaxed [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:tracking-tight [&_h2]:mt-7 [&_h2]:mb-2 [&_strong]:text-gray-800">
+        <div className="mt-7 space-y-6 text-sm text-n-600 leading-relaxed [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-n-900 [&_h2]:tracking-tight [&_h2]:mt-7 [&_h2]:mb-2 [&_strong]:text-n-800">
           <p>
             Estes Termos de Uso regem o acesso e a utilização da plataforma <strong>Lume Agenda</strong>
             {' '}(&quot;Lume&quot;, &quot;plataforma&quot; ou &quot;nós&quot;), um sistema de agendamento e gestão para
@@ -88,7 +88,7 @@ export default function TermosPage() {
             <h2>7. Privacidade</h2>
             <p>
               O tratamento de dados pessoais é descrito na nossa{' '}
-              <Link href="/privacidade" className="text-forest font-semibold hover:underline">Política de Privacidade</Link>,
+              <Link href="/privacidade" className="text-wine-700 font-semibold hover:underline">Política de Privacidade</Link>,
               que faz parte destes Termos.
             </p>
           </div>
@@ -106,7 +106,7 @@ export default function TermosPage() {
             <p>
               Dúvidas sobre estes Termos podem ser enviadas para <strong>contato@lumepremium.com</strong>.
             </p>
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs text-n-400">
               Operado por [RAZÃO SOCIAL / NOME], inscrito no CNPJ/CPF [CNPJ ou CPF], [CIDADE/UF].
               {' '}(Preencha estes dados com as informações reais da empresa antes de cobrar de clientes.)
             </p>

@@ -57,11 +57,11 @@ export default function AdminLoginPage() {
       <div className="max-w-md w-full z-10 animate-fade-up">
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="light" className="h-12 text-white mb-5" />
-          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-h2 font-semibold text-white tracking-tight flex items-center gap-2">
             <ShieldCheck className="text-wine-500 h-6 w-6" />
             Lume Admin
           </h2>
-          <p className="text-xs text-white/55 mt-1.5">
+          <p className="text-caption text-white/55 mt-1.5">
             Acesso restrito à administração da plataforma.
           </p>
         </div>
@@ -69,12 +69,12 @@ export default function AdminLoginPage() {
         <div className="card-elevated glow-wine p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
                 Endereço de E-mail
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-gray-450" />
+                  <Mail className="h-4 w-4 text-n-600" />
                 </div>
                 <input
                   type="email"
@@ -82,30 +82,30 @@ export default function AdminLoginPage() {
                   placeholder="admin@lume.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 bg-cream/60 border border-gray-150 rounded-2xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 transition-all"
+                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
                 Senha de Acesso
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-gray-450" />
+                  <Lock className="h-4 w-4 text-n-600" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 bg-cream/60 border border-gray-150 rounded-2xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 transition-all"
+                  className="block w-full pl-10 pr-10 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-450 hover:text-forest"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-n-600 hover:text-wine-700"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom cursor-pointer disabled:opacity-60"
+              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-label font-bold rounded-2xl shadow-soft transition-ui cursor-pointer disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
               <span>{isLoading ? 'Autenticando...' : 'Entrar no Admin'}</span>

@@ -1,0 +1,362 @@
+/* =========================================================
+   LUME · TOKENS
+   ---------------------------------------------------------
+   Única fonte de verdade visual do produto. Nenhum hex fora
+   deste arquivo — componente algum inventa cor, raio, sombra
+   ou duração.
+
+   Tailwind v4 é CSS-first: não existe `tailwind.config.ts`.
+   O bloco @theme ABAIXO É a configuração — cada token vira
+   utilitário (`--color-wine-700` → `bg-wine-700`/`text-wine-700`).
+   ========================================================= */
+
+@theme {
+  /* ------------------------------------------------------
+     MARCA · vinho
+     #6B1525 (wine-700) é a cor da marca. Branco sobre ela dá
+     11.9:1 — texto branco em superfície vinho é seguro em
+     qualquer tamanho.
+     ------------------------------------------------------ */
+  --color-wine-50:  #FDF4F6;
+  --color-wine-100: #F8E3E8;
+  --color-wine-200: #EFC4CD;
+  --color-wine-300: #D98F9E;
+  --color-wine-400: #C25A6E;
+  --color-wine-500: #A8354B;
+  --color-wine-600: #8C2438;  /* links e texto sobre claro — 8.7:1 */
+  --color-wine-700: #6B1525;  /* ⭐ MARCA — botão primário, acento — 11.9:1 */
+  --color-wine-800: #5A1121;
+  --color-wine-900: #450D1A;
+  --color-wine-950: #2E0710;  /* superfícies escuras, hero */
+
+  /* ------------------------------------------------------
+     NEUTROS · levemente aquecidos
+     Puxam para o vermelho para conversar com o vinho. Cinza
+     azulado é proibido: era ele vazando nos chips de KPI.
+     ------------------------------------------------------ */
+  --color-n-0:   #FFFFFF;
+  --color-n-25:  #FCFBFB;   /* fundo da aplicação */
+  --color-n-50:  #FAF8F9;
+  --color-n-100: #F5F2F3;   /* superfície secundária, chip de ícone */
+  --color-n-150: #EFEBED;
+  --color-n-200: #E7E2E4;   /* borda padrão */
+  --color-n-300: #D6D0D3;   /* borda em hover */
+  --color-n-400: #A8A0A6;   /* SÓ desabilitado — nunca carrega informação */
+  --color-n-500: #7A7178;   /* texto terciário — 4.7:1 */
+  --color-n-600: #6B6169;   /* texto secundário — 5.9:1 */
+  --color-n-700: #4A4347;
+  --color-n-800: #2A2427;   /* texto corpo */
+  --color-n-900: #1C1719;   /* títulos — 15.4:1 */
+  --color-n-950: #131011;
+
+  /* ------------------------------------------------------
+     SEMÂNTICAS
+     ⚠️ --color-danger é laranja-avermelhado DE PROPÓSITO.
+     Num produto de marca vinho, destrutivo em vermelho-escuro
+     fica indistinguível do botão primário e a profissional
+     clica em "Cancelar atendimento" achando que confirma.
+     Nenhum tom da escala wine-* pode significar erro.
+     ------------------------------------------------------ */
+  --color-success:        #1B7A4B;  /* 5.2:1 no fundo · 4.8:1 no selo */
+  --color-success-bg:     #E9F6EF;
+  --color-success-border: #C9E8D8;
+  /* Escurecido de #9A6410 para #8F5D0E: no fundo do PRÓPRIO selo (warning-bg)
+     o valor anterior dava 4.54:1 — passava AA por 0,04, sem margem nenhuma.
+     Contra o fundo branco ele parecia folgado; o teste que importa é o selo. */
+  --color-warning:        #8F5D0E;  /* 5.4:1 no fundo · 5.1:1 no selo */
+  --color-warning-bg:     #FDF3E2;
+  --color-warning-border: #F2DFBC;
+  --color-danger:         #C43A22;  /* 5.1:1 no fundo · 4.6:1 no selo */
+  --color-danger-bg:      #FDEDE8;
+  --color-danger-border:  #F5CFC4;
+  --color-info:           #1F5C8C;  /* 6.9:1 no fundo · 6.3:1 no selo */
+  --color-info-bg:        #EAF2F9;
+  --color-info-border:    #C9DDEE;
+
+  /* ------------------------------------------------------
+     ALIASES SEMÂNTICOS · o que os componentes usam
+     Trocar o tema = redefinir estes, não caçar hex no JSX.
+     ------------------------------------------------------ */
+  --color-bg:          var(--color-n-25);
+  --color-surface:     var(--color-n-0);
+  --color-surface-2:   var(--color-n-100);   /* inputs, trilhos, chip de ícone */
+  --color-surface-3:   var(--color-n-150);   /* área interna mais funda */
+  --color-line:        var(--color-n-200);
+  --color-line-strong: var(--color-n-300);
+  --color-heading:     var(--color-n-900);
+  --color-ink:         var(--color-n-800);
+  --color-muted:       var(--color-n-600);
+  --color-faint:       var(--color-n-500);
+  --color-disabled:    var(--color-n-400);
+
+  --color-accent:           var(--color-wine-700);  /* primário */
+  --color-accent-hover:     var(--color-wine-800);
+  --color-accent-link:      var(--color-wine-600);
+  --color-accent-soft:      var(--color-wine-50);   /* fundo de estado ativo */
+  --color-accent-soft-border: var(--color-wine-100);
+
+  /* Aliases herdados — código antigo ainda os referencia.
+     Ficam apontando para a escala nova para que nada saia dela. */
+  --color-cream:     var(--color-n-25);
+  --color-paper:     var(--color-n-0);
+  --color-sand:      var(--color-n-100);
+  --color-gray-150:  var(--color-n-200);
+  --color-gray-250:  var(--color-n-300);
+  --color-gray-450:  var(--color-n-600);
+  --color-forest:       var(--color-wine-700);
+  --color-forest-hover: var(--color-wine-800);
+  --color-lima:         var(--color-wine-200);
+  --color-lima-hover:   var(--color-wine-300);
+  --color-ok:   var(--color-success);
+  --color-warn: var(--color-warning);
+  --color-bad:  var(--color-danger);
+
+  /* ------------------------------------------------------
+     TIPOGRAFIA
+     Instrument Sans nos títulos e nos números (dígitos de
+     largura fixa e desenho mais firme); Manrope no corpo.
+     ------------------------------------------------------ */
+  --font-sans:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Instrument Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  /* Escala — 9 degraus, no máximo 4 por tela.
+     Hierarquia se faz com peso e cor, não inventando tamanho. */
+  --text-display: clamp(2.25rem, 5vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+
+  --text-h1: clamp(1.75rem, 3vw, 2.25rem);
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 600;
+
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.25;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: 0em;
+  --text-h3--font-weight: 600;
+
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.55;
+
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.5;
+
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.4;
+  --text-label--font-weight: 500;
+
+  /* `micro` existe para DUAS telas: a grade da Agenda e o mini-mês do admin —
+     o chip do agendamento dentro da célula, a régua de horas, o dígito do ano.
+     Essa área usava 8px e 9px, que ninguém lê; 11px é o piso. Em qualquer
+     outro lugar do produto, `caption` é o menor tamanho permitido, e é isso
+     que mantém cada tela dentro do teto de 4 tamanhos. */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.25;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 500;
+
+  /* Não há token de tamanho para "overline".
+     O brief pedia 0.6875rem, mas também pede no máximo 4 tamanhos por tela —
+     e 11px ao lado de 12px é um degrau que ninguém enxerga e que estoura o
+     orçamento de tamanhos. O overline virou ESTILO (caixa alta + tracking
+     0.08em + peso 600) no tamanho de `caption`: veja @utility overline em
+     globals.css. Ganhamos o degrau de volta sem perder a hierarquia. */
+
+  /* ------------------------------------------------------
+     RAIOS · 5 valores, nenhum a mais
+     Nomes semânticos (novos) e a escala legada snapada nos
+     MESMOS 5 valores, para que 473 `rounded-xl` espalhados
+     pelo app não fiquem fora do sistema:
+
+       rounded-chip    =  8px  =  rounded-sm / rounded-md / rounded-lg
+       rounded-control = 12px  =  rounded-xl
+       rounded-surface = 16px  =  rounded-2xl / rounded-card
+       rounded-hero    = 24px  =  rounded-3xl / rounded-4xl
+       rounded-full    = 9999px
+
+     Regra de aninhamento: raio interno = raio externo − padding.
+     Card `surface` (16) com padding 16 → filho com `chip` (8).
+     ------------------------------------------------------ */
+  --radius-chip:    8px;    /* chip, badge, input pequeno */
+  --radius-control: 12px;   /* botão, input, chip de ícone */
+  --radius-surface: 16px;   /* card padrão */
+  --radius-hero:    24px;   /* card hero, modal, sheet */
+
+  --radius-sm:   8px;
+  --radius-md:   8px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-3xl:  24px;
+  --radius-4xl:  24px;
+  --radius-card: 16px;
+
+  /* ------------------------------------------------------
+     ELEVAÇÃO · sombras tingidas de vinho-tinta, nunca preto
+     Preto puro sobre off-white quente cinza a superfície.
+     Repouso: sh-sm + borda n-200. Hover: sh-md + borda n-300.
+     Nunca borda forte E sombra forte ao mesmo tempo.
+     ------------------------------------------------------ */
+  --shadow-xs:   0 1px 2px rgba(46, 7, 16, 0.05);
+  --shadow-sm:   0 1px 3px rgba(46, 7, 16, 0.06), 0 1px 2px rgba(46, 7, 16, 0.04);
+  --shadow-md:   0 4px 12px -4px rgba(46, 7, 16, 0.10), 0 2px 4px -2px rgba(46, 7, 16, 0.06);
+  --shadow-lg:   0 12px 32px -12px rgba(46, 7, 16, 0.16), 0 4px 8px -4px rgba(46, 7, 16, 0.06);
+  --shadow-wine: 0 8px 24px -10px rgba(107, 21, 37, 0.45);  /* SÓ no CTA primário */
+  /* Aliases herdados */
+  --shadow-soft: var(--shadow-sm);
+  --shadow-glow: var(--shadow-wine);
+
+  /* ------------------------------------------------------
+     MOVIMENTO
+     ------------------------------------------------------ */
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);    /* entrada — padrão */
+  --ease-in:    cubic-bezier(0.4, 0, 1, 1);       /* saída */
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);   /* movimento contínuo */
+}
+
+/* Duração não tem namespace no Tailwind v4 — vive como custom property
+   e é consumida pelas classes de componente em globals.css. */
+:root {
+  --dur-instant: 100ms;  /* feedback de toque */
+  --dur-fast:    160ms;  /* hover, cor */
+  --dur-base:    220ms;  /* abrir/fechar, transform */
+  --dur-slow:    320ms;  /* sheet, modal */
+
+  /* Espelho dos raios com os nomes do sistema, para CSS cru */
+  --r-sm:   var(--radius-chip);
+  --r-md:   var(--radius-control);
+  --r-lg:   var(--radius-surface);
+  --r-xl:   var(--radius-hero);
+  --r-full: 9999px;
+
+  /* Espelho da elevação */
+  --sh-xs:   var(--shadow-xs);
+  --sh-sm:   var(--shadow-sm);
+  --sh-md:   var(--shadow-md);
+  --sh-lg:   var(--shadow-lg);
+  --sh-wine: var(--shadow-wine);
+}
+
+/* =========================================================
+   TEMA ESCURO
+   As utilities do Tailwind v4 leem var(--color-*): basta
+   redefinir os ALIASES — a escala bruta (wine-*, n-*) não
+   muda, só o papel que cada tom cumpre.
+   ========================================================= */
+[data-theme='dark'] {
+  --color-bg:          var(--color-n-950);
+  --color-surface:     #1A1518;
+  --color-surface-2:   #221B1F;
+  --color-surface-3:   #2B2328;
+  --color-line:        #322A2E;
+  --color-line-strong: #453B40;
+  --color-heading:     #F7F4F5;
+  --color-ink:         #E8E2E5;
+  --color-muted:       #A8A0A6;
+  --color-faint:       #8A8288;
+  --color-disabled:    #5E565B;
+
+  --color-cream:    var(--color-n-950);
+  --color-paper:    #1A1518;
+  --color-sand:     #221B1F;
+  --color-gray-150: #322A2E;
+  --color-gray-250: #453B40;
+  --color-gray-450: #A8A0A6;
+
+  /* Sobre fundo escuro a marca precisa clarear para manter AA */
+  --color-accent:             var(--color-wine-300);
+  --color-accent-hover:       var(--color-wine-200);
+  --color-accent-link:        var(--color-wine-300);
+  --color-accent-soft:        #2C1A20;
+  --color-accent-soft-border: #40252D;
+  --color-forest:             var(--color-wine-300);
+  --color-forest-hover:       var(--color-wine-200);
+
+  --color-success:        #52C48C;
+  --color-success-bg:     #10261C;
+  --color-success-border: #1E4432;
+  --color-warning:        #E0A84A;
+  --color-warning-bg:     #2A1F0E;
+  --color-warning-border: #4A3818;
+  --color-danger:         #F0785C;
+  --color-danger-bg:      #2E150F;
+  --color-danger-border:  #4E251B;
+  --color-info:           #6BA8D8;
+  --color-info-bg:        #101F2B;
+  --color-info-border:    #1D3A4E;
+  --color-ok:   var(--color-success);
+  --color-warn: var(--color-warning);
+  --color-bad:  var(--color-danger);
+
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md:   0 4px 12px -4px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg:   0 12px 32px -12px rgba(0, 0, 0, 0.8), 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+  --shadow-soft: var(--shadow-sm);
+}
+
+/* Quem não escolheu tema segue o sistema.
+   O bloco abaixo é uma cópia literal do de cima: CSS não tem mixin e a
+   media query não pode ser aplicada a metade de um seletor. Alterou um,
+   altere o outro. */
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    --color-bg:          var(--color-n-950);
+    --color-surface:     #1A1518;
+    --color-surface-2:   #221B1F;
+    --color-surface-3:   #2B2328;
+    --color-line:        #322A2E;
+    --color-line-strong: #453B40;
+    --color-heading:     #F7F4F5;
+    --color-ink:         #E8E2E5;
+    --color-muted:       #A8A0A6;
+    --color-faint:       #8A8288;
+    --color-disabled:    #5E565B;
+
+    --color-cream:    var(--color-n-950);
+    --color-paper:    #1A1518;
+    --color-sand:     #221B1F;
+    --color-gray-150: #322A2E;
+    --color-gray-250: #453B40;
+    --color-gray-450: #A8A0A6;
+
+    /* Sobre fundo escuro a marca precisa clarear para manter AA */
+    --color-accent:             var(--color-wine-300);
+    --color-accent-hover:       var(--color-wine-200);
+    --color-accent-link:        var(--color-wine-300);
+    --color-accent-soft:        #2C1A20;
+    --color-accent-soft-border: #40252D;
+    --color-forest:             var(--color-wine-300);
+    --color-forest-hover:       var(--color-wine-200);
+
+    --color-success:        #52C48C;
+    --color-success-bg:     #10261C;
+    --color-success-border: #1E4432;
+    --color-warning:        #E0A84A;
+    --color-warning-bg:     #2A1F0E;
+    --color-warning-border: #4A3818;
+    --color-danger:         #F0785C;
+    --color-danger-bg:      #2E150F;
+    --color-danger-border:  #4E251B;
+    --color-info:           #6BA8D8;
+    --color-info-bg:        #101F2B;
+    --color-info-border:    #1D3A4E;
+    --color-ok:   var(--color-success);
+    --color-warn: var(--color-warning);
+    --color-bad:  var(--color-danger);
+
+    --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md:   0 4px 12px -4px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+    --shadow-lg:   0 12px 32px -12px rgba(0, 0, 0, 0.8), 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+    --shadow-soft: var(--shadow-sm);
+  }
+}

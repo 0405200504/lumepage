@@ -14,7 +14,7 @@ import { ColumnMenu } from './ColumnMenu';
  * relê os searchParams e faz a query nova.
  *
  * Traz o que faltava nas tabelas do admin: cabeçalho fixo, zebra, hover legível,
- * números com tabular-nums alinhados à direita, linha inteira clicável, estado vazio
+ * números com num alinhados à direita, linha inteira clicável, estado vazio
  * desenhado e — abaixo de md — cartões no lugar de scroll horizontal.
  */
 
@@ -24,7 +24,7 @@ export interface ServerColumn<T> {
   header: React.ReactNode;
   /** Habilita o link de ordenação. A página precisa tratar `sort=<key>`. */
   sortable?: boolean;
-  /** Número: alinha à direita e liga tabular-nums (colunas de valor comparáveis). */
+  /** Número: alinha à direita e liga num (colunas de valor comparáveis). */
   numeric?: boolean;
   align?: 'left' | 'right' | 'center';
   className?: string;
@@ -98,10 +98,10 @@ export function ServerTable<T>({
 
       {isEmpty ? (
         <div className="py-16 px-6 flex flex-col items-center text-center">
-          {empty?.icon && <div className="mb-4 text-gray-450">{empty.icon}</div>}
-          <h3 className="text-sm font-bold text-ink">{empty?.title ?? 'Nada por aqui'}</h3>
+          {empty?.icon && <div className="mb-4 text-n-600">{empty.icon}</div>}
+          <h3 className="text-label font-bold text-ink">{empty?.title ?? 'Nada por aqui'}</h3>
           {empty?.description && (
-            <p className="mt-1.5 text-xs text-gray-450 max-w-sm leading-relaxed">{empty.description}</p>
+            <p className="mt-1.5 text-caption text-n-600 max-w-sm leading-relaxed">{empty.description}</p>
           )}
           {empty?.action && <div className="mt-5">{empty.action}</div>}
         </div>
@@ -113,7 +113,7 @@ export function ServerTable<T>({
           <div className="hidden md:block overflow-x-auto scroll-touch table-scroll max-h-[70vh]">
             <table className="min-w-full text-left border-collapse">
               <caption className="sr-only">{caption}</caption>
-              <thead className="sticky top-0 z-10 bg-surface-2 text-[11px] font-bold text-muted uppercase tracking-[0.08em]">
+              <thead className="sticky top-0 z-10 bg-surface-2 text-caption font-bold text-muted uppercase tracking-[0.08em]">
                 <tr>
                   {columns.map(col => {
                     const active = params.sort === col.key;
@@ -138,17 +138,17 @@ export function ServerTable<T>({
                         >
                           {col.header}
                           {!active
-                            ? <ChevronsUpDown className="h-3 w-3 opacity-40" aria-hidden />
+                            ? <ChevronsUpDown className="h-4 w-4 opacity-40" aria-hidden />
                             : params.dir === 'desc'
-                              ? <ArrowDown className="h-3 w-3" aria-hidden />
-                              : <ArrowUp className="h-3 w-3" aria-hidden />}
+                              ? <ArrowDown className="h-4 w-4" aria-hidden />
+                              : <ArrowUp className="h-4 w-4" aria-hidden />}
                         </Link>
                       </th>
                     );
                   })}
                 </tr>
               </thead>
-              <tbody className="text-sm text-ink">
+              <tbody className="text-label text-ink">
                 {/* O link da linha mora na coluna `primary` (ou na primeira): assim uma
                     coluna de checkbox ou de ações não vira link por acidente. */}
                 {rows.map((row, i) => {
@@ -162,7 +162,7 @@ export function ServerTable<T>({
                       {columns.map((col, ci) => (
                         <td
                           key={col.key}
-                          className={`px-4 py-3 align-middle ${alignClass(col)} ${col.numeric ? 'tabular-nums' : ''} ${col.className ?? ''}`}
+                          className={`px-4 py-3 align-middle ${alignClass(col)} ${col.numeric ? 'num' : ''} ${col.className ?? ''}`}
                         >
                           {/* A primeira coluna vira o link da linha: mantém a linha
                               "clicável" sem aninhar <a> dentro de <a> nas outras células. */}
@@ -189,14 +189,14 @@ export function ServerTable<T>({
               const rest = visible.filter(c => c !== primary);
               const content = (
                 <>
-                  <div className="text-sm font-bold text-ink">{primary?.cell(row)}</div>
+                  <div className="text-label font-bold text-ink">{primary?.cell(row)}</div>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
                     {rest.map(col => (
                       <div key={col.key} className="min-w-0">
-                        <dt className="text-[10px] font-bold text-muted uppercase tracking-[0.08em]">
+                        <dt className="text-caption font-bold text-muted uppercase tracking-[0.08em]">
                           {col.mobileLabel ?? col.header}
                         </dt>
-                        <dd className={`text-xs text-ink truncate ${col.numeric ? 'tabular-nums' : ''}`}>{col.cell(row)}</dd>
+                        <dd className={`text-caption text-ink truncate ${col.numeric ? 'num' : ''}`}>{col.cell(row)}</dd>
                       </div>
                     ))}
                   </dl>

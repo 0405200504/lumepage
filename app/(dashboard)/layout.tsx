@@ -4,6 +4,7 @@ import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { RouteTransition } from '@/components/layout/RouteTransition';
 import { ActingBanner } from '@/components/salon/ActingBanner';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 import { AdminNotices } from '@/components/dashboard/AdminNotices';
@@ -94,14 +95,7 @@ export default async function DashboardLayout({
   if (precisaBoasVindas) redirect('/bem-vinda');
 
   return (
-    <div
-      className="flex min-h-screen bg-cream"
-      style={{
-        backgroundImage:
-          'radial-gradient(60% 50% at 100% 0%, rgba(140,36,56,0.04) 0%, transparent 60%), radial-gradient(50% 40% at 0% 100%, rgba(80,11,24,0.035) 0%, transparent 55%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
+    <div className="flex min-h-screen bg-bg">
       {isTrialExpired && <PlanosOverlay identity={checkoutIdentity} />}
       {forcePasswordChange && <ForcePasswordChange />}
 
@@ -135,8 +129,10 @@ export default async function DashboardLayout({
         {/* Avisos publicados pelo admin em /admin/broadcast */}
         <AdminNotices professionalId={session.professional_id ?? ''} subscriptionStatus={subscriptionStatus} />
 
-        <main className="flex-1 p-4 sm:p-6 pb-28 lg:pb-6 overflow-y-auto max-w-7xl w-full mx-auto">
-          {children}
+        {/* A rolagem é da JANELA, não de um contêiner interno: é o que faz a
+            topbar colapsar e a barra do navegador sumir no celular. */}
+        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-8 pt-2 pb-32 lg:pb-10">
+          <RouteTransition>{children}</RouteTransition>
         </main>
       </div>
 

@@ -41,21 +41,21 @@ export function AgendaMonth({ agenda, basePath }: { agenda: ProfessionalAgenda; 
           className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-line text-muted hover:text-ink hover:bg-surface-2">
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </Link>
-        <h2 className="text-sm font-bold text-ink capitalize min-w-[10rem]">{agenda.label}</h2>
+        <h2 className="text-label font-bold text-ink capitalize min-w-[10rem]">{agenda.label}</h2>
         <Link href={`${basePath}&month=${agenda.nextMonth}`} scroll={false} aria-label="Próximo mês"
           className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-line text-muted hover:text-ink hover:bg-surface-2">
           <ChevronRight className="h-4 w-4" aria-hidden />
         </Link>
 
-        <span className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+        <span className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1 text-caption">
           <span className="text-muted">
-            <strong className="text-ink tabular-nums text-sm">{agenda.totals.appointments}</strong> atendimento(s)
+            <strong className="text-ink num text-label">{agenda.totals.appointments}</strong> atendimento(s)
           </span>
           <span className="text-muted">
-            <strong className="text-ink tabular-nums text-sm">{brl(agenda.totals.revenueCents)}</strong> no mês
+            <strong className="text-ink num text-label">{brl(agenda.totals.revenueCents)}</strong> no mês
           </span>
           {agenda.totals.busiestDate && (
-            <span className="text-muted">dia mais cheio: <strong className="text-ink tabular-nums">{formatDateBR(agenda.totals.busiestDate)}</strong></span>
+            <span className="text-muted">dia mais cheio: <strong className="text-ink num">{formatDateBR(agenda.totals.busiestDate)}</strong></span>
           )}
         </span>
       </div>
@@ -63,7 +63,7 @@ export function AgendaMonth({ agenda, basePath }: { agenda: ProfessionalAgenda; 
       <div className="card overflow-hidden">
         <div className="grid grid-cols-7 bg-surface-2 border-b border-line">
           {WEEKDAYS.map(d => (
-            <span key={d} className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted text-center">{d}</span>
+            <span key={d} className="px-2 py-2 text-micro font-bold uppercase tracking-[0.08em] text-muted text-center">{d}</span>
           ))}
         </div>
 
@@ -74,19 +74,19 @@ export function AgendaMonth({ agenda, basePath }: { agenda: ProfessionalAgenda; 
             const isToday = date === todayKey;
             return (
               <div key={date} className={`min-h-[6.5rem] border-b border-r border-line/60 p-1.5 ${isToday ? 'bg-accent-soft/60' : ''}`}>
-                <span className={`block text-[11px] tabular-nums mb-1 ${isToday ? 'font-bold text-accent-link' : 'text-muted'}`}>
+                <span className={`block text-micro num mb-1 ${isToday ? 'font-bold text-accent-link' : 'text-muted'}`}>
                   {Number(date.slice(-2))}
                 </span>
                 <ul className="space-y-0.5">
                   {(day?.items ?? []).slice(0, 4).map(a => (
-                    <li key={a.id} className="flex items-center gap-1 text-[10px] leading-tight" title={`${a.start} · ${a.clientName} · ${a.serviceName} · ${brl(a.priceCents)}`}>
+                    <li key={a.id} className="flex items-center gap-1 text-micro leading-tight" title={`${a.start} · ${a.clientName} · ${a.serviceName} · ${brl(a.priceCents)}`}>
                       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: STATUS_DOT[a.status] ?? 'var(--color-faint)' }} aria-hidden />
-                      <span className="tabular-nums text-muted shrink-0">{a.start}</span>
+                      <span className="num text-muted shrink-0">{a.start}</span>
                       <span className={`truncate ${a.status === 'cancelled' ? 'line-through text-faint' : 'text-ink'}`}>{a.clientName}</span>
                     </li>
                   ))}
                   {day && day.items.length > 4 && (
-                    <li className="text-[10px] font-bold text-muted">+{day.items.length - 4} mais</li>
+                    <li className="text-micro font-bold text-muted">+{day.items.length - 4} mais</li>
                   )}
                 </ul>
               </div>
@@ -95,7 +95,7 @@ export function AgendaMonth({ agenda, basePath }: { agenda: ProfessionalAgenda; 
         </div>
       </div>
 
-      <p className="text-[11px] text-muted">
+      <p className="text-micro text-muted">
         Somente leitura. Para mexer na agenda dela, use <strong className="text-ink">Entrar como · editar</strong> —
         assim a alteração fica registrada no nome de quem a fez.
       </p>

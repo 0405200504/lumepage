@@ -32,19 +32,19 @@ function PlanCard({ plan, subscribers }: { plan: PlanRow; subscribers: number })
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15';
-  const label = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-muted mb-1';
+  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const label = 'block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1';
 
   return (
     <div className="card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-bold text-ink">{form.name}</p>
-          <p className="text-[11px] text-muted">chave <code className="font-mono">{form.key}</code></p>
+          <p className="text-label font-bold text-ink">{form.name}</p>
+          <p className="text-caption text-muted">chave <code className="font-mono">{form.key}</code></p>
         </div>
         <span className="text-right">
-          <span className="block text-lg font-bold text-heading tabular-nums leading-none">{brl(form.price_cents)}</span>
-          <span className="block text-[10px] text-muted mt-0.5">{subscribers} assinante(s)</span>
+          <span className="block text-h3 font-bold text-heading num leading-none">{brl(form.price_cents)}</span>
+          <span className="block text-caption text-muted mt-0.5">{subscribers} assinante(s)</span>
         </span>
       </div>
 
@@ -73,14 +73,14 @@ function PlanCard({ plan, subscribers }: { plan: PlanRow; subscribers: number })
         <input className={field} value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
       </label>
 
-      <label className="flex items-center gap-2 text-xs font-semibold text-ink">
+      <label className="flex items-center gap-2 text-caption font-semibold text-ink">
         <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
           className="h-4 w-4 accent-[color:var(--color-wine-700)]" />
         Plano disponível para novas contas
       </label>
 
       <button type="button" disabled={!dirty || saving} onClick={save}
-        className="w-full h-9 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
+        className="w-full h-9 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
         {dirty ? 'Salvar alterações' : 'Sem alterações'}
       </button>

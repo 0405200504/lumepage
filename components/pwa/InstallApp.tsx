@@ -109,7 +109,7 @@ export default function InstallApp() {
       <button
         type="button"
         onClick={handleClick}
-        className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-wine-700/15 text-wine-700 text-sm font-bold rounded-2xl shadow-soft hover:bg-wine-50 transition-all-custom"
+        className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-wine-700/15 text-wine-700 text-label font-bold rounded-2xl shadow-soft hover:bg-wine-50 transition-ui"
       >
         <Download className="h-4 w-4" />
         <span>Instalar app no celular</span>
@@ -119,14 +119,14 @@ export default function InstallApp() {
       {ios && showIosSheet && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
           <div
-            className="absolute inset-0 bg-[#1a0e12]/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm"
             onClick={() => setShowIosSheet(false)}
           />
-          <div className="relative z-10 w-full sm:max-w-sm bg-paper rounded-t-4xl sm:rounded-4xl p-7 safe-sheet shadow-glow animate-slide-up">
+          <div className="relative z-10 w-full sm:max-w-sm bg-surface rounded-t-4xl sm:rounded-4xl p-7 safe-sheet shadow-glow animate-slide-up">
             <button
               type="button"
               onClick={() => setShowIosSheet(false)}
-              className="tap absolute top-5 right-5 p-1.5 rounded-xl text-gray-450 hover:bg-cream"
+              className="tap absolute top-5 right-5 p-1.5 rounded-xl text-n-600 hover:bg-n-50"
               aria-label="Fechar"
             >
               <X className="h-5 w-5" />
@@ -136,28 +136,28 @@ export default function InstallApp() {
               <div className="h-14 w-14 surface-wine text-white rounded-3xl flex items-center justify-center shadow-soft ring-hairline">
                 <Smartphone className="h-7 w-7" />
               </div>
-              <h3 className="mt-4 text-lg font-black text-ink tracking-tight">Instalar a Lume</h3>
-              <p className="mt-1 text-xs text-gray-450 leading-relaxed max-w-[18rem]">
+              <h3 className="mt-4 text-h3 font-semibold text-ink tracking-tight">Instalar a Lume</h3>
+              <p className="mt-1 text-caption text-n-600 leading-relaxed max-w-[18rem]">
                 Adicione à tela de início para abrir como um app, em tela cheia.
               </p>
             </div>
 
             <ol className="mt-6 space-y-3">
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">1</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">1</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5 flex-wrap">
                   Toque em <Share className="h-4 w-4 text-wine-700 inline" /> <strong>Compartilhar</strong> na barra do Safari
                 </span>
               </li>
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">2</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">2</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5 flex-wrap">
                   Escolha <span className="inline-flex items-center gap-1"><Plus className="h-4 w-4 text-wine-700" /></span> <strong>Adicionar à Tela de Início</strong>
                 </span>
               </li>
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">3</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">3</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5">
                   Confirme em <Check className="h-4 w-4 text-ok inline" /> <strong>Adicionar</strong>
                 </span>
               </li>
@@ -166,7 +166,7 @@ export default function InstallApp() {
             <button
               type="button"
               onClick={() => setShowIosSheet(false)}
-              className="tap mt-6 w-full py-3.5 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom"
+              className="tap mt-6 w-full py-3.5 surface-wine text-white text-label font-bold rounded-2xl shadow-soft transition-ui"
             >
               Entendi
             </button>
@@ -178,14 +178,14 @@ export default function InstallApp() {
       {android && showAndroidSheet && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
           <div
-            className="absolute inset-0 bg-[#1a0e12]/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-wine-950/45 backdrop-blur-sm"
             onClick={() => setShowAndroidSheet(false)}
           />
-          <div className="relative z-10 w-full sm:max-w-sm bg-paper rounded-t-4xl sm:rounded-4xl p-7 safe-sheet shadow-glow animate-slide-up">
+          <div className="relative z-10 w-full sm:max-w-sm bg-surface rounded-t-4xl sm:rounded-4xl p-7 safe-sheet shadow-glow animate-slide-up">
             <button
               type="button"
               onClick={() => setShowAndroidSheet(false)}
-              className="tap absolute top-5 right-5 p-1.5 rounded-xl text-gray-450 hover:bg-cream"
+              className="tap absolute top-5 right-5 p-1.5 rounded-xl text-n-600 hover:bg-n-50"
               aria-label="Fechar"
             >
               <X className="h-5 w-5" />
@@ -195,28 +195,28 @@ export default function InstallApp() {
               <div className="h-14 w-14 surface-wine text-white rounded-3xl flex items-center justify-center shadow-soft ring-hairline">
                 <Smartphone className="h-7 w-7" />
               </div>
-              <h3 className="mt-4 text-lg font-black text-ink tracking-tight">Instalar a Lume</h3>
-              <p className="mt-1 text-xs text-gray-450 leading-relaxed max-w-[18rem]">
+              <h3 className="mt-4 text-h3 font-semibold text-ink tracking-tight">Instalar a Lume</h3>
+              <p className="mt-1 text-caption text-n-600 leading-relaxed max-w-[18rem]">
                 Adicione à tela inicial para abrir como um app, em tela cheia.
               </p>
             </div>
 
             <ol className="mt-6 space-y-3">
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">1</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">1</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5 flex-wrap">
                   Toque em <MoreVertical className="h-4 w-4 text-wine-700 inline" /> <strong>Menu</strong> no canto superior
                 </span>
               </li>
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">2</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">2</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5 flex-wrap">
                   Escolha <span className="inline-flex items-center gap-1"><Download className="h-4 w-4 text-wine-700" /></span> <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>
                 </span>
               </li>
-              <li className="flex items-center gap-3 bg-cream/70 border border-gray-150 rounded-2xl p-3.5">
-                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-xs font-black flex items-center justify-center">3</span>
-                <span className="text-xs text-ink font-semibold flex items-center gap-1.5">
+              <li className="flex items-center gap-3 bg-n-50 border border-n-200 rounded-2xl p-3.5">
+                <span className="h-7 w-7 shrink-0 rounded-full surface-wine text-white text-caption font-semibold flex items-center justify-center">3</span>
+                <span className="text-caption text-ink font-semibold flex items-center gap-1.5">
                   Confirme em <Check className="h-4 w-4 text-ok inline" /> <strong>Instalar / Adicionar</strong>
                 </span>
               </li>
@@ -225,7 +225,7 @@ export default function InstallApp() {
             <button
               type="button"
               onClick={() => setShowAndroidSheet(false)}
-              className="tap mt-6 w-full py-3.5 surface-wine text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom"
+              className="tap mt-6 w-full py-3.5 surface-wine text-white text-label font-bold rounded-2xl shadow-soft transition-ui"
             >
               Entendi
             </button>

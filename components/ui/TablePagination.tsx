@@ -27,9 +27,9 @@ export function TablePagination({ total, params, basePath, searchParams, left }:
   const navOff = 'inline-flex items-center justify-center h-8 w-8 rounded-lg border border-line text-muted/40 pointer-events-none';
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-line text-xs no-print">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-line text-caption no-print">
       <div className="flex items-center gap-4">
-        <span className="font-semibold text-muted tabular-nums">
+        <span className="font-semibold text-muted num">
           {start}–{end} de <span className="text-ink">{total.toLocaleString('pt-BR')}</span>
         </span>
         {left}
@@ -43,7 +43,7 @@ export function TablePagination({ total, params, basePath, searchParams, left }:
               key={size}
               href={buildHref(basePath, searchParams, { size, page: null })}
               scroll={false}
-              className={`px-2 py-1 rounded-md font-bold tabular-nums transition-colors ${
+              className={`px-2 py-1 rounded-md font-bold num transition-colors ${
                 size === pageSize ? 'bg-accent-soft text-accent-link' : 'text-muted hover:text-ink hover:bg-surface-2'
               }`}
             >
@@ -61,7 +61,7 @@ export function TablePagination({ total, params, basePath, searchParams, left }:
             <span className={navOff} aria-hidden><ChevronLeft className="h-4 w-4" /></span>
           )}
 
-          <span className="px-2 font-bold text-ink tabular-nums">{current}/{pageCount}</span>
+          <span className="px-2 font-bold text-ink num">{current}/{pageCount}</span>
 
           {current < pageCount ? (
             <Link href={buildHref(basePath, searchParams, { page: current + 1 })} scroll={false} className={navBtn} aria-label="Próxima página">

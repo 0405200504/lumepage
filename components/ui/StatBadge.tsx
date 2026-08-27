@@ -16,17 +16,17 @@ export const StatBadge: React.FC<StatBadgeProps> = ({ comparison, suffix, higher
   const { deltaPct, direction } = comparison;
   if (direction === 'flat') {
     return (
-      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-surface-2 text-gray-450 ${className}`}>
-        <Minus className="h-3 w-3" /> 0%{suffix ? ` ${suffix}` : ''}
+      <span className={`inline-flex items-center gap-1 text-caption font-bold px-1.5 py-0.5 rounded-full bg-surface-2 text-n-600 ${className}`}>
+        <Minus className="h-4 w-4" /> 0%{suffix ? ` ${suffix}` : ''}
       </span>
     );
   }
   const isGood = direction === 'up' ? higherIsBetter : !higherIsBetter;
   const Icon = direction === 'up' ? ArrowUpRight : ArrowDownRight;
-  const cls = isGood ? 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)]' : 'bg-[color:var(--color-bad)]/10 text-[color:var(--color-bad)]';
+  const cls = isGood ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger';
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cls} ${className}`}>
-      <Icon className="h-3 w-3" /> {Math.abs(deltaPct).toFixed(1)}%{suffix ? ` ${suffix}` : ''}
+    <span className={`inline-flex items-center gap-1 text-caption font-bold px-1.5 py-0.5 rounded-full ${cls} ${className}`}>
+      <Icon className="h-4 w-4" /> {Math.abs(deltaPct).toFixed(1)}%{suffix ? ` ${suffix}` : ''}
     </span>
   );
 };

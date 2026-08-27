@@ -94,7 +94,7 @@ export function PreviewFrame({ device, fontsHref, children }: {
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
           }}
-          className={`bg-white overflow-hidden ${device === 'mobile' ? 'rounded-[28px] border-4 border-[#1c1a1d] shadow-2xl' : 'rounded-xl border border-gray-250 shadow-lg'}`}
+          className={`bg-white overflow-hidden ${device === 'mobile' ? 'rounded-[28px] border-4 border-n-950 shadow-2xl' : 'rounded-xl border border-n-300 shadow-lg'}`}
         >
           <iframe
             ref={frameRef}

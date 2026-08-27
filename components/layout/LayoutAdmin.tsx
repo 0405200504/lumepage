@@ -37,7 +37,7 @@ export async function LayoutAdmin({ children, session, title, subtitle, actions 
     <div
       data-theme={theme}
       data-density={density}
-      className="admin-shell flex min-h-screen bg-cream"
+      className="admin-shell flex min-h-screen bg-n-25"
       style={{
         backgroundImage:
           'radial-gradient(60% 50% at 100% 0%, rgba(140,36,56,0.04) 0%, transparent 60%), radial-gradient(50% 40% at 0% 100%, rgba(80,11,24,0.035) 0%, transparent 55%)',

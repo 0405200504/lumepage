@@ -26,9 +26,9 @@ export function ExportCsvButton({
       href={`/api/admin/export?${params.toString()}`}
       // Download real (a rota manda Content-Disposition) — sem virar navegação SPA.
       download
-      className={`no-print inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2 transition-colors ${className}`}
+      className={`no-print inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors ${className}`}
     >
-      <Download className="h-3.5 w-3.5" aria-hidden />
+      <Download className="h-4 w-4" aria-hidden />
       {label}
     </a>
   );

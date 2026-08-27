@@ -56,7 +56,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
     if (!prev) return null;
     const p = ((cur - prev) / prev) * 100;
     return (
-      <span className={`text-[11px] font-bold ${p >= 0 ? 'text-[color:var(--color-ok)]' : 'text-[color:var(--color-bad)]'}`}>
+      <span className={`text-caption font-bold ${p >= 0 ? 'text-success' : 'text-danger'}`}>
         {pct(p, 0)} vs período anterior
       </span>
     );
@@ -64,8 +64,8 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
 
   const alertIcon = { bad: AlertTriangle, warn: Bell, info: Info } as const;
   const alertTone = {
-    bad: 'text-[color:var(--color-bad)] bg-[color:var(--color-bad)]/10',
-    warn: 'text-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10',
+    bad: 'text-danger bg-danger-bg',
+    warn: 'text-warning bg-warning-bg',
     info: 'text-muted bg-surface-2',
   } as const;
 
@@ -91,9 +91,9 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
 
         {/* ───── Faixa 2 · precisa da sua atenção ───── */}
         <section>
-          <h2 className="text-sm font-bold text-ink mb-2.5">Precisa da sua atenção</h2>
+          <h2 className="text-label font-bold text-ink mb-2.5">Precisa da sua atenção</h2>
           {alerts.length === 0 ? (
-            <p className="card px-4 py-6 text-center text-xs text-muted">
+            <p className="card px-4 py-6 text-center text-caption text-muted">
               Nada pendente — nenhuma conta vencendo, nenhuma conversa parada, nenhuma cobrança em atraso.
             </p>
           ) : (
@@ -107,8 +107,8 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
                         <Icon className="h-4 w-4" aria-hidden />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-bold text-ink">{a.title}</span>
-                        <span className="block text-[11px] text-muted mt-0.5 line-clamp-2">{a.detail}</span>
+                        <span className="block text-caption font-bold text-ink">{a.title}</span>
+                        <span className="block text-caption text-muted mt-0.5 line-clamp-2">{a.detail}</span>
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-muted shrink-0 mt-1" aria-hidden />
                     </Link>
@@ -122,9 +122,9 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         {/* ───── Faixa 3 · gráficos ───── */}
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="card p-4 sm:p-5 rounded-3xl">
-            <h2 className="text-sm font-bold text-ink mb-3">MRR mês a mês</h2>
+            <h2 className="text-label font-bold text-ink mb-3">MRR mês a mês</h2>
             {saas.mrrCents === 0 ? (
-              <p className="py-8 text-center text-xs text-muted">
+              <p className="py-8 text-center text-caption text-muted">
                 Ainda não há assinatura ativa para compor MRR.{' '}
                 <Link href="/admin/professionals" className="font-bold text-accent-link hover:underline">Definir planos →</Link>
               </p>
@@ -138,7 +138,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
           </section>
 
           <section className="card p-4 sm:p-5 rounded-3xl">
-            <h2 className="text-sm font-bold text-ink mb-3">Faturamento por profissional</h2>
+            <h2 className="text-label font-bold text-ink mb-3">Faturamento por profissional</h2>
             <RankedBars
               items={network.byProfessional.slice(0, 8).map(p => ({
                 id: p.id, label: p.name, value: p.gmvCents, sharePct: p.sharePct,
@@ -146,7 +146,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
               }))}
               format={brl}
             />
-            <p className="mt-3 text-[11px] text-muted">GMV das profissionais — não é receita da Lume.</p>
+            <p className="mt-3 text-caption text-muted">GMV das profissionais — não é receita da Lume.</p>
           </section>
         </div>
 
@@ -154,45 +154,45 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="card rounded-3xl overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Atividade recente</h2>
-              <Link href="/admin/appointments" className="text-xs font-bold text-accent-link hover:underline">ver tudo</Link>
+              <h2 className="text-label font-bold text-ink">Atividade recente</h2>
+              <Link href="/admin/appointments" className="text-caption font-bold text-accent-link hover:underline">ver tudo</Link>
             </div>
             <ul className="divide-y divide-line">
               {recent.map(a => (
-                <li key={a.id} className="px-4 py-2.5 flex items-center gap-3 text-xs">
+                <li key={a.id} className="px-4 py-2.5 flex items-center gap-3 text-caption">
                   <span className="font-semibold text-ink flex-1 truncate">{a.client_name}</span>
                   <span className="text-muted truncate max-w-[10rem] hidden sm:block">{profNames.get(a.professional_id) ?? '—'}</span>
-                  <span className="text-muted tabular-nums whitespace-nowrap">{formatDateBR(a.date)} {formatTimeBR(a.start_time)}</span>
+                  <span className="text-muted num whitespace-nowrap">{formatDateBR(a.date)} {formatTimeBR(a.start_time)}</span>
                   <AppointmentStatusBadge status={a.status} />
                 </li>
               ))}
               {recent.length === 0 && (
-                <li className="px-4 py-8 text-center text-xs text-muted">Nenhum agendamento criado ainda nesta rede.</li>
+                <li className="px-4 py-8 text-center text-caption text-muted">Nenhum agendamento criado ainda nesta rede.</li>
               )}
             </ul>
           </section>
 
           <section className="card rounded-3xl overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Contas por faturamento</h2>
-              <Link href="/admin/professionals" className="text-xs font-bold text-accent-link hover:underline">ver tudo</Link>
+              <h2 className="text-label font-bold text-ink">Contas por faturamento</h2>
+              <Link href="/admin/professionals" className="text-caption font-bold text-accent-link hover:underline">ver tudo</Link>
             </div>
             <ul className="divide-y divide-line">
               {network.byProfessional.slice(0, 5).map(p => (
-                <li key={p.id} className="px-4 py-2.5 flex items-center gap-3 text-xs">
+                <li key={p.id} className="px-4 py-2.5 flex items-center gap-3 text-caption">
                   <Link href={`/admin/professionals/${p.id}`} className="font-semibold text-ink flex-1 truncate hover:underline">{p.name}</Link>
-                  <span className="text-muted tabular-nums">{pct(p.sharePct, 0)}</span>
-                  <span className="text-ink font-bold tabular-nums w-24 text-right">{brl(p.gmvCents)}</span>
+                  <span className="text-muted num">{pct(p.sharePct, 0)}</span>
+                  <span className="text-ink font-bold num w-24 text-right">{brl(p.gmvCents)}</span>
                 </li>
               ))}
               {network.byProfessional.length === 0 && (
-                <li className="px-4 py-8 text-center text-xs text-muted">Nenhum atendimento pago no período escolhido.</li>
+                <li className="px-4 py-8 text-center text-caption text-muted">Nenhum atendimento pago no período escolhido.</li>
               )}
             </ul>
           </section>
         </div>
 
-        <p className="text-[11px] text-muted px-1">
+        <p className="text-caption text-muted px-1">
           Infraestrutura (uso do banco, lixeira da rede, webhooks) foi para{' '}
           <Link href="/admin/system" className="font-bold text-accent-link hover:underline">Saúde do sistema</Link>.
         </p>

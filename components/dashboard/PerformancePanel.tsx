@@ -42,11 +42,11 @@ const Bars: React.FC<{ data: { label: string; value: number }[]; format?: (v: nu
     <div className="space-y-2">
       {data.map((d) => (
         <div key={d.label} className="flex items-center gap-3">
-          <span className="text-[11px] font-semibold text-gray-450 w-16 shrink-0 truncate" title={d.label}>{d.label}</span>
-          <div className="flex-1 h-5 bg-cream rounded-full overflow-hidden">
-            <div className="h-full bg-wine-700/80 rounded-full transition-all" style={{ width: `${(d.value / max) * 100}%` }} />
+          <span className="text-caption font-semibold text-n-600 w-16 shrink-0 truncate" title={d.label}>{d.label}</span>
+          <div className="flex-1 h-5 bg-n-25 rounded-full overflow-hidden">
+            <div className="h-full bg-wine-700/80 rounded-full transition-ui" style={{ width: `${(d.value / max) * 100}%` }} />
           </div>
-          <span className="text-[11px] font-bold text-ink w-16 shrink-0 text-right">{format ? format(d.value) : d.value}</span>
+          <span className="text-caption font-bold text-ink w-16 shrink-0 text-right">{format ? format(d.value) : d.value}</span>
         </div>
       ))}
     </div>
@@ -144,8 +144,8 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
-              className={`tap text-xs font-bold px-3.5 py-2 rounded-xl transition-all-custom ${
-                period === p.key ? 'surface-wine text-white shadow-soft' : 'bg-cream/60 text-gray-450 hover:text-ink border border-gray-150'
+              className={`tap text-caption font-bold px-3.5 py-2 rounded-xl transition-ui ${
+                period === p.key ? 'surface-wine text-white shadow-soft' : 'bg-n-50 text-n-600 hover:text-ink border border-n-200'
               }`}
             >
               {p.label}
@@ -155,10 +155,10 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
         {period === 'custom' && (
           <div className="flex flex-wrap items-center gap-2">
             <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
-              className="text-xs font-semibold text-ink bg-cream/60 border border-gray-150 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
-            <span className="text-xs text-gray-450">até</span>
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            <span className="text-caption text-n-600">até</span>
             <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
-              className="text-xs font-semibold text-ink bg-cream/60 border border-gray-150 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
           </div>
         )}
       </div>
@@ -184,17 +184,17 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
             <div className="card p-4 flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Star className="h-5 w-5" /></div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Serviço mais vendido</p>
-                <p className="text-sm font-bold text-ink truncate">{data.topServices[0]?.label || '—'}</p>
-                {data.topServices[0] && <p className="text-[11px] text-gray-450">{data.topServices[0].value}x no período</p>}
+                <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Serviço mais vendido</p>
+                <p className="text-label font-bold text-ink truncate">{data.topServices[0]?.label || '—'}</p>
+                {data.topServices[0] && <p className="text-caption text-n-600">{data.topServices[0].value}x no período</p>}
               </div>
             </div>
             <div className="card p-4 flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Crown className="h-5 w-5" /></div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Cliente que mais agendou</p>
-                <p className="text-sm font-bold text-ink truncate">{data.topClient?.[0] || '—'}</p>
-                {data.topClient && <p className="text-[11px] text-gray-450">{data.topClient[1]} agendamentos</p>}
+                <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Cliente que mais agendou</p>
+                <p className="text-label font-bold text-ink truncate">{data.topClient?.[0] || '—'}</p>
+                {data.topClient && <p className="text-caption text-n-600">{data.topClient[1]} agendamentos</p>}
               </div>
             </div>
           </div>
@@ -223,19 +223,19 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
 
 const Kpi: React.FC<{ icon: React.ReactNode; label: string; value: string; muted?: boolean }> = ({ icon, label, value, muted }) => (
   <div className="card p-4">
-    <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-gray-100 text-gray-450' : 'bg-wine-700/8 text-wine-700'}`}>{icon}</div>
-    <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">{label}</p>
-    <p className="text-lg font-bold text-ink mt-0.5">{value}</p>
+    <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-n-100 text-n-600' : 'bg-wine-700/8 text-wine-700'}`}>{icon}</div>
+    <p className="text-caption font-bold text-n-600 uppercase tracking-wider">{label}</p>
+    <p className="text-h3 font-bold text-ink mt-0.5">{value}</p>
   </div>
 );
 
 const ChartCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="card p-5">
-    <p className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {title}</p>
+    <p className="text-caption font-bold text-n-600 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {title}</p>
     {children}
   </div>
 );
 
-const Muted = () => <p className="text-xs text-gray-450 py-4 text-center">Sem dados no período.</p>;
+const Muted = () => <p className="text-caption text-n-600 py-4 text-center">Sem dados no período.</p>;
 
 export default PerformancePanel;

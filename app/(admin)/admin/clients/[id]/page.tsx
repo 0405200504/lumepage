@@ -54,10 +54,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       actions={
         <>
           <a href={buildWhatsappLink(client.whatsapp, '')} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-[#226045] hover:bg-surface-2">
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-success hover:bg-surface-2">
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
           </a>
-          <Link href="/admin/clients" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2">
+          <Link href="/admin/clients" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2">
             <ArrowLeft className="h-3.5 w-3.5" /> Voltar
           </Link>
         </>
@@ -77,30 +77,30 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
         {client.notes && (
           <section className="card p-4">
-            <h2 className="text-sm font-bold text-ink mb-1.5">Observações da profissional</h2>
-            <p className="text-xs text-muted whitespace-pre-wrap">{client.notes}</p>
+            <h2 className="text-label font-bold text-ink mb-1.5">Observações da profissional</h2>
+            <p className="text-caption text-muted whitespace-pre-wrap">{client.notes}</p>
           </section>
         )}
 
         <section className="card overflow-hidden">
-          <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">Histórico de agendamentos</h2>
+          <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Histórico de agendamentos</h2>
           <ul className="divide-y divide-line">
             {appts.map(a => (
-              <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-xs">
-                <span className="tabular-nums font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
-                <span className="tabular-nums text-muted w-12">{formatTimeBR(a.start_time)}</span>
+              <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
+                <span className="num font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
+                <span className="num text-muted w-12">{formatTimeBR(a.start_time)}</span>
                 <span className="text-ink flex-1 min-w-[8rem] truncate">{a.service?.name}</span>
-                <span className="tabular-nums text-ink">{brl(a.service?.price_cents || 0)}</span>
+                <span className="num text-ink">{brl(a.service?.price_cents || 0)}</span>
                 <AppointmentStatusBadge status={a.status} />
               </li>
             ))}
-            {appts.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Nenhum agendamento.</li>}
+            {appts.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhum agendamento.</li>}
           </ul>
         </section>
 
         {(anamnesis || []).length > 0 && (
           <section className="card p-4">
-            <h2 className="text-sm font-bold text-ink mb-2">Fichas de anamnese</h2>
+            <h2 className="text-label font-bold text-ink mb-2">Fichas de anamnese</h2>
             <ul className="flex flex-wrap gap-2">
               {(anamnesis as { id: string; created_at: string; status: string }[]).map(f => (
                 <li key={f.id}><Badge tone="neutral">{formatDateBR(f.created_at)} · {f.status}</Badge></li>

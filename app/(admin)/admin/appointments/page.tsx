@@ -32,8 +32,8 @@ export default async function AdminAppointmentsPage({ searchParams }: { searchPa
       key: 'date', header: 'Quando', sortable: true, primary: true,
       cell: r => (
         <span className="block">
-          <span className="block font-semibold text-ink tabular-nums">{formatDateBR(r.date)}</span>
-          <span className="block text-[11px] text-muted tabular-nums">{formatTimeBR(r.startTime)}–{formatTimeBR(r.endTime)}</span>
+          <span className="block font-semibold text-ink num">{formatDateBR(r.date)}</span>
+          <span className="block text-caption text-muted num">{formatTimeBR(r.startTime)}–{formatTimeBR(r.endTime)}</span>
         </span>
       ),
     },
@@ -42,14 +42,14 @@ export default async function AdminAppointmentsPage({ searchParams }: { searchPa
       cell: r => (
         <span className="block min-w-0">
           <span className="block font-semibold text-ink truncate">{r.clientName}</span>
-          <span className="block text-[11px] text-muted tabular-nums">{r.clientWhatsapp}</span>
+          <span className="block text-caption text-muted num">{r.clientWhatsapp}</span>
         </span>
       ),
     },
-    { key: 'prof', header: 'Profissional', cell: r => <span className="text-xs text-muted truncate">{r.professionalName}</span> },
-    { key: 'service', header: 'Serviço', cell: r => <span className="text-xs text-ink truncate">{r.serviceName}</span> },
+    { key: 'prof', header: 'Profissional', cell: r => <span className="text-caption text-muted truncate">{r.professionalName}</span> },
+    { key: 'service', header: 'Serviço', cell: r => <span className="text-caption text-ink truncate">{r.serviceName}</span> },
     { key: 'value', header: 'Valor', numeric: true, cell: r => brl(r.priceCents) },
-    { key: 'origin', header: 'Origem', hideOnMobile: true, cell: r => <span className="text-[11px] text-muted">{r.origin}</span> },
+    { key: 'origin', header: 'Origem', hideOnMobile: true, cell: r => <span className="text-caption text-muted">{r.origin}</span> },
     { key: 'status', header: 'Status', sortable: true, cell: r => <AppointmentStatusBadge status={r.status} /> },
     { key: 'actions', header: '', align: 'right', hideOnMobile: true, cell: r => <AppointmentDetailButton row={r} /> },
   ];
@@ -57,9 +57,9 @@ export default async function AdminAppointmentsPage({ searchParams }: { searchPa
   const statusChips = Object.entries(totals.byStatus)
     .sort((a, b) => b[1] - a[1])
     .map(([status, count]) => (
-      <span key={status} className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+      <span key={status} className="inline-flex items-center gap-1.5 text-caption text-muted">
         <AppointmentStatusBadge status={status} />
-        <span className="tabular-nums font-bold text-ink">{count}</span>
+        <span className="num font-bold text-ink">{count}</span>
       </span>
     ));
 
@@ -72,8 +72,8 @@ export default async function AdminAppointmentsPage({ searchParams }: { searchPa
       <div className="space-y-4">
         <div className="card px-4 py-3 flex flex-wrap items-center gap-4">
           <DateRangeFilter basePath={BASE} />
-          <span className="ml-auto text-xs text-muted">
-            Faturamento no filtro: <strong className="text-ink tabular-nums">{brl(totals.revenueCents)}</strong>
+          <span className="ml-auto text-caption text-muted">
+            Faturamento no filtro: <strong className="text-ink num">{brl(totals.revenueCents)}</strong>
           </span>
         </div>
 

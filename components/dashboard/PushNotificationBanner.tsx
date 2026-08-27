@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 // Função auxiliar para converter a base64 VAPID public key para Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
@@ -111,34 +112,44 @@ export function PushNotificationBanner() {
 
   if (!showBanner) return null;
 
+  /* Toast dispensável, NÃO faixa no fluxo.
+     Como faixa, ela empurrava o conteúdo principal para baixo toda vez que
+     aparecia — a profissional abria o painel e o faturamento tinha mudado de
+     lugar. Aqui ela flutua: acima da tab bar no celular, no canto inferior
+     direito no desktop, e não desloca um pixel do que está atrás. */
   return (
-    <div className="bg-wine-50 border border-gray-150 border-l-4 border-l-wine-700 p-4 rounded-2xl shadow-soft flex items-start sm:items-center justify-between gap-4 animate-fade-up">
-      <div className="flex items-center gap-3">
-        <div className="bg-white p-2 rounded-full shadow-soft text-wine-700 shrink-0">
-          <Bell size={22} />
-        </div>
-        <div>
-          <h3 className="text-ink font-semibold leading-tight">Ativar notificações de agendamentos?</h3>
-          <p className="text-gray-450 text-sm mt-0.5">
-            Seja avisada na hora, no seu dispositivo, quando uma cliente agendar.
+    <div
+      role="status"
+      className="fixed z-45 no-print toast-in
+        left-4 right-4 bottom-[calc(76px+env(safe-area-inset-bottom))]
+        lg:left-auto lg:right-6 lg:bottom-6 lg:w-[380px]"
+    >
+      <div className="card p-4 flex items-start gap-3">
+        <span className="icon-chip" data-accent="true" aria-hidden>
+          <Bell className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-label font-semibold text-heading leading-snug">
+            Ativar notificações de agendamentos?
+          </h3>
+          <p className="text-caption text-n-500 mt-0.5">
+            Seja avisada na hora, no seu aparelho, quando uma cliente agendar.
           </p>
+          <div className="flex items-center gap-2 mt-3">
+            <Button size="sm" onClick={handleSubscribe} loading={isSubscribing}>
+              {isSubscribing ? 'Ativando…' : 'Ativar agora'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDismiss}>
+              Agora não
+            </Button>
+          </div>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 mt-2 sm:mt-0 shrink-0">
-        <button
-          onClick={handleSubscribe}
-          disabled={isSubscribing}
-          className="tap bg-wine-700 hover:bg-wine-800 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all-custom disabled:opacity-50"
-        >
-          {isSubscribing ? 'Ativando…' : 'Ativar agora'}
-        </button>
         <button
           onClick={handleDismiss}
-          className="tap p-2 text-gray-450 hover:text-wine-700 hover:bg-wine-100 rounded-full transition-all-custom"
           aria-label="Dispensar"
+          className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
         >
-          <X size={20} />
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>

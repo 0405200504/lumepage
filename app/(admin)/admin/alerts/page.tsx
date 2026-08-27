@@ -9,8 +9,8 @@ export const metadata = { title: 'Alertas | Lume Admin' };
 
 const ICON = { bad: AlertTriangle, warn: Bell, info: Info } as const;
 const TONE = {
-  bad: 'text-[color:var(--color-bad)] bg-[color:var(--color-bad)]/10',
-  warn: 'text-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10',
+  bad: 'text-danger bg-danger-bg',
+  warn: 'text-warning bg-warning-bg',
   info: 'text-muted bg-surface-2',
 } as const;
 
@@ -26,9 +26,9 @@ export default async function AdminAlertsPage() {
     >
       {alerts.length === 0 ? (
         <div className="card py-16 flex flex-col items-center text-center">
-          <CheckCircle2 className="h-8 w-8 text-[color:var(--color-ok)] mb-3" aria-hidden />
-          <h2 className="text-sm font-bold text-ink">Nada pegando fogo</h2>
-          <p className="mt-1 text-xs text-muted">Nenhum trial vencendo, nenhuma conta parada, nenhuma conversa esperando.</p>
+          <CheckCircle2 className="h-8 w-8 text-success mb-3" aria-hidden />
+          <h2 className="text-label font-bold text-ink">Nada pegando fogo</h2>
+          <p className="mt-1 text-caption text-muted">Nenhum trial vencendo, nenhuma conta parada, nenhuma conversa esperando.</p>
         </div>
       ) : (
         <ul className="space-y-2.5">
@@ -41,10 +41,10 @@ export default async function AdminAlertsPage() {
                     <Icon className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-ink">{a.title}</span>
-                    <span className="block text-xs text-muted mt-0.5">{a.detail}</span>
+                    <span className="block text-label font-bold text-ink">{a.title}</span>
+                    <span className="block text-caption text-muted mt-0.5">{a.detail}</span>
                   </span>
-                  <span className="text-xs font-bold text-accent-link shrink-0 self-center">Ver →</span>
+                  <span className="text-caption font-bold text-accent-link shrink-0 self-center">Ver →</span>
                 </Link>
               </li>
             );

@@ -15,7 +15,7 @@ export function NetworkTrashButton({ appointments, clients }: { appointments: nu
   const [typed, setTyped] = useState('');
   const total = appointments + clients;
 
-  if (total === 0) return <p className="text-xs text-muted">A lixeira da rede está vazia.</p>;
+  if (total === 0) return <p className="text-caption text-muted">A lixeira da rede está vazia.</p>;
 
   const run = async () => {
     setBusy(true);
@@ -28,7 +28,7 @@ export function NetworkTrashButton({ appointments, clients }: { appointments: nu
   if (!confirming) {
     return (
       <button type="button" onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-[color:var(--color-bad)] hover:bg-[color:var(--color-bad)]/10 transition-colors">
+        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold text-danger hover:bg-danger-bg transition-colors">
         <Trash2 className="h-3.5 w-3.5" /> Esvaziar lixeira ({total})
       </button>
     );
@@ -36,16 +36,16 @@ export function NetworkTrashButton({ appointments, clients }: { appointments: nu
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="text-xs text-muted">
+      <label className="text-caption text-muted">
         Digite <strong className="text-ink font-mono">APAGAR</strong> para confirmar:
         <input value={typed} onChange={e => setTyped(e.target.value)} aria-label="Confirmação"
-          className="ml-2 h-8 px-2 rounded-lg border border-line bg-surface text-xs text-ink w-28" />
+          className="ml-2 h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink w-28" />
       </label>
       <button type="button" disabled={typed !== 'APAGAR' || busy} onClick={run}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[color:var(--color-bad)] text-white text-xs font-bold disabled:opacity-40">
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-danger text-white text-caption font-bold disabled:opacity-40">
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Apagar definitivamente
       </button>
-      <button type="button" onClick={() => { setConfirming(false); setTyped(''); }} className="h-8 px-3 rounded-lg text-xs font-bold text-muted hover:bg-surface-2">
+      <button type="button" onClick={() => { setConfirming(false); setTyped(''); }} className="h-8 px-3 rounded-lg text-caption font-bold text-muted hover:bg-surface-2">
         Cancelar
       </button>
     </div>
@@ -72,7 +72,7 @@ export function TestDataButton() {
 
   return (
     <button type="button" onClick={run} disabled={busy}
-      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2 transition-colors disabled:opacity-50">
+      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors disabled:opacity-50">
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
       Limpar contas de teste
     </button>

@@ -82,12 +82,12 @@ export function AdminTopbar({
     <header className="sticky top-0 z-30 glass hairline-b select-none">
       <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-4">
         <nav aria-label="Trilha de navegação" className="min-w-0 flex-1 pl-12 lg:pl-0">
-          <ol className="flex items-center gap-1 text-[11px] font-bold text-gray-450">
+          <ol className="flex items-center gap-1 text-caption font-bold text-n-600">
             {crumbs.map((crumb, i) => {
               const last = i === crumbs.length - 1;
               return (
                 <li key={crumb.href} className="flex items-center gap-1.5 min-w-0">
-                  {i > 0 && <ChevronRight className="h-3 w-3 text-gray-450/70 shrink-0" aria-hidden />}
+                  {i > 0 && <ChevronRight className="h-3 w-3 text-n-600/70 shrink-0" aria-hidden />}
                   {last ? (
                     <span className="text-ink truncate" aria-current="page">{crumb.label}</span>
                   ) : (
@@ -108,11 +108,11 @@ export function AdminTopbar({
           <Link
             href="/admin/alerts"
             aria-label={alertCount > 0 ? `${alertCount} alertas` : 'Alertas'}
-            className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom"
+            className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl bg-surface border border-n-200 text-wine-700 shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-ui"
           >
             <Bell className="h-4 w-4" aria-hidden />
             {alertCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[color:var(--color-bad)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-caption font-bold flex items-center justify-center num">
                 {alertCount > 99 ? '99+' : alertCount}
               </span>
             )}
@@ -120,15 +120,15 @@ export function AdminTopbar({
 
           {/* Mesmo chip de identidade do painel da profissional. */}
           <div
-            className="flex items-center gap-0 sm:gap-2.5 shrink-0 sm:bg-paper/80 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2 sm:shadow-soft"
+            className="flex items-center gap-0 sm:gap-2.5 shrink-0 sm:bg-surface sm:border sm:border-n-200 rounded-full sm:rounded-2xl p-0 sm:p-2 sm:shadow-soft"
             title={`${userName} · ${userEmail}`}
           >
-            <span className="h-9 w-9 bg-gradient-to-br from-wine-700/12 to-wine-500/8 ring-1 ring-wine-700/10 text-forest rounded-full sm:rounded-xl flex items-center justify-center shrink-0">
+            <span className="h-9 w-9 bg-gradient-to-br from-wine-700/12 to-wine-500/8 ring-1 ring-wine-700/10 text-wine-700 rounded-full sm:rounded-xl flex items-center justify-center shrink-0">
               <ShieldAlert className="h-5 w-5" aria-hidden />
             </span>
             <span className="hidden xl:block leading-tight text-left">
-              <span className="block text-xs font-bold text-ink">{userName}</span>
-              <span className="block text-[10px] text-gray-450 truncate max-w-[150px]">{userEmail}</span>
+              <span className="block text-caption font-bold text-ink">{userName}</span>
+              <span className="block text-caption text-n-600 truncate max-w-[150px]">{userEmail}</span>
             </span>
           </div>
         </div>
@@ -136,8 +136,8 @@ export function AdminTopbar({
 
       <div className="px-4 sm:px-6 lg:px-8 pb-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{title}</h1>
-          {subtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{subtitle}</p>}
+          <h1 className="text-h2 font-semibold text-ink tracking-tight leading-tight truncate">{title}</h1>
+          {subtitle && <p className="hidden sm:block text-caption text-n-600 mt-1 max-w-2xl">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 no-print">{actions}</div>}
       </div>

@@ -70,7 +70,7 @@ export default function PainSection() {
         <div className="mt-12 grid gap-4 sm:grid-cols-2">
           {dores.map((d, i) => (
             <Reveal key={d.n} delay={i * 0.06}>
-              <div className="group flex h-full gap-4 rounded-lp-3xl border border-rose/50 bg-lp-cream p-6 transition-all duration-300 hover:border-bordo/40 hover:shadow-lp-card sm:p-7">
+              <div className="group flex h-full gap-4 rounded-lp-3xl border border-rose/50 bg-lp-cream p-6 transition-ui duration-300 hover:border-bordo/40 hover:shadow-lp-card sm:p-7">
                 <span className="font-cormorant text-3xl italic text-bordo/70">
                   {d.n}
                 </span>

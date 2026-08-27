@@ -50,7 +50,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
       cell: r => (
         <span className="block min-w-0">
           <span className="block font-semibold text-ink truncate">{r.brandName}</span>
-          <span className="block text-[11px] text-muted truncate">{r.name} · /{r.slug}</span>
+          <span className="block text-caption text-muted truncate">{r.name} · /{r.slug}</span>
         </span>
       ),
     },
@@ -71,16 +71,16 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
     {
       key: 'bot', header: 'Bot', menuLabel: 'Bot', align: 'center',
       cell: r => r.botConfigured
-        ? <Bot className={`h-4 w-4 mx-auto ${r.botEnabled ? 'text-[color:var(--color-ok)]' : 'text-muted'}`} aria-label={r.botEnabled ? 'Bot ligado' : 'Bot configurado, desligado'} />
-        : <span className="text-muted text-xs" aria-label="Sem bot">—</span>,
+        ? <Bot className={`h-4 w-4 mx-auto ${r.botEnabled ? 'text-success' : 'text-muted'}`} aria-label={r.botEnabled ? 'Bot ligado' : 'Bot configurado, desligado'} />
+        : <span className="text-muted text-caption" aria-label="Sem bot">—</span>,
     },
     {
       key: 'access', header: 'Último acesso', menuLabel: 'Último acesso', sortable: true, className: 'min-w-[8rem]',
-      cell: r => <span className="text-xs text-muted">{r.lastSignInAt ? formatRelativeBR(r.lastSignInAt) : '—'}</span>,
+      cell: r => <span className="text-caption text-muted">{r.lastSignInAt ? formatRelativeBR(r.lastSignInAt) : '—'}</span>,
     },
     {
       key: 'created', header: 'Cadastro', menuLabel: 'Cadastro', sortable: true, hideOnMobile: true,
-      cell: r => <span className="text-xs text-muted tabular-nums">{formatDateBR(r.createdAt)}</span>,
+      cell: r => <span className="text-caption text-muted num">{formatDateBR(r.createdAt)}</span>,
     },
     {
       key: 'enter', header: <span className="sr-only">Entrar como</span>, align: 'right', className: 'w-24',
@@ -95,10 +95,10 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
       subtitle="As contas da rede, com o que cada uma produziu nos últimos 30 dias."
       actions={
         <>
-          <Link href="/admin/professionals/acessos" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-line bg-surface text-ink text-xs font-bold hover:bg-surface-2 transition-colors">
+          <Link href="/admin/professionals/acessos" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-line bg-surface text-ink text-caption font-bold hover:bg-surface-2 transition-colors">
             <KeyRound className="h-4 w-4" /> Acessos
           </Link>
-          <Link href="/admin/professionals/new" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold transition-colors">
+          <Link href="/admin/professionals/new" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold transition-colors">
             <Plus className="h-4 w-4" /> Cadastrar
           </Link>
         </>

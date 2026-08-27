@@ -27,8 +27,8 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
       <div className="max-w-md w-full z-10">
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="light" className="h-12 text-white mb-5" />
-          <h1 className="text-2xl font-black text-white tracking-tight">Criar uma nova senha</h1>
-          <p className="text-xs text-white/55 mt-1.5">Você escolhe. Ninguém da Lume vê o que você digitar aqui.</p>
+          <h1 className="text-h2 font-semibold text-white tracking-tight">Criar uma nova senha</h1>
+          <p className="text-caption text-white/55 mt-1.5">Você escolhe. Ninguém da Lume vê o que você digitar aqui.</p>
         </div>
 
         <div className="card-elevated p-7 md:p-9">
@@ -36,12 +36,12 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
             <ResetPasswordForm token={token} />
           ) : (
             <div className="space-y-4 text-center">
-              <p className="text-sm font-bold text-ink">{check.error}</p>
-              <p className="text-xs text-muted">
+              <p className="text-label font-bold text-ink">{check.error}</p>
+              <p className="text-caption text-muted">
                 Links de redefinição valem uma hora e só funcionam uma vez — é o que impede
                 que alguém reaproveite o seu.
               </p>
-              <Link href="/login" className="inline-block w-full py-3.5 surface-wine text-white text-sm font-bold rounded-2xl">
+              <Link href="/login" className="inline-block w-full py-3.5 surface-wine text-white text-label font-bold rounded-2xl">
                 Voltar para o login
               </Link>
             </div>
