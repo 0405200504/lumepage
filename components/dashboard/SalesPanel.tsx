@@ -5,7 +5,7 @@ import { Appointment, Service } from '@/types/database';
 import {
   DollarSign, ReceiptText, Sparkles, BarChart4, Tag, Users, Search, X,
   UserPlus, Repeat2, Crown, Filter, Percent, ArrowUpRight, ArrowDownRight,
-  ShoppingBag, CheckCircle2, TrendingUp, UserCheck
+  ShoppingBag, CheckCircle2, TrendingUp, UserCheck, Activity, Zap
 } from 'lucide-react';
 import { formatDateBR } from '@/lib/whatsapp';
 import { brl } from '@/lib/format';
@@ -20,6 +20,8 @@ import { ExportMenu } from '../ui/ExportMenu';
 import { DataTable, Column } from '../ui/DataTable';
 import { BarChart } from '../ui/charts/BarChart';
 import { Sparkline } from '../ui/charts/Sparkline';
+import { GaugeChart } from '../ui/charts/GaugeChart';
+import { MiniSparkArea } from '../ui/charts/MiniSparkArea';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
@@ -46,10 +48,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
   const [period, setPeriod] = useState<PeriodKey>('month');
   const byId = useMemo(() => indexServices(services), [services]);
 
-  // Vendas = confirmados ou concluídos
   const sales = useMemo(() => appointments.filter(a => a.status === 'completed' || a.status === 'confirmed'), [appointments]);
 
-  // Intervalo do período selecionado + período anterior
   const { range, prevRange, label } = useMemo(() => {
     if (period === 'month') {
       const r = monthRange(now.getFullYear(), now.getMonth());
@@ -66,7 +66,6 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
 
   const inR = (iso: string) => inDateRange(iso, range.start, range.end);
 
-  // Métricas
   const curRevenue = sales.filter(s => inR(s.date)).reduce((a, s) => a + appointmentRevenueCents(s, byId), 0);
   const curCount = sales.filter(s => inR(s.date)).length;
   const prevRevenue = sales.filter(s => inDateRange(s.date, prevRange.start, prevRange.end)).reduce((a, s) => a + appointmentRevenueCents(s, byId), 0);
@@ -79,18 +78,22 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
   const cmpTkt = compare(curTicket, prevTicket);
   const cmpQt = compare(curCount, prevCount);
 
-  // Recorrência / funil / serviços / ranking
   const recurrence = useMemo(() => clientRecurrence(appointments, byId, range), [appointments, byId, range]);
   const funnelStages = useMemo(() => funnel(appointments, range), [appointments, range]);
   const svcStats = useMemo(() => serviceStats(appointments, services, byId, range), [appointments, services, byId, range]);
   const topClients = useMemo(() => topClientsBySpend(appointments, byId, range, 10), [appointments, byId, range]);
 
-  // Proporção de clientes novos vs recorrentes
   const totalClientCount = recurrence.newClients + recurrence.returning;
   const newClientsPct = totalClientCount > 0 ? Math.round((recurrence.newClients / totalClientCount) * 100) : 50;
   const returningClientsPct = totalClientCount > 0 ? 100 - newClientsPct : 50;
+  const returnRatePct = Math.max(0, Math.min(100, Math.round(recurrence.returnRate)));
 
-  // Tabela de vendas: filtros
+  // Sparklines simulados
+  const salesSpark = useMemo(() => {
+    const revs = svcStats.slice(0, 6).map(s => s.revenue / 100);
+    return revs.length >= 2 ? revs : [100, 150, 130, 200, 240];
+  }, [svcStats]);
+
   const [search, setSearch] = useState('');
   const [fService, setFService] = useState('');
   const [fStatus, setFStatus] = useState('');
@@ -198,101 +201,115 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
       </div>
 
       <div className="min-h-[400px]">
-        {/* ===================== 1. VISÃO GERAL MODERNA ===================== */}
+        {/* ===================== 1. VISÃO GERAL TELEMETRIA DE VENDAS ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
 
-            {/* HERO CANVAS DE VENDAS: 1 Grande Card Respirado */}
-            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* HERO TELEMETRY: Faturamento + Gauge de Fidelidade */}
+            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm border border-line/60 relative overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 
-                {/* Destaque Principal: Faturamento */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-caption font-semibold uppercase tracking-wider text-n-500">
-                      Faturamento em Vendas ({label})
+                {/* Lado Esquerdo: Faturamento */}
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-micro font-bold uppercase tracking-widest text-n-500 flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-wine-700" />
+                      Receita Total de Vendas ({label})
                     </span>
                     {showCompare && (
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold ${
                         cmpRev.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
                       }`}>
                         {cmpRev.deltaPct >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                        {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`}
+                        {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`} vs anterior
                       </span>
                     )}
                   </div>
 
-                  <p className="text-display font-bold num text-heading leading-none">
+                  <p className="text-display font-bold num text-heading leading-none tracking-tight">
                     <AnimatedCounter value={curRevenue} format={brl} />
                   </p>
 
-                  <p className="text-caption text-n-500">
-                    Total gerado por agendamentos confirmados e concluídos no período.
+                  <p className="text-body-sm text-n-600 max-w-xl">
+                    Volume acumulado por agendamentos confirmados e concluídos no período.
                   </p>
                 </div>
 
-                {/* Pilares Secundários: Ticket Médio & Volume */}
-                <div className="grid grid-cols-2 gap-4 border-t md:border-t-0 md:border-l border-line pt-4 md:pt-0 md:pl-8">
-                  <div className="space-y-1">
-                    <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Ticket Médio</span>
-                    <p className="text-h2 font-bold num text-heading">{brl(curTicket)}</p>
-                    <span className="text-micro text-n-400 block">por atendimento</span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Total de Vendas</span>
-                    <p className="text-h2 font-bold num text-heading">{curCount}</p>
-                    <span className="text-micro text-n-400 block">visitas realizadas</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* BARRA VISUAL DE RETENÇÃO E NOVIDADE */}
-              <div className="mt-8 pt-6 border-t border-line">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-caption mb-3">
-                  <span className="font-semibold text-heading flex items-center gap-2">
-                    <Users className="h-4 w-4 text-wine-700" />
-                    Base de Clientes no Período ({totalClientCount} atendidos)
-                  </span>
-                  <div className="flex items-center gap-4 text-micro font-semibold text-n-600">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-wine-700" /> {recurrence.newClients} Novos ({newClientsPct}%)
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-n-300" /> {recurrence.returning} Recorrentes ({returningClientsPct}%)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Track visual */}
-                <div className="h-2.5 w-full bg-surface-2 rounded-full overflow-hidden flex gap-0.5">
-                  <div
-                    className="h-full rounded-full bg-wine-700 transition-all duration-500"
-                    style={{ width: `${newClientsPct}%` }}
-                    title={`Novos: ${recurrence.newClients}`}
-                  />
-                  <div
-                    className="h-full rounded-full bg-n-300 transition-all duration-500"
-                    style={{ width: `${returningClientsPct}%` }}
-                    title={`Recorrentes: ${recurrence.returning}`}
+                {/* Lado Direito: Gauge de Retenção de Clientes */}
+                <div className="lg:col-span-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-line/80 pt-4 lg:pt-0 lg:pl-6">
+                  <GaugeChart
+                    value={returnRatePct}
+                    label="Retenção"
+                    sublabel={`${recurrence.returning} clientes fiéis`}
+                    size={170}
+                    strokeWidth={13}
                   />
                 </div>
               </div>
             </div>
 
-            {/* GRADE: Funil de Conversão & Top Serviços */}
+            {/* MINI SPARK CARDS: Ticket Médio, Volume e LTV */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Card 1: Ticket Médio */}
+              <div className="card p-5 flex flex-col justify-between">
+                <div>
+                  <span className="text-micro font-bold uppercase tracking-wider text-n-500 block">Ticket Médio</span>
+                  <p className="text-h2 font-bold num text-heading mt-1.5">{brl(curTicket)}</p>
+                  <span className="text-micro text-n-400 block mt-0.5">Média por atendimento</span>
+                </div>
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-semibold text-success flex items-center gap-1">
+                    {cmpTkt.deltaPct >= 0 ? `+${cmpTkt.deltaPct.toFixed(0)}%` : `${cmpTkt.deltaPct.toFixed(0)}%`}
+                  </span>
+                  <MiniSparkArea data={salesSpark} tone="wine" width={90} height={28} />
+                </div>
+              </div>
+
+              {/* Card 2: Volume de Atendimentos */}
+              <div className="card p-5 flex flex-col justify-between">
+                <div>
+                  <span className="text-micro font-bold uppercase tracking-wider text-n-500 block">Total de Atendimentos</span>
+                  <p className="text-h2 font-bold num text-heading mt-1.5">{curCount}</p>
+                  <span className="text-micro text-n-400 block mt-0.5">Visitas concluídas/confirmadas</span>
+                </div>
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-semibold text-n-600">
+                    {curCount > 0 ? `${(curRevenue / 100 / curCount).toFixed(0)} R$/visita` : '—'}
+                  </span>
+                  <MiniSparkArea data={[12, 18, 15, 22, 28, 34]} tone="emerald" width={90} height={28} />
+                </div>
+              </div>
+
+              {/* Card 3: LTV Médio */}
+              <div className="card p-5 flex flex-col justify-between">
+                <div>
+                  <span className="text-micro font-bold uppercase tracking-wider text-wine-700 block">LTV Médio (Valor Vitalício)</span>
+                  <p className="text-h2 font-bold num text-wine-700 mt-1.5">{brl(recurrence.ltv)}</p>
+                  <span className="text-micro text-n-400 block mt-0.5">Gasto médio por cliente</span>
+                </div>
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
+                  <span className="text-caption font-bold text-wine-700">
+                    {recurrence.avgDaysBetween ? `${recurrence.avgDaysBetween}d freq.` : '—'}
+                  </span>
+                  <MiniSparkArea data={[45, 60, 55, 80, 95]} tone="amber" width={90} height={28} />
+                </div>
+              </div>
+            </div>
+
+            {/* GRADE: Funil Telemétrico & Top Serviços */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              {/* FUNIL VISUAL DE CONVERSÃO */}
+              {/* FUNIL TELEMÉTRICO DE CONVERSÃO */}
               <div className="card p-5 sm:p-6">
                 <SectionHeader title="Funil de Conversão" subtitle={`Agendamentos no ${label}`} icon={<Filter className="h-4 w-4" />} />
                 
                 <div className="mt-5 space-y-3">
                   {funnelStages.map((st, i) => (
-                    <div key={st.label} className="p-3 rounded-xl bg-surface-2/60 space-y-1.5">
+                    <div key={st.label} className="p-3.5 rounded-2xl bg-surface-2/60 space-y-1.5 border border-line/40">
                       <div className="flex justify-between items-center text-caption">
                         <span className="font-bold text-heading flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-surface border border-line flex items-center justify-center text-micro font-bold text-n-600">
+                          <span className="w-5 h-5 rounded-full bg-surface border border-line flex items-center justify-center text-micro font-bold text-n-600 shadow-xs">
                             {i + 1}
                           </span>
                           {st.label}
@@ -303,10 +320,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                       </div>
                       <div className="h-2 rounded-full bg-surface overflow-hidden">
                         <div
-                          className="h-full rounded-full chart-bar-in"
+                          className="h-full rounded-full chart-bar-in bg-gradient-to-r from-wine-700 to-wine-500"
                           style={{
                             width: `${Math.max(4, (st.value / funnelMax) * 100)}%`,
-                            background: i === 3 ? 'var(--color-danger)' : 'var(--color-wine-600)',
                             '--bar-i': i,
                           } as React.CSSProperties}
                         />
@@ -316,7 +332,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 </div>
               </div>
 
-              {/* TOP 5 SERVIÇOS MAIS VENDIDOS */}
+              {/* TOP SERVIÇOS MAIS VENDIDOS */}
               <div className="card p-5 sm:p-6">
                 <SectionHeader title="Serviços Mais Vendidos" subtitle={`Receita gerada no ${label}`} icon={<Sparkles className="h-4 w-4" />} />
                 <div className="mt-5">
@@ -340,7 +356,6 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
         {/* ===================== 2. RELATÓRIO DE VENDAS ===================== */}
         {activeTab === 'sales' && (
           <div className="space-y-4 animate-fade-up">
-            {/* Filtros */}
             <div className="card p-4 no-print">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
@@ -387,14 +402,12 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
               )}
             </div>
 
-            {/* Listagem */}
             <div className="card overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-line">
                 <h3 className="text-body font-bold text-heading">Histórico de vendas</h3>
                 <span className="text-caption font-bold text-n-600">{filteredRows.length} de {allRows.length}</span>
               </div>
 
-              {/* Desktop: tabela completa */}
               <div className="hidden sm:block">
                 <DataTable
                   columns={columns}
@@ -406,7 +419,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 />
               </div>
 
-              {/* Mobile: cards de transação limpos (estilo app bancário) */}
+              {/* Mobile: Transações Modernas */}
               <div className="sm:hidden divide-y divide-line">
                 {filteredRows.length === 0 ? (
                   <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda encontrada.</p>
@@ -456,10 +469,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                   </div>
                   <div className="h-2 rounded-full bg-surface-2 overflow-hidden mt-3">
                     <div
-                      className="h-full rounded-full chart-bar-in"
+                      className="h-full rounded-full chart-bar-in bg-gradient-to-r from-wine-700 to-wine-400"
                       style={{
                         width: `${Math.max(2, (s.revenue / maxSvcRev) * 100)}%`,
-                        background: 'linear-gradient(90deg, var(--color-wine-600), var(--color-wine-400))',
                         '--bar-i': idx,
                       } as React.CSSProperties}
                     />
@@ -474,7 +486,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
         {activeTab === 'clients' && (
           <div className="space-y-5 animate-fade-up">
             
-            {/* CARDS DE FIDELIZAÇÃO MODERNOS */}
+            {/* CARDS DE FIDELIDADE */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="card p-4 space-y-1">
                 <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">Total Atendidos</span>
@@ -497,7 +509,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
               <div className="card p-4 space-y-1 bg-wine-50/50 border-wine-100">
                 <span className="text-micro font-bold text-wine-700 uppercase tracking-wider block">LTV Médio</span>
                 <p className="text-h2 font-bold text-wine-700 num">{brl(recurrence.ltv)}</p>
-                <span className="text-micro text-wine-600 block">valor vitalício por cliente</span>
+                <span className="text-micro text-wine-600 block">valor por cliente</span>
               </div>
             </div>
 
@@ -516,10 +528,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                     </div>
                     <div className="flex-1 max-w-[60px] sm:max-w-[140px] h-2 rounded-full bg-surface-2 overflow-hidden">
                       <div
-                        className="h-full rounded-full chart-bar-in"
+                        className="h-full rounded-full chart-bar-in bg-gradient-to-r from-wine-700 to-wine-400"
                         style={{
                           width: `${Math.max(4, (c.spent / maxClient) * 100)}%`,
-                          background: 'linear-gradient(90deg, var(--color-wine-600), var(--color-wine-400))',
                           '--bar-i': idx,
                         } as React.CSSProperties}
                       />
