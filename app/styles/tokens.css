@@ -5,11 +5,24 @@
    deste arquivo — componente algum inventa cor, raio, sombra
    ou duração.
 
-   DIREÇÃO (rodada 3): instrumento técnico em tema CLARO.
-   Painel de medição, não app de bem-estar. Hairline no lugar
-   de sombra, grafite frio no lugar de neutro quente, geometria
-   curta e chanfrada no lugar de canto macio, monoespaçada nos
-   dados, e o vinho da marca funcionando como LUZ DE SINAL.
+   DIREÇÃO (rodada 4): SaaS claro, macio e caro.
+   A rodada anterior perseguiu "instrumento de medição" e
+   entregou o oposto do que a marca é: grafite frio, três
+   famílias tipográficas brigando, canto chanfrado, hairline
+   no lugar de sombra. Lia como rascunho de engenharia.
+
+   O que manda agora:
+     · UMA tipografia (Plus Jakarta Sans) do micro-rótulo ao
+       display. Hierarquia se faz com PESO, TAMANHO e COR —
+       nunca trocando de família.
+     · Superfície BRANCA sobre fundo cinza-claro. O que separa
+       um card do fundo é a diferença de luz, não um traço.
+     · Raio generoso: 12 nos controles, 20 nos cards, 28 nos
+       heros, pílula no que é filtro/ação.
+     · Sombra de volta, mas difusa e quase incolor — a peça
+       repousa sobre o fundo, não flutua com halo.
+     · Vinho da marca como COR DE AÇÃO: item ativo, botão
+       primário, dado em foco. Chapado, sem gradiente.
 
    Tailwind v4 é CSS-first: não existe `tailwind.config.ts`.
    O bloco @theme ABAIXO É a configuração — cada token vira
@@ -24,55 +37,57 @@
      qualquer tamanho.
      ------------------------------------------------------ */
   --color-wine-50:  #FDF4F6;
-  --color-wine-100: #F8E3E8;
-  --color-wine-200: #EFC4CD;
-  --color-wine-300: #D98F9E;
-  --color-wine-400: #C25A6E;
-  --color-wine-500: #A8354B;
+  --color-wine-100: #F9E7EC;
+  --color-wine-200: #F0CBD5;
+  --color-wine-300: #DEA0B0;
+  --color-wine-400: #C66E84;
+  --color-wine-500: #A94257;
   --color-wine-600: #8C2438;  /* links e texto sobre claro — 8.7:1 */
   --color-wine-700: #6B1525;  /* ⭐ MARCA — botão primário, acento — 11.9:1 */
-  --color-wine-800: #5A1121;
-  --color-wine-900: #450D1A;
-  --color-wine-950: #2E0710;  /* superfícies escuras, hero */
+  --color-wine-800: #571120;
+  --color-wine-900: #430D19;
+  --color-wine-950: #2C070F;  /* superfícies escuras, hero */
 
   /* ------------------------------------------------------
-     NEUTROS · grafite FRIO
-     A rodada anterior usava neutros quentes (#FAF8F9, #7A7178).
-     Eles davam aconchego — e aconchego é exatamente o que fazia
-     a tela parecer app de bem-estar. Instrumento de medição pede
-     cinza frio, levemente azulado, que não compete com o vinho e
-     faz a hairline ler como traço de régua, não como sombra.
+     NEUTROS · cinza QUENTE
+     O grafite azulado da rodada anterior empurrava a interface
+     para "painel de servidor". Um neutro com fração de vermelho
+     na base convive com o vinho sem virar rosa, e é o que dá o
+     ar caro do papel das referências.
+
+     A escala foi puxada para BAIXO no meio (n-100/150/200 mais
+     claros): a separação entre superfícies agora é de LUZ, e
+     luz sutil exige que o cinza não seja pesado.
      ------------------------------------------------------ */
   --color-n-0:   #FFFFFF;
-  --color-n-25:  #FAFAFB;   /* fundo da aplicação */
-  --color-n-50:  #F6F7F8;
-  --color-n-100: #EFF1F3;   /* superfície secundária */
-  --color-n-150: #E6E9EC;   /* grid de fundo */
-  --color-n-200: #DCE0E5;   /* hairline padrão */
-  --color-n-300: #C3C9D1;   /* bracket, tick, tracejado */
-  --color-n-400: #9AA2AD;   /* SÓ desabilitado — nunca carrega informação */
-  --color-n-500: #6E7681;   /* texto terciário — 4.6:1 */
-  --color-n-600: #545B65;   /* texto secundário — 6.9:1 */
-  --color-n-700: #3E444C;
-  --color-n-800: #2C3138;   /* texto corpo */
-  --color-n-900: #1A1D22;   /* títulos */
-  --color-n-950: #0E1013;
+  --color-n-25:  #FBFAFA;
+  --color-n-50:  #F7F6F6;
+  --color-n-100: #F2F1F1;   /* superfície secundária, trilho */
+  --color-n-150: #ECEAEA;
+  --color-n-200: #E3E0E1;   /* linha discreta */
+  --color-n-300: #CFCBCC;   /* linha de contorno em controle */
+  --color-n-400: #A9A5A6;   /* SÓ desabilitado — nunca carrega informação */
+  --color-n-500: #7B7678;   /* texto terciário — 4.9:1 */
+  --color-n-600: #5F5A5C;   /* texto secundário — 7.1:1 */
+  --color-n-700: #494446;
+  --color-n-800: #322E30;   /* texto corpo */
+  --color-n-900: #1C191A;   /* títulos e superfície "tinta" */
+  --color-n-950: #100E0F;
 
   /* ------------------------------------------------------
      SINAL · a luz, não a superfície
-     --signal marca UM ponto por tela: a linha do "agora" na
-     agenda, o ponto de estado ao vivo, o dado em foco no
-     gráfico, o indicador da aba ativa, o contador de pendência.
-     Área máxima: alguns pixels.
+     Marca UM ponto por tela: a linha do "agora" na agenda, o
+     ponto de estado ao vivo, o dado em foco no gráfico.
 
-     ⚠️ #F0334F no branco dá 3.97:1 — REPROVA em texto pequeno.
-     Ele nunca carrega texto de corpo; só marca, indicador e
-     número ≥24px. Existe --color-signal-ink para quando um
-     rótulo pequeno precisa dessa família de cor com contraste.
+     O vermelho-coral da rodada anterior (#F0334F) brigava com
+     o vinho a três metros de distância e reprovava em texto
+     pequeno. O sinal agora é a PRÓPRIA marca — o que muda em
+     relação ao resto da tela é a saturação do contexto, não
+     uma segunda cor quente competindo.
      ------------------------------------------------------ */
-  --color-signal:     #F0334F;
-  --color-signal-bg:  #FFE8EC;
-  --color-signal-ink: #B01029;  /* 6.2:1 — o texto pequeno usa ESTE */
+  --color-signal:     #A94257;   /* wine-500 — ponto, linha do agora */
+  --color-signal-bg:  #FDF4F6;
+  --color-signal-ink: #8C2438;   /* 8.7:1 — o texto pequeno usa ESTE */
 
   /* ------------------------------------------------------
      SEMÂNTICAS
@@ -82,50 +97,57 @@
      clica em "Cancelar atendimento" achando que confirma.
      Nenhum tom da escala wine-* pode significar erro.
 
-     Os fundos pastel (*-bg) estão APOSENTADOS na UI nova: o
-     status virou ponto + rótulo sobre superfície neutra. Os
-     tokens ficam porque telas legadas ainda os referenciam.
+     Os fundos claros (*-bg) voltaram a ter uso: no sistema
+     macio o selo de status é uma pílula de fundo suave, não
+     mais um ponto sobre superfície nua.
      ------------------------------------------------------ */
-  --color-success:        #1B7A4B;
-  --color-success-bg:     #E9F6EF;
-  --color-success-border: #C9E8D8;
-  --color-warning:        #8F5D0E;
-  --color-warning-bg:     #FDF3E2;
-  --color-warning-border: #F2DFBC;
-  --color-danger:         #C43A22;
-  --color-danger-bg:      #FDEDE8;
-  --color-danger-border:  #F5CFC4;
-  --color-info:           #1F5C8C;
-  --color-info-bg:        #EAF2F9;
-  --color-info-border:    #C9DDEE;
+  --color-success:        #16794A;
+  --color-success-bg:     #EAF6F0;
+  --color-success-border: #CDE8DA;
+  --color-warning:        #8A5A0B;
+  --color-warning-bg:     #FCF4E4;
+  --color-warning-border: #F0E0BE;
+  --color-danger:         #C0392B;
+  --color-danger-bg:      #FCEEEB;
+  --color-danger-border:  #F3D2CB;
+  --color-info:           #1E5A8A;
+  --color-info-bg:        #EBF3F9;
+  --color-info-border:    #CBDEEE;
 
   /* ------------------------------------------------------
      ALIASES SEMÂNTICOS · o que os componentes usam
      Trocar o tema = redefinir estes, não caçar hex no JSX.
      ------------------------------------------------------ */
-  --color-bg:          var(--color-n-25);
-  --color-surface:     var(--color-n-0);
-  --color-surface-2:   var(--color-n-100);   /* inputs, trilhos */
+  --color-bg:          #F4F3F3;              /* fundo da aplicação */
+  --color-surface:     var(--color-n-0);     /* card, painel, barra */
+  --color-surface-2:   var(--color-n-100);   /* input, trilho, área interna */
   --color-surface-3:   var(--color-n-150);   /* área interna mais funda */
-  --color-line:        var(--color-n-200);   /* hairline padrão */
-  --color-line-strong: var(--color-n-300);   /* hover, foco de container */
-  --color-grid:        var(--color-n-150);   /* grid de fundo da área de conteúdo */
-  --color-tick:        var(--color-n-300);   /* marcação de régua */
+  --color-line:        var(--color-n-200);   /* divisória discreta */
+  --color-line-strong: var(--color-n-300);   /* contorno de controle, hover */
+  --color-grid:        var(--color-n-150);
+  --color-tick:        var(--color-n-300);
   --color-heading:     var(--color-n-900);
   --color-ink:         var(--color-n-800);
   --color-muted:       var(--color-n-600);
   --color-faint:       var(--color-n-500);
   --color-disabled:    var(--color-n-400);
 
+  /* A "tinta": superfície escura de contraste. É o preto das
+     referências — pílula ativa, dock do celular, tooltip, o
+     card de destaque que ancora a tela. Não é preto puro:
+     n-900 tem a mesma base quente do resto da escala. */
+  --color-ink-surface:       var(--color-n-900);
+  --color-ink-surface-hover: var(--color-n-800);
+
   --color-accent:           var(--color-wine-700);  /* primário */
   --color-accent-hover:     var(--color-wine-800);
   --color-accent-link:      var(--color-wine-600);
   --color-accent-soft:      var(--color-wine-50);   /* fundo de estado ativo */
-  --color-accent-soft-border: var(--color-wine-200);
+  --color-accent-soft-border: var(--color-wine-100);
 
   /* Aliases herdados — código antigo ainda os referencia.
      Ficam apontando para a escala nova para que nada saia dela. */
-  --color-cream:     var(--color-n-25);
+  --color-cream:     var(--color-bg);
   --color-paper:     var(--color-n-0);
   --color-sand:      var(--color-n-100);
   --color-gray-150:  var(--color-n-200);
@@ -133,137 +155,144 @@
   --color-gray-450:  var(--color-n-600);
   --color-forest:       var(--color-wine-700);
   --color-forest-hover: var(--color-wine-800);
-  --color-lima:         var(--color-wine-200);
-  --color-lima-hover:   var(--color-wine-300);
+  --color-lima:         var(--color-wine-100);
+  --color-lima-hover:   var(--color-wine-200);
   --color-ok:   var(--color-success);
   --color-warn: var(--color-warning);
   --color-bad:  var(--color-danger);
 
   /* ------------------------------------------------------
-     TIPOGRAFIA
-     Sans (Instrument Sans / Manrope): títulos, nomes, dinheiro.
-     Mono (JetBrains Mono): tudo que é DADO — rótulo micro,
-     horário, duração, data, ID, delta, cabeçalho de tabela,
-     rótulo de eixo, unidade.
+     TIPOGRAFIA · uma família só
+     Plus Jakarta Sans do micro-rótulo ao display. Geométrica
+     de terminações macias, dígito tabular, e um desenho que
+     lê como produto caro sem virar "app de bem-estar".
 
-     Dinheiro fica em SANS com tabular-nums: R$ em mono vira
-     cupom fiscal.
+     As três famílias anteriores (Manrope + Instrument Sans +
+     JetBrains Mono) eram a causa direta de a interface parecer
+     montada por pessoas diferentes: cada bloco da tela tinha
+     um esqueleto tipográfico distinto.
+
+     --font-mono aponta para a MESMA família de propósito. As
+     dezenas de chamadas a `mono`/`mono-micro` espalhadas pelo
+     app continuam funcionando; o que elas produzem agora é o
+     mesmo desenho de letra, diferenciado por peso e tracking.
      ------------------------------------------------------ */
-  --font-sans:    'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Instrument Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans:    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* Escala — degraus fechados:
-       10 (mono micro) · 12 (caption) · 14 (denso) · 15 (corpo)
-       · 18 (h3) · 22 (h2) · 30+ (números, h1)
-     Hierarquia se faz com peso e cor, não inventando tamanho. */
-  --text-display: clamp(2.25rem, 5vw, 3.5rem);
-  --text-display--line-height: 1.05;
-  --text-display--letter-spacing: -0.02em;
+  /* Escala mais aberta no topo. O número grande das referências
+     é o assunto da tela: ele ganha ar, o resto se cala. */
+  --text-display: clamp(2.5rem, 5.5vw, 4rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
   --text-display--font-weight: 700;
 
-  --text-h1: clamp(1.75rem, 3vw, 2.25rem);
-  --text-h1--line-height: 1.15;
-  --text-h1--letter-spacing: -0.02em;
-  --text-h1--font-weight: 600;
+  --text-h1: clamp(1.875rem, 3.2vw, 2.5rem);   /* 30 → 40 */
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.03em;
+  --text-h1--font-weight: 700;
 
-  --text-h2: 1.375rem;   /* 22 */
+  --text-h2: 1.5rem;     /* 24 */
   --text-h2--line-height: 1.25;
-  --text-h2--letter-spacing: -0.01em;
-  --text-h2--font-weight: 600;
+  --text-h2--letter-spacing: -0.022em;
+  --text-h2--font-weight: 700;
 
   --text-h3: 1.125rem;   /* 18 */
-  --text-h3--line-height: 1.3;
-  --text-h3--letter-spacing: 0em;
+  --text-h3--line-height: 1.35;
+  --text-h3--letter-spacing: -0.015em;
   --text-h3--font-weight: 600;
 
   --text-body: 0.9375rem;  /* 15 — o corpo do produto */
-  --text-body--line-height: 1.55;
+  --text-body--line-height: 1.6;
 
-  /* 14px é o degrau DENSO: linha de tabela, célula, rótulo de
-     controle. `label` foi snapado nele — 13px ao lado de 14px
-     era um degrau que ninguém enxerga. */
-  --text-body-sm: 0.875rem;
+  --text-body-sm: 0.875rem;   /* 14 — linha de tabela, célula */
   --text-body-sm--line-height: 1.5;
   --text-label: 0.875rem;
   --text-label--line-height: 1.4;
-  --text-label--font-weight: 500;
+  --text-label--font-weight: 600;
 
   --text-caption: 0.75rem;   /* 12 */
-  --text-caption--line-height: 1.4;
+  --text-caption--line-height: 1.45;
   --text-caption--font-weight: 500;
 
-  /* 10px existe SÓ para a monoespaçada em caixa alta (o micro-label
-     do header de página, o cabeçalho de tabela, o rótulo de eixo).
-     Em sans, `caption` continua sendo o piso. */
-  --text-micro: 0.625rem;    /* 10 */
-  --text-micro--line-height: 1.2;
+  /* 11px, não mais 10: em sans geométrica o 10 fecha o olho da
+     letra. O micro-rótulo agora é 11/600 com tracking curto. */
+  --text-micro: 0.6875rem;   /* 11 */
+  --text-micro--line-height: 1.3;
 
   /* ------------------------------------------------------
-     RAIOS · geometria curta
-     O raio grande era o principal responsável pelo ar de
-     "consumer app". Nada acima de 14px. `--r-full` deixou de
-     valer para pill de filtro e selo de status: sobrou para
-     avatar e ponto de status, e só.
+     RAIOS · geometria macia
+     A rodada anterior derrubou tudo para 4–14px e o resultado
+     ficou duro. As referências vivem no oposto: 20+ no card,
+     pílula completa no controle. É o que mais rápido comunica
+     "software de 2026" — e o que mais agrada quem não tem
+     paciência para interface hostil.
 
-     Nomes semânticos (novos) e a escala legada snapada nos
-     MESMOS valores, para que os `rounded-xl`/`rounded-2xl`
-     espalhados pelo app não fiquem fora do sistema:
+     Nomes semânticos e a escala legada snapada nos MESMOS
+     valores, para que os `rounded-xl`/`rounded-2xl` espalhados
+     pelo app entrem no sistema sem edição:
 
-       rounded-badge   =  4px  =  (novo)
-       rounded-chip    =  6px  =  rounded-sm/md/lg/xl
-       rounded-surface = 10px  =  rounded-2xl / rounded-card
-       rounded-hero    = 14px  =  rounded-3xl / rounded-4xl
-       rounded-full    = 9999px  → avatar e status dot APENAS
+       rounded-badge   =  8px   selo, tag, checkbox
+       rounded-chip    = 12px   botão, input, chip
+       rounded-surface = 20px   card padrão
+       rounded-hero    = 28px   modal, sheet, painel flutuante
+       rounded-pill    = 9999px filtro, segmented, ação redonda
      ------------------------------------------------------ */
-  --radius-badge:   4px;    /* badge, tag, checkbox, avatar quadrado */
-  --radius-chip:    6px;    /* botão, input, chip de ícone */
-  --radius-control: 6px;    /* alias de chip — controles */
-  --radius-surface: 10px;   /* card padrão */
-  --radius-hero:    14px;   /* modal, sheet, hero */
+  --radius-badge:   8px;
+  --radius-chip:    12px;
+  --radius-control: 12px;
+  --radius-surface: 20px;
+  --radius-hero:    28px;
+  --radius-pill:    9999px;
 
-  --radius-xs:   4px;
-  --radius-sm:   6px;
-  --radius-md:   6px;
-  --radius-lg:   6px;
-  --radius-xl:   6px;
-  --radius-2xl:  10px;
-  --radius-3xl:  14px;
-  --radius-4xl:  14px;
-  --radius-card: 10px;
+  --radius-xs:   6px;
+  --radius-sm:   8px;
+  --radius-md:   10px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  20px;
+  --radius-3xl:  24px;
+  --radius-4xl:  28px;
+  --radius-card: 20px;
 
   /* ------------------------------------------------------
-     ELEVAÇÃO · quase morta
-     Card em repouso: fundo n-0 + hairline, ZERO sombra.
-     Elevação se faz escurecendo a borda para n-300, não
-     borrando pixel embaixo. `lg` fica reservada ao que flutua
-     de verdade: modal, sheet, dropdown, tooltip.
+     ELEVAÇÃO · difusa e quase incolor
+     A sombra voltou porque é ela que faz o branco descolar do
+     cinza sem precisar de traço. Mas é uma sombra LARGA e
+     rasa: espalhamento grande, opacidade baixa, deslocamento
+     vertical pequeno. Nada de halo colorido — o único brilho
+     do produto é o do botão primário, e ainda assim contido.
      ------------------------------------------------------ */
-  --shadow-xs:   0 0 0 0 rgba(0, 0, 0, 0);   /* neutralizada de propósito */
-  --shadow-sm:   0 0 0 0 rgba(0, 0, 0, 0);   /* neutralizada de propósito */
-  --shadow-md:   0 2px 8px -3px rgba(14, 16, 19, 0.10);
-  --shadow-lg:   0 12px 32px -12px rgba(14, 16, 19, 0.20), 0 2px 6px -3px rgba(14, 16, 19, 0.08);
-  --shadow-wine: 0 0 0 0 rgba(0, 0, 0, 0);   /* o CTA não brilha mais */
+  --shadow-xs:   0 1px 2px rgba(16, 14, 15, 0.04);
+  --shadow-sm:   0 1px 3px rgba(16, 14, 15, 0.05), 0 1px 2px -1px rgba(16, 14, 15, 0.04);
+  --shadow-md:   0 10px 28px -14px rgba(16, 14, 15, 0.16), 0 2px 6px -3px rgba(16, 14, 15, 0.05);
+  --shadow-lg:   0 28px 64px -28px rgba(16, 14, 15, 0.26), 0 6px 18px -10px rgba(16, 14, 15, 0.10);
+  --shadow-wine: 0 12px 28px -14px rgba(107, 21, 37, 0.42);
   /* Aliases herdados */
   --shadow-soft: var(--shadow-sm);
   --shadow-glow: var(--shadow-wine);
 
   /* ------------------------------------------------------
-     MOVIMENTO · mais seco
-     Uma curva só, sem overshoot: o instrumento não balança.
+     MOVIMENTO
+     Desaceleração longa (o "settle" das referências) para o
+     que entra; curva curta e simétrica para hover e cor. O
+     spring tem overshoot MÍNIMO — 1.32, não 1.7: o elemento
+     assenta, não quica.
      ------------------------------------------------------ */
-  --ease-out:   cubic-bezier(0.2, 0, 0, 1);
-  --ease-in:    cubic-bezier(0.4, 0, 1, 1);
-  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
 }
 
 /* Duração não tem namespace no Tailwind v4 — vive como custom property
    e é consumida pelas classes de componente em globals.css. */
 :root {
   --dur-instant: 90ms;   /* feedback de toque */
-  --dur-fast:    120ms;  /* hover, cor */
-  --dur-base:    180ms;  /* abrir/fechar, transform */
-  --dur-slow:    260ms;  /* sheet, modal */
+  --dur-fast:    150ms;  /* hover, cor */
+  --dur-base:    220ms;  /* abrir/fechar, transform */
+  --dur-slow:    320ms;  /* sheet, modal */
 
   /* Espelho dos raios com os nomes do sistema, para CSS cru */
   --r-xs:   var(--radius-badge);
@@ -280,12 +309,8 @@
   --sh-lg:   var(--shadow-lg);
   --sh-wine: var(--shadow-wine);
 
-  /* ------------------------------------------------------
-     LINHAS · o sistema que não existia
-     Interface técnica se reconhece pela estrutura de linha,
-     não pela cor. Tracejado tem SIGNIFICADO: previsto, não
-     confirmado, vazio, planejado.
-     ------------------------------------------------------ */
+  /* Linhas — sobraram para divisória interna de card e de tabela.
+     Estrutura de tela é feita com superfície e espaço, não com traço. */
   --line:        1px solid var(--color-line);
   --line-strong: 1px solid var(--color-line-strong);
   --line-dashed: 1px dashed var(--color-line-strong);
@@ -294,63 +319,69 @@
 
 /* =========================================================
    TEMA ESCURO
-   A direção do produto é CLARO-técnico; o escuro continua
-   existindo como preferência do sistema operacional, e agora
-   em grafite frio, coerente com a escala nova.
+   A direção do produto é CLARO; o escuro continua existindo
+   como preferência do sistema operacional, agora em grafite
+   QUENTE, coerente com a escala nova — e com as mesmas regras
+   de superfície (fundo mais escuro, card mais claro).
    ========================================================= */
 [data-theme='dark'] {
-  --color-bg:          var(--color-n-950);
-  --color-surface:     #15181C;
-  --color-surface-2:   #1C2026;
-  --color-surface-3:   #242931;
-  --color-line:        #2A2F37;
-  --color-line-strong: #3A414B;
-  --color-grid:        #1E2229;
-  --color-tick:        #3A414B;
-  --color-heading:     #F2F4F6;
-  --color-ink:         #E1E5EA;
-  --color-muted:       #A3ABB5;
-  --color-faint:       #858E99;
-  --color-disabled:    #565E68;
+  --color-bg:          #121011;
+  --color-surface:     #1B1819;
+  --color-surface-2:   #232021;
+  --color-surface-3:   #2B2728;
+  --color-line:        #2E2A2B;
+  --color-line-strong: #413C3E;
+  --color-grid:        #211E1F;
+  --color-tick:        #413C3E;
+  --color-heading:     #F5F3F3;
+  --color-ink:         #E4E1E2;
+  --color-muted:       #A8A3A5;
+  --color-faint:       #8B8688;
+  --color-disabled:    #5C5759;
 
-  --color-cream:    var(--color-n-950);
-  --color-paper:    #15181C;
-  --color-sand:     #1C2026;
-  --color-gray-150: #2A2F37;
-  --color-gray-250: #3A414B;
-  --color-gray-450: #A3ABB5;
+  --color-ink-surface:       #F5F3F3;
+  --color-ink-surface-hover: #E4E1E2;
+
+  --color-cream:    #121011;
+  --color-paper:    #1B1819;
+  --color-sand:     #232021;
+  --color-gray-150: #2E2A2B;
+  --color-gray-250: #413C3E;
+  --color-gray-450: #A8A3A5;
 
   /* Sobre fundo escuro a marca precisa clarear para manter AA */
   --color-accent:             var(--color-wine-300);
   --color-accent-hover:       var(--color-wine-200);
   --color-accent-link:        var(--color-wine-300);
-  --color-accent-soft:        #2C1A20;
-  --color-accent-soft-border: #40252D;
+  --color-accent-soft:        #2E1B21;
+  --color-accent-soft-border: #43262E;
   --color-forest:             var(--color-wine-300);
   --color-forest-hover:       var(--color-wine-200);
 
-  --color-signal:     #FF5C73;
-  --color-signal-bg:  #2B1015;
-  --color-signal-ink: #FF8A9B;
+  --color-signal:     #DEA0B0;
+  --color-signal-bg:  #2E1B21;
+  --color-signal-ink: #DEA0B0;
 
-  --color-success:        #52C48C;
-  --color-success-bg:     #10261C;
-  --color-success-border: #1E4432;
-  --color-warning:        #E0A84A;
-  --color-warning-bg:     #2A1F0E;
-  --color-warning-border: #4A3818;
-  --color-danger:         #F0785C;
-  --color-danger-bg:      #2E150F;
-  --color-danger-border:  #4E251B;
-  --color-info:           #6BA8D8;
-  --color-info-bg:        #101F2B;
-  --color-info-border:    #1D3A4E;
+  --color-success:        #4FC088;
+  --color-success-bg:     #12241B;
+  --color-success-border: #1F4231;
+  --color-warning:        #DDA44A;
+  --color-warning-bg:     #291F0F;
+  --color-warning-border: #483619;
+  --color-danger:         #EE7B62;
+  --color-danger-bg:      #2C1610;
+  --color-danger-border:  #4B261C;
+  --color-info:           #6BA5D6;
+  --color-info-bg:        #101E2A;
+  --color-info-border:    #1D384C;
   --color-ok:   var(--color-success);
   --color-warn: var(--color-warning);
   --color-bad:  var(--color-danger);
 
-  --shadow-md:   0 2px 8px -3px rgba(0, 0, 0, 0.6);
-  --shadow-lg:   0 12px 32px -12px rgba(0, 0, 0, 0.8), 0 2px 6px -3px rgba(0, 0, 0, 0.6);
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md:   0 10px 28px -14px rgba(0, 0, 0, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.5);
+  --shadow-lg:   0 28px 64px -28px rgba(0, 0, 0, 0.85), 0 6px 18px -10px rgba(0, 0, 0, 0.6);
   --shadow-soft: var(--shadow-sm);
 }
 
@@ -360,57 +391,62 @@
    altere o outro. */
 @media (prefers-color-scheme: dark) {
   [data-theme='system'] {
-    --color-bg:          var(--color-n-950);
-    --color-surface:     #15181C;
-    --color-surface-2:   #1C2026;
-    --color-surface-3:   #242931;
-    --color-line:        #2A2F37;
-    --color-line-strong: #3A414B;
-    --color-grid:        #1E2229;
-    --color-tick:        #3A414B;
-    --color-heading:     #F2F4F6;
-    --color-ink:         #E1E5EA;
-    --color-muted:       #A3ABB5;
-    --color-faint:       #858E99;
-    --color-disabled:    #565E68;
+    --color-bg:          #121011;
+    --color-surface:     #1B1819;
+    --color-surface-2:   #232021;
+    --color-surface-3:   #2B2728;
+    --color-line:        #2E2A2B;
+    --color-line-strong: #413C3E;
+    --color-grid:        #211E1F;
+    --color-tick:        #413C3E;
+    --color-heading:     #F5F3F3;
+    --color-ink:         #E4E1E2;
+    --color-muted:       #A8A3A5;
+    --color-faint:       #8B8688;
+    --color-disabled:    #5C5759;
 
-    --color-cream:    var(--color-n-950);
-    --color-paper:    #15181C;
-    --color-sand:     #1C2026;
-    --color-gray-150: #2A2F37;
-    --color-gray-250: #3A414B;
-    --color-gray-450: #A3ABB5;
+    --color-ink-surface:       #F5F3F3;
+    --color-ink-surface-hover: #E4E1E2;
+
+    --color-cream:    #121011;
+    --color-paper:    #1B1819;
+    --color-sand:     #232021;
+    --color-gray-150: #2E2A2B;
+    --color-gray-250: #413C3E;
+    --color-gray-450: #A8A3A5;
 
     --color-accent:             var(--color-wine-300);
     --color-accent-hover:       var(--color-wine-200);
     --color-accent-link:        var(--color-wine-300);
-    --color-accent-soft:        #2C1A20;
-    --color-accent-soft-border: #40252D;
+    --color-accent-soft:        #2E1B21;
+    --color-accent-soft-border: #43262E;
     --color-forest:             var(--color-wine-300);
     --color-forest-hover:       var(--color-wine-200);
 
-    --color-signal:     #FF5C73;
-    --color-signal-bg:  #2B1015;
-    --color-signal-ink: #FF8A9B;
+    --color-signal:     #DEA0B0;
+    --color-signal-bg:  #2E1B21;
+    --color-signal-ink: #DEA0B0;
 
-    --color-success:        #52C48C;
-    --color-success-bg:     #10261C;
-    --color-success-border: #1E4432;
-    --color-warning:        #E0A84A;
-    --color-warning-bg:     #2A1F0E;
-    --color-warning-border: #4A3818;
-    --color-danger:         #F0785C;
-    --color-danger-bg:      #2E150F;
-    --color-danger-border:  #4E251B;
-    --color-info:           #6BA8D8;
-    --color-info-bg:        #101F2B;
-    --color-info-border:    #1D3A4E;
+    --color-success:        #4FC088;
+    --color-success-bg:     #12241B;
+    --color-success-border: #1F4231;
+    --color-warning:        #DDA44A;
+    --color-warning-bg:     #291F0F;
+    --color-warning-border: #483619;
+    --color-danger:         #EE7B62;
+    --color-danger-bg:      #2C1610;
+    --color-danger-border:  #4B261C;
+    --color-info:           #6BA5D6;
+    --color-info-bg:        #101E2A;
+    --color-info-border:    #1D384C;
     --color-ok:   var(--color-success);
     --color-warn: var(--color-warning);
     --color-bad:  var(--color-danger);
 
-    --shadow-md:   0 2px 8px -3px rgba(0, 0, 0, 0.6);
-    --shadow-lg:   0 12px 32px -12px rgba(0, 0, 0, 0.8), 0 2px 6px -3px rgba(0, 0, 0, 0.6);
+    --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-md:   0 10px 28px -14px rgba(0, 0, 0, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.5);
+    --shadow-lg:   0 28px 64px -28px rgba(0, 0, 0, 0.85), 0 6px 18px -10px rgba(0, 0, 0, 0.6);
     --shadow-soft: var(--shadow-sm);
   }
 }

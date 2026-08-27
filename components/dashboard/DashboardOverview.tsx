@@ -234,21 +234,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           template. 7/5 em cima, 3+3+3+3 no meio, 7/5 embaixo. */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
         {/* --- HERO: o faturamento. Aparece UMA vez na tela, aqui. --- */}
-        {/* O hero é o único elemento vinho da tela — e o único com chanfro
-            grande, que é onde a assinatura do produto aparece em tamanho
-            legível. Dinheiro continua em sans; o resto do bloco, em mono. */}
-        <Card hero chamfer pad="p-6 sm:p-8" className="lg:col-span-7 flex flex-col">
+        {/* O hero é o único elemento vinho da tela: raio 28, superfície com
+            dois centros de luz e o faturamento em `display`. É o objeto que
+            ancora o Início — tudo o mais na página é branco sobre cinza. */}
+        <Card hero pad="p-6 sm:p-8" className="lg:col-span-7 flex flex-col">
           <span className="mono-micro !text-wine-200">Faturamento {PERIOD_NOUN[period]}</span>
           <p className="num text-display font-bold mt-2">
             <CountUp value={revenue} format={brl} />
           </p>
 
           <div className="flex items-center gap-2 mt-3">
-            {/* Selo sem pílula: seta + número em mono, sobre a própria
-                superfície vinho. O retângulo translúcido em volta era mais
-                pesado que o dado que ele carregava. */}
-            <span className="inline-flex items-center gap-1.5 mono-micro !text-white">
-              <TrendIcon className="h-3 w-3" aria-hidden />
+            {/* Pílula translúcida sobre o vinho — o mesmo objeto que o
+                StatBadge desenha no branco, adaptado à superfície escura. */}
+            <span className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-white/15 text-caption font-bold tabular-nums !text-white">
+              <TrendIcon className="h-3.5 w-3.5" aria-hidden />
               {delta.deltaPct > 0 ? '+' : ''}{delta.deltaPct.toFixed(0)}%
             </span>
             <span className="text-caption text-white/60">
@@ -267,7 +266,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <Card pad="p-5 sm:p-6" className="lg:col-span-5 lg:row-span-2 flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="mono-micro text-n-900">Atendimentos de hoje</h2>
+              <h2 className="text-h3 text-heading">Atendimentos de hoje</h2>
               <p className="text-caption text-n-500 mt-1">
                 {deHoje.length > 0
                   ? `${deHoje.length} ${deHoje.length === 1 ? 'horário reservado' : 'horários reservados'}`
@@ -325,7 +324,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   <Link
                     href={bookingHref}
                     target="_blank"
-                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-full bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     Abrir link de agendamento <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </Link>
@@ -368,7 +367,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <Card pad="p-0" className="lg:col-span-7 overflow-hidden">
           <div className="flex items-start justify-between gap-3 p-5 sm:p-6 pb-4">
             <div>
-              <h2 className="mono-micro text-n-900">Seus serviços</h2>
+              <h2 className="text-h3 text-heading">Seus serviços</h2>
               <p className="text-caption text-n-500 mt-0.5">Preços e durações do seu catálogo.</p>
             </div>
             <Link
@@ -383,17 +382,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="max-h-[320px] overflow-y-auto scroll-touch">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-10 bg-surface">
-                  <tr className="border-y border-line-strong">
-                    <th scope="col" className="px-5 sm:px-6 py-2.5 mono-micro text-n-500">Serviço</th>
-                    <th scope="col" className="px-3 py-2.5 mono-micro text-n-500 text-right">Duração</th>
-                    <th scope="col" className="px-5 sm:px-6 py-2.5 mono-micro text-n-500 text-right">Valor</th>
+                  <tr className="border-b border-line">
+                    <th scope="col" className="px-5 sm:px-6 py-3 text-caption font-semibold text-n-500">Serviço</th>
+                    <th scope="col" className="px-3 py-3 text-caption font-semibold text-n-500 text-right">Duração</th>
+                    <th scope="col" className="px-5 sm:px-6 py-3 text-caption font-semibold text-n-500 text-right">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {services.map((s, i) => (
+                  {services.map((s) => (
                     <tr
                       key={s.id}
-                      className={`group h-11 transition-ui hover:bg-n-50 ${i % 2 === 1 ? 'bg-n-25' : ''}`}
+                      className="group h-[52px] border-b border-line last:border-b-0 transition-ui hover:bg-n-25"
                     >
                       <td className="px-5 sm:px-6 text-body-sm text-ink">{s.name}</td>
                       <td className="mono px-3 text-caption text-n-500 text-right whitespace-nowrap">{s.duration_minutes}min</td>
@@ -413,7 +412,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 action={
                   <Link
                     href="/dashboard/services"
-                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-full bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     Cadastrar serviço
                   </Link>
@@ -425,7 +424,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         {/* --- Próximos 7 dias --- */}
         <Card pad="p-5 sm:p-6" className="lg:col-span-5">
-          <h2 className="mono-micro text-n-900">Próximos 7 dias</h2>
+          <h2 className="text-h3 text-heading">Próximos 7 dias</h2>
           <p className="text-caption text-n-500 mt-1">O que já está reservado a partir de amanhã.</p>
 
           <ul className="mt-4 divide-y divide-line">

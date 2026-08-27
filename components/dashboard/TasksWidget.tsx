@@ -73,7 +73,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
   return (
     <div className="card p-6 space-y-4">
       <div>
-        <h3 className="mono-micro text-n-900">Bloco de notas &amp; tarefas</h3>
+        <h3 className="text-h3 text-heading">Bloco de notas &amp; tarefas</h3>
         <p className="text-caption text-n-500 mt-1">Anote o que é importante. Com data, a tarefa aparece na sua Agenda.</p>
       </div>
 
@@ -114,7 +114,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
                   type="button"
                   onClick={() => { setShowCustom(false); setDueDate(chip.val); if (!chip.val) setDueTime(''); }}
                   className={`tap mono-micro px-3 h-8 rounded-chip border transition-ui ${
-                    active ? 'bg-wine-50 text-wine-700 border-wine-200 chamfer-s' : 'bg-surface text-n-600 border-line hover:text-ink hover:border-line-strong'
+                    active ? 'bg-wine-50 text-wine-700 border-wine-200' : 'bg-surface text-n-600 border-line hover:text-ink hover:border-line-strong'
                   }`}
                 >
                   {chip.label}
@@ -125,7 +125,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
               type="button"
               onClick={() => setShowCustom(true)}
               className={`tap inline-flex items-center gap-1 mono-micro px-3 h-8 rounded-chip border transition-ui ${
-                showCustom ? 'bg-wine-50 text-wine-700 border-wine-200 chamfer-s' : 'bg-surface text-n-600 border-line hover:text-ink hover:border-line-strong'
+                showCustom ? 'bg-wine-50 text-wine-700 border-wine-200' : 'bg-surface text-n-600 border-line hover:text-ink hover:border-line-strong'
               }`}
             >
               <CalendarClock className="h-3.5 w-3.5" /> Escolher data

@@ -236,7 +236,7 @@ export function SiteEditor({
               const ok = await save(config, templateId, { silent: true });
               if (ok) { setOnboarding(false); setTab('identity'); }
             }}
-            className="inline-flex items-center gap-2 px-6 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip chamfer-s transition-ui cursor-pointer disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-6 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             Continuar com {meta.name}

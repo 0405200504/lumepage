@@ -7,7 +7,6 @@ import { RefreshCw, HelpCircle, ChevronRight, ShieldAlert, Menu } from 'lucide-r
 import { OPEN_ONBOARDING_EVENT } from '@/components/onboarding/OnboardingTour';
 import { OPEN_NAV_EVENT } from '@/components/layout/Sidebar';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
 
 interface HeaderProps {
   /** Opcionais: se omitidos, o título vem da rota (app da profissional).
@@ -87,14 +86,19 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
 };
 
 /**
- * Topbar de 64px.
+ * Topbar da página.
  *
- * Fundo transparente sobre o off-white da aplicação; o blur e a borda
- * inferior só entram DEPOIS de 8px de rolagem — em repouso a barra não
- * desenha uma linha que não precisa existir.
+ * Fundo transparente sobre o cinza da aplicação; o blur e a divisória só
+ * entram DEPOIS de 8px de rolagem — em repouso a barra não desenha uma
+ * linha que não precisa existir.
  *
- * No celular ela colapsa: em repouso mostra saudação em duas linhas; ao
- * rolar, encolhe para 52px com o título e as ações.
+ * O título subiu para `h2` (24px/700) e a trilha virou uma linha de
+ * legenda comum, sem caixa alta. As ações da direita viraram discos: é a
+ * gramática de botão de ícone das referências, e ela resolve o problema de
+ * ter dois botões retangulares de tamanhos diferentes lado a lado no canto.
+ *
+ * No celular ela colapsa: em repouso mostra título e subtítulo; ao rolar,
+ * encolhe e mantém só o título com as ações.
  */
 export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, role }) => {
   const pathname = usePathname();
@@ -119,74 +123,81 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
       data-scrolled={scrolled || undefined}
       className="sticky top-0 z-30 select-none pt-safe transition-ui
         data-[scrolled]:border-b data-[scrolled]:border-line
-        data-[scrolled]:bg-bg/80 data-[scrolled]:backdrop-blur-[20px]"
+        data-[scrolled]:glass"
     >
       <div
         className="flex items-center gap-3 px-4 lg:px-8 max-w-[1400px] mx-auto w-full
-          h-[76px] data-[scrolled]:h-[52px] lg:h-16 lg:data-[scrolled]:h-16 transition-[height] duration-[220ms] ease-out"
+          h-[84px] data-[scrolled]:h-[60px] lg:h-20 lg:data-[scrolled]:h-[68px]
+          transition-[height] duration-[var(--dur-base)] ease-[var(--ease-out)]"
         data-scrolled={scrolled || undefined}
       >
-        {/* O hambúrguer SAIU do topo no celular. A navegação agora vive na
-            barra de abas do rodapé (components/layout/TabBar), onde o polegar
-            alcança — e o menu completo abre pelo item "Mais" de lá. Um botão
-            de 40px no canto superior esquerdo era o ponto mais distante do
-            dedo em toda a tela. Ele permanece só onde não há tab bar. */}
-        {role !== 'professional' && (
-          <Button
-            variant="ghost"
-            size="md"
-            iconOnly
-            className="lg:hidden -ml-2"
-            aria-label="Abrir menu de navegação"
-            onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
-            leadingIcon={<Menu className="h-5 w-5" />}
-          />
-        )}
+        {/* O menu completo abre AQUI, no topo — em todas as áreas, inclusive
+            no painel da profissional.
+
+            Ele já morou aqui, saiu para o item "Mais" do dock inferior (o
+            polegar alcança o rodapé melhor do que o canto superior esquerdo)
+            e voltou a pedido: o ícone de grade no meio de uma cápsula escura
+            não se anunciava como "menu", e a gaveta lateral — que é onde
+            moram os dezoito destinos — simplesmente não era encontrada.
+            Hambúrguer no topo é o gesto que todo mundo já procura primeiro.
+
+            O dock do rodapé continua existindo com os quatro atalhos do dia
+            a dia; o que saiu de lá foi só o botão de abrir. */}
+        <button
+          type="button"
+          className="lg:hidden icon-chip h-11 w-11 -ml-1.5 shrink-0
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          aria-label="Abrir menu de navegação"
+          onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
+        >
+          <Menu className="h-5 w-5" aria-hidden />
+        </button>
 
         <div className="min-w-0 flex-1" data-tour="page-header">
           {crumb && (
-            <p className="hidden lg:flex items-center gap-1 text-caption text-n-500 mb-0.5">
+            <p className="hidden lg:flex items-center gap-1 text-caption font-medium text-n-500 mb-1">
               <Link href="/dashboard" className="hover:text-heading transition-ui">Painel</Link>
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <ChevronRight className="h-3.5 w-3.5 text-n-300" aria-hidden />
               <span>{crumb}</span>
             </p>
           )}
           <h1 className="text-h2 text-heading truncate">{resolvedTitle}</h1>
           {resolvedSubtitle && !scrolled && (
-            <p className="hidden lg:block text-caption text-n-500 mt-0.5 max-w-2xl truncate">
+            <p className="hidden lg:block text-caption text-n-500 mt-1 max-w-2xl truncate">
               {resolvedSubtitle}
             </p>
           )}
         </div>
 
+        {/* Ações em disco. Ajuda e atualizar são do mesmo peso — nenhuma das
+            duas merece um botão com rótulo disputando com o título ao lado. */}
         <div className="flex items-center gap-2 shrink-0">
           {role === 'professional' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
+            <button
+              type="button"
               aria-label="Rever o tutorial de boas-vindas"
               title="Rever o tutorial de boas-vindas"
               onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
-              leadingIcon={<HelpCircle className="h-5 w-5" />}
-            />
+              className="icon-chip h-10 w-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+            >
+              <HelpCircle className="h-[18px] w-[18px]" aria-hidden />
+            </button>
           )}
 
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
+            type="button"
             onClick={() => startRefresh(() => router.refresh())}
             disabled={isRefreshing}
+            aria-label="Atualizar os dados"
             title="Atualizar os dados sem recarregar a página"
-            leadingIcon={<RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
-            className="max-lg:w-9 max-lg:px-0"
+            className="icon-chip h-10 w-10 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           >
-            <span className="hidden lg:inline">{isRefreshing ? 'Atualizando…' : 'Atualizar'}</span>
-          </Button>
+            <RefreshCw className={`h-[18px] w-[18px] ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden />
+          </button>
 
-          <span title={`${userName} · ${userEmail}`} className="lg:hidden">
+          <span title={`${userName} · ${userEmail}`} className="lg:hidden ml-0.5">
             {role === 'super_admin' ? (
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-wine-50 text-wine-700">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-wine-50 text-wine-700">
                 <ShieldAlert className="h-5 w-5" />
               </span>
             ) : (

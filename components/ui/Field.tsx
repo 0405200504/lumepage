@@ -26,7 +26,7 @@ export const Field: React.FC<{
   const describedBy = error ? `${id}-err` : hint ? `${id}-hint` : undefined;
   return (
     <div className={className}>
-      <label htmlFor={id} className="mono-micro text-n-500 block mb-1.5">
+      <label htmlFor={id} className="text-caption font-semibold text-n-600 block mb-2">
         {label}
         {required && <span className="text-danger ml-1" aria-hidden>*</span>}
       </label>
@@ -66,7 +66,7 @@ export const SettingsSection: React.FC<{
   <section className={`settings-section -mx-4 sm:-mx-5 px-4 sm:px-5 py-6 first:pt-0 last:pb-0 ${className}`}>
     <div className="grid gap-4 lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-8">
       <div className="min-w-0">
-        <h2 className="mono-micro text-n-900">{title}</h2>
+        <h2 className="text-h3 text-heading">{title}</h2>
         {description && <p className="mt-1.5 text-caption text-n-600">{description}</p>}
       </div>
       <div className="min-w-0">{children}</div>
@@ -75,8 +75,16 @@ export const SettingsSection: React.FC<{
 );
 
 /**
- * Interruptor. Retangular, como todo o resto — o trilho de raio total era
- * o último `rounded-full` que não era avatar nem ponto de status.
+ * Interruptor: trilho em pílula, botão redondo, 28×48.
+ *
+ * A rodada anterior o deixou retangular por coerência com um sistema que
+ * tinha banido o raio total. Esse sistema saiu. E o interruptor é o pior
+ * lugar possível para inventar forma: ele é um dos poucos controles que
+ * toda pessoa já reconhece de olhos fechados — um retângulo com um
+ * quadradinho dentro faz a pessoa parar para descobrir o que é.
+ *
+ * 48px de trilho (e não 44) porque o alvo real aqui é a linha inteira do
+ * ajuste; o interruptor só precisa ser confortável, não mínimo.
  */
 export const Toggle: React.FC<{
   checked: boolean;
@@ -92,14 +100,15 @@ export const Toggle: React.FC<{
     aria-label={label}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-badge border transition-ui
+    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-ui
       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700
       disabled:opacity-40 disabled:pointer-events-none
-      ${checked ? 'bg-wine-700 border-wine-700' : 'bg-n-100 border-line'} ${className}`}
+      ${checked ? 'bg-wine-700' : 'bg-n-200'} ${className}`}
   >
     <span
       aria-hidden
-      className={`block h-4 w-4 rounded-[3px] bg-n-0 transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)]
+      className={`block h-5 w-5 rounded-full bg-n-0 shadow-[var(--shadow-xs)]
+        transition-transform duration-[var(--dur-base)] ease-[var(--ease-spring)]
         ${checked ? 'translate-x-6' : 'translate-x-1'}`}
     />
   </button>
