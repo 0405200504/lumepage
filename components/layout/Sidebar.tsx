@@ -15,6 +15,7 @@ import { LumeLogo } from '../ui/LumeLogo';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
+import { OPEN_AI_EVENT } from '../ai/AIAgentChat';
 
 /** O Header (topo) dispara este evento para abrir a navegação no celular.
  *  Mesmo padrão que o tour de boas-vindas já usa — sem contexto novo só para
@@ -98,7 +99,7 @@ const NavItem: React.FC<{
       aria-current={active ? 'page' : undefined}
       title={showLabel ? undefined : link.label}
       className={`group/item relative flex items-center h-11 rounded-control transition-ui
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700
         ${showLabel ? 'gap-3 px-3' : 'justify-center w-11 mx-auto'}
         ${active ? 'bg-wine-700 text-white' : 'text-n-600 hover:bg-n-100 hover:text-heading'}`}
     >
@@ -108,7 +109,7 @@ const NavItem: React.FC<{
           <span className="flex-1 text-label truncate">{link.label}</span>
           {locked && <Lock className="h-4 w-4 shrink-0 text-n-400" aria-hidden />}
           {badge > 0 && (
-            <span className={`num text-caption font-semibold rounded-full px-2 leading-5 shrink-0 ${active ? 'bg-white/20 text-white' : 'bg-warning-bg text-warning border border-warning-border'}`}>
+            <span className={`num text-caption font-semibold rounded-badge px-2 leading-5 shrink-0 ${active ? 'bg-white/20 text-white' : 'border border-line text-warning'}`}>
               {badge}
             </span>
           )}
@@ -169,7 +170,7 @@ const NavFooter: React.FC<{
       onClick={onNavigate}
       title={showLabel ? undefined : 'Ver página pública'}
       className={`flex items-center h-11 rounded-control text-n-600 hover:bg-n-100 hover:text-heading transition-ui
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700
         ${showLabel ? 'gap-3 px-3' : 'justify-center w-11 mx-auto'}`}
     >
       <ExternalLink className="h-5 w-5 shrink-0" />
@@ -179,7 +180,7 @@ const NavFooter: React.FC<{
       onClick={onLogout}
       title={showLabel ? undefined : 'Sair da conta'}
       className={`flex items-center h-11 rounded-control text-n-600 hover:bg-n-100 hover:text-heading transition-ui
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700
         ${showLabel ? 'gap-3 px-3 w-full' : 'justify-center w-11 mx-auto'}`}
     >
       <LogOut className="h-5 w-5 shrink-0" />
@@ -293,7 +294,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
           <div className={`shrink-0 flex items-center h-14 ${expanded ? 'justify-between px-4' : 'justify-center'}`}>
             <Link
               href="/dashboard"
-              className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
               aria-label="Lume — Início"
             >
               <LumeLogo variant="wine" className="h-5" />
@@ -337,6 +338,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
               />
             </div>
             <NavBody pathname={pathname} showLabel lockedFor={lockedFor} badgeFor={badgeFor} onNavigate={() => setDrawerOpen(false)} />
+            {/* O Assistente IA deixou de flutuar sobre o conteúdo no celular:
+                virou item do menu, ao lado dos outros destinos. Ele disputava
+                o canto inferior direito com o FAB de novo agendamento e os
+                dois cobriam a coluna de valores em /finance e /services. */}
+            <div className="px-3 pb-2">
+              <button
+                type="button"
+                onClick={() => { setDrawerOpen(false); window.dispatchEvent(new Event(OPEN_AI_EVENT)); }}
+                className="w-full flex items-center gap-3 min-h-11 px-3 rounded-chip text-body-sm text-n-600 hover:bg-n-50 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+              >
+                <Sparkles className="h-[18px] w-[18px] shrink-0 text-wine-700" aria-hidden />
+                Assistente IA
+              </button>
+            </div>
             <div className="safe-sheet">
               <NavFooter showLabel publicSlug={publicSlug} displayName={displayName} onLogout={handleLogout} onNavigate={() => setDrawerOpen(false)} />
             </div>

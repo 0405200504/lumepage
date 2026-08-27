@@ -51,7 +51,7 @@ interface TextProps {
 
 const inputCls =
   'w-full px-3 py-2.5 text-[13px] bg-white border border-n-200 rounded-xl outline-none ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-colors placeholder:text-n-300';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-colors placeholder:text-n-300';
 
 function Counter({ value, max }: { value: string; max: number }) {
   const over = value.length > max * 0.9;

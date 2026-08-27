@@ -1,18 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Service } from '@/types/database';
-import {
-  Plus, Edit, Trash2, Clock, DollarSign, Sparkles, X, Save, Eye, EyeOff
-} from 'lucide-react';
+import { Plus, Pencil, Trash2, EyeOff } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { QuickAddFab } from '../ui/QuickAddFab';
-import { 
-  createServiceAction, 
-  updateServiceAction, 
-  deleteServiceAction 
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { Modal } from '../ui/Modal';
+import { Field, Toggle } from '../ui/Field';
+import { PageHeader } from '../ui/PageHeader';
+import { TechTable } from '../ui/TechTable';
+import { StatusLabel } from '../ui/StatusDot';
+import { EmptyState } from '../ui/EmptyState';
+import { MonoValue } from '../ui/Mono';
+import { Segmented } from '../ui/Segmented';
+import { SearchField } from '../ui/SearchField';
+import {
+  createServiceAction,
+  updateServiceAction,
+  deleteServiceAction,
 } from '@/app/actions/professional';
 
 interface ServicesListProps {
@@ -20,20 +28,50 @@ interface ServicesListProps {
   professionalId: string;
 }
 
+type Filtro = 'todos' | 'ativos' | 'inativos';
+
+const brl = (cents: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+
+/**
+ * ARQUÉTIPO 2 · TABELA DENSA.
+ *
+ * Esta tela era o exemplo do diagnóstico: 17 serviços renderizados como 17
+ * cartazes de raio 24 em grade de duas colunas, cada um com selo pastel,
+ * descrição em duas linhas e dois botões de ação sempre visíveis num rodapé
+ * próprio. Dezessete linhas de dados desenhadas como dezessete pôsteres —
+ * uma tela e meia de rolagem para ver o que cabe em 750px de tabela.
+ *
+ * O que a tabela recupera, além do espaço: COMPARAÇÃO. Duração e valor
+ * alinhados em coluna, com dígito de largura fixa, deixam a profissional
+ * ver de relance qual procedimento é caro por minuto — coisa impossível
+ * quando cada valor está num canto diferente de um card diferente.
+ *
+ * `is_active` virou toggle NA LINHA: ativar/desativar era a operação mais
+ * frequente da tela e exigia abrir o modal, marcar um checkbox e salvar.
+ */
 export const ServicesList: React.FC<ServicesListProps> = ({
   initialServices,
-  professionalId
+  professionalId,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
 
-  // Estados de Modais
+  /* Cópia local para o toggle da linha responder na hora. O router.refresh()
+     revalida no servidor logo em seguida; sem o estado local a chave só
+     mudaria de posição no fim do round-trip, e o controle pareceria travado. */
+  const [services, setServices] = useState<Service[]>(initialServices);
+  React.useEffect(() => setServices(initialServices), [initialServices]);
+
+  const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
 
-  // Estados de Formulário
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
@@ -41,10 +79,24 @@ export const ServicesList: React.FC<ServicesListProps> = ({
   const [costStr, setCostStr] = useState('0,00');
   const [isActive, setIsActive] = useState(true);
   const [clientVisible, setClientVisible] = useState(true);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Abrir modal de criação
+  const filtrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return services.filter((s) => {
+      if (filtro === 'ativos' && !s.is_active) return false;
+      if (filtro === 'inativos' && s.is_active) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.description ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [services, busca, filtro]);
+
+  const ativos = services.filter((s) => s.is_active).length;
+  const ocultos = services.filter((s) => s.client_visible === false).length;
+
   const handleOpenCreate = () => {
     setSelectedService(null);
     setName('');
@@ -57,95 +109,97 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     setIsEditModalOpen(true);
   };
 
-  // Abrir modal de edição
   const handleOpenEdit = (service: Service) => {
     setSelectedService(service);
     setName(service.name);
     setDescription(service.description || '');
     setDurationMinutes(service.duration_minutes);
-    
-    // Converte centavos para string formatada "150,00"
-    const priceFormatted = (service.price_cents / 100).toFixed(2).replace('.', ',');
-    setPriceStr(priceFormatted);
+    setPriceStr((service.price_cents / 100).toFixed(2).replace('.', ','));
     setCostStr(((service.cost_cents ?? 0) / 100).toFixed(2).replace('.', ','));
     setIsActive(service.is_active);
     setClientVisible(service.client_visible !== false);
     setIsEditModalOpen(true);
   };
 
-  // Tratar salvamento
+  /** Liga/desliga direto na linha, com reversão em caso de falha. */
+  const handleToggleActive = async (service: Service, next: boolean) => {
+    setTogglingId(service.id);
+    setServices((prev) =>
+      prev.map((s) => (s.id === service.id ? { ...s, is_active: next } : s)),
+    );
+    try {
+      const res = await updateServiceAction(professionalId, service.id, { is_active: next });
+      if (!res.success) {
+        setServices((prev) =>
+          prev.map((s) => (s.id === service.id ? { ...s, is_active: !next } : s)),
+        );
+        error('Não foi possível alterar', res.error || 'Tente novamente.');
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setServices((prev) =>
+        prev.map((s) => (s.id === service.id ? { ...s, is_active: !next } : s)),
+      );
+      error('Erro', 'Falha ao alterar o serviço.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) {
+    if (!name.trim()) {
       error('Campo obrigatório', 'O nome do serviço é obrigatório.');
       return;
     }
-
-    // Converter string de preço "150,00" para centavos (inteiro 15000)
-    const normalizedPrice = priceStr.replace(/\D/g, ''); // remove tudo que não for dígito
-    const priceCents = parseInt(normalizedPrice, 10) || 0;
+    const priceCents = parseInt(priceStr.replace(/\D/g, ''), 10) || 0;
     const costCents = parseInt(costStr.replace(/\D/g, ''), 10) || 0;
+    const payload = {
+      name: name.trim(),
+      description: description || null,
+      duration_minutes: durationMinutes,
+      price_cents: priceCents,
+      cost_cents: costCents,
+      is_active: isActive,
+      client_visible: clientVisible,
+    };
 
     setIsSubmitting(true);
     try {
-      if (selectedService) {
-        // Atualizar
-        const res = await updateServiceAction(professionalId, selectedService.id, {
-          name,
-          description: description || null,
-          duration_minutes: durationMinutes,
-          price_cents: priceCents,
-          cost_cents: costCents,
-          is_active: isActive,
-          client_visible: clientVisible
-        });
-        if (res.success) {
-          success('Serviço Atualizado', 'As alterações foram salvas com sucesso.');
-          setIsEditModalOpen(false);
-          router.refresh();
-        } else {
-          error('Erro ao salvar', res.error || 'Ocorreu um erro.');
-        }
+      const res = selectedService
+        ? await updateServiceAction(professionalId, selectedService.id, payload)
+        : await createServiceAction(professionalId, payload);
+      if (res.success) {
+        success(
+          selectedService ? 'Serviço atualizado' : 'Serviço criado',
+          selectedService ? 'As alterações foram salvas.' : 'Novo procedimento adicionado.',
+        );
+        setIsEditModalOpen(false);
+        router.refresh();
       } else {
-        // Criar
-        const res = await createServiceAction(professionalId, {
-          name,
-          description: description || null,
-          duration_minutes: durationMinutes,
-          price_cents: priceCents,
-          cost_cents: costCents,
-          is_active: isActive,
-          client_visible: clientVisible
-        });
-        if (res.success) {
-          success('Serviço Criado', 'Novo procedimento adicionado com sucesso.');
-          setIsEditModalOpen(false);
-          router.refresh();
-        } else {
-          error('Erro ao cadastrar', res.error || 'Ocorreu um erro.');
-        }
+        error('Erro ao salvar', res.error || 'Ocorreu um erro.');
       }
-    } catch (e) {
-      error('Erro', 'Ocorreu uma falha ao processar solicitação.');
+    } catch {
+      error('Erro', 'Ocorreu uma falha ao processar a solicitação.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Tratar exclusão
   const handleDeleteConfirm = async () => {
     if (!serviceToDelete) return;
     setIsSubmitting(true);
     try {
-      const res = await deleteServiceAction(professionalId, serviceToDelete);
+      const res = await deleteServiceAction(professionalId, serviceToDelete.id);
       if (res.success) {
-        success('Excluído!', 'O serviço foi removido do seu catálogo.');
+        success('Excluído', 'O serviço foi removido do seu catálogo.');
         router.refresh();
       } else {
         error('Falha ao excluir', res.error || 'Não foi possível deletar.');
       }
-    } catch (e) {
-      error('Erro', 'Ocorreu uma falha ao enviar solicitação.');
+    } catch {
+      error('Erro', 'Ocorreu uma falha ao enviar a solicitação.');
     } finally {
       setIsSubmitting(false);
       setIsDeleteOpen(false);
@@ -153,279 +207,327 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     }
   };
 
-  // Formatar preço para exibição
-  const formatPrice = (cents: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+  const moeda = (v: string, set: (s: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '') || '0';
+    set((parseInt(digits, 10) / 100).toFixed(2).replace('.', ','));
   };
 
   return (
-    <div className="space-y-6 select-none">
-      {/* Topo com Botão */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-n-200 shadow-xs">
-        <div className="flex items-center gap-2 text-wine-700">
-          <Sparkles className="h-5 w-5" />
-          <span className="text-caption font-bold">{initialServices.length} serviços cadastrados</span>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-1 px-4 py-2.5 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Cadastrar Serviço</span>
-        </button>
+    <div className="space-y-5">
+      <PageHeader
+        trail={[
+          'Serviços',
+          `${services.length} cadastrados`,
+          `${ativos} ativos`,
+          ocultos > 0 ? `${ocultos} fora do site` : null,
+        ]}
+        title="Catálogo de serviços"
+        actions={
+          <Button size="md" onClick={handleOpenCreate} leadingIcon={<Plus className="h-[18px] w-[18px]" />}>
+            Novo serviço
+          </Button>
+        }
+      />
+
+      {/* Busca + filtro. Com 17 linhas a busca já paga o próprio espaço; com
+          40 ela é a única forma de achar um serviço sem varrer a lista. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField
+          className="flex-1 min-w-[12rem] max-w-sm"
+          label="Buscar serviço"
+          placeholder="Buscar serviço"
+          value={busca}
+          onChange={setBusca}
+        />
+        <Segmented
+          ariaLabel="Filtrar por status"
+          value={filtro}
+          onChange={setFiltro}
+          items={[
+            { key: 'todos', label: 'Todos' },
+            { key: 'ativos', label: 'Ativos' },
+            { key: 'inativos', label: 'Inativos' },
+          ]}
+        />
       </div>
 
-      <QuickAddFab actions={[{ label: 'Cadastrar serviço', icon: Plus, onClick: handleOpenCreate }]} />
-
-      {/* Grid de Serviços */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {initialServices.length > 0 ? (
-          initialServices.map((service) => (
-            <div 
-              key={service.id} 
-              className="bg-white border border-n-200 rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-4 hover:border-wine-700/45 transition-ui duration-200"
-            >
-              <div className="space-y-2">
-                <div className="flex justify-between items-start gap-4">
-                  <h4 className="font-bold text-n-800 text-label truncate" title={service.name}>
-                    {service.name}
-                  </h4>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {service.client_visible === false && (
-                      <span
-                        title="Visível apenas para você — não aparece para a cliente agendar"
-                        className="flex items-center gap-1 text-caption font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning-border"
-                      >
-                        <EyeOff className="h-2.5 w-2.5" />
-                        Só no painel
-                      </span>
-                    )}
-                    <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${
-                      service.is_active
-                        ? 'bg-success-bg text-success border border-success-border'
-                        : 'bg-n-100 text-n-400 border border-n-200'
-                    }`}>
-                      {service.is_active ? 'Ativo' : 'Inativo'}
+      <Card pad="p-0" className="overflow-hidden">
+        <TechTable
+          rows={filtrados}
+          rowKey={(s) => s.id}
+          initialSort={{ key: 'name', dir: 'asc' }}
+          empty={
+            services.length === 0 ? (
+              <EmptyState
+                framed={false}
+                title="Nenhum serviço cadastrado"
+                description="Cadastre o primeiro procedimento para que ele apareça na sua página de agendamento."
+                actionText="Novo serviço"
+                onAction={handleOpenCreate}
+              />
+            ) : (
+              <EmptyState
+                framed={false}
+                title="Nenhum resultado"
+                description="Nenhum serviço corresponde à busca ou ao filtro selecionado."
+              />
+            )
+          }
+          columns={[
+            {
+              key: 'name',
+              header: 'Serviço',
+              /* A coluna do nome absorve TODO o excesso de largura. Sem isso o
+                 layout automático da tabela reparte a sobra entre as cinco
+                 colunas e abre um vão de 300px entre o nome e a duração — os
+                 números deixam de ler como coluna. */
+              width: '100%',
+              sortValue: (s) => s.name,
+              cell: (s) => (
+                <div className="min-w-0">
+                  <p className="text-ink truncate">{s.name}</p>
+                  {s.description && (
+                    /* A descrição desceu para uma linha só, truncada. No card
+                       ela ocupava duas linhas em todos os 17 itens e era o que
+                       mais empurrava a tela para baixo — o texto completo
+                       continua no modal de edição, que é onde ele é lido. */
+                    <p className="text-caption text-n-500 truncate">{s.description}</p>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'duration',
+              className: 'whitespace-nowrap',
+              header: 'Duração',
+              num: true,
+              sortValue: (s) => s.duration_minutes,
+              cell: (s) => `${s.duration_minutes}min`,
+            },
+            {
+              key: 'price',
+              className: 'whitespace-nowrap',
+              header: 'Valor',
+              num: true,
+              sortValue: (s) => s.price_cents,
+              cell: (s) => <span className="num font-semibold text-heading">{brl(s.price_cents)}</span>,
+            },
+            {
+              key: 'visible',
+              className: 'whitespace-nowrap',
+              header: 'No site',
+              hideOnMobile: true,
+              sortValue: (s) => (s.client_visible === false ? 0 : 1),
+              cell: (s) =>
+                s.client_visible === false ? (
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    title="Visível apenas para você — não aparece para a cliente agendar"
+                  >
+                    <EyeOff className="h-3.5 w-3.5 text-warning" aria-hidden />
+                    <span className="mono-micro text-n-600">Só no painel</span>
+                  </span>
+                ) : (
+                  <StatusLabel tone="success">Sim</StatusLabel>
+                ),
+            },
+            {
+              key: 'active',
+              className: 'whitespace-nowrap',
+              header: 'Ativo',
+              sortValue: (s) => (s.is_active ? 1 : 0),
+              cell: (s) => (
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Toggle
+                    checked={s.is_active}
+                    disabled={togglingId === s.id}
+                    onChange={(v) => handleToggleActive(s, v)}
+                    label={`${s.is_active ? 'Desativar' : 'Ativar'} ${s.name}`}
+                  />
+                  <MonoValue className="text-micro text-n-500 hidden lg:inline">
+                    {s.is_active ? 'ATIVO' : 'INATIVO'}
+                  </MonoValue>
+                </div>
+              ),
+            },
+          ]}
+          onRowClick={handleOpenEdit}
+          /* No celular a linha carrega nome em cima e os dados em mono
+             embaixo — duração, valor e visibilidade, que na tabela ficariam
+             atrás de um scroll horizontal invisível. O toggle vai junto das
+             ações, à direita, porque ativar/desativar é a operação frequente
+             e ela não pode exigir abrir o modal. */
+          mobileRow={(s) => (
+            <>
+              <div className="flex items-baseline gap-2">
+                <p className="text-body-sm text-heading truncate flex-1">{s.name}</p>
+                <span className="num text-body-sm font-semibold text-heading shrink-0">
+                  {brl(s.price_cents)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <MonoValue className="text-micro text-n-500">{s.duration_minutes}MIN</MonoValue>
+                <span className="text-n-300" aria-hidden>·</span>
+                <StatusLabel tone={s.is_active ? 'success' : 'neutral'}>
+                  {s.is_active ? 'Ativo' : 'Inativo'}
+                </StatusLabel>
+                {s.client_visible === false && (
+                  <>
+                    <span className="text-n-300" aria-hidden>·</span>
+                    <span className="inline-flex items-center gap-1">
+                      <EyeOff className="h-3 w-3 text-warning" aria-hidden />
+                      <span className="mono-micro text-n-600">Só no painel</span>
                     </span>
-                  </div>
-                </div>
-                
-                {service.description && (
-                  <p className="text-caption text-n-600 line-clamp-2 leading-relaxed" title={service.description}>
-                    {service.description}
-                  </p>
+                  </>
                 )}
-
-                <div className="flex flex-wrap items-center gap-4 pt-2">
-                  <div className="flex items-center gap-1 text-caption text-n-400 font-semibold">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{service.duration_minutes} min</span>
-                  </div>
-                  <div className="flex items-center gap-0.5 text-caption text-n-900 font-bold">
-                    <DollarSign className="h-3.5 w-3.5 text-n-400" />
-                    <span>{formatPrice(service.price_cents)}</span>
-                  </div>
-                </div>
               </div>
+            </>
+          )}
+          actions={(s) => (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label={`Editar ${s.name}`}
+                onClick={(e) => { e.stopPropagation(); handleOpenEdit(s); }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label={`Excluir ${s.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setServiceToDelete(s);
+                  setIsDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        />
+      </Card>
 
-              {/* Botões de Ação */}
-              <div className="flex justify-end gap-2 border-t border-n-100 pt-3.5">
-                <button
-                  onClick={() => handleOpenEdit(service)}
-                  title="Editar serviço"
-                  className="p-2 hover:bg-n-50 text-n-500 rounded-xl transition-colors border border-n-200"
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => {
-                    setServiceToDelete(service.id);
-                    setIsDeleteOpen(true);
-                  }}
-                  title="Excluir serviço"
-                  className="p-2 hover:bg-danger-bg text-danger rounded-xl transition-colors border border-danger-border/50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-2 py-16 text-center text-caption text-n-600 border-2 border-dashed border-n-300 rounded-3xl bg-white/50">
-            Nenhum serviço cadastrado. Clique no botão acima para adicionar seu primeiro procedimento!
+      <Modal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        busy={isSubmitting}
+        trail={['Catálogo', selectedService ? 'Editar' : 'Novo']}
+        title={selectedService ? selectedService.name : 'Novo procedimento'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="service-form" loading={isSubmitting}>
+              Salvar
+            </Button>
+          </>
+        }
+      >
+        <form id="service-form" onSubmit={handleSave} className="space-y-4">
+          <Field
+            label="Nome do serviço"
+            required
+            inputProps={{
+              value: name,
+              onChange: (e) => setName(e.target.value),
+              placeholder: 'Ex.: Limpeza de pele profunda',
+              autoFocus: true,
+            }}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Duração (min)"
+              required
+              inputProps={{
+                type: 'number',
+                min: 5,
+                value: durationMinutes,
+                onChange: (e) => setDurationMinutes(parseInt(e.target.value, 10) || 30),
+              }}
+            />
+            <Field
+              label="Valor (R$)"
+              required
+              inputProps={{
+                value: priceStr,
+                onChange: moeda(priceStr, setPriceStr),
+                inputMode: 'numeric',
+                className: 'field-input num font-semibold',
+              }}
+            />
           </div>
-        )}
-      </div>
 
-      {/* Modal de Criação / Edição */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-xs" onClick={() => !isSubmitting && setIsEditModalOpen(false)} />
-          
-          <form 
-            onSubmit={handleSave}
-            className="relative bg-white rounded-3xl p-6 shadow-xl max-w-md w-full mx-4 border border-n-200 z-10 space-y-4"
-          >
-            <div className="flex justify-between items-center border-b border-n-100 pb-3">
-              <h3 className="text-body font-semibold text-n-900 tracking-tight">
-                {selectedService ? 'Editar Procedimento' : 'Novo Procedimento'}
-              </h3>
-              <button 
-                type="button" 
-                disabled={isSubmitting} 
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-n-400 hover:text-n-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+          <Field
+            label="Custo de insumos (R$)"
+            hint="Material gasto por atendimento. Alimenta o DRE do Financeiro para calcular o lucro líquido. Opcional."
+            inputProps={{
+              value: costStr,
+              onChange: moeda(costStr, setCostStr),
+              inputMode: 'numeric',
+              className: 'field-input num font-semibold',
+            }}
+          />
+
+          <Field label="Descrição">
+            <textarea
+              rows={3}
+              className="field-input"
+              placeholder="Explique resumidamente o procedimento, benefícios e cuidados associados…"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </Field>
+
+          {/* Os dois interruptores dividem uma seção separada por hairline —
+              sem card aninhado, que era o que fazia o rodapé do formulário
+              parecer uma caixa dentro de outra. */}
+          <div className="border-t border-line pt-4 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-body-sm text-ink">Serviço ativo</p>
+                <p className="text-caption text-n-500">
+                  Inativo some da agenda e do agendamento, mas o histórico é preservado.
+                </p>
+              </div>
+              <Toggle checked={isActive} onChange={setIsActive} label="Serviço ativo" />
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
-                  Nome do Serviço *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Limpeza de Pele Profunda"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption placeholder-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
-                />
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-body-sm text-ink">Mostrar para a cliente</p>
+                <p className="text-caption text-n-500">
+                  Desligado, o serviço fica só no seu painel: não aparece no site para a
+                  cliente agendar nem na lista que o bot oferece.
+                </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
-                    Duração (Minutos) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={5}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(parseInt(e.target.value, 10) || 30)}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
-                    Preço (R$) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={priceStr}
-                    onChange={(e) => {
-                      // Máscara básica de reais
-                      let val = e.target.value.replace(/\D/g, '');
-                      if (val === '') val = '0';
-                      const cents = parseInt(val, 10);
-                      const formatted = (cents / 100).toFixed(2).replace('.', ',');
-                      setPriceStr(formatted);
-                    }}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 font-semibold text-n-800"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
-                  Custo de insumos (R$)
-                </label>
-                <input
-                  type="text"
-                  value={costStr}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, '');
-                    if (val === '') val = '0';
-                    const cents = parseInt(val, 10);
-                    setCostStr((cents / 100).toFixed(2).replace('.', ','));
-                  }}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 font-semibold text-n-800"
-                />
-                <p className="text-caption text-n-600 mt-1">Material gasto por atendimento. Usado no DRE do Financeiro para calcular o lucro líquido. Opcional.</p>
-              </div>
-
-              <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
-                  Descrição do Serviço
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Explique resumidamente o procedimento, benefícios e cuidados associados..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption placeholder-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 py-1.5">
-                <input
-                  type="checkbox"
-                  id="serviceActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
-                />
-                <label htmlFor="serviceActive" className="text-caption text-n-700 font-bold cursor-pointer">
-                  Serviço ativo
-                </label>
-              </div>
-
-              <div className="rounded-xl border border-n-200 bg-n-50/60 p-3">
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    id="serviceClientVisible"
-                    checked={clientVisible}
-                    onChange={(e) => setClientVisible(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
-                  />
-                  <div>
-                    <label htmlFor="serviceClientVisible" className="flex items-center gap-1.5 text-caption text-n-700 font-bold cursor-pointer">
-                      {clientVisible ? <Eye className="h-3.5 w-3.5 text-wine-700" /> : <EyeOff className="h-3.5 w-3.5 text-warning" />}
-                      Mostrar para a cliente no agendamento
-                    </label>
-                    <p className="text-caption text-n-600 mt-1 leading-relaxed">
-                      Desmarque para deixar o serviço só no seu painel (uso interno e agendamento manual).
-                      Assim ele não aparece no site para a cliente agendar nem na lista que o bot oferece.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Toggle
+                checked={clientVisible}
+                onChange={setClientVisible}
+                label="Mostrar para a cliente no agendamento"
+              />
             </div>
+          </div>
+        </form>
+      </Modal>
 
-            <div className="pt-4 flex justify-end gap-2 border-t border-n-100">
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 border border-n-200 rounded-xl text-caption font-semibold text-n-600 hover:bg-n-50 "
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <Save className="h-4 w-4" />
-                <span>{isSubmitting ? 'Salvando...' : 'Salvar'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Modal de Confirmação de Exclusão */}
       <ConfirmDialog
         isOpen={isDeleteOpen}
-        title="Excluir Procedimento"
-        description="Esta ação removerá permanentemente o serviço do seu catálogo de agendamentos. Deseja continuar?"
-        confirmText="Confirmar Exclusão"
+        title="Excluir procedimento"
+        description={
+          serviceToDelete
+            ? `“${serviceToDelete.name}” será removido permanentemente do seu catálogo. Os atendimentos já registrados não são afetados.`
+            : ''
+        }
+        confirmText="Excluir"
         cancelText="Voltar"
         onConfirm={handleDeleteConfirm}
         onCancel={() => {
@@ -437,4 +539,5 @@ export const ServicesList: React.FC<ServicesListProps> = ({
     </div>
   );
 };
+
 export default ServicesList;

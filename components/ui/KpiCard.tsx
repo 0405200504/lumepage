@@ -8,6 +8,7 @@ import type { Comparison } from '@/lib/analytics';
 interface KpiCardProps {
   label: string;
   value: string;
+  /** ⚠️ Ignorado de propósito — mesma razão documentada em StatCard. */
   icon?: React.ReactNode;
   hint?: string;
   comparison?: Comparison;
@@ -15,38 +16,47 @@ interface KpiCardProps {
   higherIsBetter?: boolean;
   spark?: number[];
   sparkColor?: string;
-  /** destaca o número em bordô (dado-chave). */
+  /** destaca o número em vinho (dado-chave). UM por tela. */
   accent?: boolean;
   onClick?: () => void;
   className?: string;
 }
 
-/** Cartão de KPI minimalista: label uppercase discreto, número grande,
- *  selo de tendência opcional e sparkline opcional. */
+/**
+ * KPI: rótulo em mono acima, número grande abaixo, delta com seta e cor
+ * semântica, sparkline opcional. Sem ícone decorativo, sem sombra.
+ *
+ * Quando forem MAIS DE QUATRO KPIs na mesma tela, prefira `<IndexGrid>`:
+ * ele divide uma superfície só por hairline em vez de espalhar oito cards
+ * soltos, e é assim que um mostrador agrupa campos.
+ */
 export const KpiCard: React.FC<KpiCardProps> = ({
-  label, value, icon, hint, comparison, comparisonSuffix = 'vs mês ant.', higherIsBetter = true,
+  label, value, hint, comparison, comparisonSuffix = 'vs mês ant.', higherIsBetter = true,
   spark, sparkColor, accent, onClick, className = '',
 }) => {
   const clickable = !!onClick;
   return (
     <div
-      className={`card ${clickable ? 'card-interactive cursor-pointer' : ''} p-5 sm:p-6 flex flex-col ${className}`}
+      className={`card ${clickable ? 'card-interactive cursor-pointer' : ''} p-4 sm:p-5 flex flex-col ${className}`}
       onClick={onClick}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
       onKeyDown={clickable ? (e) => { if (e.key === 'Enter') onClick!(); } : undefined}
     >
-      <div className="flex items-center justify-between mb-2.5">
-        {icon && (
-          <span className="icon-chip" data-accent={accent ? 'true' : undefined} aria-hidden>{icon}</span>
+      <p className="mono-micro text-n-500">{label}</p>
+      <p className={`num text-h2 font-semibold mt-2 leading-none ${accent ? 'text-wine-700' : 'text-heading'}`}>
+        {value}
+      </p>
+      <div className="flex items-end justify-between gap-2 mt-2">
+        <div className="flex flex-col gap-1 min-w-0">
+          {comparison && (
+            <StatBadge comparison={comparison} suffix={comparisonSuffix} higherIsBetter={higherIsBetter} />
+          )}
+          {hint && <p className="text-caption text-n-500 truncate">{hint}</p>}
+        </div>
+        {spark && spark.length > 1 && (
+          <Sparkline data={spark} color={sparkColor ?? 'var(--color-wine-700)'} className="ml-auto" />
         )}
-        {comparison && <StatBadge comparison={comparison} suffix={comparisonSuffix} higherIsBetter={higherIsBetter} />}
-      </div>
-      <p className="overline text-n-500">{label}</p>
-      <p className="num text-h2 font-semibold mt-0.5 text-heading">{value}</p>
-      <div className="flex items-end justify-between gap-2 mt-1">
-        {hint && <p className="text-caption text-n-500">{hint}</p>}
-        {spark && spark.length > 1 && <Sparkline data={spark} color={sparkColor ?? 'var(--color-wine-500)'} className="ml-auto" />}
       </div>
     </div>
   );

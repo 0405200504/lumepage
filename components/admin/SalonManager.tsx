@@ -41,7 +41,7 @@ export function SalonManager({ salons, unassigned }: {
         <label className="flex-1 min-w-[14rem]">
           <span className="block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1">Novo grupo</span>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="ex.: Studio Bella — unidade Centro"
-            className="w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            className="w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
         </label>
         <button type="button" onClick={create} disabled={busy || !name.trim()}
           className="h-9 px-3.5 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center gap-1.5 disabled:opacity-40">
@@ -91,7 +91,7 @@ function SalonCard({ salon, unassigned }: { salon: SalonView; unassigned: { id: 
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const field = 'h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
 
   return (
     <section className="card p-4 space-y-3">

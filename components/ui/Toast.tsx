@@ -86,7 +86,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {toast.actionLabel && toast.onAction && (
                   <button
                     onClick={() => { toast.onAction?.(); removeToast(toast.id); }}
-                    className="tap mt-2.5 inline-flex items-center gap-1.5 h-9 px-3 rounded-chip bg-wine-700 text-white text-caption font-semibold transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                    className="tap mt-2.5 inline-flex items-center gap-1.5 h-9 px-3 rounded-chip bg-wine-700 text-white text-caption font-semibold transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     <Undo2 className="h-4 w-4" aria-hidden />
                     {toast.actionLabel}
@@ -97,7 +97,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <button
                 onClick={() => removeToast(toast.id)}
                 aria-label="Fechar aviso"
-                className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
               >
                 <X className="h-4 w-4" />
               </button>

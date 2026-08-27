@@ -40,10 +40,13 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Manrope = corpo/UI. Instrument Sans = títulos e NÚMEROS (dígito de
-            largura fixa e desenho mais firme no valor grande do faturamento). */}
+        {/* Manrope = corpo/UI. Instrument Sans = títulos e DINHEIRO (dígito de
+            largura fixa e desenho mais firme no valor grande do faturamento).
+            JetBrains Mono = DADO: horário, duração, data, ID, delta, cabeçalho
+            de tabela, rótulo de eixo e o micro-label de contexto do header.
+            Só 400/500 da mono — mono em negrito perde o desenho técnico. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Instrument+Sans:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Instrument+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>

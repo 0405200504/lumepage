@@ -8,12 +8,14 @@ import { statusMeta } from '@/lib/appointments/status';
 import { appointmentRevenueCents, indexServices } from '@/lib/finance';
 import { toISO, compare } from '@/lib/analytics';
 import { Card } from '@/components/ui/Card';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PillGroup } from '@/components/ui/PillGroup';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CountUp } from '@/components/ui/CountUp';
 import { AreaChart, type AreaPoint } from '@/components/ui/charts/AreaChart';
+import { MonoTrail } from '@/components/ui/Mono';
+import { IndexGrid } from '@/components/ui/IndexGrid';
+import { useRouter } from 'next/navigation';
 
 interface DashboardOverviewProps {
   professionalName: string;
@@ -69,6 +71,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const today = useMemo(() => new Date(), []);
   const todayIso = toISO(today);
   const byId = useMemo(() => indexServices(services), [services]);
+  const router = useRouter();
+
+  /** "QUI 27 AGO" — a data de hoje na trilha mono do header. */
+  const hojeLabel = new Date()
+    .toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+    .replace(/\./g, '');
+
   const firstName = professionalName?.split(' ')[0] || professionalName;
   const bookingHref = slug ? `/agendar/${slug}` : '#';
 
@@ -202,9 +211,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     <div className="space-y-4 lg:space-y-6">
       {/* Saudação + filtro de período. O filtro comanda o hero e só ele. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-label text-n-600">
-          Bem-vinda de volta, <span className="text-heading font-semibold">{firstName}</span>.
-        </p>
+        <div className="min-w-0">
+          <MonoTrail
+            items={[
+              'Início',
+              hojeLabel,
+              `${deHoje.length} hoje`,
+              pendentes.length > 0 ? `${pendentes.length} pendente(s)` : null,
+            ]}
+            className="mb-1"
+          />
+          <p className="text-body text-n-600">
+            Bem-vinda de volta, <span className="text-heading font-semibold">{firstName}</span>.
+          </p>
+        </div>
         <PillGroup items={PERIODS} value={period} onChange={setPeriod} ariaLabel="Período" />
       </div>
 
@@ -214,20 +234,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           template. 7/5 em cima, 3+3+3+3 no meio, 7/5 embaixo. */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
         {/* --- HERO: o faturamento. Aparece UMA vez na tela, aqui. --- */}
-        <Card hero pad="p-6 sm:p-8" className="lg:col-span-7 flex flex-col">
-          <span className="overline text-white/60">Faturamento {PERIOD_NOUN[period]}</span>
+        {/* O hero é o único elemento vinho da tela — e o único com chanfro
+            grande, que é onde a assinatura do produto aparece em tamanho
+            legível. Dinheiro continua em sans; o resto do bloco, em mono. */}
+        <Card hero chamfer pad="p-6 sm:p-8" className="lg:col-span-7 flex flex-col">
+          <span className="mono-micro !text-wine-200">Faturamento {PERIOD_NOUN[period]}</span>
           <p className="num text-display font-bold mt-2">
             <CountUp value={revenue} format={brl} />
           </p>
 
           <div className="flex items-center gap-2 mt-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-semibold ${
-                delta.direction === 'down' ? 'bg-white/12 text-white/80' : 'bg-white/15 text-white'
-              }`}
-            >
-              <TrendIcon className="h-4 w-4" aria-hidden />
-              <span className="num">{delta.deltaPct > 0 ? '+' : ''}{delta.deltaPct.toFixed(0)}%</span>
+            {/* Selo sem pílula: seta + número em mono, sobre a própria
+                superfície vinho. O retângulo translúcido em volta era mais
+                pesado que o dado que ele carregava. */}
+            <span className="inline-flex items-center gap-1.5 mono-micro !text-white">
+              <TrendIcon className="h-3 w-3" aria-hidden />
+              {delta.deltaPct > 0 ? '+' : ''}{delta.deltaPct.toFixed(0)}%
             </span>
             <span className="text-caption text-white/60">
               {delta.direction === 'flat' ? 'igual' : delta.direction === 'up' ? 'a mais' : 'a menos'} {COMPARISON_NOUN[period]}
@@ -245,8 +267,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <Card pad="p-5 sm:p-6" className="lg:col-span-5 lg:row-span-2 flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-h3 text-heading">Atendimentos de hoje</h2>
-              <p className="text-caption text-n-500 mt-0.5">
+              <h2 className="mono-micro text-n-900">Atendimentos de hoje</h2>
+              <p className="text-caption text-n-500 mt-1">
                 {deHoje.length > 0
                   ? `${deHoje.length} ${deHoje.length === 1 ? 'horário reservado' : 'horários reservados'}`
                   : 'Nada marcado ainda'}
@@ -254,7 +276,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             <Link
               href="/dashboard/agenda"
-              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 rounded-chip"
+              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 rounded-chip"
             >
               Ver agenda <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
@@ -271,18 +293,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     <li key={app.id} className="stagger-item relative" style={{ ['--i' as string]: i }}>
                       <Link
                         href="/dashboard/appointments"
-                        className="tap group flex items-start gap-4 py-2 rounded-chip transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                        className="tap group flex items-start gap-4 py-2 rounded-chip transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                       >
-                        <span className="num shrink-0 w-[52px] pt-2.5 text-caption text-n-500 text-right">
+                        <span className="mono shrink-0 w-[52px] pt-2.5 text-caption text-n-500 text-right">
                           {app.start_time.slice(0, 5)}
                         </span>
-                        <span className="relative shrink-0 mt-3 h-2.5 w-2.5 rounded-full bg-wine-700 ring-4 ring-surface" aria-hidden />
+                        {/* Ponto de 6px na cor do STATUS — o marcador da
+                            linha do tempo era vinho para todos, e vinho é a
+                            marca, não um estado. O anel de 4px que o
+                            destacava do conector some junto. */}
+                        <span className={`relative shrink-0 mt-3.5 h-1.5 w-1.5 rounded-full ring-[3px] ring-surface ${m.dot}`} aria-hidden />
                         <span className="min-w-0 flex-1 pb-1">
                           <span className="flex items-center gap-2 justify-between">
-                            <span className="text-label font-semibold text-heading truncate">{app.client_name}</span>
+                            <span className="text-body-sm font-semibold text-heading truncate">{app.client_name}</span>
                             <StatusPill tone={m.tone}>{m.label}</StatusPill>
                           </span>
-                          <span className="block text-caption text-n-500 truncate mt-0.5">
+                          <span className="block mono-micro text-n-500 truncate mt-1">
                             {app.service?.name ?? 'Serviço não informado'}
                           </span>
                         </span>
@@ -299,7 +325,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   <Link
                     href={bookingHref}
                     target="_blank"
-                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     Abrir link de agendamento <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </Link>
@@ -310,29 +336,44 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </Card>
 
         {/* --- KPIs: OUTRAS métricas. O faturamento não se repete aqui. --- */}
-        <div className="lg:col-span-7 grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
-          <StatCard label="Atendimentos hoje" value={deHoje.length} hint="Reservados para hoje" />
-          <StatCard
-            label="Pendentes"
-            value={pendentes.length}
-            hint={pendentes.length > 0 ? 'Precisam da sua resposta' : 'Tudo em dia'}
-            accent={pendentes.length > 0}
-            href={pendentes.length > 0 ? '/dashboard/appointments?status=pending' : undefined}
+        {/* Os quatro KPIs dividem UMA superfície separada por hairline, em vez
+            de quatro cards com gap entre eles — mesmo arquétipo do financeiro.
+            O contador de pendentes é o único --signal da grade: é ele que pede
+            ação hoje. */}
+        <div className="lg:col-span-7">
+          <IndexGrid
+            items={[
+              { label: 'Atendimentos hoje', value: deHoje.length, format: 'mono', hint: 'Reservados para hoje' },
+              {
+                label: 'Pendentes',
+                value: pendentes.length,
+                format: 'mono',
+                accent: pendentes.length > 0,
+                hint: pendentes.length > 0 ? 'Precisam da sua resposta' : 'Tudo em dia',
+                onClick: pendentes.length > 0 ? () => router.push('/dashboard/appointments?status=pending') : undefined,
+              },
+              { label: 'Ticket médio', value: brl(ticketMedio), hint: 'Média do mês' },
+              {
+                label: 'Clientes',
+                value: clientes,
+                format: 'mono',
+                hint: 'Na sua carteira',
+                onClick: () => router.push('/dashboard/clients'),
+              },
+            ]}
           />
-          <StatCard label="Ticket médio" value={brl(ticketMedio)} hint="Média do mês" />
-          <StatCard label="Clientes" value={clientes} hint="Na sua carteira" href="/dashboard/clients" />
         </div>
 
         {/* --- Serviços: tabela de verdade, não lista de cartões --- */}
         <Card pad="p-0" className="lg:col-span-7 overflow-hidden">
           <div className="flex items-start justify-between gap-3 p-5 sm:p-6 pb-4">
             <div>
-              <h2 className="text-h3 text-heading">Seus serviços</h2>
+              <h2 className="mono-micro text-n-900">Seus serviços</h2>
               <p className="text-caption text-n-500 mt-0.5">Preços e durações do seu catálogo.</p>
             </div>
             <Link
               href="/dashboard/services"
-              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 rounded-chip"
+              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 rounded-chip"
             >
               Gerenciar <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
@@ -342,21 +383,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="max-h-[320px] overflow-y-auto scroll-touch">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-10 bg-surface">
-                  <tr className="border-y border-line">
-                    <th scope="col" className="px-5 sm:px-6 py-2.5 overline text-n-500 font-semibold">Serviço</th>
-                    <th scope="col" className="px-3 py-2.5 overline text-n-500 font-semibold text-right">Duração</th>
-                    <th scope="col" className="px-5 sm:px-6 py-2.5 overline text-n-500 font-semibold text-right">Valor</th>
+                  <tr className="border-y border-line-strong">
+                    <th scope="col" className="px-5 sm:px-6 py-2.5 mono-micro text-n-500">Serviço</th>
+                    <th scope="col" className="px-3 py-2.5 mono-micro text-n-500 text-right">Duração</th>
+                    <th scope="col" className="px-5 sm:px-6 py-2.5 mono-micro text-n-500 text-right">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
                   {services.map((s, i) => (
                     <tr
                       key={s.id}
-                      className={`group h-[52px] transition-ui hover:bg-wine-50/60 ${i % 2 === 1 ? 'bg-n-25' : ''}`}
+                      className={`group h-11 transition-ui hover:bg-n-50 ${i % 2 === 1 ? 'bg-n-25' : ''}`}
                     >
-                      <td className="px-5 sm:px-6 text-label text-heading">{s.name}</td>
-                      <td className="num px-3 text-caption text-n-500 text-right whitespace-nowrap">{s.duration_minutes} min</td>
-                      <td className="num px-5 sm:px-6 text-label font-semibold text-heading text-right whitespace-nowrap">
+                      <td className="px-5 sm:px-6 text-body-sm text-ink">{s.name}</td>
+                      <td className="mono px-3 text-caption text-n-500 text-right whitespace-nowrap">{s.duration_minutes}min</td>
+                      <td className="num px-5 sm:px-6 text-body-sm font-semibold text-heading text-right whitespace-nowrap">
                         {brl(s.price_cents)}
                       </td>
                     </tr>
@@ -372,7 +413,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 action={
                   <Link
                     href="/dashboard/services"
-                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     Cadastrar serviço
                   </Link>
@@ -384,15 +425,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         {/* --- Próximos 7 dias --- */}
         <Card pad="p-5 sm:p-6" className="lg:col-span-5">
-          <h2 className="text-h3 text-heading">Próximos 7 dias</h2>
-          <p className="text-caption text-n-500 mt-0.5">O que já está reservado a partir de amanhã.</p>
+          <h2 className="mono-micro text-n-900">Próximos 7 dias</h2>
+          <p className="text-caption text-n-500 mt-1">O que já está reservado a partir de amanhã.</p>
 
           <ul className="mt-4 divide-y divide-line">
             {proximos.map((d, i) => (
-              <li key={d.iso} className="stagger-item flex items-center gap-3 h-[52px]" style={{ ['--i' as string]: i }}>
+              <li key={d.iso} className="stagger-item flex items-center gap-3 h-11" style={{ ['--i' as string]: i }}>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-label text-heading truncate">{d.weekday}</span>
-                  <span className="num block text-caption text-n-500">{d.diaMes}</span>
+                  <span className="block text-body-sm text-ink truncate">{d.weekday}</span>
+                  <span className="mono-micro block text-n-500">{d.diaMes}</span>
                 </span>
                 {d.count > 0 ? (
                   <>

@@ -21,15 +21,17 @@ import {
   monthRange, metricsForRange, compare, projectionForMonth, receivablesAging,
   byPaymentMethod, monthlySeries, DEFAULT_PAYMENT_RATES, PaymentRates, paymentLabel,
 } from '@/lib/analytics';
-import { KpiCard } from '../ui/KpiCard';
+import { IndexGrid } from '../ui/IndexGrid';
+import { PageHeader } from '../ui/PageHeader';
+import { MonoLabel, MonoValue } from '../ui/Mono';
+import { StatusLabel } from '../ui/StatusDot';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
-import { QuickAddFab } from '../ui/QuickAddFab';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
-import { LineChart } from '../ui/charts/LineChart';
+import { TechChart } from '../ui/charts/TechChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
@@ -314,22 +316,34 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="sm" iconOnly aria-label="Mês anterior" onClick={() => step(-1)} leadingIcon={<ChevronLeft className="h-5 w-5" />} />
-            <Button variant="ghost" size="sm" iconOnly aria-label="Próximo mês" onClick={() => step(1)} leadingIcon={<ChevronRight className="h-5 w-5" />} />
-          </div>
-          <h2 className="text-h2 text-heading capitalize">{MONTHS[cursor.m]} {cursor.y}</h2>
-        </div>
-        <div className="flex gap-2">
-          <ExportMenu onCSV={exportLedgerCSV} />
-          <Button size="sm" onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-4 w-4" />}>Lançamento</Button>
-        </div>
-      </div>
-
-      <QuickAddFab actions={[{ label: 'Novo lançamento', icon: Plus, onClick: () => setShowForm(true) }]} />
+      {/* O seletor de mês virou um controle de RÉGUA: setas encostadas no
+          rótulo, dentro da mesma moldura retangular, como um contador de
+          instrumento. Antes eram dois botões fantasma soltos ao lado de um
+          h2 — nada indicava que o mês era navegável. */}
+      <PageHeader
+        className="no-print"
+        trail={['Financeiro', `${monthItems.length} lançamentos`, `margem ${metrics.margin.toFixed(0)}%`]}
+        title="Financeiro"
+        actions={
+          <>
+            <div className="segmented">
+              <button onClick={() => step(-1)} aria-label="Mês anterior">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button data-active="true" className="capitalize min-w-[9rem]">
+                {MONTHS[cursor.m]} {cursor.y}
+              </button>
+              <button onClick={() => step(1)} aria-label="Próximo mês">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <ExportMenu onCSV={exportLedgerCSV} />
+            <Button size="md" onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-[18px] w-[18px]" />}>
+              Lançamento
+            </Button>
+          </>
+        }
+      />
 
       <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
 
@@ -337,13 +351,22 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
         {/* ===================== VISÃO GERAL ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
-            {/* KPIs com comparativo */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard label="Entradas do mês" value={brl(income)} icon={<DollarSign className="h-5 w-5" />} comparison={cmpIncome} hint="Serviços + avulsos" onClick={() => setDrill('income')} accent />
-              <KpiCard label="Saídas do mês" value={brl(expense)} icon={<ArrowDownCircle className="h-5 w-5" />} comparison={cmpExpense} higherIsBetter={false} hint="Insumos + fixas + lançamentos" onClick={() => setDrill('expense')} />
-              <KpiCard label="Lucro do mês" value={brl(metrics.netProfit)} icon={metrics.netProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />} comparison={cmpProfit} hint={`Margem ${metrics.margin.toFixed(0)}%`} onClick={() => setDrill('profit')} />
-              <KpiCard label="Saldo acumulado" value={brl(totalBalance)} icon={<PiggyBank className="h-5 w-5" />} hint="Sobrou até hoje" />
-            </div>
+            {/* ARQUÉTIPO 3 · os quatro índices dividem UMA superfície, separados
+                por hairline, sem ícone e sem sombra. Eram quatro cards soltos
+                com um iconezinho num quadrado cinza cada — o rótulo "Entradas
+                do mês" já dizia o que o cifrãozinho diria, e o gap entre eles
+                transformava uma leitura contínua em quatro leituras. */}
+            <IndexGrid
+              items={[
+                { label: 'Entradas do mês', value: brl(income), accent: true, hint: 'Serviços + avulsos',
+                  delta: { pct: cmpIncome.deltaPct }, onClick: () => setDrill('income') },
+                { label: 'Saídas do mês', value: brl(expense), hint: 'Insumos + fixas + lançamentos',
+                  delta: { pct: cmpExpense.deltaPct, good: cmpExpense.deltaPct <= 0 }, onClick: () => setDrill('expense') },
+                { label: 'Lucro do mês', value: brl(metrics.netProfit), hint: `Margem ${metrics.margin.toFixed(0)}%`,
+                  delta: { pct: cmpProfit.deltaPct }, onClick: () => setDrill('profit') },
+                { label: 'Saldo acumulado', value: brl(totalBalance), hint: 'Sobrou até hoje' },
+              ]}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* DRE */}
@@ -403,16 +426,29 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
               <div className="card p-5 sm:p-6">
                 <SectionHeader title="Contas a receber" subtitle="Valores previstos ainda não realizados" icon={<ScrollText className="h-4 w-4" />}
                   actions={<button onClick={() => setDrill('receivable')} className="text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui">Ver tudo →</button>} />
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button onClick={() => setDrill('receivable')} className="text-left rounded-xl border border-danger-border bg-danger-bg p-4">
-                    <p className="flex items-center gap-1.5 overline text-danger"><Clock4 className="h-3.5 w-3.5" /> Vencido</p>
-                    <p className="text-h2 font-semibold text-danger mt-1 num">{brl(receivables.overdue.total)}</p>
-                    <p className="text-caption text-n-600 mt-0.5">{receivables.overdue.items.length} agendamento(s)</p>
+                {/* Os dois blocos perderam o fundo (salmão e cinza) e dividem
+                    uma moldura só, separados por hairline. O "vencido" continua
+                    marcado — mas por um PONTO e pelo número em --danger, não
+                    por um retângulo colorido de 100×90px.
+                    "A vencer" leva contorno tracejado: é previsto, e tracejado
+                    quer dizer previsto em todo o produto. */}
+                <div className="grid grid-cols-2 mt-4 border border-line rounded-surface overflow-hidden">
+                  <button onClick={() => setDrill('receivable')} className="text-left p-4 border-r border-line transition-ui hover:bg-n-25">
+                    <StatusLabel tone="danger">Vencido</StatusLabel>
+                    <p className="text-h2 font-semibold text-danger mt-1.5 num leading-none">{brl(receivables.overdue.total)}</p>
+                    <MonoValue className="text-micro text-n-500 mt-1.5 block">
+                      {receivables.overdue.items.length} AGENDAMENTO(S)
+                    </MonoValue>
                   </button>
-                  <div className="rounded-xl border border-line bg-surface-2 p-4">
-                    <p className="flex items-center gap-1.5 overline text-n-500"><Clock4 className="h-3.5 w-3.5" /> A vencer</p>
-                    <p className="text-h2 font-semibold text-ink mt-1 num">{brl(receivables.dueSoon.total)}</p>
-                    <p className="text-caption text-n-600 mt-0.5">{receivables.dueSoon.items.length} agendamento(s)</p>
+                  <div className="p-4">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-3 border-t border-dashed border-line-strong" aria-hidden />
+                      <MonoLabel>A vencer</MonoLabel>
+                    </span>
+                    <p className="text-h2 font-semibold text-ink mt-1.5 num leading-none">{brl(receivables.dueSoon.total)}</p>
+                    <MonoValue className="text-micro text-n-500 mt-1.5 block">
+                      {receivables.dueSoon.items.length} AGENDAMENTO(S)
+                    </MonoValue>
                   </div>
                 </div>
                 <p className="mt-3 text-caption text-n-600">Baseado em agendamentos pendentes/confirmados (data passada = vencido).</p>
@@ -438,16 +474,20 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 {payments.length === 0 ? (
                   <p className="text-caption text-n-600 py-8 text-center">Sem vendas com forma de pagamento no mês.</p>
                 ) : (
-                  <div className="mt-4 space-y-2">
+                  /* Uma moldura por forma de pagamento era card dentro de card.
+                     Viraram linhas divididas por hairline de ponta a ponta. */
+                  <div className="mt-4 -mx-5 sm:-mx-6">
                     {payments.map(p => (
-                      <div key={p.method} className="flex items-center justify-between gap-2 rounded-xl border border-line p-3">
+                      <div key={p.method} className="flex items-center justify-between gap-2 px-5 sm:px-6 py-2.5 border-b border-line last:border-b-0">
                         <div className="min-w-0">
-                          <p className="text-label font-semibold text-ink truncate">{p.label}</p>
-                          <p className="text-caption text-n-600">{p.count} venda(s) · taxa {brl(p.fee)}</p>
+                          <p className="text-body-sm text-ink truncate">{p.label}</p>
+                          <MonoValue className="text-micro text-n-500">
+                            {p.count} VENDA(S) · TAXA {brl(p.fee)}
+                          </MonoValue>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-label font-semibold text-ink num">{brl(p.net)}</p>
-                          <p className="text-caption text-n-600">líquido de {brl(p.gross)}</p>
+                          <p className="text-body-sm font-semibold text-ink num">{brl(p.net)}</p>
+                          <MonoValue className="text-micro text-n-500">LÍQ. DE {brl(p.gross)}</MonoValue>
                         </div>
                       </div>
                     ))}
@@ -459,14 +499,33 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             {/* Evolução do lucro líquido */}
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Evolução do lucro líquido" subtitle="Faturamento x lucro · últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
-              <div className="mt-5">
-                <LineChart
+              {/* Legenda em mono, sólido × tracejado. O faturamento (a linha
+                  de referência) virou tracejada e o LUCRO ficou sólido em
+                  vinho: o dado que a tela existe para mostrar é o que ganha o
+                  traço cheio, e o outro passa a ser a régua ao fundo. */}
+              <div className="flex items-center gap-4 mt-3">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-4 h-px bg-wine-700" aria-hidden />
+                  <MonoLabel>Lucro líquido</MonoLabel>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-4 border-t border-dashed border-line-strong" aria-hidden />
+                  <MonoLabel>Faturamento</MonoLabel>
+                </span>
+              </div>
+              <div className="mt-4">
+                <TechChart
                   labels={netSeries.map(p => p.label)}
-                  series={[
-                    { name: 'Faturamento', color: 'var(--color-n-600)', values: netSeries.map(p => p.gross / 100) },
-                    { name: 'Lucro líquido', color: 'var(--color-wine-500)', values: netSeries.map(p => p.net / 100) },
-                  ]}
+                  height={220}
                   format={(v) => brl(Math.round(v * 100))}
+                  axisFormat={(v: number) => {
+                    const r = Math.round(v);
+                    return Math.abs(r) >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')}k` : String(r);
+                  }}
+                  series={[
+                    { name: 'Faturamento', style: 'dashed', color: 'var(--color-n-400)', values: netSeries.map(p => p.gross / 100) },
+                    { name: 'Lucro líquido', color: 'var(--color-wine-700)', values: netSeries.map(p => p.net / 100) },
+                  ]}
                 />
               </div>
             </div>
@@ -478,35 +537,55 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
           <div className="card p-5 sm:p-6 space-y-4 animate-fade-up">
             <SectionHeader title="Extrato do mês" subtitle={`${monthItems.length} lançamentos`} icon={<ReceiptText className="h-4 w-4" />}
               actions={<ExportMenu onCSV={exportLedgerCSV} />} />
-            <div className="space-y-2 max-h-[600px] overflow-y-auto scroll-touch -mx-1 px-1">
+            {/* Extrato = ARQUÉTIPO 2 em forma de lista: linha de 44px,
+                divisória de ponta a ponta, valor à direita em tabular.
+                O quadradinho colorido com a setinha (menta para entrada,
+                salmão para saída) saiu: o SINAL do valor (+/−) e a cor do
+                próprio número já dizem a direção, e a seta repetia isso 40
+                vezes numa coluna de manchas. Sobrou uma barra de 3px à
+                esquerda — a mesma gramática do bloco da agenda. */}
+            <div className="max-h-[600px] overflow-y-auto scroll-touch -mx-5 sm:-mx-6">
               {monthItems.length === 0 ? (
-                <EmptyState
-                  icon={<Wallet className="h-6 w-6" />}
-                  title="Nenhum lançamento neste mês"
-                  description="Entradas e saídas que você registrar aparecem aqui, junto com o que a agenda gera sozinha."
-                  actionText="Adicionar o primeiro"
-                  onAction={() => setShowForm(true)}
-                />
+                <div className="px-5 sm:px-6">
+                  <EmptyState
+                    title="Nenhum lançamento neste mês"
+                    description="Entradas e saídas que você registrar aparecem aqui, junto com o que a agenda gera sozinha."
+                    actionText="Adicionar o primeiro"
+                    onAction={() => setShowForm(true)}
+                  />
+                </div>
               ) : monthItems.map((i) => {
                 const inc = i.kind === 'income';
                 const isFixed = i.id.startsWith('fixed-');
                 return (
-                  <div key={i.id} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2 transition-colors">
-                    <span className={`p-2 rounded-lg shrink-0 ${inc ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
-                      {isFixed ? <Repeat className="h-4 w-4" /> : inc ? <ArrowUpCircle className="h-4 w-4" /> : <ArrowDownCircle className="h-4 w-4" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-label font-semibold text-ink truncate">{i.category}</p>
-                      <p className="text-caption text-n-600 truncate">{i.description || '—'} · {formatDateBR(i.date)}</p>
+                  <div key={i.id} className="flex items-stretch gap-3 border-b border-line last:border-b-0 hover:bg-n-25 transition-ui group">
+                    <span className={`w-[3px] shrink-0 ${inc ? 'bg-success' : 'bg-danger'}`} aria-hidden />
+                    <div className="flex-1 min-w-0 flex items-center gap-3 pr-5 sm:pr-6 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-body-sm text-ink truncate">{i.category}</p>
+                        <p className="mono-micro text-n-500 truncate">
+                          {formatDateBR(i.date)}{i.description ? ` · ${i.description}` : ''}
+                        </p>
+                      </div>
+                      <span className={`text-body-sm font-semibold shrink-0 num ${inc ? 'text-success' : 'text-danger'}`}>
+                        {inc ? '+' : '−'}{brl(i.amount_cents)}
+                      </span>
+                      <span className="shrink-0 w-16 text-right no-print">
+                        {i.auto ? (
+                          <span className="mono-micro text-n-400">{isFixed ? 'FIXA' : 'AUTO'}</span>
+                        ) : (
+                          <Button
+                            variant="ghost" size="sm" iconOnly
+                            aria-label={`Excluir lançamento ${i.category}`}
+                            onClick={() => remove(i.id)}
+                            disabled={deletingId === i.id}
+                            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-ui"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </span>
                     </div>
-                    <span className={`text-label font-semibold shrink-0 num ${inc ? 'text-success' : 'text-danger'}`}>{inc ? '+' : '−'}{brl(i.amount_cents)}</span>
-                    {i.auto ? (
-                      <span className="overline text-n-500 bg-n-100 rounded-full px-2 py-0.5 shrink-0 no-print">{isFixed ? 'FIXA' : 'AUTO'}</span>
-                    ) : (
-                      <button onClick={() => remove(i.id)} disabled={deletingId === i.id} className="p-1.5 rounded-lg text-n-600 hover:text-danger hover:bg-danger-bg transition-colors shrink-0 no-print">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                   </div>
                 );
               })}
@@ -518,15 +597,29 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
         {activeTab === 'cashflow' && (
           <div className="card p-5 sm:p-6 animate-fade-up">
             <SectionHeader title="Fluxo de caixa e lucro" subtitle="Faturamento x lucro líquido · últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
-            <div className="mt-6">
-              <LineChart
+            <div className="flex items-center gap-4 mt-3">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-4 h-px bg-wine-700" aria-hidden />
+                <MonoLabel>Lucro líquido</MonoLabel>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-4 border-t border-dashed border-line-strong" aria-hidden />
+                <MonoLabel>Faturamento</MonoLabel>
+              </span>
+            </div>
+            <div className="mt-5">
+              <TechChart
                 height={260}
                 labels={netSeries.map(p => p.label)}
+                format={(v: number) => brl(Math.round(v * 100))}
+                axisFormat={(v: number) => {
+                  const r = Math.round(v);
+                  return Math.abs(r) >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')}k` : String(r);
+                }}
                 series={[
-                  { name: 'Faturamento', color: 'var(--color-n-600)', values: netSeries.map(p => p.gross / 100) },
-                  { name: 'Lucro líquido', color: 'var(--color-wine-500)', values: netSeries.map(p => p.net / 100) },
+                  { name: 'Faturamento', style: 'dashed', color: 'var(--color-n-400)', values: netSeries.map(p => p.gross / 100) },
+                  { name: 'Lucro líquido', color: 'var(--color-wine-700)', values: netSeries.map(p => p.net / 100) },
                 ]}
-                format={(v) => brl(Math.round(v * 100))}
               />
             </div>
           </div>
@@ -560,9 +653,9 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <SectionHeader title="Contas fixas mensais" subtitle="Lançadas como saída todo mês, a partir do cadastro" icon={<Repeat className="h-4 w-4" />} />
             <form onSubmit={addFixed} className="flex flex-col sm:flex-row gap-2 my-5 no-print">
               <input placeholder="Ex: Aluguel do espaço" value={fxName} onChange={(e) => setFxName(e.target.value)}
-                className="flex-1 min-w-0 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="flex-1 min-w-0 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
               <input inputMode="decimal" placeholder="R$ 0,00" value={fxAmount} onChange={(e) => setFxAmount(e.target.value)}
-                className="w-full sm:w-32 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="w-full sm:w-32 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
               <Button type="submit" loading={fxSaving} className="shrink-0">Adicionar</Button>
             </form>
             <div className="space-y-2">
@@ -575,7 +668,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
               ) : fixedExpenses.filter(f => f.active).map(f => (
                 <div key={f.id} className="flex items-center justify-between rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
                   <div className="min-w-0 flex items-center gap-3">
-                    <span className="bg-danger-bg p-2 rounded-lg text-danger"><Repeat className="h-4 w-4" /></span>
+                    <span className="icon-chip !text-danger"><Repeat className="h-4 w-4" /></span>
                     <div>
                       <p className="text-label font-semibold text-ink truncate">{f.name}</p>
                       <p className="text-caption text-n-600">Desde {formatDateBR(f.created_at.split('T')[0])}</p>
@@ -583,7 +676,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-danger font-semibold num">{brl(f.amount_cents)} / mês</span>
-                    <button onClick={() => removeFixed(f.id)} className="p-1.5 rounded-lg text-n-600 hover:text-danger hover:bg-danger-bg transition-colors no-print"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => removeFixed(f.id)} className="p-1.5 rounded-lg text-n-600 hover:text-danger hover:bg-n-100 transition-colors no-print"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               ))}
@@ -619,31 +712,31 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-2 gap-1 bg-n-100 rounded-control p-1" role="radiogroup" aria-label="Tipo de lançamento">
                 <button type="button" role="radio" aria-checked={formType === 'expense'} onClick={() => setFormType('expense')}
-                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${formType === 'expense' ? 'bg-danger text-white' : 'text-n-600 hover:text-heading'}`}>Saída</button>
+                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${formType === 'expense' ? 'bg-danger text-white' : 'text-n-600 hover:text-heading'}`}>Saída</button>
                 <button type="button" role="radio" aria-checked={formType === 'income'} onClick={() => setFormType('income')}
-                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${formType === 'income' ? 'bg-success text-white' : 'text-n-600 hover:text-heading'}`}>Entrada</button>
+                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${formType === 'income' ? 'bg-success text-white' : 'text-n-600 hover:text-heading'}`}>Entrada</button>
               </div>
               <div>
                 <label className="block overline text-n-500 mb-1.5">Valor (R$)</label>
                 <input inputMode="decimal" required placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-control text-h2 font-semibold num text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-control text-h2 font-semibold num text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
               </div>
               <div>
                 <label className="block overline text-n-500 mb-1.5">Categoria</label>
                 <input list="fin-cats" placeholder="Selecione ou digite" value={category} onChange={(e) => setCategory(e.target.value)}
-                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 <datalist id="fin-cats">{(formType === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c} />)}</datalist>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block overline text-n-500 mb-1.5">Data</label>
                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 </div>
                 <div>
                   <label className="block overline text-n-500 mb-1.5">Descrição</label>
                   <input placeholder="Opcional" value={description} onChange={(e) => setDescription(e.target.value)}
-                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 </div>
               </div>
               <Button type="submit" size="lg" loading={saving} className="w-full">Salvar lançamento</Button>

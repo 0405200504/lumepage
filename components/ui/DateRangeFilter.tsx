@@ -86,12 +86,12 @@ export function DateRangeFilter({ basePath, presets, hideCustom, className = '' 
         <div className="flex items-center gap-1.5">
           <input
             type="date" value={from} onChange={e => setFrom(e.target.value)} aria-label="Data inicial"
-            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           />
           <span className="text-muted text-caption">até</span>
           <input
             type="date" value={to} onChange={e => setTo(e.target.value)} aria-label="Data final"
-            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           />
           <button
             type="button" onClick={applyCustom}

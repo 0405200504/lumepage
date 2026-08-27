@@ -37,12 +37,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     switch (type) {
       case 'danger':
         return {
-          iconBg: 'bg-danger-bg text-danger',
+          iconBg: 'border border-line text-danger',
           btnBg: 'bg-danger hover:brightness-95 text-white',
         };
       case 'warning':
         return {
-          iconBg: 'bg-warning-bg text-warning',
+          iconBg: 'border border-line text-warning',
           btnBg: 'bg-warning hover:brightness-95 text-white',
         };
       default:

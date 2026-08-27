@@ -6,7 +6,12 @@ import { WaitlistEntry, WaitlistStatus, Service } from '@/types/database';
 import { Clock, MessageCircle, X, Plus, Trash2, CalendarPlus, UserPlus } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
-import { QuickAddFab } from '../ui/QuickAddFab';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { PageHeader } from '../ui/PageHeader';
+import { TechTable } from '../ui/TechTable';
+import { StatusLabel } from '../ui/StatusDot';
+import { MonoValue } from '../ui/Mono';
 import { buildWhatsappLink, formatDateBR } from '@/lib/whatsapp';
 import {
   updateWaitlistStatusAction, deleteWaitlistEntryAction,
@@ -20,12 +25,13 @@ interface WaitlistPanelProps {
   services: Service[];
 }
 
-const STATUS_META: Record<WaitlistStatus, { label: string; badge: string }> = {
-  waiting:     { label: 'Aguardando',  badge: 'bg-warning-bg text-warning' },
-  contacted:   { label: 'Contatada',   badge: 'bg-wine-700/10 text-wine-700' },
-  scheduled:   { label: 'Encaixada',   badge: 'bg-success-bg text-success' },
-  cancelled:   { label: 'Cancelada',   badge: 'bg-danger-bg text-danger' },
-  no_response: { label: 'Sem resposta', badge: 'bg-n-200 text-n-600' },
+type WaitTone = 'warning' | 'accent' | 'success' | 'danger' | 'neutral';
+const STATUS_META: Record<WaitlistStatus, { label: string; tone: WaitTone }> = {
+  waiting:     { label: 'Aguardando',   tone: 'warning' },
+  contacted:   { label: 'Contatada',    tone: 'accent' },
+  scheduled:   { label: 'Encaixada',    tone: 'success' },
+  cancelled:   { label: 'Cancelada',    tone: 'danger' },
+  no_response: { label: 'Sem resposta', tone: 'neutral' },
 };
 const STATUS_ORDER: WaitlistStatus[] = ['waiting', 'contacted', 'scheduled', 'cancelled', 'no_response'];
 
@@ -131,86 +137,172 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
   };
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-caption text-n-600">
-          {initialEntries.length} {initialEntries.length === 1 ? 'solicitação' : 'solicitações'} na lista
-        </p>
-        <button onClick={() => setShowAdd(true)} className="tap inline-flex items-center gap-1.5 px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl shadow-soft hover:opacity-95 transition-ui">
-          <UserPlus className="h-4 w-4" /> Adicionar à lista
-        </button>
-      </div>
-
-      <QuickAddFab actions={[{ label: 'Adicionar à lista', icon: UserPlus, onClick: () => setShowAdd(true) }]} />
+    <div className="space-y-5">
+      <PageHeader
+        trail={[
+          'Fila de espera',
+          `${initialEntries.length} na lista`,
+          `${initialEntries.filter(e => e.status === 'waiting').length} aguardando`,
+        ]}
+        title="Lista de espera"
+        actions={
+          <Button size="md" onClick={() => setShowAdd(true)} leadingIcon={<UserPlus className="h-[18px] w-[18px]" />}>
+            Adicionar à lista
+          </Button>
+        }
+      />
 
       {initialEntries.length === 0 ? (
-        <EmptyState
-          title="Nenhuma solicitação ainda"
-          description="Quando uma cliente entrar na lista de espera pela sua página de agendamento, ela aparece aqui."
-        />
+        <Card pad="p-4">
+          <EmptyState
+            framed={false}
+            title="Nenhuma solicitação ainda"
+            description="Quando uma cliente entrar na lista de espera pela sua página de agendamento, ela aparece aqui."
+          />
+        </Card>
       ) : (
-        <div className="space-y-3">
-          {initialEntries.map((entry) => {
-            const meta = STATUS_META[entry.status] ?? STATUS_META.waiting;
-            return (
-              <div key={entry.id} className="card p-4">
-                <div className="flex items-start justify-between gap-3">
+        /* ARQUÉTIPO 2 · a fila virou TABELA, e a ordem virou dado.
+           Como cartões empilhados, a informação que mais importa numa lista de
+           espera — quem chegou primeiro — não aparecia em lugar nenhum: era
+           preciso inferir pela posição. Agora há uma coluna de posição em mono,
+           e "Encaixar" é a ação da linha, não um botão dentro de um cartão. */
+        <Card pad="p-0" className="overflow-hidden">
+          <TechTable
+            rows={initialEntries}
+            rowKey={(e) => e.id}
+            columns={[
+              {
+                key: 'pos',
+                header: '#',
+                width: '1%',
+                className: 'whitespace-nowrap',
+                cell: (e) => (
+                  <MonoValue className="text-body-sm text-n-500">
+                    {String(initialEntries.indexOf(e) + 1).padStart(2, '0')}
+                  </MonoValue>
+                ),
+              },
+              {
+                key: 'name',
+                header: 'Cliente',
+                width: '100%',
+                sortValue: (e) => e.client_name,
+                cell: (e) => (
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-label text-ink truncate">{entry.client_name}</h3>
-                      <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>{meta.label}</span>
-                    </div>
-                    <p className="text-caption text-n-600 mt-0.5">{entry.client_whatsapp}</p>
-                    {entry.service_name && <p className="text-caption text-ink mt-1">Serviço: <span className="text-n-600">{entry.service_name}</span></p>}
-                    {(entry.desired_date || entry.desired_period) && (
-                      <p className="text-caption text-n-600 mt-0.5">
-                        Quando: {entry.desired_date ? formatDateBR(entry.desired_date) : ''}{entry.desired_date && entry.desired_period ? ' · ' : ''}{entry.desired_period || ''}
-                      </p>
-                    )}
-                    {entry.time_preference && <p className="text-caption text-n-600 mt-0.5">Preferência: {entry.time_preference}</p>}
-                    {entry.notes && <p className="text-caption text-n-600 mt-1 italic">“{entry.notes}”</p>}
-                    <p className="text-caption text-n-400 mt-1 flex items-center gap-1"><Clock className="h-3 w-3" /> Entrou em {formatDateBR(entry.created_at.split('T')[0])}</p>
+                    <p className="text-ink truncate">{e.client_name}</p>
+                    <p className="mono-micro text-n-500 truncate">
+                      {e.client_whatsapp}
+                      {e.service_name ? ` · ${e.service_name}` : ''}
+                    </p>
+                    {e.notes && <p className="text-caption text-n-500 truncate italic">“{e.notes}”</p>}
                   </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <select
-                    value={entry.status}
-                    disabled={busyId === entry.id}
-                    onChange={(e) => changeStatus(entry, e.target.value as WaitlistStatus)}
-                    className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
-                  >
-                    {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-                  </select>
-
-                  <button
-                    onClick={() => window.open(buildWhatsappLink(entry.client_whatsapp, `Oi, ${entry.client_name.split(' ')[0]}! Sobre a lista de espera aqui da agenda 💛`), '_blank')}
-                    className="tap inline-flex items-center gap-1.5 px-3 py-2 bg-success-bg text-success border border-success-border text-caption font-bold rounded-xl hover:bg-success-bg transition-ui"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                  </button>
-
-                  {activeServices.length > 0 && entry.status !== 'scheduled' && (
-                    <button
-                      onClick={() => openFit(entry)}
-                      className="tap inline-flex items-center gap-1.5 px-3 py-2 surface-wine text-white text-caption font-bold rounded-xl hover:opacity-95 transition-ui"
+                ),
+              },
+              {
+                key: 'when',
+                header: 'Quando quer',
+                className: 'whitespace-nowrap',
+                hideOnMobile: true,
+                cell: (e) =>
+                  e.desired_date || e.desired_period || e.time_preference ? (
+                    <span className="inline-flex flex-col">
+                      {e.desired_date && <MonoValue className="text-body-sm">{formatDateBR(e.desired_date)}</MonoValue>}
+                      <span className="mono-micro text-n-500">
+                        {e.desired_period || e.time_preference || ''}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="mono-micro text-n-400">QUALQUER</span>
+                  ),
+              },
+              {
+                key: 'since',
+                header: 'Entrou em',
+                num: true,
+                className: 'whitespace-nowrap',
+                hideOnMobile: true,
+                sortValue: (e) => e.created_at,
+                cell: (e) => <MonoValue className="text-body-sm text-n-500">{formatDateBR(e.created_at.split('T')[0])}</MonoValue>,
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                className: 'whitespace-nowrap',
+                cell: (e) => {
+                  const meta = STATUS_META[e.status] ?? STATUS_META.waiting;
+                  return (
+                    <select
+                      value={e.status}
+                      disabled={busyId === e.id}
+                      onClick={(ev) => ev.stopPropagation()}
+                      onChange={(ev) => changeStatus(e, ev.target.value as WaitlistStatus)}
+                      aria-label={`Status de ${e.client_name}`}
+                      /* O status é editável NA LINHA: mudar "aguardando" para
+                         "contatada" era a operação mais frequente da tela e
+                         exigia rolar até o rodapé do cartão. */
+                      className="mono-micro bg-transparent border border-line rounded-badge px-1.5 h-6 cursor-pointer hover:border-line-strong transition-ui"
                     >
-                      <CalendarPlus className="h-3.5 w-3.5" /> Encaixar
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => removeEntry(entry)}
-                    disabled={busyId === entry.id}
-                    className="tap ml-auto inline-flex items-center gap-1.5 px-3 py-2 border border-danger-border text-danger text-caption font-bold rounded-xl hover:bg-danger-bg transition-ui"
+                      {STATUS_ORDER.map((st) => (
+                        <option key={st} value={st}>{STATUS_META[st].label}</option>
+                      ))}
+                    </select>
+                  );
+                },
+              },
+            ]}
+            mobileRow={(e) => {
+              const meta = STATUS_META[e.status] ?? STATUS_META.waiting;
+              return (
+                <>
+                  <div className="flex items-baseline gap-2">
+                    <MonoValue className="text-micro text-n-400 shrink-0">
+                      {String(initialEntries.indexOf(e) + 1).padStart(2, '0')}
+                    </MonoValue>
+                    <span className="text-body-sm text-heading truncate flex-1">{e.client_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 pl-6">
+                    <StatusLabel tone={meta.tone}>{meta.label}</StatusLabel>
+                    {e.desired_date && (
+                      <>
+                        <span className="text-n-300" aria-hidden>·</span>
+                        <MonoValue className="text-micro text-n-500">{formatDateBR(e.desired_date)}</MonoValue>
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            }}
+            actions={(e) => (
+              <>
+                {activeServices.length > 0 && e.status !== 'scheduled' && (
+                  <Button
+                    size="sm" variant="secondary"
+                    onClick={(ev) => { ev.stopPropagation(); openFit(e); }}
+                    leadingIcon={<CalendarPlus className="h-3.5 w-3.5" />}
                   >
-                    <Trash2 className="h-3.5 w-3.5" /> Remover
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    Encaixar
+                  </Button>
+                )}
+                <Button
+                  size="sm" variant="ghost" iconOnly aria-label={`Falar com ${e.client_name}`}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    window.open(buildWhatsappLink(e.client_whatsapp, `Oi, ${e.client_name.split(' ')[0]}! Sobre a lista de espera aqui da agenda 💛`), '_blank');
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm" variant="ghost" iconOnly aria-label={`Remover ${e.client_name}`}
+                  onClick={(ev) => { ev.stopPropagation(); removeEntry(e); }}
+                  disabled={busyId === e.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          />
+        </Card>
       )}
 
       {/* Modal: adicionar manualmente */}
@@ -225,20 +317,20 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
             </div>
             <form onSubmit={submitAdd} className="space-y-3">
               <input required value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Nome *"
-                className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="field-input" />
               <input required inputMode="tel" value={aPhone} onChange={(e) => setAPhone(e.target.value)} placeholder="WhatsApp *"
-                className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="field-input" />
               <select value={aServiceId} onChange={(e) => setAServiceId(e.target.value)}
-                className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+                className="field-input">
                 <option value="">Serviço desejado (opcional)</option>
                 {activeServices.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input value={aPeriod} onChange={(e) => setAPeriod(e.target.value)} placeholder="Dia/período desejado (ex.: sábado, manhã)"
-                className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="field-input" />
               <input value={aPref} onChange={(e) => setAPref(e.target.value)} placeholder="Preferência de horário (ex.: depois das 18h)"
-                className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                className="field-input" />
               <textarea value={aNotes} onChange={(e) => setANotes(e.target.value)} rows={2} placeholder="Observação (opcional)"
-                className="block w-full px-3 py-2.5 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y" />
+                className="field-input resize-y" />
               <div className="flex justify-end gap-2.5 pt-1">
                 <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2.5 border border-n-200 rounded-xl text-caption font-bold text-n-600 hover:bg-n-50">Cancelar</button>
                 <button type="submit" disabled={savingAdd} className="tap px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl hover:opacity-95 disabled:opacity-60">
@@ -264,29 +356,29 @@ export const WaitlistPanel: React.FC<WaitlistPanelProps> = ({ professionalId, in
             <p className="text-caption text-n-600 mb-4">Ao confirmar, criamos o agendamento e a solicitação vira “Encaixada”.</p>
             <form onSubmit={submitFit} className="space-y-3">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Serviço *</label>
+                <label className="mono-micro text-n-500 block mb-1.5">Serviço *</label>
                 <select required value={fServiceId} onChange={(e) => onFitService(e.target.value)}
-                  className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+                  className="field-input">
                   {activeServices.map(s => <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes} min</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Data *</label>
+                  <label className="mono-micro text-n-500 block mb-1.5">Data *</label>
                   <input required type="date" value={fDate} onChange={(e) => setFDate(e.target.value)}
-                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                    className="field-input" />
                 </div>
                 <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Início *</label>
+                  <label className="mono-micro text-n-500 block mb-1.5">Início *</label>
                   <input required type="time" value={fTime} onChange={(e) => setFTime(e.target.value)}
-                    className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                    className="field-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Duração (min) *</label>
+                <label className="mono-micro text-n-500 block mb-1.5">Duração (min) *</label>
                 <input required type="number" min={5} step={5} value={fDuration}
                   onChange={(e) => setFDuration(Math.max(5, parseInt(e.target.value, 10) || 0))}
-                  className="block w-full px-3 py-3 bg-n-50 border border-n-200 rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                  className="field-input" />
                 {fTime && fDuration > 0 && (
                   <span className="text-caption text-n-400 mt-1 block">Ocupa <strong className="text-ink">{fTime}</strong> → <strong className="text-ink">{addMinutes(fTime, fDuration)}</strong>.</span>
                 )}

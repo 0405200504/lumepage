@@ -6,6 +6,11 @@ import type { Message } from 'ai';
 import { Sparkles, X, Send, Mic, Loader2, User, Plus, History, Trash2, MessageSquare, CheckCircle2, Zap } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
+/** A barra de abas do celular (item "Mais") dispara este evento para abrir o
+ *  assistente. Mesmo padrão do OPEN_NAV_EVENT — sem contexto novo só para
+ *  ligar dois componentes que já são irmãos na casca. */
+export const OPEN_AI_EVENT = 'lume:open-ai';
+
 // Remove marcações de Markdown que apareceriam como texto cru no balão do chat
 function stripMarkdown(text: string): string {
   return text
@@ -228,23 +233,38 @@ export function AIAgentChat() {
     }
   };
 
+  useEffect(() => {
+    const abrir = () => setIsOpen(true);
+    window.addEventListener(OPEN_AI_EVENT, abrir);
+    return () => window.removeEventListener(OPEN_AI_EVENT, abrir);
+  }, []);
+
   return (
     <>
-      {/* Botão Flutuante */}
+      {/* Gatilho do assistente.
+          UM flutuante por tela, e ele é "Novo agendamento" (na Agenda). O
+          assistente e o FAB dividiam o mesmo canto inferior direito e, em
+          /agenda, /finance e /services, os dois cobriam conteúdo em qualquer
+          posição de rolagem — dois círculos de 56px empilhados sobre a coluna
+          de valores.
+          No desktop ele vira um botão discreto e ancorado no canto; no
+          celular ele SAI da tela e é alcançado pelo menu "Mais" da barra de
+          abas, junto com o resto da navegação. */}
       {!isOpen && (
         <button
           data-tour="ai-chat"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 h-14 w-14 bg-wine-700 text-white rounded-full shadow-glow flex items-center justify-center hover:scale-105 transition-transform z-50 tap"
+          className="hidden lg:flex fixed bottom-6 right-6 h-11 items-center gap-2 px-4 bg-surface border border-line rounded-chip text-body-sm font-semibold text-wine-700 hover:border-wine-200 hover:bg-wine-50 transition-ui z-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           aria-label="Abrir Assistente IA"
         >
-          <Sparkles className="h-6 w-6" />
+          <Sparkles className="h-[18px] w-[18px]" aria-hidden />
+          Assistente
         </button>
       )}
 
       {/* Janela de Chat */}
       {isOpen && (
-        <div className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:w-[400px] lg:h-[600px] bg-surface z-50 flex flex-col lg:rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 lg:inset-auto lg:bottom-20 lg:right-6 lg:w-[400px] lg:h-[600px] bg-surface border border-line z-50 flex flex-col lg:rounded-hero shadow-lg overflow-hidden animate-slide-up">
           {/* Header */}
           <div className="px-4 py-4 surface-wine text-white flex items-center justify-between shrink-0 shadow-soft">
             <div className="flex items-center gap-3 min-w-0">
@@ -510,7 +530,7 @@ export function AIAgentChat() {
             <div className="p-4 bg-white border-t border-n-200 shrink-0">
               <form onSubmit={handleSubmit} className="flex items-center gap-2 relative">
                 <input
-                  className="flex-1 bg-n-50 border border-n-200 rounded-full pl-4 pr-12 py-3 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui placeholder:text-n-400 disabled:opacity-50"
+                  className="flex-1 bg-n-50 border border-n-200 rounded-full pl-4 pr-12 py-3 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui placeholder:text-n-400 disabled:opacity-50"
                   value={input}
                   onChange={handleInputChange}
                   placeholder="Digite ou mande um áudio..."

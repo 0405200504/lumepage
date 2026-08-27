@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Segmented } from '@/components/ui/Segmented';
+import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -243,7 +246,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
           <label className="block text-caption font-bold uppercase tracking-wider text-n-600 mb-1.5">Nome da ficha</label>
           <input
             type="text" maxLength={120}
-            className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label font-semibold text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label font-semibold text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             placeholder='Ex.: "Anamnese Facial", "Ficha de Cílios"...'
             value={builder.title}
             onChange={e => setBuilder(b => b && ({ ...b, title: e.target.value }))}
@@ -251,7 +254,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
           <label className="block text-caption font-bold uppercase tracking-wider text-n-600 mt-4 mb-1.5">Descrição (opcional)</label>
           <textarea
             rows={2} maxLength={500}
-            className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y"
+            className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 resize-y"
             placeholder="Uma frase curta explicando para que serve esta ficha."
             value={builder.description}
             onChange={e => setBuilder(b => b && ({ ...b, description: e.target.value }))}
@@ -311,7 +314,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
                 <div className="flex-1 min-w-0 space-y-3">
                   <input
                     type="text" maxLength={400}
-                    className="w-full px-3.5 py-2.5 bg-surface-2 border border-line rounded-xl text-label font-semibold text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                    className="w-full px-3.5 py-2.5 bg-surface-2 border border-line rounded-xl text-label font-semibold text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                     placeholder="Escreva a pergunta..."
                     value={q.label}
                     onChange={e => patchQuestion(q.id, { label: e.target.value })}
@@ -348,7 +351,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
                       <label className="block text-caption font-bold uppercase tracking-wider text-n-600 mb-1">Opções (uma por linha)</label>
                       <textarea
                         rows={3}
-                        className="w-full px-3.5 py-2.5 bg-surface-2 border border-line rounded-xl text-caption text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 resize-y"
+                        className="w-full px-3.5 py-2.5 bg-surface-2 border border-line rounded-xl text-caption text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 resize-y"
                         value={(q.options || []).join('\n')}
                         onChange={e => patchQuestion(q.id, { options: e.target.value.split('\n') })}
                         onBlur={e => patchQuestion(q.id, { options: e.target.value.split('\n').map(o => o.trim()).filter(Boolean) })}
@@ -363,7 +366,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
                   <button onClick={() => moveQuestion(i, 1)} disabled={i === builder.questions.length - 1} className="tap p-1.5 text-n-400 hover:text-heading disabled:opacity-30 rounded-lg hover:bg-surface-2" aria-label="Mover para baixo">
                     <ArrowDown className="h-4 w-4" />
                   </button>
-                  <button onClick={() => removeQuestion(q.id)} className="tap p-1.5 text-n-400 hover:text-danger rounded-lg hover:bg-danger-bg" aria-label="Excluir pergunta">
+                  <button onClick={() => removeQuestion(q.id)} className="tap p-1.5 text-n-400 hover:text-danger rounded-lg hover:bg-n-100" aria-label="Excluir pergunta">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -386,32 +389,37 @@ export const AnamnesisPanel: React.FC<Props> = ({
 
   return (
     <div className="space-y-5 pb-24">
-      {/* Tabs + ação principal */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex p-1 bg-surface-2 border border-line rounded-2xl">
-          <button
-            onClick={() => setTab('fichas')}
-            className={`tap px-4 py-2 rounded-xl text-caption font-bold transition-colors ${tab === 'fichas' ? 'bg-white text-heading shadow-soft' : 'text-n-600'}`}
-          >
-            Minhas fichas ({forms.length})
-          </button>
-          <button
-            onClick={() => setTab('respostas')}
-            className={`tap px-4 py-2 rounded-xl text-caption font-bold transition-colors ${tab === 'respostas' ? 'bg-white text-heading shadow-soft' : 'text-n-600'}`}
-          >
-            Respostas ({responses.length}){pendingCount > 0 && <span className="ml-1.5 text-caption font-semibold text-warning">{pendingCount} pendente{pendingCount > 1 ? 's' : ''}</span>}
-          </button>
-        </div>
-        <button
-          onClick={() => setShowTemplates(true)}
-          className="tap px-4 py-2.5 surface-wine text-white text-caption font-bold rounded-xl shadow-soft hover:shadow-glow transition-ui inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" /> Nova ficha
-        </button>
-      </div>
+      <PageHeader
+        trail={[
+          'Anamnese',
+          `${forms.length} ficha(s)`,
+          `${responses.length} resposta(s)`,
+          pendingCount > 0 ? `${pendingCount} pendente(s)` : null,
+        ]}
+        title="Fichas de anamnese"
+        actions={
+          <Button size="md" onClick={() => setShowTemplates(true)} leadingIcon={<Plus className="h-[18px] w-[18px]" />}>
+            Nova ficha
+          </Button>
+        }
+      />
+
+      {/* O trilho de abas era uma cápsula dentro de outra cápsula (fundo cinza
+          de raio 16 com o item ativo em branco e sombra). Virou o segmented
+          retangular do sistema; as contagens subiram para a trilha mono do
+          header, onde são lidas uma vez em vez de repetidas em cada aba. */}
+      <Segmented
+        ariaLabel="Seção da anamnese"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { key: 'fichas', label: 'Minhas fichas' },
+          { key: 'respostas', label: 'Respostas' },
+        ]}
+      />
 
       {!whatsappConnected && (
-        <div className="text-caption text-warning bg-warning-bg border border-warning-border rounded-xl px-4 py-3 leading-relaxed">
+        <div className="text-caption text-warning border-l-2 border-warning pl-3 py-1 leading-relaxed">
           <strong>WhatsApp não conectado:</strong> os links e PDFs serão gerados normalmente, mas o envio automático pelo seu número fica desativado.
           Você ainda pode enviar o link manualmente (botão do WhatsApp) — para automatizar, conecte seu WhatsApp em <em>WhatsApp</em>.
         </div>
@@ -462,7 +470,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
                     </button>
                     <button
                       onClick={() => setFormToDelete(form)}
-                      className="tap p-2.5 text-n-600 hover:text-danger border border-line rounded-xl hover:bg-danger-bg transition-colors"
+                      className="tap p-2.5 text-n-600 hover:text-danger border border-line rounded-xl hover:bg-n-100 transition-colors"
                       aria-label="Excluir ficha"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -491,11 +499,11 @@ export const AnamnesisPanel: React.FC<Props> = ({
                     <div className="flex items-center gap-2">
                       <h4 className="text-label font-bold text-heading truncate">{r.client_name || 'Cliente'}</h4>
                       {r.status === 'completed' ? (
-                        <span className="inline-flex items-center gap-1 text-caption font-semibold text-success bg-success-bg border border-success-border rounded-full px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 mono-micro text-success border border-line rounded-badge px-1.5 h-5">
                           <CheckCircle2 className="h-3 w-3" /> Preenchida
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-caption font-semibold text-warning bg-warning-bg border border-warning-border rounded-full px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 mono-micro text-warning border border-line rounded-badge px-1.5 h-5">
                           <Clock className="h-3 w-3" /> Aguardando
                         </span>
                       )}
@@ -535,7 +543,7 @@ export const AnamnesisPanel: React.FC<Props> = ({
                     )}
                     <button
                       onClick={() => setResponseToDelete(r)}
-                      className="tap p-2 text-n-400 hover:text-danger border border-line rounded-xl hover:bg-danger-bg transition-colors"
+                      className="tap p-2 text-n-400 hover:text-danger border border-line rounded-xl hover:bg-n-100 transition-colors"
                       aria-label="Excluir resposta"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -695,7 +703,7 @@ const SendModal: React.FC<SendModalProps> = ({ professionalId, form, clients, wh
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-n-400" />
               <input
                 type="text"
-                className="w-full pl-10 pr-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="w-full pl-10 pr-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                 placeholder="Digite o nome da cliente..."
                 value={query}
                 onChange={e => { setQuery(e.target.value); setClientId(null); }}
@@ -721,7 +729,7 @@ const SendModal: React.FC<SendModalProps> = ({ professionalId, form, clients, wh
                 <label className="block text-caption font-bold uppercase tracking-wider text-n-600 mb-1.5">Nome da cliente</label>
                 <input
                   type="text" maxLength={120}
-                  className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   placeholder="Nome completo"
                   value={name}
                   onChange={e => setName(e.target.value)}
@@ -731,7 +739,7 @@ const SendModal: React.FC<SendModalProps> = ({ professionalId, form, clients, wh
                 <label className="block text-caption font-bold uppercase tracking-wider text-n-600 mb-1.5">WhatsApp (com DDD)</label>
                 <input
                   type="tel" maxLength={20}
-                  className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  className="w-full px-4 py-3 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   placeholder="(11) 99999-9999"
                   value={whatsapp}
                   onChange={e => setWhatsapp(e.target.value)}
@@ -759,7 +767,7 @@ const SendModal: React.FC<SendModalProps> = ({ professionalId, form, clients, wh
         ) : (
           <>
             <div className="flex flex-col items-center text-center">
-              <div className="p-4 bg-success-bg text-success rounded-2xl mb-4">
+              <div className="p-4 text-success rounded-2xl mb-4">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
               <h3 className="text-h3 font-semibold text-heading tracking-tight">

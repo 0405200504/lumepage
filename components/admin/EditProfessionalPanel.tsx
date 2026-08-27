@@ -99,7 +99,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
 
@@ -112,7 +112,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
 
@@ -125,7 +125,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 font-mono"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700 font-mono"
             />
           </div>
 
@@ -138,7 +138,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
 
@@ -151,7 +151,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
 
@@ -163,7 +163,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               type="text"
               value={instagram}
               onChange={(e) => setInstagram(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
         </div>
@@ -176,7 +176,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
           />
         </div>
 
@@ -188,7 +188,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
             rows={3}
             value={publicBio}
             onChange={(e) => setPublicBio(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
           />
         </div>
 
@@ -245,7 +245,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as ProfessionalStatus)}
-              className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             >
               <option value="active">Ativo (Agendamento Liberado)</option>
               <option value="paused">Pausado (Agenda Suspensa)</option>
@@ -268,7 +268,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
             />
           </div>
 

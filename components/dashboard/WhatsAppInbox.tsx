@@ -200,7 +200,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
       <div className="card flex flex-col items-center justify-center gap-3 p-10 text-center">
         <MessageCircle className="h-8 w-8 text-faint" />
         <div>
-          <p className="text-label font-bold text-heading">WhatsApp desconectado</p>
+          <p className="text-body-sm font-semibold text-heading">WhatsApp desconectado</p>
           <p className="mt-1 text-caption text-n-600">Conecte seu número na aba WhatsApp para ver as conversas aqui.</p>
         </div>
       </div>
@@ -218,7 +218,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar conversa"
-              className="w-full rounded-xl border border-line bg-surface-2 py-2.5 pl-9 pr-3 text-label text-heading outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              className="w-full rounded-xl border border-line bg-surface-2 py-2.5 pl-9 pr-3 text-label text-heading outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             />
           </div>
         </div>
@@ -262,9 +262,9 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
               <Avatar chat={chat} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-label font-bold text-heading">{chat.name}</p>
+                  <p className="truncate text-body-sm font-semibold text-heading">{chat.name}</p>
                   {chat.lastMessageAt && (
-                    <span className="shrink-0 text-caption text-faint">{shortTime(chat.lastMessageAt)}</span>
+                    <span className="shrink-0 mono-micro text-n-400">{shortTime(chat.lastMessageAt)}</span>
                   )}
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -272,7 +272,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                     {previewText(chat.lastPreview, chat.lastMessageType)}
                   </p>
                   {chat.unread > 0 && (
-                    <span className="shrink-0 rounded-full bg-ok px-1.5 py-0.5 text-caption font-bold text-white">
+                    <span className="shrink-0 rounded-badge bg-[color:var(--color-signal)] px-1.5 py-0.5 mono-micro !text-white">
                       {chat.unread > 99 ? '99+' : chat.unread}
                     </span>
                   )}
@@ -288,7 +288,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
         {!activeChat ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 bg-surface-2 text-center">
             <MessageCircle className="h-10 w-10 text-faint" />
-            <p className="text-label font-bold text-heading">Suas conversas do WhatsApp</p>
+            <p className="text-body-sm font-semibold text-heading">Suas conversas do WhatsApp</p>
             <p className="max-w-xs text-caption text-n-600">
               Escolha uma conversa à esquerda para ler e responder sem sair do Lume.
             </p>
@@ -365,7 +365,7 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
                 }}
                 placeholder="Escreva uma mensagem"
-                className="max-h-32 min-h-[2.75rem] flex-1 resize-none rounded-2xl border border-line bg-surface-2 px-4 py-3 text-label text-heading outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="field-input max-h-32 min-h-[2.75rem] flex-1 resize-none py-2.5"
               />
               <button
                 type="button"
@@ -403,25 +403,31 @@ function Bubble({ msg, isGroup }: { msg: InboxMessage; isGroup: boolean }) {
   const mine = msg.fromMe;
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+      {/* Raio 10 em três cantos e 90° do lado do autor — a mesma gramática do
+          chanfro: um canto quebrado dá direção e autoria sem setinha, sem cor
+          extra e sem repetir avatar em cada linha.
+          As minhas mensagens saem do verde translúcido (que era a única
+          aparição do --success como SUPERFÍCIE no produto) e vão para o vinho
+          da marca, com branco por cima: 11.9:1, legível em qualquer tamanho. */}
       <div
-        className={`max-w-[75%] rounded-2xl px-3 py-2 shadow-xs ${
+        className={`max-w-[78%] rounded-surface px-3 py-2 ${
           mine
-            ? 'rounded-br-sm bg-[color-mix(in_srgb,var(--color-ok)_16%,var(--color-surface))]'
-            : 'rounded-bl-sm bg-surface'
+            ? 'rounded-br-none bg-wine-700 text-white'
+            : 'rounded-bl-none bg-surface border border-line text-ink'
         }`}
       >
         {isGroup && !mine && msg.senderName && (
-          <p className="mb-0.5 text-caption font-bold text-wine-700">{msg.senderName}</p>
+          <p className="mb-1 mono-micro text-wine-700">{msg.senderName}</p>
         )}
 
         {msg.hasMedia && <Media msg={msg} />}
 
         {msg.text && (
-          <p className="whitespace-pre-wrap break-words text-label text-heading">{msg.text}</p>
+          <p className="whitespace-pre-wrap break-words text-body-sm">{msg.text}</p>
         )}
 
         <div className="mt-0.5 flex items-center justify-end gap-1">
-          <span className="text-caption text-faint">{clock(msg.timestamp)}</span>
+          <span className={`mono-micro ${mine ? 'text-wine-200' : 'text-n-400'}`}>{clock(msg.timestamp)}</span>
           {mine && <Status status={msg.status} />}
         </div>
       </div>

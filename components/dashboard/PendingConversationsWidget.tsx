@@ -70,14 +70,14 @@ export function PendingConversationsWidget({ initialConversations, showEmptyStat
   return (
     <div className="bg-white rounded-3xl border border-n-200 shadow-sm overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-n-200">
-        <div className="w-8 h-8 rounded-xl bg-warning-bg flex items-center justify-center">
+        <div className="icon-chip !text-warning">
           <MessageCircle className="h-4 w-4 text-warning" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-label font-bold text-n-900">Conversas Pendentes</h2>
           <p className="text-caption text-n-400">A cliente aguarda seu atendimento direto</p>
         </div>
-        <span className="text-caption font-bold text-white bg-warning rounded-full px-2 py-0.5 min-w-[20px] text-center">
+        <span className="text-caption font-bold text-white bg-warning rounded-badge px-2 py-0.5 min-w-[20px] text-center">
           {conversations.length}
         </span>
       </div>

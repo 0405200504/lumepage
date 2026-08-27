@@ -296,34 +296,47 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
 
   // Campo dentro de um bloco cinza (bg-surface-2) x campo direto no cartão branco.
-  const fieldOnTint = 'w-full px-4 py-3 bg-surface border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 placeholder:text-faint';
-  const fieldOnCard = 'w-full px-4 py-2.5 bg-surface-2 border border-line rounded-xl text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 placeholder:text-faint';
+  /* Um campo só. A distinção "campo sobre bloco cinza" × "campo sobre cartão
+     branco" deixou de existir junto com os blocos cinzas aninhados. */
+  const fieldOnTint = 'field-input';
+  const fieldOnCard = 'field-input';
 
   return (
     <div className="space-y-5">
       {/* ═══ Conexão ═══════════════════════════════════════════════════════ */}
       <section className="card p-5 md:p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-n-600 shrink-0">
-              <MessageCircle className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-body font-bold text-heading tracking-tight">WhatsApp</h2>
-              <p className="text-caption text-n-600 mt-0.5">Conecte seu número para o Lume enviar as mensagens automáticas por você.</p>
-            </div>
+          <div className="min-w-0">
+            <h2 className="mono-micro text-n-900">WhatsApp</h2>
+            <p className="text-caption text-n-500 mt-1">
+              Conecte seu número para o Lume enviar as mensagens automáticas por você.
+            </p>
           </div>
+          {/* Estado AO VIVO: ponto + rótulo mono, dentro de um botão
+              retangular que também revalida. Conectado é a única condição em
+              que --signal aparece nesta tela — é literalmente uma luz de
+              "no ar", que é para o que ele existe. */}
           <button
             type="button"
             onClick={refreshStatus}
             title="Verificar conexão"
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
+            className="shrink-0 inline-flex items-center gap-2 rounded-chip border border-line px-2.5 h-8 hover:border-line-strong transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${
-              isConnected ? 'bg-ok' : status === 'loading' ? 'bg-faint' : status === 'not_configured' ? 'bg-n-300' : 'bg-bad'
-            }`} />
-            {statusLabel[status] ?? statusLabel.error}
-            <RefreshCw className={`h-3 w-3 ${status === 'loading' ? 'animate-spin' : ''}`} />
+            <span
+              className="status-dot"
+              data-live={isConnected ? 'true' : undefined}
+              style={{
+                color: isConnected
+                  ? 'var(--color-signal)'
+                  : status === 'loading'
+                    ? 'var(--color-n-400)'
+                    : status === 'not_configured'
+                      ? 'var(--color-n-300)'
+                      : 'var(--color-danger)',
+              }}
+            />
+            <span className="mono-micro text-n-600">{statusLabel[status] ?? statusLabel.error}</span>
+            <RefreshCw className={`h-3 w-3 text-n-500 ${status === 'loading' ? 'animate-spin' : ''}`} aria-hidden />
           </button>
         </div>
 
@@ -355,7 +368,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 type="button"
                 disabled={isPending || !uazapiUrl || !uazapiToken}
                 onClick={() => handleSaveCredentials(true)}
-                className="flex-1 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60"
+                className="flex-1 py-3 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-colors disabled:opacity-60"
               >
                 {isPending ? 'Salvando…' : 'Salvar e conectar'}
               </button>
@@ -367,7 +380,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                     setUazapiToken(initialSettings?.uazapi_token || '');
                     setEditingCredentials(false);
                   }}
-                  className="px-4 py-3 rounded-xl border border-line text-caption font-bold text-n-600 hover:bg-surface transition-colors"
+                  className="px-4 py-3 rounded-chip border border-line text-caption font-semibold text-n-600 hover:bg-surface transition-colors"
                 >
                   Cancelar
                 </button>
@@ -397,7 +410,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 <button
                   type="button"
                   onClick={handleOpenQrModal}
-                  className="rounded-xl border border-line bg-surface px-3 py-2 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors"
+                  className="rounded-chip border border-line bg-surface px-3 py-2 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
                 >
                   Trocar número
                 </button>
@@ -421,7 +434,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <button
                 type="button"
                 onClick={handleOpenQrModal}
-                className="shrink-0 px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-soft transition-colors"
+                className="shrink-0 px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-colors"
               >
                 Conectar WhatsApp
               </button>
@@ -453,7 +466,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                     <button
                       type="button"
                       onClick={() => { setEditingCredentials(true); setShowAdvanced(false); }}
-                      className="shrink-0 rounded-xl border border-line px-3 py-2 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors"
+                      className="shrink-0 rounded-chip border border-line px-3 py-2 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
                     >
                       Editar
                     </button>
@@ -475,7 +488,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                       type="button"
                       onClick={handleTestMessage}
                       disabled={isPending || !testPhone}
-                      className="shrink-0 px-4 py-2.5 rounded-xl border border-line text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="shrink-0 px-4 py-2.5 rounded-chip border border-line text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       Enviar
                     </button>
@@ -496,7 +509,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                       type="button"
                       onClick={handleDiagnose}
                       disabled={diagnosing}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-chip border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       {diagnosing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                       {diagnosing ? 'Verificando…' : 'Verificar'}
@@ -535,7 +548,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                       type="button"
                       onClick={handleSetupWebhook}
                       disabled={isPending}
-                      className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-1.5 text-caption font-bold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-chip border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
                     >
                       <Zap className="h-3.5 w-3.5" />
                       Reconfigurar
@@ -566,7 +579,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
             </p>
           </div>
           {activeAutomations > 0 && (
-            <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-caption font-bold text-n-600">
+            <span className="shrink-0 rounded-badge border border-line px-2 py-0.5 mono-micro text-n-600">
               {activeAutomations} ativa{activeAutomations > 1 ? 's' : ''}
             </span>
           )}
@@ -595,7 +608,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               <input
                 type="number" min={0} max={3600} value={autoBookingDelay}
                 onChange={e => setAutoBookingDelay(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
               />
               <span className="text-caption text-n-600">
                 {autoBookingDelay === 0 ? 'segundos — envio instantâneo' : 'segundo(s) do agendamento'}
@@ -654,7 +667,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 <input
                   type="number" min={1} max={365} value={autoFollowupDays}
                   onChange={e => setAutoFollowupDays(Math.max(1, parseInt(e.target.value) || 30))}
-                  className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  className="w-20 px-2 py-2 rounded-xl border border-line bg-surface text-label text-center text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                 />
                 <span className="text-caption text-n-600">dias sem retornar</span>
               </div>
@@ -697,14 +710,14 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                         <input
                           type="text" placeholder="nome_var" value={row.key}
                           onChange={e => updateVarRow(i, 'key', e.target.value)}
-                          className="w-full rounded-xl border border-line bg-surface-2 py-2 pl-5 pr-5 font-mono text-caption text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                          className="w-full rounded-xl border border-line bg-surface-2 py-2 pl-5 pr-5 font-mono text-caption text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                         />
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 select-none font-mono text-caption text-faint">{'}'}</span>
                       </div>
                       <input
                         type="text" placeholder="Valor que aparece na mensagem" value={row.value}
                         onChange={e => updateVarRow(i, 'value', e.target.value)}
-                        className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                        className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                       />
                       <button type="button" onClick={() => removeVarRow(i)} className="shrink-0 text-faint hover:text-bad transition-colors">
                         <Trash2 className="h-4 w-4" />
@@ -813,7 +826,7 @@ function MessageField({ value, onChange, hint }: { value: string; onChange: (v: 
         rows={3}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2.5 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+        className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2.5 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
       />
       {hint && <p className="mt-1 text-caption text-faint">{hint}</p>}
     </div>
@@ -828,7 +841,7 @@ function TimeField({ value, onChange, label = 'Horário de envio' }: { value: st
         type="time"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="rounded-xl border border-line bg-surface px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+        className="rounded-xl border border-line bg-surface px-3 py-2 text-label text-heading outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { TabBar } from '@/components/layout/TabBar';
 import { RouteTransition } from '@/components/layout/RouteTransition';
 import { ActingBanner } from '@/components/salon/ActingBanner';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
@@ -135,6 +136,10 @@ export default async function DashboardLayout({
           <RouteTransition>{children}</RouteTransition>
         </main>
       </div>
+
+      {/* Barra de abas do celular. O `pb-24` do <main> já reservava o espaço
+          que ela ocupa — antes, para o FAB solto. */}
+      <TabBar />
 
       <AIAgentChat />
 

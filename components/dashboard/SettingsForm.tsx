@@ -133,14 +133,19 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   return (
     <div className="flex flex-col lg:flex-row gap-6 select-none max-w-5xl">
       {/* Abas Laterais */}
-      <div className="w-full lg:w-60 shrink-0 bg-white border border-n-200 rounded-3xl p-4 shadow-xs self-start flex flex-row lg:flex-col gap-1.5 overflow-x-auto scrollbar-none">
+      {/* O trilho de abas era um cartão de raio 24 com o item ativo pintado
+          de vinho sólido e halo — seis retângulos vinho competindo com o botão
+          "Salvar" da tela. Virou uma lista com hairline: o ativo ganha fundo
+          wine-50 e um traço de 2px na aresta, do jeito que um seletor marca. */}
+      <div className="w-full lg:w-60 shrink-0 card overflow-hidden self-start flex flex-row lg:flex-col overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-caption font-bold rounded-xl transition-ui w-full cursor-pointer whitespace-nowrap ${
-            activeTab === 'profile' 
-              ? 'bg-wine-700 text-white shadow-wine' 
-              : 'text-n-500 hover:bg-n-50 hover:text-n-800'
+          className={`relative flex items-center gap-2.5 px-4 min-h-11 mono-micro transition-ui w-full cursor-pointer whitespace-nowrap
+            border-b border-line last:border-b-0 lg:border-b lg:last:border-b-0 ${
+            activeTab === 'profile'
+              ? 'bg-wine-50 text-wine-700 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-wine-700'
+              : 'text-n-600 hover:bg-n-25 hover:text-heading'
           }`}
         >
           <User className="h-4 w-4" />
@@ -150,10 +155,11 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('agenda')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-caption font-bold rounded-xl transition-ui w-full cursor-pointer whitespace-nowrap ${
-            activeTab === 'agenda' 
-              ? 'bg-wine-700 text-white shadow-wine' 
-              : 'text-n-500 hover:bg-n-50 hover:text-n-800'
+          className={`relative flex items-center gap-2.5 px-4 min-h-11 mono-micro transition-ui w-full cursor-pointer whitespace-nowrap
+            border-b border-line last:border-b-0 lg:border-b lg:last:border-b-0 ${
+            activeTab === 'agenda'
+              ? 'bg-wine-50 text-wine-700 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-wine-700'
+              : 'text-n-600 hover:bg-n-25 hover:text-heading'
           }`}
         >
           <SettingsIcon className="h-4 w-4" />
@@ -163,10 +169,11 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('branding')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-caption font-bold rounded-xl transition-ui w-full cursor-pointer whitespace-nowrap ${
+          className={`relative flex items-center gap-2.5 px-4 min-h-11 mono-micro transition-ui w-full cursor-pointer whitespace-nowrap
+            border-b border-line last:border-b-0 lg:border-b lg:last:border-b-0 ${
             activeTab === 'branding'
-              ? 'bg-wine-700 text-white shadow-wine'
-              : 'text-n-500 hover:bg-n-50 hover:text-n-800'
+              ? 'bg-wine-50 text-wine-700 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-wine-700'
+              : 'text-n-600 hover:bg-n-25 hover:text-heading'
           }`}
         >
           <Paintbrush className="h-4 w-4" />
@@ -176,10 +183,11 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('integrations')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-caption font-bold rounded-xl transition-ui w-full cursor-pointer whitespace-nowrap ${
+          className={`relative flex items-center gap-2.5 px-4 min-h-11 mono-micro transition-ui w-full cursor-pointer whitespace-nowrap
+            border-b border-line last:border-b-0 lg:border-b lg:last:border-b-0 ${
             activeTab === 'integrations'
-              ? 'bg-wine-700 text-white shadow-wine'
-              : 'text-n-500 hover:bg-n-50 hover:text-n-800'
+              ? 'bg-wine-50 text-wine-700 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-wine-700'
+              : 'text-n-600 hover:bg-n-25 hover:text-heading'
           }`}
         >
           <LinkIcon className="h-4 w-4" />
@@ -188,7 +196,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       </div>
 
       {/* Formulário Principal */}
-      <form onSubmit={handleSave} className="flex-1 bg-white border border-n-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
+      <form onSubmit={handleSave} className="flex-1 card p-5 md:p-6 space-y-6">
         
         {/* ABA: Perfil */}
         {activeTab === 'profile' && (
@@ -200,7 +208,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Seu Nome Completo
                 </label>
                 <input
@@ -208,12 +216,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Nome da Clínica / Marca
                 </label>
                 <input
@@ -221,12 +229,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   required
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Número do WhatsApp
                 </label>
                 <input
@@ -234,12 +242,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   required
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   E-mail de Login
                 </label>
                 <input
@@ -247,12 +255,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Nome de Usuário Instagram
                 </label>
                 <input
@@ -260,12 +268,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   placeholder="Ex: @amandacosta.estetica"
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Descrição Curta (Bio Rápida)
                 </label>
                 <input
@@ -273,20 +281,20 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   placeholder="Especialista em cílios e estética facial..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption"
+                  className="field-input"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+              <label className="mono-micro text-n-500 block mb-1.5">
                 Sobre Você / Biografia Pública (Exibida no topo do agendamento)
               </label>
               <textarea
                 rows={3}
                 value={publicBio}
                 onChange={(e) => setPublicBio(e.target.value)}
-                className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption"
+                className="field-input"
               />
             </div>
 
@@ -295,19 +303,19 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               <h4 className="text-caption font-bold text-n-400 uppercase tracking-wider">Local de Atendimento</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                  <label className="mono-micro text-n-500 block mb-1.5">
                     Endereço Completo
                   </label>
                   <input
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption"
+                    className="field-input"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                  <label className="mono-micro text-n-500 block mb-1.5">
                     Cidade / Estado
                   </label>
                   <div className="flex gap-2">
@@ -316,7 +324,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                       placeholder="São Paulo"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="block w-full min-w-0 px-3 py-2 border border-n-200 rounded-xl text-caption "
+                      className="field-input"
                     />
                     <input
                       type="text"
@@ -343,13 +351,13 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Confirmação de Agendamento
                 </label>
                 <select
                   value={confirmationMode}
                   onChange={(e) => setConfirmationMode(e.target.value as ConfirmationMode)}
-                  className="block w-full px-3 py-2 border border-n-200 bg-white rounded-xl text-caption "
+                  className="field-input"
                 >
                   <option value="manual">Manual (Aprovado por você no painel)</option>
                   <option value="automatic">Automático (Cai confirmado direto)</option>
@@ -357,7 +365,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Aviso Prévio Mínimo (Horas)
                 </label>
                 <input
@@ -365,7 +373,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   min={0}
                   value={minNoticeHours}
                   onChange={(e) => setMinNoticeHours(parseInt(e.target.value, 10) || 0)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption "
+                  className="field-input"
                 />
                 <span className="text-caption text-n-400 mt-1 block">
                   Evita que clientes reservem horários muito próximos ao momento atual.
@@ -373,7 +381,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Limite de Antecedência Máxima (Dias)
                 </label>
                 <input
@@ -381,7 +389,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   min={1}
                   value={maxDaysAhead}
                   onChange={(e) => setMaxDaysAhead(parseInt(e.target.value, 10) || 30)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption "
+                  className="field-input"
                 />
                 <span className="text-caption text-n-400 mt-1 block">
                   Determina até quantos dias no futuro os clientes podem agendar horários.
@@ -394,7 +402,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   id="showPrice"
                   checked={showPricePublic}
                   onChange={(e) => setShowPricePublic(e.target.checked)}
-                  className="h-4.5 w-4.5 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer"
+                  className="h-4.5 w-4.5 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 cursor-pointer"
                 />
                 <label htmlFor="showPrice" className="text-caption font-bold text-n-700 cursor-pointer">
                   Exibir preços dos serviços na página pública
@@ -405,7 +413,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
             {/* Limite de horários exibidos na página pública */}
             <div className="border-t border-n-200 pt-5 space-y-3">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Horários exibidos na página pública
                 </label>
                 <select
@@ -415,7 +423,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     if (v === 'custom') setPublicSlotsLimit(prev => ([0, 3, 5, 8].includes(prev) ? 4 : prev));
                     else setPublicSlotsLimit(parseInt(v, 10));
                   }}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption bg-white"
+                  className="field-input"
                 >
                   <option value="0">Mostrar todos os horários disponíveis</option>
                   <option value="3">Mostrar até 3 horários por dia</option>
@@ -429,7 +437,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     min={1}
                     value={publicSlotsLimit}
                     onChange={(e) => setPublicSlotsLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="block w-full mt-2 px-3 py-2 border border-n-200 rounded-xl text-caption "
+                    className="field-input"
                     placeholder="Quantidade de horários por dia"
                   />
                 )}
@@ -447,7 +455,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   id="requiresDeposit"
                   checked={requiresDeposit}
                   onChange={(e) => setRequiresDeposit(e.target.checked)}
-                  className="h-4.5 w-4.5 mt-0.5 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer"
+                  className="h-4.5 w-4.5 mt-0.5 rounded-sm border-n-200 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 cursor-pointer"
                 />
                 <label htmlFor="requiresDeposit" className="cursor-pointer">
                   <span className="text-caption font-bold text-n-700 block">Exigir sinal / antecipação para reservar</span>
@@ -457,14 +465,14 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
               {requiresDeposit && (
                 <div>
-                  <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                  <label className="mono-micro text-n-500 block mb-1.5">
                     Instruções de Sinal (exibidas na página de agendamento)
                   </label>
                   <textarea
                     rows={3}
                     value={depositInstructions}
                     onChange={(e) => setDepositInstructions(e.target.value)}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                    className="field-input"
                   />
                 </div>
               )}
@@ -482,7 +490,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Cor Primária (Fundo do Cabeçalho)
                 </label>
                 <div className="flex gap-2">
@@ -496,13 +504,13 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     type="text"
                     value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption font-mono"
+                    className="field-input"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Cor Secundária (Destaques e Botões selecionados)
                 </label>
                 <div className="flex gap-2">
@@ -516,14 +524,14 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     type="text"
                     value={secondaryColor}
                     onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption font-mono"
+                    className="field-input"
                   />
                 </div>
               </div>
 
               {/* Elementos decorativos do popup */}
               <div className="sm:col-span-2">
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Elementos decorativos do agendamento
                 </label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -580,8 +588,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               <div
                 className={`rounded-2xl border p-4 text-caption ${
                   googleAviso.tipo === 'ok'
-                    ? 'bg-success-bg border-success-border text-success'
-                    : 'bg-danger-bg border-danger-border text-danger'
+                    ? 'border-line text-success'
+                    : 'border-line text-danger'
                 }`}
               >
                 <p className="font-bold">{googleAviso.titulo}</p>
@@ -602,7 +610,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                   </p>
                   {googleConnection && (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-success-bg text-success text-caption font-bold">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-success text-caption font-bold">
                         <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                         Conectado como {googleConnection.google_email}
                       </span>
@@ -614,7 +622,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     </div>
                   )}
                   {googleConnection?.last_error && (
-                    <p className="mt-2 text-caption text-danger bg-danger-bg border border-danger-border rounded-lg px-2 py-1.5 max-w-sm">
+                    <p className="mt-2 text-caption text-danger border-l-2 border-danger pl-2 max-w-sm">
                       Última tentativa falhou: {googleConnection.last_error}. Se continuar, desconecte e conecte de novo.
                     </p>
                   )}
@@ -641,7 +649,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                           setSyncing(false);
                         }
                       }}
-                      className="w-full sm:w-auto px-4 py-2 text-caption font-bold text-n-700 bg-white border border-n-200 hover:bg-n-50 rounded-xl transition-colors disabled:opacity-60"
+                      className="field-input"
                     >
                       {syncing ? 'Sincronizando…' : 'Sincronizar agora'}
                     </button>
@@ -659,7 +667,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                           }
                         }
                       }}
-                      className="w-full sm:w-auto px-4 py-2 text-caption font-bold text-danger bg-danger-bg hover:bg-danger-bg rounded-xl transition-colors"
+                      className="w-full sm:w-auto px-4 py-2 text-caption font-bold text-danger bg-danger-bg hover:bg-n-100 rounded-xl transition-colors"
                     >
                       Desconectar
                     </button>

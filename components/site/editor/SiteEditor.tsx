@@ -236,7 +236,7 @@ export function SiteEditor({
               const ok = await save(config, templateId, { silent: true });
               if (ok) { setOnboarding(false); setTab('identity'); }
             }}
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-wine-700 hover:bg-wine-800 text-white text-sm font-bold rounded-2xl shadow-soft transition-colors cursor-pointer disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-6 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip chamfer-s transition-ui cursor-pointer disabled:opacity-60"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             Continuar com {meta.name}
@@ -244,7 +244,7 @@ export function SiteEditor({
         </div>
 
         {blocker && (
-          <div className="max-w-2xl mx-auto flex items-start gap-2.5 rounded-2xl border border-warning-border bg-warning-bg px-4 py-3">
+          <div className="max-w-2xl mx-auto flex items-start gap-2.5 border-l-2 border-warning pl-3 py-1">
             <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <p className="text-[12px] text-warning leading-relaxed">{blocker}</p>
           </div>
@@ -259,7 +259,7 @@ export function SiteEditor({
       {isDemo && <DemoBanner />}
 
       {/* Barra de status e ações */}
-      <div className="rounded-3xl border border-n-200 bg-white shadow-xs p-4 space-y-3">
+      <div className="card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <StatusPill status={status} />
@@ -325,7 +325,7 @@ export function SiteEditor({
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] gap-4 items-start">
         {/* Configurações */}
-        <div className="rounded-3xl border border-n-200 bg-white shadow-xs overflow-hidden">
+        <div className="card overflow-hidden">
           <nav className="flex gap-1 overflow-x-auto scrollbar-none border-b border-n-200 px-2 py-2">
             {TABS.map(t => {
               const Icon = t.icon;
@@ -427,7 +427,12 @@ export function SiteEditor({
         </div>
 
         {/* Preview */}
-        <div className="rounded-3xl border border-n-200 bg-n-100 shadow-xs overflow-hidden">
+        {/* Moldura de dispositivo: hairline + fundo n-100, raio `hero`.
+            É o único lugar da tela onde o conteúdo de dentro NÃO segue o
+            design system — ele é a página pública da profissional, com a cor
+            de marca DELA. A moldura existe justamente para dizer "isto aqui é
+            outro contexto". */}
+        <div className="rounded-hero border border-line bg-n-100 overflow-hidden">
           <div className="flex items-center justify-between gap-2 border-b border-n-200 bg-white px-4 py-2.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-n-600">
               Prévia ao vivo · {meta.name}
@@ -445,7 +450,7 @@ export function SiteEditor({
                     onClick={() => setDevice(d.id)}
                     aria-label={d.label}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-colors cursor-pointer ${
-                      device === d.id ? 'bg-white text-wine-700 shadow-xs' : 'text-n-600'
+                      device === d.id ? 'bg-wine-50 text-wine-700 border border-wine-200' : 'text-n-600'
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" /> {d.label}

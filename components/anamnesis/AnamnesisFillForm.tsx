@@ -107,7 +107,7 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
   }
 
   const inputClass =
-    'w-full px-4 py-3 bg-n-50 border border-n-200 rounded-xl text-label text-n-900 placeholder:text-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui';
+    'w-full px-4 py-3 bg-n-50 border border-n-200 rounded-xl text-label text-n-900 placeholder:text-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui';
   const focusRing = { ['--tw-ring-color' as string]: `${accent}55` } as React.CSSProperties;
 
   return (

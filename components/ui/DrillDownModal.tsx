@@ -70,7 +70,7 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               return (
                 <div key={r.id} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2 transition-colors">
                   {!neutral && (
-                    <span className={`p-1.5 rounded-lg shrink-0 ${out ? 'bg-danger-bg text-danger' : 'bg-success-bg text-success'}`}>
+                    <span className={`p-1.5 rounded-badge border border-line shrink-0 ${out ? 'text-danger' : 'text-success'}`}>
                       {out ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowUpCircle className="h-4 w-4" />}
                     </span>
                   )}
@@ -87,7 +87,7 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
           </div>
 
           <div className="flex items-center justify-between p-5 border-t border-line">
-            <span className="text-caption font-bold text-n-600 uppercase tracking-wider">{totalLabel} · {rows.length} {rows.length === 1 ? 'item' : 'itens'}</span>
+            <span className="mono-micro text-n-500">{totalLabel} · {rows.length} {rows.length === 1 ? 'item' : 'itens'}</span>
             <span className="text-h3 font-bold text-heading num">{brl(Math.abs(total))}</span>
           </div>
         </div>

@@ -58,7 +58,7 @@ export const NewAppointmentFab: React.FC<Props> = ({ professionalId, services, c
             transition-[opacity,transform] duration-[220ms] ease-out
             opacity-0 translate-y-3 pointer-events-none
             data-[visible]:opacity-100 data-[visible]:translate-y-0 data-[visible]:pointer-events-auto
-            active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
         >
           <Plus className="h-6 w-6" />
         </button>
