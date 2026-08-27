@@ -23,10 +23,10 @@ export interface IndexItem {
  * que o rótulo já não dissesse — era ruído repetido oito vezes — e o gap
  * entre cards transformava uma leitura contínua em oito leituras.
  *
- * Aqui os índices dividem UMA superfície e são separados por hairline, do
- * jeito que um mostrador divide os campos: rótulo em mono acima, número
- * grande abaixo, delta com seta e cor semântica. Sem ícone, sem sombra,
- * sem gap.
+ * Aqui os índices dividem UMA superfície e são separados por divisória
+ * clara: rótulo pequeno acima, número grande abaixo, variação em pílula.
+ * Sem ícone e sem gap — a leitura é contínua, da esquerda para a direita,
+ * como uma linha de indicadores e não como oito objetos soltos.
  */
 export const IndexGrid: React.FC<{
   items: IndexItem[];
@@ -48,21 +48,21 @@ export const IndexGrid: React.FC<{
             role={it.onClick ? 'button' : undefined}
             tabIndex={it.onClick ? 0 : undefined}
             onKeyDown={it.onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); it.onClick!(); } } : undefined}
-            className={`border-r border-b border-line p-4 sm:p-5 min-w-0 transition-ui
+            className={`border-r border-b border-line p-5 sm:p-6 min-w-0 transition-ui
               focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wine-700
               ${it.onClick ? 'cursor-pointer hover:bg-n-25' : ''}`}
           >
-            <dt className="mono-micro text-n-500 truncate">{it.label}</dt>
+            <dt className="text-caption font-medium text-n-500 truncate">{it.label}</dt>
             <dd
               className={[
-                'mt-2 leading-none truncate text-h2 font-semibold',
+                'mt-3 leading-none truncate text-h2 font-bold',
                 it.format === 'mono' ? 'mono' : 'num',
                 it.accent ? 'text-wine-700' : 'text-heading',
               ].join(' ')}
             >
               {it.value}
             </dd>
-            <div className="mt-2 flex items-center gap-2 min-h-4">
+            <div className="mt-3 flex items-center gap-2 min-h-6">
               {it.delta && <Delta pct={it.delta.pct} good={it.delta.good} />}
               {it.hint && <span className="text-caption text-n-500 truncate">{it.hint}</span>}
             </div>
@@ -74,15 +74,18 @@ export const IndexGrid: React.FC<{
 };
 
 /**
- * Delta: seta + número em mono, SEM retângulo de fundo. O selo pastel
- * arredondado em volta de "+12,4%" era mais pesado que o dado.
+ * Delta: pílula com seta + número, na cor semântica.
+ *
+ * É deliberadamente o MESMO objeto que `<StatBadge>` desenha no KPI. Duas
+ * formas diferentes para "variação percentual" no mesmo produto obrigam a
+ * pessoa a reaprender o sinal a cada tela.
  */
 export const Delta: React.FC<{ pct: number; good?: boolean; className?: string }> = ({
   pct, good, className = '',
 }) => {
   if (pct === 0) {
     return (
-      <span className={`inline-flex items-center gap-1 mono-micro text-n-500 ${className}`}>
+      <span className={`inline-flex items-center gap-1 h-6 px-2 rounded-full bg-n-100 text-n-600 text-caption font-bold tabular-nums ${className}`}>
         <Minus className="h-3 w-3" aria-hidden /> 0%
       </span>
     );
@@ -92,11 +95,11 @@ export const Delta: React.FC<{ pct: number; good?: boolean; className?: string }
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
     <span
-      className={`inline-flex items-center gap-1 mono-micro ${
-        isGood ? 'text-success' : 'text-danger'
+      className={`inline-flex items-center gap-0.5 h-6 px-2 rounded-full text-caption font-bold tabular-nums ${
+        isGood ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
       } ${className}`}
     >
-      <Icon className="h-3 w-3" aria-hidden />
+      <Icon className="h-3.5 w-3.5" aria-hidden />
       {up ? '+' : '−'}{Math.abs(pct).toFixed(1)}%
     </span>
   );

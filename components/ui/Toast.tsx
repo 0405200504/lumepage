@@ -86,7 +86,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {toast.actionLabel && toast.onAction && (
                   <button
                     onClick={() => { toast.onAction?.(); removeToast(toast.id); }}
-                    className="tap mt-2.5 inline-flex items-center gap-1.5 h-9 px-3 rounded-chip bg-wine-700 text-white text-caption font-semibold transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                    className="tap mt-2.5 inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-wine-700 text-white text-caption font-semibold transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     <Undo2 className="h-4 w-4" aria-hidden />
                     {toast.actionLabel}

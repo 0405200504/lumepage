@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/StatusPill';
 import { StatusDot, StatusLabel } from '@/components/ui/StatusDot';
-import { Chamfer, ChamferFrame, Bracket } from '@/components/ui/Frame';
 import { MonoLabel, MonoValue, MonoTrail } from '@/components/ui/Mono';
 import { Segmented } from '@/components/ui/Segmented';
 import { Field, Toggle, SettingsSection } from '@/components/ui/Field';
@@ -29,7 +28,7 @@ const Section: React.FC<{ n: string; title: string; note?: string; children: Rea
   n, title, note, children,
 }) => (
   <section className="scroll-mt-24">
-    <div className="flex items-baseline gap-3 border-b border-line-strong pb-2 mb-5">
+    <div className="flex items-baseline gap-3 border-b border-line pb-3 mb-6">
       <span className="mono-micro text-wine-700">{n}</span>
       <h2 className="text-h3 text-heading">{title}</h2>
     </div>
@@ -70,87 +69,19 @@ export function StyleguideClient() {
   const [tog, setTog] = useState(true);
 
   return (
-    <div className="field-grid app-grain max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-12">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-12">
       <PageHeader
-        trail={['Styleguide', 'Rodada 3', 'Instrumento técnico']}
+        trail={['Styleguide', 'Rodada 4', 'SaaS claro e macio']}
         title="Linguagem visual"
         description="Todos os primitivos lado a lado. Isto é o que se valida antes de multiplicar por 16 rotas."
         actions={<Button size="sm" leadingIcon={<Plus className="h-4 w-4" />}>Ação primária</Button>}
       />
 
-      {/* ── 00 · SUPERFÍCIE ──────────────────────────────── */}
-      <section>
-        <div className="flex items-baseline gap-3 border-b border-line-strong pb-2 mb-5">
-          <span className="mono-micro text-wine-700">00</span>
-          <h2 className="text-h3 text-heading">Superfície · grid e grão</h2>
-        </div>
-        <p className="text-body-sm text-n-600 max-w-2xl mb-5">
-          As duas texturas do fundo da aplicação. Ambas são <strong>propositalmente
-          quase invisíveis</strong> — se der para “ver o quadriculado”, errou. Como isso
-          torna impossível confirmar a olho que foram aplicadas, cada uma aparece
-          duas vezes: no valor real e ampliada.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card pad="p-0" className="overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line flex items-baseline justify-between">
-              <MonoLabel>Grid de fundo</MonoLabel>
-              <MonoValue className="text-micro text-n-400">1px · 32px · n-150</MonoValue>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-line">
-              <div className="field-grid h-32 relative">
-                <span className="mono-micro text-n-400 absolute bottom-2 left-2">real</span>
-              </div>
-              <div
-                className="h-32 relative"
-                style={{
-                  backgroundImage:
-                    'repeating-linear-gradient(to right, var(--color-n-300) 0 1px, transparent 1px 32px),' +
-                    'repeating-linear-gradient(to bottom, var(--color-n-300) 0 1px, transparent 1px 32px)',
-                }}
-              >
-                <span className="mono-micro text-n-500 absolute bottom-2 left-2">ampliado</span>
-              </div>
-            </div>
-            <p className="text-caption text-n-500 px-4 py-3 border-t border-line">
-              Duas famílias de linha a cada 32px, desvanecendo por
-              <code className="mono text-n-600"> mask-image</code> radial. Vive na área de
-              conteúdo, atrás de tudo.
-            </p>
-          </Card>
-
-          <Card pad="p-0" className="overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line flex items-baseline justify-between">
-              <MonoLabel>Grão</MonoLabel>
-              <MonoValue className="text-micro text-n-400">ruído SVG · 2%</MonoValue>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-line">
-              <div className="grain-swatch h-32 relative bg-n-100">
-                <span className="mono-micro text-n-400 absolute bottom-2 left-2">real · 2%</span>
-              </div>
-              <div
-                className="grain-swatch h-32 relative bg-n-100"
-                /* Para AMPLIAR o grão, background-size tem de ficar MAIOR que
-                   os 160px nativos do SVG — isso estica cada partícula. Com
-                   90px ele encolhia e virava uma mancha cinza uniforme, que é
-                   justamente o oposto de mostrar a textura. */
-                style={{ ['--grain-opacity' as string]: '0.28', ['--grain-scale' as string]: '520px' }}
-              >
-                <span className="mono-micro text-n-600 absolute bottom-2 left-2">ampliado · 35%</span>
-              </div>
-            </div>
-            <p className="text-caption text-n-500 px-4 py-3 border-t border-line">
-              Tira o aspecto de “retângulo branco do Figma” sem custar cor nenhuma.
-              A 2% ele não se vê: ele se sente na superfície grande.
-            </p>
-          </Card>
-        </div>
-      </section>
-
       {/* ── 01 · COR ─────────────────────────────────────── */}
       <Section
         n="01"
         title="Cor"
-        note="Neutros em grafite FRIO — o neutro quente (#FAF8F9) era o que dava o ar de app de bem-estar. O vinho da marca não mudou. --signal é uma LUZ: linha do agora, ponto ao vivo, dado em foco. Nunca superfície, nunca texto abaixo de 24px."
+        note="Neutros em cinza QUENTE — o grafite azulado da rodada anterior puxava a interface para painel de servidor. O vinho da marca não mudou. --signal deixou de ser um coral próprio e passou a ser wine-500: uma segunda cor quente competindo com a marca se lia como erro."
       >
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 mb-6">
           {['n-0', 'n-25', 'n-100', 'n-150', 'n-200', 'n-300', 'n-400',
@@ -163,9 +94,9 @@ export function StyleguideClient() {
           <Swatch name="wine-200" v="--color-wine-200" />
           <Swatch name="wine-600" v="--color-wine-600" ratio="link · 8.7:1" />
           <Swatch name="wine-700" v="--color-wine-700" ratio="MARCA · 11.9:1" />
-          <Swatch name="signal" v="--color-signal" ratio="3.97:1 ⚠" />
+          <Swatch name="signal" v="--color-signal" ratio="wine-500 · 5.6:1" />
           <Swatch name="signal-bg" v="--color-signal-bg" />
-          <Swatch name="signal-ink" v="--color-signal-ink" ratio="texto · 6.2:1" />
+          <Swatch name="signal-ink" v="--color-signal-ink" ratio="texto · 8.7:1" />
         </div>
         <div className="grid grid-cols-4 gap-3">
           <Swatch name="success" v="--color-success" ratio="5.2:1" />
@@ -181,7 +112,7 @@ export function StyleguideClient() {
                 <StatusDot tone="signal" /> <span className="text-caption text-n-600">ponto ao vivo</span>
               </span>
               <span className="text-h1 num text-[color:var(--color-signal)] leading-none">12</span>
-              <span className="text-caption text-n-500">← 30px: permitido</span>
+              <span className="text-caption text-n-500">← número em foco</span>
             </div>
           </div>
           <div className="w-40">
@@ -203,7 +134,7 @@ export function StyleguideClient() {
       <Section
         n="02"
         title="Tipografia"
-        note="Sans para nome, título e DINHEIRO. Mono para dado: horário, duração, data, ID, delta, cabeçalho de tabela, rótulo de eixo. R$ em mono viraria cupom fiscal."
+        note="UMA família: Plus Jakarta Sans, do micro-rótulo ao display. Eram três (Manrope, Instrument Sans e JetBrains Mono) e o resultado era uma tela em que o nome da cliente, o horário e o valor tinham esqueletos de letra diferentes. Hierarquia se faz com peso, tamanho e cor — nunca trocando de família. Número usa tabular-nums, que era a única coisa que a monoespaçada entregava de útil."
       >
         <Card className="divide-y divide-line">
           {[
@@ -213,8 +144,9 @@ export function StyleguideClient() {
             ['corpo · 15', <span key="d" className="text-body text-ink">A cliente confirmou o horário pelo WhatsApp.</span>],
             ['denso · 14', <span key="e" className="text-body-sm text-ink">Linha de tabela e rótulo de controle.</span>],
             ['caption · 12', <span key="f" className="text-caption text-n-600">Texto de apoio abaixo do campo.</span>],
-            ['mono micro · 10', <span key="g" className="mono-micro text-n-500">AGENDA · QUI 27 AGO · 5 AGENDAMENTOS</span>],
-            ['mono dado', <span key="h" className="mono text-ink">14:30 · 90min · #A7F2 · +12,4%</span>],
+            ['micro · 11', <span key="g" className="mono-micro text-n-500">Agenda · qui, 27 ago · 5 agendamentos</span>],
+            ['overline · 11', <span key="i" className="overline text-n-500">Cabeçalho de seção</span>],
+            ['dado tabular', <span key="h" className="mono text-ink">14:30 · 90min · #A7F2 · +12,4%</span>],
             ['dinheiro (sans + tabular)', <span key="i" className="num text-h2 font-semibold text-heading">R$ 12.480,00</span>],
           ].map(([label, el], i) => (
             <div key={i} className="flex flex-wrap items-baseline gap-x-6 gap-y-1 py-3 first:pt-0 last:pb-0">
@@ -228,15 +160,15 @@ export function StyleguideClient() {
       {/* ── 03 · RAIOS E CHANFRO ─────────────────────────── */}
       <Section
         n="03"
-        title="Raios e chanfro"
-        note="Nada acima de 14px. rounded-full sobrou para avatar e ponto de status. O chanfro — canto inferior direito a 45° — entra em hero, item ativo, selo e botão primário. É a assinatura do produto."
+        title="Raios e elevação"
+        note="Geometria macia: 8 no selo, 12 no controle, 20 no card, 28 no hero, pílula no que é filtro ou ação. O chanfro a 45° foi aposentado junto com a direção que o criou. A sombra voltou — larga, rasa e quase incolor: é ela que faz o branco descolar do cinza sem precisar de traço."
       >
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-          {[['badge', '4px'], ['chip', '6px'], ['surface', '10px'], ['hero', '14px'], ['full', 'avatar']].map(([n, v]) => (
+          {[['badge', '8px'], ['chip', '12px'], ['surface', '20px'], ['hero', '28px'], ['pill', 'controle']].map(([n, v]) => (
             <div key={n} className="text-center">
               <div
-                className="h-16 bg-wine-50 border border-wine-200"
-                style={{ borderRadius: n === 'full' ? '9999px' : `var(--radius-${n})` }}
+                className="h-16 bg-wine-50"
+                style={{ borderRadius: `var(--radius-${n})` }}
               />
               <p className="mono-micro text-n-600 mt-1.5">{n}</p>
               <p className="mono-micro text-n-400">{v}</p>
@@ -245,74 +177,49 @@ export function StyleguideClient() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3 items-start">
-          <Chamfer className="bg-wine-700 text-white p-4">
-            <MonoLabel className="!text-wine-200">Fundo chapado</MonoLabel>
-            <p className="text-body-sm mt-1">clip-path direto. Não há borda para o corte comer.</p>
-          </Chamfer>
-
-          <ChamferFrame>
-            <div className="p-4">
-              <MonoLabel>Com hairline</MonoLabel>
-              <p className="text-body-sm text-ink mt-1">
-                Moldura da cor da linha + miolo 1px menor. A hairline sobrevive ao corte.
-              </p>
+          {[
+            ['xs / sm', 'var(--shadow-sm)', 'Card em repouso. Quase só um assentamento.'],
+            ['md', 'var(--shadow-md)', 'Card sob o cursor, dropdown, tooltip.'],
+            ['lg', 'var(--shadow-lg)', 'O que flutua de verdade: modal, sheet, rail aberto.'],
+          ].map(([n, v, d]) => (
+            <div key={n} className="bg-surface rounded-surface p-4" style={{ boxShadow: v }}>
+              <MonoLabel>{n}</MonoLabel>
+              <p className="text-body-sm text-ink mt-1">{d}</p>
             </div>
-          </ChamferFrame>
-
-          <ChamferFrame active>
-            <div className="p-4">
-              <MonoLabel className="!text-wine-700">Estado ativo</MonoLabel>
-              <p className="text-body-sm text-wine-800 mt-1">
-                A moldura vira vinho e o miolo, wine-50.
-              </p>
-            </div>
-          </ChamferFrame>
+          ))}
         </div>
       </Section>
 
       {/* ── 04 · LINHAS ──────────────────────────────────── */}
       <Section
         n="04"
-        title="Linhas, brackets e ticks"
-        note="A alavanca de maior impacto e a mais barata: interface técnica se reconhece pela estrutura de linha, não pela cor. Tracejado tem UM significado em todo o produto — previsto, não confirmado, vazio."
+        title="Superfícies e divisórias"
+        note="A hierarquia é de LUZ, não de traço: fundo cinza, card branco, poço cinza-claro dentro do card, tinta quase preta no que ancora. Os cantos em L e os ticks de régua saíram — delimitavam sem estruturar e eram enfeite fingindo rigor. A linha sobrou para dividir DENTRO do card."
       >
         <div className="grid gap-4 sm:grid-cols-2 items-start">
-          <Bracket className="p-5 bg-surface">
-            <MonoLabel as="p">Corner brackets</MonoLabel>
-            <p className="text-body-sm text-ink mt-2">
-              Quatro cantos em L de 12px em vez de borda fechada. A borda diz “caixa”;
-              o bracket diz “visor”. É a alternativa à sombra que aposentamos.
-            </p>
-          </Bracket>
-
           <div className="card p-5">
-            <MonoLabel as="p">Hierarquia de tick</MonoLabel>
-            <div className="mt-4 flex items-end gap-0 h-12 border-b border-line-strong">
-              {Array.from({ length: 13 }).map((_, i) => (
-                <div key={i} className="flex-1 flex justify-start">
-                  <div
-                    className="w-px bg-[color:var(--color-tick)]"
-                    style={{ height: i % 2 === 0 ? 12 : 6, opacity: i % 2 === 0 ? 1 : 0.7 }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-1.5">
-              {['08:00', '11:00', '14:00', '17:00', '20:00'].map((h) => (
-                <MonoValue key={h} className="text-micro text-n-400">{h}</MonoValue>
-              ))}
+            <MonoLabel as="p">Três superfícies</MonoLabel>
+            <div className="mt-4 space-y-2">
+              <div className="h-10 rounded-chip bg-bg flex items-center px-3 text-caption text-n-600">--bg · fundo da aplicação</div>
+              <div className="h-10 rounded-chip bg-surface shadow-[var(--shadow-sm)] flex items-center px-3 text-caption text-n-600">--surface · card</div>
+              <div className="h-10 rounded-chip well flex items-center px-3 text-caption text-n-600">--surface-2 · poço (input, trilho)</div>
+              <div className="h-10 rounded-chip surface-ink flex items-center px-3 text-caption">--ink-surface · o que ancora</div>
             </div>
           </div>
 
           <div className="card p-5 self-start">
             <MonoLabel as="p">Tracejado = previsto</MonoLabel>
+            <p className="text-caption text-n-500 mt-1">
+              É o único uso que sobrou do tracejado: receita prevista, slot livre.
+              Ele saiu da moldura de estado vazio, que agora é superfície.
+            </p>
             <div className="mt-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-16 h-px bg-wine-700" />
+                <div className="w-16 h-[2px] rounded-full bg-wine-700" />
                 <span className="text-caption text-n-600">Receita realizada</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-16 border-t border-dashed border-line-strong" />
+                <div className="w-16 border-t-2 border-dashed border-line-strong" />
                 <span className="text-caption text-n-600">Receita prevista</span>
               </div>
             </div>
@@ -322,14 +229,14 @@ export function StyleguideClient() {
             <MonoLabel as="p">Divisória de ponta a ponta</MonoLabel>
             <div className="mt-3 -mx-5">
               {['Confirmado', 'Aguardando', 'Cancelado'].map((t) => (
-                <div key={t} className="px-5 py-2.5 border-b border-line last:border-b-0 text-body-sm text-ink">
+                <div key={t} className="px-5 py-3 border-b border-line last:border-b-0 text-body-sm text-ink">
                   {t}
                 </div>
               ))}
             </div>
             <p className="text-caption text-n-500 mt-3">
-              A linha atravessa o card inteiro (−mx do padding). Divisória com recuo lateral
-              era o gesto que mais amaciava a interface.
+              Dentro do card a linha atravessa inteiro (−mx do padding). Fora dele,
+              o que separa é espaço.
             </p>
           </div>
         </div>
@@ -339,7 +246,7 @@ export function StyleguideClient() {
       <Section
         n="05"
         title="Ícones e status"
-        note="Traço 1.25 com terminação RETA e junta em esquadro (o lucide vem com ponta arredondada — era isso que fazia os ícones parecerem amadores). Tamanhos 14 / 18 / 22. O container é um quadrado vazado de 30px, não um chip preenchido."
+        note="Traço 1.75 com ponta e junta ARREDONDADAS. A rodada anterior forçou 1.25 com ponta reta atrás de um ar de desenho de engenharia: em tela retina o traço sumia e o ângulo agudo virava farpa. O container é um disco de 36px em cinza-claro. Tamanhos 14 / 18 / 22."
       >
         <Card className="flex flex-wrap items-center gap-8">
           <div>
@@ -355,7 +262,7 @@ export function StyleguideClient() {
               <span className="icon-chip"><Search className="h-4 w-4" /></span>
               <span className="icon-chip" data-accent="true"><Search className="h-4 w-4" /></span>
             </div>
-            <p className="mono-micro text-n-400 mt-2">neutro · ativo (com chanfro)</p>
+            <p className="mono-micro text-n-400 mt-2">neutro · ativo · tinta</p>
           </div>
           <div>
             <MonoLabel as="p" className="mb-3">Os quatro estados</MonoLabel>
@@ -366,7 +273,7 @@ export function StyleguideClient() {
               <StatusLabel tone="neutral">Rascunho</StatusLabel>
               <StatusLabel tone="signal" live>Ao vivo</StatusLabel>
             </div>
-            <p className="mono-micro text-n-400 mt-2.5">ponto de 6px + rótulo mono — sem pílula pastel</p>
+            <p className="mono-micro text-n-400 mt-2.5">pílula suave: ponto de 6px + rótulo, 26px de altura</p>
           </div>
           <div>
             <MonoLabel as="p" className="mb-3">Badge</MonoLabel>
@@ -407,7 +314,7 @@ export function StyleguideClient() {
             </tbody>
           </table>
           <p className="text-caption text-n-500 mt-4">
-            O primário leva o chanfro de 6px e perdeu o halo vinho. `destructive` usa
+            Todos em pílula, com o `active:scale-[0.97]` como resposta de toque. `destructive` usa
             --danger (laranja-avermelhado), nunca a escala wine — senão “Cancelar
             atendimento” fica indistinguível de “Confirmar”. O <strong>anel de foco é
             sempre wine-700</strong>, mesmo no destrutivo: vermelho ali faria o teclado
@@ -420,7 +327,7 @@ export function StyleguideClient() {
       <Section
         n="07"
         title="Arquétipo 1 · Régua temporal"
-        note="A agenda de hoje usa tracejado IGUAL para hora cheia e meia hora — marcação sem hierarquia não mede nada, e gasta como decoração o tracejado que no resto do produto significa “vazio”. Aqui: tick de 6px na hora, 3px na meia; o tracejado ficou só no slot livre; o status vira uma barra de 3px à esquerda do bloco, em vez de colorir o bloco inteiro e transformar o dia num mosaico."
+        note="O status vira uma barra à esquerda do bloco, em vez de colorir o bloco inteiro e transformar o dia num mosaico. Os ticks de régua saíram: a hora é marcada pelo rótulo e pelo espaço. O tracejado ficou só no slot livre — é o único lugar do produto onde ele ainda significa alguma coisa."
       >
         <Card className="overflow-hidden">
           <div className="flex items-baseline justify-between mb-4">
@@ -458,7 +365,7 @@ export function StyleguideClient() {
       <Section
         n="08"
         title="Arquétipo 2 · Tabela densa"
-        note="Linha de 44px (que é também o alvo mínimo de toque), cabeçalho mono sticky, divisória de ponta a ponta, numérico à direita com dígito de largura fixa, ações reveladas no hover da linha. É isto que substitui os 17 cartazes empilhados de /dashboard/services."
+        note="Linha de 56px, cabeçalho sticky em 12px cinza, sem zebra e sem borda externa (ela vive dentro de um card), numérico à direita com dígito de largura fixa, ações reveladas no hover da linha. É isto que substitui os 17 cartazes empilhados de /dashboard/services."
       >
         <Card pad="p-0" className="overflow-hidden">
           <TechTable
@@ -548,13 +455,13 @@ export function StyleguideClient() {
               onChange={setSeg}
             />
             <p className="text-caption text-n-500 mt-3">
-              Retangular, segmentos encostados e divididos por hairline, ativo marcado
-              por traço de 2px na base — como uma chave seletora, não uma cápsula que desliza.
+              Trilho cinza em pílula, opções em pílula, ativo em vinho chapado. É o
+              controle mais visível das referências e o que mais rápido diz “2026”.
             </p>
             <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
               <div>
                 <p className="text-body-sm text-ink">Aceitar agendamento online</p>
-                <p className="text-caption text-n-500">Interruptor retangular, raio 4.</p>
+                <p className="text-caption text-n-500">Trilho em pílula, botão redondo, 28×48.</p>
               </div>
               <Toggle checked={tog} onChange={setTog} label="Aceitar agendamento online" />
             </div>
@@ -579,7 +486,7 @@ export function StyleguideClient() {
       <Section
         n="11"
         title="Arquétipo 5 · Conversa"
-        note="O canto reto é o que carrega a linguagem aqui: raio 10 em três cantos e 90° do lado do autor. Mesmo raciocínio do chanfro — um único canto quebrado dá direção e autoria sem setinha, sem cor extra e sem repetir avatar em cada linha."
+        note="O canto reto é o que carrega a linguagem aqui: raio macio em três cantos e 90° do lado do autor. Um único canto diferente dá direção e autoria sem setinha, sem cor extra e sem repetir avatar em cada linha."
       >
         <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr] items-start">
           {/* lista à esquerda — pilha no mobile */}
@@ -654,7 +561,7 @@ export function StyleguideClient() {
       <Section
         n="12"
         title="Arquétipo 6 · Configuração"
-        note="Seções separadas por hairline de ponta a ponta, título em mono, controle alinhado à direita. Sem card dentro de card — a moldura aninhada é o que faz a tela de ajustes parecer uma pilha de caixas."
+        note="Seções separadas por divisória de ponta a ponta, título em 18px, controle alinhado à direita. Sem card dentro de card — a moldura aninhada é o que faz a tela de ajustes parecer uma pilha de caixas."
       >
         <Card>
           <SettingsSection title="Identidade" description="Como sua marca aparece na página pública.">
@@ -703,7 +610,7 @@ export function StyleguideClient() {
       </Section>
 
       <footer className="border-t border-line pt-5">
-        <MonoTrail items={['Lume', 'Styleguide', 'Rodada 3', new Date().getFullYear()]} />
+        <MonoTrail items={['Lume', 'Styleguide', 'Rodada 4', new Date().getFullYear()]} />
       </footer>
     </div>
   );

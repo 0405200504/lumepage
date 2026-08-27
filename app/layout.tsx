@@ -40,13 +40,16 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Manrope = corpo/UI. Instrument Sans = títulos e DINHEIRO (dígito de
-            largura fixa e desenho mais firme no valor grande do faturamento).
-            JetBrains Mono = DADO: horário, duração, data, ID, delta, cabeçalho
-            de tabela, rótulo de eixo e o micro-label de contexto do header.
-            Só 400/500 da mono — mono em negrito perde o desenho técnico. */}
+        {/* UMA família em todo o painel: Plus Jakarta Sans.
+            Antes eram três (Manrope no corpo, Instrument Sans nos títulos e
+            no dinheiro, JetBrains Mono nos dados) e o resultado era uma tela
+            em que nome de cliente, horário e valor tinham esqueletos
+            tipográficos diferentes — a queixa de "as fontes não combinam".
+            Hierarquia agora se faz com peso (400→800), tamanho e cor.
+            Os pesos vão até 800 porque o número grande do faturamento é o
+            assunto da tela e precisa de um degrau acima do título. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Instrument+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
           rel="stylesheet"
         />
       </head>

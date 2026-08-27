@@ -254,7 +254,7 @@ export function AIAgentChat() {
         <button
           data-tour="ai-chat"
           onClick={() => setIsOpen(true)}
-          className="hidden lg:flex fixed bottom-6 right-6 h-11 items-center gap-2 px-4 bg-surface border border-line rounded-chip text-body-sm font-semibold text-wine-700 hover:border-wine-200 hover:bg-wine-50 transition-ui z-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          className="hidden lg:flex fixed bottom-6 right-6 h-11 items-center gap-2 px-5 bg-surface shadow-[var(--shadow-md)] rounded-full text-body-sm font-semibold text-wine-700 hover:bg-wine-50 transition-ui z-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
           aria-label="Abrir Assistente IA"
         >
           <Sparkles className="h-[18px] w-[18px]" aria-hidden />

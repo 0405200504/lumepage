@@ -2,53 +2,71 @@ import React from 'react';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   as?: 'div' | 'section' | 'article';
-  /** Padding interno. 16px no mobile, 20px no desktop (escala base 4). */
+  /** Padding interno. 20px no mobile, 24px no desktop. */
   pad?: string;
-  /** Cartão clicável: a borda escurece. Não levita, não ganha sombra. */
+  /** Cartão clicável: sobe 2px e a sombra abre no hover. */
   interactive?: boolean;
-  /** Superfície vinho com grão. UM por tela, no máximo. Leva chanfro. */
+  /** Superfície vinho. UM por tela, no máximo. */
   hero?: boolean;
-  /** Sem borda fechada: quatro cantos em L. A moldura de "área de medição". */
+  /** Superfície "tinta" (quase preta). O card de contraste das referências. */
+  ink?: boolean;
+  /** @deprecated Herdado da rodada "instrumento". Hoje devolve o card padrão. */
   bracket?: boolean;
-  /** Canto inferior direito cortado a 45°. Só em destaque e estado ativo. */
+  /** @deprecated Herdado da rodada "instrumento". Hoje devolve o card padrão. */
   chamfer?: boolean;
 }
 
 /**
- * Cartão padrão: raio 10, hairline n-200, ZERO sombra.
+ * Cartão padrão: branco, raio 20, sombra difusa e SEM borda.
  *
- * A sombra saiu de propósito. Ela era o que dava o ar de "adesivo colado
- * na tela" e, somada ao raio de 24px e aos neutros quentes, produzia o
- * resultado que o diagnóstico chamou de "premium suave e genérico".
- * Num instrumento a superfície é plana; o que a delimita é o traço de 1px,
- * e a elevação se faz ESCURECENDO esse traço.
+ * O hairline de 1px saiu de propósito. Ele era o detalhe que fazia a tela
+ * parecer planilha: quinze retângulos contornados, todos com o mesmo peso,
+ * nenhum com hierarquia. Com fundo cinza e card branco, quem delimita é a
+ * diferença de luz — e ela delimita sem somar traço à tela.
  *
- * Regra de aninhamento: com padding 16/20 e raio externo 10, o filho
- * interno usa `rounded-badge` (4px) — nunca repete o 10 do pai.
+ * O padding subiu de 16/20 para 20/24: nas referências o ar dentro do card
+ * é metade do que comunica "caro".
+ *
+ * Regra de aninhamento: com raio externo 20, o filho interno usa
+ * `rounded-chip` (12px) — nunca repete o raio do pai.
+ *
+ * `bracket` e `chamfer` continuam na assinatura porque dezenas de telas os
+ * passam. Não fazem mais nada: a geometria chanfrada e os cantos em L foram
+ * aposentados junto com a direção "instrumento técnico".
  */
 export const Card: React.FC<CardProps> = ({
   as = 'div',
-  pad = 'p-4 sm:p-5',
+  pad = 'p-5 sm:p-6',
   interactive,
   hero,
-  bracket,
-  chamfer,
+  ink,
+  // Aceitos e descartados: são as props da direção "instrumento técnico".
+  // Ficam na assinatura para que as telas que ainda as passam continuem
+  // compilando — e ficam FORA de `rest` para não vazarem como atributo
+  // desconhecido no DOM.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  bracket: _bracket,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  chamfer: _chamfer,
   className = '',
   children,
   ...rest
 }) => {
   const Tag = as as React.ElementType;
+  const surface = hero
+    ? 'surface-wine text-white rounded-hero overflow-hidden relative shadow-[var(--shadow-md)]'
+    : ink
+      ? 'surface-ink overflow-hidden relative'
+      : 'card';
+
   return (
     <Tag
       className={[
-        hero ? 'surface-wine text-white rounded-hero overflow-hidden relative' : bracket ? 'bg-surface' : 'card',
-        bracket ? 'brackets' : '',
-        chamfer ? 'chamfer' : '',
+        surface,
         interactive ? 'card-interactive cursor-pointer' : '',
         pad,
         className,
       ].filter(Boolean).join(' ')}
-      data-corners={bracket ? '4' : undefined}
       {...rest}
     >
       {children}

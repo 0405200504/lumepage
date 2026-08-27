@@ -3,16 +3,15 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'ink';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
-  /** Só ícone: vira quadrado e exige `aria-label`. */
+  /** Só ícone: vira círculo e exige `aria-label`. */
   iconOnly?: boolean;
-  /** Ícone lucide 14/18/22 — a escala nova. */
   leadingIcon?: React.ReactNode;
   trailingIcon?: React.ReactNode;
   children?: React.ReactNode;
@@ -23,28 +22,33 @@ interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>
  * :active, :focus-visible, disabled e loading — para que nenhuma tela
  * remonte um botão com estilo inline e esqueça metade deles.
  *
- * O primário leva o CHANFRO: canto inferior direito cortado a 45°. Como
- * ele é de fundo chapado, o `clip-path` não tem borda para comer — o corte
- * sai limpo com uma classe só. É a assinatura aparecendo no elemento mais
- * repetido da interface.
+ * FORMA: pílula. É a decisão mais visível da rodada 4 e a que mais aproxima
+ * o produto das referências. O retângulo de raio 6 da rodada anterior era
+ * correto e sem graça; a pílula lê como software contemporâneo e, num
+ * produto usado majoritariamente por mulheres numa cadeira de atendimento,
+ * também lê como convite em vez de formulário.
  *
- * O primário também perdeu o halo vinho (`shadow-wine`, hoje neutralizado):
- * um botão de marca chapado sobre branco já é o elemento mais forte da tela.
+ * `secondary` é branco com contorno claro — ele precisa existir SOBRE card
+ * branco e sobre o fundo cinza, então não pode ser cinza-preenchido.
+ * `ghost` é o contrário: sem fundo em repouso, cinza-claro no hover.
+ * `ink` é o botão preto das referências: ação neutra de alto contraste
+ * (Exportar, Ver relatório) que não gasta a cor da marca.
  *
  * `destructive` usa --color-danger (laranja-avermelhado), NUNCA a escala
  * wine-*: num produto de marca vinho, destrutivo em vermelho-escuro fica
  * indistinguível do primário e a profissional cancela achando que confirma.
- * Ele também perdeu o fundo pastel — virou hairline + texto, como o resto.
  */
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-wine-700 text-white hover:bg-wine-800 active:bg-wine-800 disabled:bg-wine-700 chamfer-s',
+    'bg-wine-700 text-white shadow-[var(--shadow-wine)] hover:bg-wine-800 active:bg-wine-800 disabled:bg-wine-700 disabled:shadow-none',
   secondary:
-    'bg-surface text-heading border border-line hover:bg-n-50 hover:border-line-strong',
+    'bg-surface text-heading ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:ring-line-strong hover:bg-n-25',
   ghost:
     'bg-transparent text-n-600 hover:bg-n-100 hover:text-heading',
   destructive:
-    'bg-surface text-danger border border-danger/40 hover:bg-danger hover:text-white hover:border-danger',
+    'bg-danger-bg text-danger ring-1 ring-inset ring-danger-border hover:bg-danger hover:text-white hover:ring-danger',
+  ink:
+    'bg-ink-surface text-white hover:bg-ink-surface-hover shadow-[var(--shadow-xs)]',
 };
 
 /**
@@ -58,15 +62,15 @@ const VARIANTS: Record<Variant, string> = {
  * celular, sem que nenhuma tela precise saber disso.
  */
 const SIZES: Record<Size, string> = {
-  sm: 'h-11 sm:h-9 px-3 text-caption gap-1.5 rounded-chip',
-  md: 'h-11 px-4 text-body-sm gap-2 rounded-chip',
-  lg: 'h-12 px-5 text-body gap-2 rounded-chip',
+  sm: 'h-11 sm:h-9 px-3.5 text-caption gap-1.5',
+  md: 'h-11 px-5 text-body-sm gap-2',
+  lg: 'h-13 px-6 text-body gap-2.5',
 };
 
 const ICON_SIZES: Record<Size, string> = {
-  sm: 'h-11 w-11 sm:h-9 sm:w-9 rounded-chip',
-  md: 'h-11 w-11 rounded-chip',
-  lg: 'h-12 w-12 rounded-chip',
+  sm: 'h-11 w-11 sm:h-9 sm:w-9',
+  md: 'h-11 w-11',
+  lg: 'h-13 w-13',
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -91,10 +95,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       disabled={isDisabled}
       data-loading={loading || undefined}
       className={[
-        'inline-flex items-center justify-center font-semibold select-none',
-        'transition-ui active:scale-[0.98]',
+        'inline-flex items-center justify-center font-semibold select-none rounded-full',
+        'tracking-[-0.01em] transition-ui active:scale-[0.97]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700',
-        'disabled:opacity-50 disabled:pointer-events-none',
+        'disabled:opacity-45 disabled:pointer-events-none',
         iconOnly ? ICON_SIZES[size] : SIZES[size],
         VARIANTS[variant],
         className,

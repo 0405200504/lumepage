@@ -434,7 +434,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           <div className="sheet-backdrop absolute inset-0" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-[88%] max-w-xs h-full bg-bg overflow-y-auto scroll-touch p-4 shadow-lg animate-slide-right">
             <div className="flex items-center justify-between mb-4">
-              <p className="mono-micro text-n-900">Filtros e opções</p>
+              <p className="text-h3 text-heading">Filtros e opções</p>
               <Button variant="ghost" size="sm" iconOnly aria-label="Fechar filtros" onClick={() => setSidebarOpen(false)} leadingIcon={<X className="h-5 w-5" />} />
             </div>
             {sidebar}
@@ -558,7 +558,7 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
       <div className="card p-4">
         <div className="flex items-center justify-between mb-2">
           <Button variant="ghost" size="sm" iconOnly aria-label="Mês anterior" onClick={() => onStepMonth(-1)} leadingIcon={<ChevronLeft className="h-4 w-4" />} />
-          <p className="mono-micro text-n-900">{MONTHS[miniCursor.getMonth()].slice(0, 3)} {miniCursor.getFullYear()}</p>
+          <p className="text-h3 text-heading">{MONTHS[miniCursor.getMonth()].slice(0, 3)} {miniCursor.getFullYear()}</p>
           <Button variant="ghost" size="sm" iconOnly aria-label="Próximo mês" onClick={() => onStepMonth(1)} leadingIcon={<ChevronRight className="h-4 w-4" />} />
         </div>
         <div className="grid grid-cols-7">
@@ -599,7 +599,7 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
       {/* Filtros */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="mono-micro text-n-900">Filtros</p>
+          <p className="text-h3 text-heading">Filtros</p>
           <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={!hasFilters}>Limpar</Button>
         </div>
         <SelectField label="Status" value={filterStatus} onChange={(v) => setFilterStatus(v as 'all' | AppointmentStatus)}>
@@ -688,7 +688,7 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
               className={`group relative min-h-[112px] text-left p-2 border-b border-r border-line transition-ui cursor-pointer ${!inMonth ? 'bg-n-25' : ''} ${(holiday || isSunday) && inMonth ? 'bg-wine-50/60' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isDragOver ? 'ring-2 ring-inset ring-wine-700 bg-wine-50' : 'hover:bg-n-50'}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`mono inline-flex items-center justify-center h-6 w-6 text-micro rounded-badge ${isToday ? 'bg-wine-700 text-white chamfer-s' : inMonth ? 'text-ink' : 'text-n-400'}`}>{day.getDate()}</span>
+                <span className={`mono inline-flex items-center justify-center h-6 w-6 text-micro rounded-badge ${isToday ? 'bg-wine-700 text-white' : inMonth ? 'text-ink' : 'text-n-400'}`}>{day.getDate()}</span>
                 {appts.length > 0 && <span className="mono-micro text-wine-700 border border-wine-200 bg-wine-50 rounded-badge px-1.5 py-0.5">{appts.length}</span>}
               </div>
               {holiday && <div className="mt-1 flex items-center gap-1 text-micro font-semibold text-wine-700 truncate"><PartyPopper className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{holiday.name}</span></div>}
@@ -805,7 +805,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
           </div>
         </div>
         {holiday && (
-          <span className="inline-flex items-center gap-1.5 mono-micro text-wine-700 bg-wine-50 border border-wine-200 px-2 py-1 rounded-badge chamfer-s">
+          <span className="inline-flex items-center gap-1.5 mono-micro text-wine-700 bg-wine-50 border border-wine-200 px-2 py-1 rounded-badge">
             <PartyPopper className="h-4 w-4" aria-hidden /> {holiday.name}
           </span>
         )}
@@ -1083,7 +1083,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
               className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-line transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-700 ${(holiday || d.getDay() === 0) ? 'bg-wine-50/60' : ''}`}
             >
               <p className="overline text-n-500">{WEEKDAYS_SHORT[d.getDay()]}</p>
-              <span className={`mono mt-0.5 inline-flex items-center justify-center h-7 w-7 text-caption rounded-badge ${isToday ? 'bg-wine-700 text-white chamfer-s' : 'text-ink'}`}>{d.getDate()}</span>
+              <span className={`mono mt-0.5 inline-flex items-center justify-center h-7 w-7 text-caption rounded-badge ${isToday ? 'bg-wine-700 text-white' : 'text-ink'}`}>{d.getDate()}</span>
               {count > 0 && <p className="num text-micro font-semibold text-wine-700 truncate">{count}</p>}
             </button>
           );
@@ -1333,7 +1333,7 @@ const DayDetail: React.FC<{
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 placeholder="Nova tarefa neste dia…"
-                className="flex-1 min-w-0 h-11 px-3 bg-surface border border-line rounded-control text-label text-ink placeholder-n-400 transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                className="field-input flex-1 min-w-0"
               />
               <input
                 type="time"
@@ -1341,7 +1341,7 @@ const DayDetail: React.FC<{
                 onChange={(e) => setNewTime(e.target.value)}
                 title="Horário (opcional)"
                 aria-label="Horário da tarefa (opcional)"
-                className="num w-24 shrink-0 h-11 px-2 bg-surface border border-line rounded-control text-label text-ink transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                className="field-input num w-24 shrink-0 px-2"
               />
               <Button type="submit" size="md" iconOnly loading={saving} aria-label="Adicionar tarefa" leadingIcon={<Plus className="h-5 w-5" />} />
             </form>

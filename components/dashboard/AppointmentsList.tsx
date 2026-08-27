@@ -550,7 +550,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
             <section key={iso}>
               {/* Cabeçalho do dia: gruda no topo enquanto o dia rola. */}
               <div className="sticky top-[52px] lg:top-16 z-10 -mx-4 px-4 lg:mx-0 lg:px-0 py-2 bg-bg/85 backdrop-blur-[20px] flex items-baseline gap-2">
-                <h2 className="mono-micro text-n-900">{rotulo}</h2>
+                <h2 className="text-h3 text-heading">{rotulo}</h2>
                 <span className="mono-micro text-n-500">
                   {apps.length} {apps.length === 1 ? 'HORÁRIO' : 'HORÁRIOS'}
                 </span>
