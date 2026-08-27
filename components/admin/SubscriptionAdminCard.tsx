@@ -75,18 +75,18 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
   };
 
   return (
-    <div className="bg-white border border-[#efe9e6] rounded-3xl p-6 md:p-8 shadow-xs space-y-6 max-w-3xl">
-      <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+    <div className="bg-white border border-n-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-6 max-w-3xl">
+      <div className="flex items-center gap-2 border-b border-n-100 pb-3">
         <Sparkles className="h-4 w-4 text-wine-700" />
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Assinatura & Plano</h3>
+        <h3 className="text-label font-bold text-n-800 uppercase tracking-wider">Assinatura & Plano</h3>
       </div>
 
       {legacy ? (
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
-          <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-2xl bg-warning-bg border border-warning-border px-4 py-3">
+          <ShieldCheck className="h-5 w-5 text-warning shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-amber-800">Conta legada — acesso cheio</p>
-            <p className="text-xs text-amber-700 mt-0.5">
+            <p className="text-label font-bold text-warning">Conta legada — acesso cheio</p>
+            <p className="text-caption text-warning mt-0.5">
               Criada em {formatDate(professional.created_at)}, antes das regras de plano. As limitações
               não se aplicam a ela. Você ainda pode registrar o plano abaixo para organização.
             </p>
@@ -96,22 +96,22 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
 
       {/* Situação atual */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-gray-150 p-4">
-          <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Plano atual</p>
-          <p className="text-lg font-black text-ink mt-1">
+        <div className="rounded-2xl border border-n-200 p-4">
+          <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Plano atual</p>
+          <p className="text-h3 font-semibold text-ink mt-1">
             {professional.subscription_plan ? PLAN_LABEL[professional.subscription_plan] : '—'}
           </p>
-          <p className="text-[11px] text-gray-450 mt-0.5 capitalize">{professional.subscription_status || 'sem status'}</p>
+          <p className="text-caption text-n-600 mt-0.5 capitalize">{professional.subscription_status || 'sem status'}</p>
         </div>
-        <div className="rounded-2xl border border-gray-150 p-4">
-          <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" /> Acesso desde</p>
-          <p className="text-lg font-black text-ink mt-1">{formatDate(professional.created_at)}</p>
+        <div className="rounded-2xl border border-n-200 p-4">
+          <p className="text-caption font-bold text-n-600 uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" /> Acesso desde</p>
+          <p className="text-h3 font-semibold text-ink mt-1">{formatDate(professional.created_at)}</p>
         </div>
-        <div className="rounded-2xl border border-gray-150 p-4">
-          <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider flex items-center gap-1"><CalendarClock className="h-3 w-3" /> Vence em</p>
-          <p className="text-lg font-black text-ink mt-1">{formatDate(professional.subscription_ends_at)}</p>
+        <div className="rounded-2xl border border-n-200 p-4">
+          <p className="text-caption font-bold text-n-600 uppercase tracking-wider flex items-center gap-1"><CalendarClock className="h-3 w-3" /> Vence em</p>
+          <p className="text-h3 font-semibold text-ink mt-1">{formatDate(professional.subscription_ends_at)}</p>
           {remaining !== null && (
-            <p className={`text-[11px] font-bold mt-0.5 ${remaining < 0 ? 'text-bad' : remaining <= 7 ? 'text-warn' : 'text-ok'}`}>
+            <p className={`text-caption font-bold mt-0.5 ${remaining < 0 ? 'text-bad' : remaining <= 7 ? 'text-warn' : 'text-ok'}`}>
               {remaining < 0 ? `Vencido há ${Math.abs(remaining)} dia(s)` : `Faltam ${remaining} dia(s)`}
             </p>
           )}
@@ -121,9 +121,9 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
       {/* Controles */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Plano</label>
+          <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Plano</label>
           <select value={plan} onChange={(e) => setPlan(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-gray-200 bg-white rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20">
+            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
             <option value="">Sem plano</option>
             <option value="start">Start</option>
             <option value="pro">Pro</option>
@@ -131,27 +131,27 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
           </select>
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Situação</label>
+          <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Situação</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'trialing')}
-            className="block w-full px-3 py-2.5 border border-gray-200 bg-white rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20">
+            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
             <option value="active">Ativo (acesso liberado)</option>
             <option value="trialing">Em teste (trial)</option>
           </select>
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Vencimento do acesso</label>
+          <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Vencimento do acesso</label>
           <input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20" />
+            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => addDays(30)} className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50">Liberar 1 mês</button>
-        <button type="button" onClick={() => addDays(365)} className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50">Liberar 1 ano</button>
-        <button type="button" onClick={() => setEndsAt('')} className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50">Sem vencimento</button>
+        <button type="button" onClick={() => addDays(30)} className="px-3 py-2 rounded-xl border border-n-200 text-caption font-semibold text-n-600 hover:bg-n-50">Liberar 1 mês</button>
+        <button type="button" onClick={() => addDays(365)} className="px-3 py-2 rounded-xl border border-n-200 text-caption font-semibold text-n-600 hover:bg-n-50">Liberar 1 ano</button>
+        <button type="button" onClick={() => setEndsAt('')} className="px-3 py-2 rounded-xl border border-n-200 text-caption font-semibold text-n-600 hover:bg-n-50">Sem vencimento</button>
         <div className="flex-1" />
         <button type="button" onClick={handleSave} disabled={saving}
-          className="px-5 py-3 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-60">
+          className="px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-60">
           <Save className="h-4 w-4" />
           <span>{saving ? 'Salvando...' : 'Salvar plano'}</span>
         </button>

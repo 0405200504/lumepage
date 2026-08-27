@@ -38,8 +38,8 @@ export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adic
       <div className="fixed right-4 lg:right-6 bottom-[calc(9.75rem+env(safe-area-inset-bottom))] lg:bottom-[5.75rem] z-40 flex flex-col items-end gap-2.5 no-print">
         {!single && open && actions.map(({ label: l, icon: Icon, onClick }) => (
           <button key={l} onClick={() => { setOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
-            <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-bold shadow-md whitespace-nowrap">{l}</span>
-            <span className="h-11 w-11 rounded-full bg-paper border border-gray-150 text-wine-700 shadow-md flex items-center justify-center shrink-0"><Icon className="h-[18px] w-[18px]" /></span>
+            <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-caption font-bold shadow-md whitespace-nowrap">{l}</span>
+            <span className="h-11 w-11 rounded-full bg-surface border border-n-200 text-wine-700 shadow-md flex items-center justify-center shrink-0"><Icon className="h-5 w-5" /></span>
           </button>
         ))}
         <button

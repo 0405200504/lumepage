@@ -28,26 +28,26 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ onCSV, label = 'Exportar
     <div className={`relative no-print ${className}`} ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface border border-line text-xs font-bold text-ink hover:bg-surface-2 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface border border-line text-caption font-bold text-ink hover:bg-surface-2 transition-colors"
       >
-        <Download className="h-3.5 w-3.5" /> {label}
-        <ChevronDown className={`h-3.5 w-3.5 text-gray-450 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <Download className="h-4 w-4" /> {label}
+        <ChevronDown className={`h-4 w-4 text-n-600 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute right-0 mt-1.5 w-48 rounded-xl border border-line bg-surface shadow-md p-1 z-20 animate-fade-up">
           {onCSV && (
             <button
               onClick={() => { onCSV(); setOpen(false); }}
-              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-xs font-semibold text-ink hover:bg-surface-2 transition-colors"
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-caption font-semibold text-ink hover:bg-surface-2 transition-colors"
             >
-              <FileText className="h-4 w-4 text-gray-450" /> Exportar CSV
+              <FileText className="h-4 w-4 text-n-600" /> Exportar CSV
             </button>
           )}
           <button
             onClick={() => { setOpen(false); setTimeout(printPDF, 50); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-xs font-semibold text-ink hover:bg-surface-2 transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-caption font-semibold text-ink hover:bg-surface-2 transition-colors"
           >
-            <Printer className="h-4 w-4 text-gray-450" /> Imprimir / Salvar PDF
+            <Printer className="h-4 w-4 text-n-600" /> Imprimir / Salvar PDF
           </button>
         </div>
       )}

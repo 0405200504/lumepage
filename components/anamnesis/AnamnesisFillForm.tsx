@@ -82,12 +82,12 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
 
   if (done) {
     return (
-      <div className="bg-white rounded-3xl p-8 border border-[#efe9e6] shadow-xl text-center flex flex-col items-center">
+      <div className="bg-white rounded-3xl p-8 border border-n-200 shadow-xl text-center flex flex-col items-center">
         <div className="p-4 rounded-2xl mb-4" style={{ backgroundColor: `${accent}14`, color: accent }}>
           <CheckCircle2 className="h-8 w-8" />
         </div>
-        <h2 className="text-lg font-black text-gray-900 tracking-tight">Ficha enviada com sucesso! 💛</h2>
-        <p className="mt-2 text-xs text-gray-500 leading-relaxed max-w-sm">
+        <h2 className="text-h3 font-semibold text-n-900 tracking-tight">Ficha enviada com sucesso! 💛</h2>
+        <p className="mt-2 text-caption text-n-500 leading-relaxed max-w-sm">
           {done.pdfSentToClient
             ? `Prontinho! ${brandName} já recebeu suas respostas e uma cópia em PDF foi enviada para o seu WhatsApp.`
             : `Prontinho! ${brandName} já recebeu suas respostas. Você pode baixar a sua cópia em PDF abaixo.`}
@@ -96,7 +96,7 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
           href={`/api/anamnese/${token}/pdf`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-6 inline-flex items-center gap-2 px-6 py-3 text-white text-xs font-bold rounded-xl shadow-sm transition-opacity hover:opacity-90"
+          className="mt-6 inline-flex items-center gap-2 px-6 py-3 text-white text-caption font-bold rounded-xl shadow-sm transition-opacity hover:opacity-90"
           style={{ backgroundColor: accent }}
         >
           <FileDown className="h-4 w-4" />
@@ -107,23 +107,23 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
   }
 
   const inputClass =
-    'w-full px-4 py-3 bg-[#faf8f6] border border-[#e8e1dd] rounded-xl text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 transition-shadow';
+    'w-full px-4 py-3 bg-n-50 border border-n-200 rounded-xl text-label text-n-900 placeholder:text-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui';
   const focusRing = { ['--tw-ring-color' as string]: `${accent}55` } as React.CSSProperties;
 
   return (
-    <div className="bg-white rounded-3xl border border-[#efe9e6] shadow-xl overflow-hidden">
+    <div className="bg-white rounded-3xl border border-n-200 shadow-xl overflow-hidden">
       {/* Cabeçalho */}
       <div className="px-6 sm:px-8 pt-8 pb-6" style={{ backgroundColor: `${accent}0d` }}>
         {design?.showLogo !== false && (
-          <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: accent }}>{brandName}</p>
+          <p className="text-caption font-semibold uppercase tracking-[0.22em]" style={{ color: accent }}>{brandName}</p>
         )}
         <div className="mt-2 flex items-start gap-3">
           <span className="mt-0.5 p-2 rounded-xl text-white shrink-0" style={{ backgroundColor: accent }}>
             <ClipboardList className="h-4 w-4" />
           </span>
           <div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight leading-snug">{formTitle}</h1>
-            <p className="mt-1 text-xs text-gray-500 leading-relaxed">
+            <h1 className="text-h2 font-semibold text-n-900 tracking-tight leading-snug">{formTitle}</h1>
+            <p className="mt-1 text-caption text-n-500 leading-relaxed">
               {clientName ? `Oi, ${clientName.split(' ')[0]}! ` : ''}Responda com calma — essas informações deixam seu atendimento mais seguro e personalizado.
             </p>
           </div>
@@ -132,11 +132,11 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
         <div className="mt-5">
           <div className="h-1.5 rounded-full bg-white overflow-hidden">
             <div
-              className="h-full rounded-full transition-all duration-300"
+              className="h-full rounded-full transition-ui duration-300"
               style={{ width: `${Math.round((answeredCount / Math.max(questions.length, 1)) * 100)}%`, backgroundColor: accent }}
             />
           </div>
-          <p className="mt-1.5 text-[10px] font-semibold text-gray-400">{answeredCount} de {questions.length} respondidas</p>
+          <p className="mt-1.5 text-caption font-semibold text-n-400">{answeredCount} de {questions.length} respondidas</p>
         </div>
       </div>
 
@@ -144,10 +144,10 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
       <div className="px-6 sm:px-8 py-6 space-y-6">
         {questions.map((q, i) => (
           <div key={q.id} id={`anamnesis-q-${q.id}`}>
-            <label className="block text-[13px] font-bold text-gray-800 leading-snug mb-2">
-              <span className="mr-1.5 text-[11px] font-black" style={{ color: accent }}>{i + 1}.</span>
+            <label className="block text-caption font-bold text-n-800 leading-snug mb-2">
+              <span className="mr-1.5 text-caption font-semibold" style={{ color: accent }}>{i + 1}.</span>
               {q.label}
-              {q.required && <span className="ml-1 text-red-500">*</span>}
+              {q.required && <span className="ml-1 text-danger">*</span>}
             </label>
 
             {q.type === 'text' && (
@@ -197,8 +197,8 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
                     <button
                       key={opt} type="button"
                       onClick={() => setAnswer(q.id, opt)}
-                      className={`flex-1 py-3 rounded-xl text-sm font-bold border transition-colors ${
-                        active ? 'text-white border-transparent' : 'bg-[#faf8f6] text-gray-600 border-[#e8e1dd] hover:border-gray-300'
+                      className={`flex-1 py-3 rounded-xl text-label font-bold border transition-colors ${
+                        active ? 'text-white border-transparent' : 'bg-n-50 text-n-600 border-n-200 hover:border-n-300'
                       }`}
                       style={active ? { backgroundColor: accent } : undefined}
                     >
@@ -217,8 +217,8 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
                     <button
                       key={opt} type="button"
                       onClick={() => setAnswer(q.id, opt)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
-                        active ? 'text-white border-transparent' : 'bg-[#faf8f6] text-gray-600 border-[#e8e1dd] hover:border-gray-300'
+                      className={`px-4 py-2.5 rounded-xl text-caption font-bold border transition-colors ${
+                        active ? 'text-white border-transparent' : 'bg-n-50 text-n-600 border-n-200 hover:border-n-300'
                       }`}
                       style={active ? { backgroundColor: accent } : undefined}
                     >
@@ -237,8 +237,8 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
                     <button
                       key={opt} type="button"
                       onClick={() => toggleMulti(q.id, opt)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
-                        active ? 'text-white border-transparent' : 'bg-[#faf8f6] text-gray-600 border-[#e8e1dd] hover:border-gray-300'
+                      className={`px-4 py-2.5 rounded-xl text-caption font-bold border transition-colors ${
+                        active ? 'text-white border-transparent' : 'bg-n-50 text-n-600 border-n-200 hover:border-n-300'
                       }`}
                       style={active ? { backgroundColor: accent } : undefined}
                     >
@@ -253,9 +253,9 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
       </div>
 
       {/* Assinatura + envio */}
-      <div className="px-6 sm:px-8 pb-8 pt-2 border-t border-[#f3ede9]">
-        <label className="block text-[13px] font-bold text-gray-800 mt-5 mb-2">
-          Assinatura (digite seu nome completo) <span className="text-red-500">*</span>
+      <div className="px-6 sm:px-8 pb-8 pt-2 border-t border-n-50">
+        <label className="block text-caption font-bold text-n-800 mt-5 mb-2">
+          Assinatura (digite seu nome completo) <span className="text-danger">*</span>
         </label>
         <input
           type="text" maxLength={120}
@@ -272,20 +272,20 @@ export const AnamnesisFillForm: React.FC<Props> = ({ token, brandName, formTitle
             className="mt-0.5 h-4 w-4 rounded accent-current"
             style={{ accentColor: accent }}
           />
-          <span className="text-[11px] text-gray-500 leading-relaxed">
+          <span className="text-caption text-n-500 leading-relaxed">
             Declaro que as informações prestadas são verdadeiras e de minha responsabilidade.
           </span>
         </label>
 
         {error && (
-          <p className="mt-4 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</p>
+          <p className="mt-4 text-caption font-semibold text-danger bg-danger-bg border border-danger-border rounded-xl px-4 py-3">{error}</p>
         )}
 
         <button
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="mt-5 w-full py-4 rounded-2xl text-white text-sm font-black tracking-tight shadow-lg transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
+          className="mt-5 w-full py-4 rounded-2xl text-white text-label font-semibold tracking-tight shadow-lg transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
           style={{ backgroundColor: accent }}
         >
           {submitting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>) : 'Enviar minha ficha ✨'}

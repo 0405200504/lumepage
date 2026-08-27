@@ -120,16 +120,16 @@ export function TemplatePicker({ selected, onSelect }: {
             type="button"
             onClick={() => onSelect(meta.id)}
             aria-pressed={active}
-            className={`text-left rounded-2xl border bg-white overflow-hidden transition-all cursor-pointer ${
+            className={`text-left rounded-2xl border bg-white overflow-hidden transition-ui cursor-pointer ${
               active
-                ? 'border-forest ring-2 ring-forest/15 shadow-md'
-                : 'border-gray-150 hover:border-gray-250 hover:shadow-soft'
+                ? 'border-wine-700 ring-2 ring-wine-700/15 shadow-md'
+                : 'border-n-200 hover:border-n-300 hover:shadow-soft'
             }`}
           >
             <div className="relative">
               <Thumb meta={meta} />
               {active && (
-                <span className="absolute top-2 right-2 h-6 w-6 rounded-full bg-forest text-white grid place-items-center shadow-md">
+                <span className="absolute top-2 right-2 h-6 w-6 rounded-full bg-wine-700 text-white grid place-items-center shadow-md">
                   <Check className="h-3.5 w-3.5" />
                 </span>
               )}
@@ -137,12 +137,12 @@ export function TemplatePicker({ selected, onSelect }: {
             <div className="p-3.5">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-heading">{meta.name}</h4>
-                <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-gray-450 bg-sand border border-gray-150 px-2 py-0.5 rounded-full">
+                <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-n-600 bg-n-100 border border-n-200 px-2 py-0.5 rounded-full">
                   {meta.category}
                 </span>
               </div>
-              <p className="text-[11px] text-gray-450 mt-1.5 leading-relaxed">{meta.description}</p>
-              <p className="text-[10px] text-gray-400 mt-2">
+              <p className="text-[11px] text-n-600 mt-1.5 leading-relaxed">{meta.description}</p>
+              <p className="text-[10px] text-n-400 mt-2">
                 <span className="font-bold">Ideal para:</span> {meta.bestFor}
               </p>
             </div>

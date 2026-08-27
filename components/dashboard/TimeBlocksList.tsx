@@ -102,14 +102,14 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
   return (
     <div className="space-y-6 select-none">
       {/* Topo com botão */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-[#efe9e6] shadow-xs">
-        <div className="flex items-center gap-2 text-forest">
+      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-n-200 shadow-xs">
+        <div className="flex items-center gap-2 text-wine-700">
           <Lock className="h-5 w-5" />
-          <span className="text-xs font-bold">{initialBlocks.length} bloqueios ativos</span>
+          <span className="text-caption font-bold">{initialBlocks.length} bloqueios ativos</span>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-1 px-4 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-4 py-2.5 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           <span>Bloquear Horário</span>
@@ -124,27 +124,27 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
           initialBlocks.map((block) => {
             const dateObj = new Date(`${block.date}T12:00:00`);
             return (
-              <div key={block.id} className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs p-4 flex items-start justify-between gap-3">
+              <div key={block.id} className="bg-white border border-n-200 rounded-3xl shadow-xs p-4 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-bold text-gray-800">{dateObj.toLocaleDateString('pt-BR')}</p>
+                  <p className="font-bold text-n-800">{dateObj.toLocaleDateString('pt-BR')}</p>
                   <div className="mt-1.5">
                     {block.block_type === 'full_day' ? (
-                      <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-100/50 rounded-md px-2 py-0.5">Dia Inteiro</span>
+                      <span className="text-caption font-bold text-danger bg-danger-bg border border-danger-border/50 rounded-md px-2 py-0.5">Dia Inteiro</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700">
-                        <Clock className="h-3.5 w-3.5 text-gray-450" />
+                      <span className="inline-flex items-center gap-1 text-caption font-semibold text-n-700">
+                        <Clock className="h-3.5 w-3.5 text-n-600" />
                         {block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1.5">
-                    {block.reason || <span className="italic text-gray-400">Bloqueio manual de agenda</span>}
+                  <p className="text-caption text-n-500 mt-1.5">
+                    {block.reason || <span className="italic text-n-400">Bloqueio manual de agenda</span>}
                   </p>
                 </div>
                 <button
                   onClick={() => { setBlockToDelete(block.id); setIsDeleteOpen(true); }}
                   title="Remover bloqueio"
-                  className="tap p-2.5 hover:bg-red-50 text-red-600 rounded-xl transition-colors border border-red-100/50 shrink-0"
+                  className="tap p-2.5 hover:bg-danger-bg text-danger rounded-xl transition-colors border border-danger-border/50 shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -152,17 +152,17 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
             );
           })
         ) : (
-          <div className="bg-white border border-[#efe9e6] rounded-3xl shadow-xs py-12 text-center text-xs text-gray-450">
+          <div className="bg-white border border-n-200 rounded-3xl shadow-xs py-12 text-center text-caption text-n-600">
             Você não tem nenhum bloqueio de horário ativo na sua agenda.
           </div>
         )}
       </div>
 
       {/* Lista de Bloqueios (desktop) */}
-      <div className="hidden lg:block bg-white border border-[#efe9e6] rounded-3xl shadow-xs overflow-hidden">
+      <div className="hidden lg:block bg-white border border-n-200 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#efe9e6] text-left">
-            <thead className="bg-[#f4f1ec]/40 text-xs font-bold text-gray-400 uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-n-200 text-left">
+            <thead className="bg-n-50/40 text-caption font-bold text-n-400 uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Data do Bloqueio</th>
                 <th className="px-6 py-4">Duração / Período</th>
@@ -170,34 +170,34 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#efe9e6] text-sm text-gray-700">
+            <tbody className="divide-y divide-n-200 text-label text-n-700">
               {initialBlocks.length > 0 ? (
                 initialBlocks.map((block) => {
                   const dateObj = new Date(`${block.date}T12:00:00`);
                   return (
-                    <tr key={block.id} className="hover:bg-gray-50/20 transition-colors">
+                    <tr key={block.id} className="hover:bg-n-50/20 transition-colors">
                       {/* Data */}
-                      <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-800">
+                      <td className="px-6 py-4 whitespace-nowrap font-bold text-n-800">
                         {dateObj.toLocaleDateString('pt-BR')}
                       </td>
 
                       {/* Horário */}
-                      <td className="px-6 py-4 whitespace-nowrap text-xs">
+                      <td className="px-6 py-4 whitespace-nowrap text-caption">
                         {block.block_type === 'full_day' ? (
-                          <span className="font-bold text-red-600 bg-red-50 border border-red-100/50 rounded-md px-2 py-0.5">
+                          <span className="font-bold text-danger bg-danger-bg border border-danger-border/50 rounded-md px-2 py-0.5">
                             Dia Inteiro
                           </span>
                         ) : (
-                          <div className="flex items-center gap-1 font-semibold text-gray-700">
-                            <Clock className="h-3.5 w-3.5 text-gray-450" />
+                          <div className="flex items-center gap-1 font-semibold text-n-700">
+                            <Clock className="h-3.5 w-3.5 text-n-600" />
                             <span>{block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}</span>
                           </div>
                         )}
                       </td>
 
                       {/* Motivo */}
-                      <td className="px-6 py-4 max-w-xs truncate text-xs text-gray-500" title={block.reason || 'Sem descrição'}>
-                        {block.reason || <span className="italic text-gray-400">Bloqueio manual de agenda</span>}
+                      <td className="px-6 py-4 max-w-xs truncate text-caption text-n-500" title={block.reason || 'Sem descrição'}>
+                        {block.reason || <span className="italic text-n-400">Bloqueio manual de agenda</span>}
                       </td>
 
                       {/* Ações */}
@@ -208,7 +208,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                             setIsDeleteOpen(true);
                           }}
                           title="Remover bloqueio"
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-xl transition-colors border border-red-100/50"
+                          className="p-2 hover:bg-danger-bg text-danger rounded-xl transition-colors border border-danger-border/50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -218,7 +218,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-xs text-gray-450">
+                  <td colSpan={4} className="py-12 text-center text-caption text-n-600">
                     Você não tem nenhum bloqueio de horário ativo na sua agenda.
                   </td>
                 </tr>
@@ -231,30 +231,30 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
       {/* Modal para Adicionar Bloqueio */}
       {isOpenModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-[#1a0e12]/30 backdrop-blur-xs" onClick={() => !isSubmitting && setIsOpenModal(false)} />
+          <div className="absolute inset-0 bg-wine-950/45 backdrop-blur-xs" onClick={() => !isSubmitting && setIsOpenModal(false)} />
           
           <form 
             onSubmit={handleSave}
-            className="relative bg-white rounded-3xl p-6 shadow-xl max-w-md w-full mx-4 border border-[#efe9e6] z-10 space-y-4"
+            className="relative bg-white rounded-3xl p-6 shadow-xl max-w-md w-full mx-4 border border-n-200 z-10 space-y-4"
           >
-            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-              <h3 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-1.5">
-                <Lock className="h-4.5 w-4.5 text-forest" />
+            <div className="flex justify-between items-center border-b border-n-100 pb-3">
+              <h3 className="text-body font-semibold text-n-900 tracking-tight flex items-center gap-1.5">
+                <Lock className="h-4.5 w-4.5 text-wine-700" />
                 <span>Bloquear Horário</span>
               </h3>
               <button 
                 type="button" 
                 disabled={isSubmitting} 
                 onClick={() => setIsOpenModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-n-400 hover:text-n-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-4 text-caption">
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
                   Selecione a Data *
                 </label>
                 <input
@@ -262,22 +262,22 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
                   Tipo de Bloqueio *
                 </label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setBlockType('full_day')}
-                    className={`flex-1 py-2 px-3 text-center font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`flex-1 py-2 px-3 text-center font-bold rounded-xl transition-ui cursor-pointer ${
                       blockType === 'full_day'
-                        ? 'bg-forest text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-600 border border-gray-200'
+                        ? 'bg-wine-700 text-white shadow-sm'
+                        : 'bg-n-50 text-n-600 border border-n-200'
                     }`}
                   >
                     Dia Inteiro
@@ -285,10 +285,10 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   <button
                     type="button"
                     onClick={() => setBlockType('custom_time')}
-                    className={`flex-1 py-2 px-3 text-center font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`flex-1 py-2 px-3 text-center font-bold rounded-xl transition-ui cursor-pointer ${
                       blockType === 'custom_time'
-                        ? 'bg-forest text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-600 border border-gray-200'
+                        ? 'bg-wine-700 text-white shadow-sm'
+                        : 'bg-n-50 text-n-600 border border-n-200'
                     }`}
                   >
                     Horário Específico
@@ -299,7 +299,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
               {blockType === 'custom_time' && (
                 <div className="grid grid-cols-2 gap-3 animate-slide-down">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
                       Horário Inicial *
                     </label>
                     <input
@@ -307,12 +307,12 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                       required={blockType === 'custom_time'}
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 text-center font-bold"
+                      className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption text-center font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
                       Horário Final *
                     </label>
                     <input
@@ -320,14 +320,14 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                       required={blockType === 'custom_time'}
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 text-center font-bold"
+                      className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption text-center font-bold"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
                   Motivo do Bloqueio (Opcional)
                 </label>
                 <textarea
@@ -335,24 +335,24 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   placeholder="Ex: Folga, compromisso médico, feriado, etc..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption placeholder-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
+            <div className="pt-4 flex justify-end gap-2 border-t border-n-100">
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setIsOpenModal(false)}
-                className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 focus:outline-none"
+                className="px-4 py-2 border border-n-200 rounded-xl text-caption font-semibold text-n-600 hover:bg-n-50 "
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                className="px-4 py-2 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1"
               >
                 <Save className="h-4 w-4" />
                 <span>{isSubmitting ? 'Salvando...' : 'Confirmar Bloqueio'}</span>

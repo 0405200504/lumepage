@@ -58,63 +58,54 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ success, error, info }}>
       {children}
 
-      {/* Toast Container */}
-      <div className="fixed bottom-6 right-6 z-55 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto relative flex items-start gap-3 w-full bg-white/95 backdrop-blur-xl border border-[#efe9e6] rounded-2xl p-4 pl-5 shadow-lg animate-slide-in transition-all overflow-hidden`}
-            style={{
-              animation: 'toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-            }}
-          >
-            {/* Barra de acento por tipo */}
-            <span className={`absolute left-0 top-0 bottom-0 w-1 ${
-              toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            }`} />
-            {/* Ícones */}
-            {toast.type === 'success' && <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />}
-
-            {/* Conteúdo */}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-gray-800 leading-tight">{toast.title}</p>
-              <p className="text-[11px] text-gray-500 mt-1 leading-normal">{toast.message}</p>
-              {toast.actionLabel && toast.onAction && (
-                <button
-                  onClick={() => { toast.onAction?.(); removeToast(toast.id); }}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#500b18] text-white text-[11px] font-bold hover:bg-[#3d0812] transition-colors"
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                  {toast.actionLabel}
-                </button>
-              )}
-            </div>
-
-            {/* Fechar */}
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="text-gray-450 hover:text-gray-600 p-0.5 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
+      {/* Toast: no desktop entra pelo topo à direita; no celular pelo rodapé,
+          acima da tab bar, onde o polegar alcança o botão de desfazer. */}
+      <div
+        className="fixed z-55 flex flex-col gap-3 pointer-events-none no-print
+          left-4 right-4 bottom-[calc(76px+env(safe-area-inset-bottom))]
+          sm:left-auto sm:right-6 sm:top-6 sm:bottom-auto sm:w-[380px]"
+      >
+        {toasts.map((toast) => {
+          // Classe ESTÁTICA por tipo: `text-${tone}` não existe para o
+          // Tailwind, que varre o código como texto e nunca veria a string.
+          const iconColor =
+            toast.type === 'success' ? 'text-success' : toast.type === 'error' ? 'text-danger' : 'text-info';
+          const Icon =
+            toast.type === 'success' ? CheckCircle2 : toast.type === 'error' ? AlertTriangle : Info;
+          return (
+            <div
+              key={toast.id}
+              role={toast.type === 'error' ? 'alert' : 'status'}
+              className="toast-in pointer-events-auto card p-4 flex items-start gap-3"
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
+              <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${iconColor}`} aria-hidden />
+
+              <div className="flex-1 min-w-0">
+                <p className="text-label font-semibold text-heading leading-snug">{toast.title}</p>
+                <p className="text-caption text-n-500 mt-0.5">{toast.message}</p>
+                {toast.actionLabel && toast.onAction && (
+                  <button
+                    onClick={() => { toast.onAction?.(); removeToast(toast.id); }}
+                    className="tap mt-2.5 inline-flex items-center gap-1.5 h-9 px-3 rounded-chip bg-wine-700 text-white text-caption font-semibold transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  >
+                    <Undo2 className="h-4 w-4" aria-hidden />
+                    {toast.actionLabel}
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => removeToast(toast.id)}
+                aria-label="Fechar aviso"
+                className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      <style jsx global>{`
-        @keyframes toast-in {
-          from {
-            transform: translateY(1rem) scale(0.95);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </ToastContext.Provider>
   );
 };

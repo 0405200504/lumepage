@@ -2,17 +2,39 @@ import React from 'react';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   as?: 'div' | 'section' | 'article';
-  /** padding interno (default p-5) */
+  /** Padding interno. 20px no mobile, 24px no desktop (escala base 4). */
   pad?: string;
+  /** Cartão clicável: sobe 2px e escurece a borda — só onde existe mouse. */
   interactive?: boolean;
+  /** Superfície vinho com grão. UM por tela, no máximo. */
+  hero?: boolean;
 }
 
-/** Cartão sóbrio: borda 1px sutil + sombra leve + raio moderado (via .card no globals). */
-export const Card: React.FC<CardProps> = ({ as = 'div', pad = 'p-5', interactive, className = '', children, ...rest }) => {
+/**
+ * Cartão padrão: raio `surface` (16px), borda n-200 e sombra sm.
+ * Repouso é borda leve + sombra leve; nunca as duas fortes juntas.
+ *
+ * Regra de aninhamento: com padding 20/24 e raio externo 16, o filho
+ * interno usa `rounded-chip` (8px) — nunca repete o 16 do pai.
+ */
+export const Card: React.FC<CardProps> = ({
+  as = 'div',
+  pad = 'p-5 sm:p-6',
+  interactive,
+  hero,
+  className = '',
+  children,
+  ...rest
+}) => {
   const Tag = as as React.ElementType;
   return (
     <Tag
-      className={`card ${pad} ${interactive ? 'transition-all-custom hover:shadow-lg hover:-translate-y-0.5 hover:border-[color:var(--color-accent-soft-border)] cursor-pointer' : ''} ${className}`}
+      className={[
+        hero ? 'surface-wine text-white rounded-hero overflow-hidden relative' : 'card',
+        interactive ? 'card-interactive cursor-pointer' : '',
+        pad,
+        className,
+      ].join(' ')}
       {...rest}
     >
       {children}

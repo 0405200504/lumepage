@@ -32,11 +32,11 @@ export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null
 
         <div className="mx-auto mt-6 max-w-2xl text-center">
           <SectionLabel>Seu teste grátis acabou</SectionLabel>
-          <h1 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+          <h1 className="mt-4 font-sora text-h1 font-semibold leading-tight text-grafite sm:text-display">
             Assine e continue de onde parou.{' '}
             <span className="accent text-bordo">Sem fidelidade.</span>
           </h1>
-          <p className="mt-5 text-base leading-relaxed text-grafite/70 sm:text-lg">
+          <p className="mt-5 text-body leading-relaxed text-grafite/70 sm:text-h3">
             Sua agenda, suas clientes e seu histórico continuam aqui, do jeito
             que você deixou. Escolha o plano e o acesso volta na hora.
           </p>
@@ -46,7 +46,7 @@ export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null
 
         {/* reforço + contato */}
         <div className="mx-auto mt-10 max-w-3xl rounded-[2rem] border border-bordo/15 bg-lp-cream px-7 py-9 text-center sm:px-12">
-          <p className="text-base leading-relaxed text-grafite/75 sm:text-lg">
+          <p className="text-body leading-relaxed text-grafite/75 sm:text-h3">
             <strong className="font-semibold text-grafite">
               Assinar não te prende.
             </strong>{' '}
@@ -57,7 +57,7 @@ export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 border-t border-rose/50 pt-7 sm:flex-row">
             <Sparkle size={16} className="shrink-0 text-bordo" />
-            <p className="font-sora text-lg font-medium leading-snug text-grafite sm:text-xl">
+            <p className="font-sora text-h3 font-medium leading-snug text-grafite sm:text-h2">
               Ficou em dúvida sobre qual plano?{' '}
               <a
                 href={WHATSAPP_LINK}

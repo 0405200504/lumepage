@@ -19,16 +19,16 @@ export default async function DuplicateClientsPage() {
       title="Clientes duplicadas"
       subtitle="Mesmo telefone, cadastros diferentes. Escolha qual fica e funda o resto — o histórico vai junto."
       actions={
-        <Link href="/admin/clients" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2">
+        <Link href="/admin/clients" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2">
           <ArrowLeft className="h-3.5 w-3.5" /> Voltar
         </Link>
       }
     >
       {groups.length === 0 ? (
         <div className="card py-16 flex flex-col items-center text-center">
-          <CheckCircle2 className="h-8 w-8 text-[color:var(--color-ok)] mb-3" aria-hidden />
-          <h2 className="text-sm font-bold text-ink">Nenhuma duplicata encontrada</h2>
-          <p className="mt-1 text-xs text-muted max-w-sm">
+          <CheckCircle2 className="h-8 w-8 text-success mb-3" aria-hidden />
+          <h2 className="text-label font-bold text-ink">Nenhuma duplicata encontrada</h2>
+          <p className="mt-1 text-caption text-muted max-w-sm">
             A comparação usa o telefone padronizado (55+DDD+número). Se ainda houver cadastros
             com formatos diferentes, rode “Padronizar telefones” na lista de clientes.
           </p>

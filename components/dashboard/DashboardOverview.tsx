@@ -1,14 +1,19 @@
 'use client';
 
-import React from 'react';
-import { Appointment, Service } from '@/types/database';
-import {
-  Calendar, Clock, DollarSign, Users, Sparkles, AlertCircle, ArrowRight,
-  CalendarRange, Wallet, Contact, Share2,
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Appointment, Service } from '@/types/database';
+import { ArrowRight, ArrowUpRight, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { statusMeta } from '@/lib/appointments/status';
-import { serviceRevenueCents, indexServices } from '@/lib/finance';
+import { appointmentRevenueCents, indexServices } from '@/lib/finance';
+import { toISO, compare } from '@/lib/analytics';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { StatusPill } from '@/components/ui/StatusPill';
+import { PillGroup } from '@/components/ui/PillGroup';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { CountUp } from '@/components/ui/CountUp';
+import { AreaChart, type AreaPoint } from '@/components/ui/charts/AreaChart';
 
 interface DashboardOverviewProps {
   professionalName: string;
@@ -18,186 +23,396 @@ interface DashboardOverviewProps {
   services: Service[];
 }
 
+type Period = 'hoje' | 'semana' | 'mes' | 'ano';
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: 'hoje', label: 'Hoje' },
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes', label: 'Mês' },
+  { key: 'ano', label: 'Ano' },
+];
+
+const PERIOD_NOUN: Record<Period, string> = {
+  hoje: 'hoje',
+  semana: 'nos últimos 7 dias',
+  mes: 'neste mês',
+  ano: 'neste ano',
+};
+
+const COMPARISON_NOUN: Record<Period, string> = {
+  hoje: 'que ontem',
+  semana: 'que os 7 dias anteriores',
+  mes: 'que o mês passado',
+  ano: 'que o ano passado',
+};
+
+const brl = (cents: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+
+const shiftDays = (d: Date, n: number) => {
+  const c = new Date(d);
+  c.setDate(c.getDate() + n);
+  return c;
+};
+
+const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   professionalName,
   slug,
   appointments,
   services,
 }) => {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const activeApps = appointments.filter(a => a.status !== 'cancelled');
-  const todayApps = activeApps.filter(a => a.date === todayStr);
-  const sortedTodayApps = [...todayApps].sort((a, b) => a.start_time.localeCompare(b.start_time));
-  const pendingApps = activeApps.filter(a => a.status === 'pending');
-  const uniqueClients = new Set(activeApps.map(a => a.client_whatsapp)).size;
-  // Faturamento do mês — MESMA regra da aba Contas (lib/finance).
-  // Passa o índice de serviços p/ resolver multi-serviço igual à aba Contas (números batem).
-  const monthlyRevenueCents = serviceRevenueCents(appointments, today.getFullYear(), today.getMonth(), indexServices(services));
+  const [period, setPeriod] = useState<Period>('mes');
 
-  const formatPrice = (cents: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
-
+  const today = useMemo(() => new Date(), []);
+  const todayIso = toISO(today);
+  const byId = useMemo(() => indexServices(services), [services]);
   const firstName = professionalName?.split(' ')[0] || professionalName;
   const bookingHref = slug ? `/agendar/${slug}` : '#';
 
-  // Ações rápidas (mesmos destinos que já existem no menu) — cara de app.
-  const quickActions = [
-    { label: 'Agenda', icon: CalendarRange, href: '/dashboard/agenda', external: false },
-    { label: 'Contatos', icon: Contact, href: '/dashboard/clients', external: false },
-    { label: 'Contas', icon: Wallet, href: '/dashboard/finance', external: false },
-    { label: 'Divulgar', icon: Share2, href: bookingHref, external: true },
-  ];
+  /* Faturamento segue a MESMA regra da aba Contas: confirmados + concluídos.
+     Se as duas telas divergirem, a profissional para de confiar nas duas. */
+  const billable = useMemo(
+    () => appointments.filter((a) => a.status === 'confirmed' || a.status === 'completed'),
+    [appointments],
+  );
 
-  // KPIs com acento de cor suave por métrica (leve, sem poluir).
-  const kpis = [
-    { label: 'Faturamento do mês', value: formatPrice(monthlyRevenueCents), hint: 'Confirmados + concluídos', icon: DollarSign, tint: 'wine', link: undefined as string | undefined },
-    { label: 'Atendimentos hoje', value: todayApps.length, hint: 'Reservados para hoje', icon: Calendar, tint: 'indigo', link: undefined as string | undefined },
-    { label: 'Pendentes', value: pendingApps.length, hint: pendingApps.length > 0 ? 'Há pendências' : 'Tudo em dia!', icon: Clock, tint: 'amber', link: pendingApps.length > 0 ? '/dashboard/appointments?status=pending' : undefined },
-    { label: 'Total de clientes', value: uniqueClients, hint: 'Na sua carteira', icon: Users, tint: 'emerald', link: undefined as string | undefined },
-  ];
+  const revenueBetween = React.useCallback(
+    (startIso: string, endIso: string) =>
+      billable
+        .filter((a) => a.date >= startIso && a.date <= endIso)
+        .reduce((sum, a) => sum + appointmentRevenueCents(a, byId), 0),
+    [billable, byId],
+  );
 
-  const tintClasses: Record<string, string> = {
-    wine: 'bg-wine-700/10 text-wine-700',
-    indigo: 'bg-indigo-500/10 text-indigo-600',
-    amber: 'bg-amber-500/10 text-amber-600',
-    emerald: 'bg-emerald-500/10 text-emerald-600',
-  };
+  /* ---- Período selecionado, período anterior equivalente e a série ---- */
+  const { revenue, previous, series } = useMemo(() => {
+    if (period === 'hoje') {
+      const ontem = toISO(shiftDays(today, -1));
+      // Por hora: mostra quanto já entrou ao longo do dia, acumulado.
+      const doDia = billable.filter((a) => a.date === todayIso);
+      let acc = 0;
+      const pontos: AreaPoint[] = [];
+      for (let h = 7; h <= 21; h++) {
+        acc += doDia
+          .filter((a) => Number(a.start_time.slice(0, 2)) === h)
+          .reduce((s, a) => s + appointmentRevenueCents(a, byId), 0);
+        pontos.push({ label: `${String(h).padStart(2, '0')}:00`, value: acc });
+      }
+      return { revenue: revenueBetween(todayIso, todayIso), previous: revenueBetween(ontem, ontem), series: pontos };
+    }
+
+    if (period === 'semana') {
+      const inicio = shiftDays(today, -6);
+      const pontos: AreaPoint[] = [];
+      let acc = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = shiftDays(inicio, i);
+        const iso = toISO(d);
+        acc += revenueBetween(iso, iso);
+        pontos.push({ label: `${WEEKDAYS[d.getDay()].slice(0, 3)}, ${d.getDate()}`, value: acc });
+      }
+      return {
+        revenue: revenueBetween(toISO(inicio), todayIso),
+        previous: revenueBetween(toISO(shiftDays(today, -13)), toISO(shiftDays(today, -7))),
+        series: pontos,
+      };
+    }
+
+    if (period === 'mes') {
+      const inicio = new Date(today.getFullYear(), today.getMonth(), 1);
+      const pontos: AreaPoint[] = [];
+      let acc = 0;
+      for (let dia = 1; dia <= today.getDate(); dia++) {
+        const iso = toISO(new Date(today.getFullYear(), today.getMonth(), dia));
+        acc += revenueBetween(iso, iso);
+        pontos.push({ label: `${dia} de ${MONTHS_SHORT[today.getMonth()]}`, value: acc });
+      }
+      // Mês anterior ATÉ O MESMO DIA — comparar mês inteiro com mês pela metade
+      // faria o painel anunciar queda todo dia 2.
+      const prevInicio = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const prevFim = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+      return {
+        revenue: revenueBetween(toISO(inicio), todayIso),
+        previous: revenueBetween(toISO(prevInicio), toISO(prevFim)),
+        series: pontos,
+      };
+    }
+
+    // ano
+    const pontos: AreaPoint[] = [];
+    let acc = 0;
+    for (let m = 0; m <= today.getMonth(); m++) {
+      const ini = toISO(new Date(today.getFullYear(), m, 1));
+      const fim = toISO(new Date(today.getFullYear(), m + 1, 0));
+      acc += revenueBetween(ini, fim);
+      pontos.push({ label: `${MONTHS_SHORT[m]} de ${today.getFullYear()}`, value: acc });
+    }
+    return {
+      revenue: revenueBetween(toISO(new Date(today.getFullYear(), 0, 1)), todayIso),
+      previous: revenueBetween(
+        toISO(new Date(today.getFullYear() - 1, 0, 1)),
+        toISO(new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())),
+      ),
+      series: pontos,
+    };
+  }, [period, today, todayIso, billable, byId, revenueBetween]);
+
+  const delta = compare(revenue, previous);
+
+  /* ---- Métricas dos cards. Nenhuma repete o número do hero. ---- */
+  const ativos = useMemo(() => appointments.filter((a) => a.status !== 'cancelled'), [appointments]);
+  const deHoje = useMemo(
+    () => ativos.filter((a) => a.date === todayIso).sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    [ativos, todayIso],
+  );
+  const pendentes = useMemo(() => ativos.filter((a) => a.status === 'pending'), [ativos]);
+  const clientes = useMemo(() => new Set(ativos.map((a) => a.client_whatsapp)).size, [ativos]);
+  const ticketMedio = useMemo(() => {
+    const mes = billable.filter((a) => a.date.startsWith(todayIso.slice(0, 7)));
+    if (!mes.length) return 0;
+    return mes.reduce((s, a) => s + appointmentRevenueCents(a, byId), 0) / mes.length;
+  }, [billable, byId, todayIso]);
+
+  /* ---- Próximos 7 dias (a partir de amanhã) ---- */
+  const proximos = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => {
+        const d = shiftDays(today, i + 1);
+        const iso = toISO(d);
+        const dia = ativos.filter((a) => a.date === iso);
+        return {
+          iso,
+          weekday: WEEKDAYS[d.getDay()],
+          diaMes: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
+          count: dia.length,
+          cents: dia
+            .filter((a) => a.status === 'confirmed' || a.status === 'completed')
+            .reduce((s, a) => s + appointmentRevenueCents(a, byId), 0),
+        };
+      }),
+    [today, ativos, byId],
+  );
+
+  const TrendIcon = delta.direction === 'up' ? TrendingUp : delta.direction === 'down' ? TrendingDown : Minus;
 
   return (
-    <div className="space-y-6 sm:space-y-8 select-none animate-fade-up">
-      {/* Hero — número-chave grande + ações rápidas circulares (cara de app) */}
-      <div data-tour="home-hero" className="surface-wine text-white rounded-[1.75rem] sm:rounded-4xl p-6 sm:p-8 relative overflow-hidden ring-hairline">
-        <div className="absolute right-0 -top-6 h-48 w-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-4 lg:space-y-6">
+      {/* Saudação + filtro de período. O filtro comanda o hero e só ele. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-label text-n-600">
+          Bem-vinda de volta, <span className="text-heading font-semibold">{firstName}</span>.
+        </p>
+        <PillGroup items={PERIODS} value={period} onChange={setPeriod} ariaLabel="Período" />
+      </div>
 
-        <div className="relative z-10 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <span className="text-[10px] font-black uppercase text-white/60 tracking-[0.18em] flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3" /> Faturamento do mês
-            </span>
-            <p className="text-[2rem] sm:text-4xl font-black tracking-tight mt-2 leading-none tabular-nums">{formatPrice(monthlyRevenueCents)}</p>
-            <p className="text-xs text-white/60 mt-2">Bem-vinda de volta, {firstName}</p>
-          </div>
-        </div>
+      {/* ===================== BENTO =====================
+          Colunas de tamanhos diferentes de propósito: uma grade de cartões
+          todos iguais é justamente o que fazia a tela antiga parecer um
+          template. 7/5 em cima, 3+3+3+3 no meio, 7/5 embaixo. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+        {/* --- HERO: o faturamento. Aparece UMA vez na tela, aqui. --- */}
+        <Card hero pad="p-6 sm:p-8" className="lg:col-span-7 flex flex-col">
+          <span className="overline text-white/60">Faturamento {PERIOD_NOUN[period]}</span>
+          <p className="num text-display font-bold mt-2">
+            <CountUp value={revenue} format={brl} />
+          </p>
 
-        {/* Ações rápidas */}
-        <div className="relative z-10 mt-6 grid grid-cols-4 gap-2">
-          {quickActions.map(({ label, icon: Icon, href, external }) => (
-            <Link
-              key={label}
-              href={href}
-              target={external ? '_blank' : undefined}
-              className="tap flex flex-col items-center gap-2 group"
+          <div className="flex items-center gap-2 mt-3">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-semibold ${
+                delta.direction === 'down' ? 'bg-white/12 text-white/80' : 'bg-white/15 text-white'
+              }`}
             >
-              <span className="h-12 w-12 sm:h-13 sm:w-13 rounded-2xl bg-white/12 border border-white/15 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-colors">
-                <Icon className="h-5 w-5" />
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-white/85 text-center leading-tight">{label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+              <TrendIcon className="h-4 w-4" aria-hidden />
+              <span className="num">{delta.deltaPct > 0 ? '+' : ''}{delta.deltaPct.toFixed(0)}%</span>
+            </span>
+            <span className="text-caption text-white/60">
+              {delta.direction === 'flat' ? 'igual' : delta.direction === 'up' ? 'a mais' : 'a menos'} {COMPARISON_NOUN[period]}
+              {' · '}
+              <span className="num">{brl(previous)}</span>
+            </span>
+          </div>
 
-      {/* KPIs — cards arredondados, 2 colunas no mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon;
-          const body = (
-            <>
-              <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center justify-center h-9 w-9 rounded-xl ${tintClasses[kpi.tint]}`}>
-                  <Icon className="h-[18px] w-[18px]" />
-                </span>
-                {kpi.link && <ArrowRight className="h-4 w-4 text-gray-450" />}
-              </div>
-              <p className="text-xl sm:text-2xl font-black text-ink leading-none mt-4 tabular-nums">{kpi.value}</p>
-              <span className="text-[11px] font-bold text-gray-450 mt-1.5 block">{kpi.label}</span>
-              <span className="text-[10px] text-gray-450 font-medium flex items-center gap-1 mt-0.5">
-                {kpi.link && <AlertCircle className="h-3 w-3 text-wine-500" />}{kpi.hint}
-              </span>
-            </>
-          );
-          return kpi.link ? (
-            <Link key={kpi.label} href={kpi.link} className="card-elevated p-4 sm:p-5 rounded-3xl hover:-translate-y-0.5">{body}</Link>
-          ) : (
-            <div key={kpi.label} className="card-elevated p-4 sm:p-5 rounded-3xl">{body}</div>
-          );
-        })}
-      </div>
+          <div className="mt-auto pt-6 -mx-1">
+            <AreaChart data={series} format={brl} tone="onWine" height={110} />
+          </div>
+        </Card>
 
-      {/* Conteúdo Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Atendimentos de Hoje */}
-        <div className="card p-5 sm:p-6 rounded-3xl lg:col-span-2 space-y-5">
-          <div className="flex items-center justify-between">
+        {/* --- Atendimentos de hoje: linha do tempo, ocupa a coluna inteira --- */}
+        <Card pad="p-5 sm:p-6" className="lg:col-span-5 lg:row-span-2 flex flex-col">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-base font-black text-ink tracking-tight">Atendimentos de hoje</h3>
-              <p className="text-xs text-gray-450 mt-0.5">Sua agenda cronológica para hoje.</p>
+              <h2 className="text-h3 text-heading">Atendimentos de hoje</h2>
+              <p className="text-caption text-n-500 mt-0.5">
+                {deHoje.length > 0
+                  ? `${deHoje.length} ${deHoje.length === 1 ? 'horário reservado' : 'horários reservados'}`
+                  : 'Nada marcado ainda'}
+              </p>
             </div>
-            <Link href="/dashboard/agenda" className="text-[11px] font-bold text-wine-700 hover:underline flex items-center gap-1 shrink-0">
-              Ver agenda <ArrowRight className="h-3 w-3" />
+            <Link
+              href="/dashboard/agenda"
+              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 rounded-chip"
+            >
+              Ver agenda <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
 
-          <div className="space-y-2.5">
-            {sortedTodayApps.length > 0 ? (
-              sortedTodayApps.map((app) => {
-                const m = statusMeta(app.status);
-                return (
-                  <Link
-                    key={app.id}
-                    href="/dashboard/appointments"
-                    className="tap flex items-center gap-3 bg-surface-2/60 hover:bg-surface-2 border border-gray-150 rounded-2xl p-3 transition-colors"
-                  >
-                    <span className={`h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center bg-wine-700/8 text-wine-700 font-black text-xs tabular-nums`}>
-                      {app.start_time.substring(0, 5)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-sm text-ink truncate">{app.client_name}</p>
-                      <p className="text-xs text-gray-450 truncate">{app.service?.name}</p>
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${m.badge}`}>{m.label}</span>
-                  </Link>
-                );
-              })
+          <div className="mt-5 flex-1">
+            {deHoje.length > 0 ? (
+              <ol className="relative">
+                {/* conector vertical da linha do tempo */}
+                <span className="absolute left-[38px] top-2 bottom-2 w-px bg-n-200" aria-hidden />
+                {deHoje.map((app, i) => {
+                  const m = statusMeta(app.status);
+                  return (
+                    <li key={app.id} className="stagger-item relative" style={{ ['--i' as string]: i }}>
+                      <Link
+                        href="/dashboard/appointments"
+                        className="tap group flex items-start gap-4 py-2 rounded-chip transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                      >
+                        <span className="num shrink-0 w-[52px] pt-2.5 text-caption text-n-500 text-right">
+                          {app.start_time.slice(0, 5)}
+                        </span>
+                        <span className="relative shrink-0 mt-3 h-2.5 w-2.5 rounded-full bg-wine-700 ring-4 ring-surface" aria-hidden />
+                        <span className="min-w-0 flex-1 pb-1">
+                          <span className="flex items-center gap-2 justify-between">
+                            <span className="text-label font-semibold text-heading truncate">{app.client_name}</span>
+                            <StatusPill tone={m.tone}>{m.label}</StatusPill>
+                          </span>
+                          <span className="block text-caption text-n-500 truncate mt-0.5">
+                            {app.service?.name ?? 'Serviço não informado'}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
             ) : (
-              <div className="text-center py-10 border border-dashed border-gray-250 rounded-2xl">
-                <p className="text-xs text-gray-450">Nenhum agendamento marcado para hoje.</p>
-                <Link href={bookingHref} target="_blank" className="mt-3 inline-block text-xs font-bold text-wine-700 hover:underline">
-                  Abrir link de agendamento &rarr;
-                </Link>
-              </div>
+              <EmptyState
+                title="Hoje está livre"
+                description="Nenhum horário marcado. Divulgue seu link e deixe as clientes escolherem."
+                action={
+                  <Link
+                    href={bookingHref}
+                    target="_blank"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  >
+                    Abrir link de agendamento <ArrowUpRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                }
+              />
             )}
           </div>
+        </Card>
+
+        {/* --- KPIs: OUTRAS métricas. O faturamento não se repete aqui. --- */}
+        <div className="lg:col-span-7 grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+          <StatCard label="Atendimentos hoje" value={deHoje.length} hint="Reservados para hoje" />
+          <StatCard
+            label="Pendentes"
+            value={pendentes.length}
+            hint={pendentes.length > 0 ? 'Precisam da sua resposta' : 'Tudo em dia'}
+            accent={pendentes.length > 0}
+            href={pendentes.length > 0 ? '/dashboard/appointments?status=pending' : undefined}
+          />
+          <StatCard label="Ticket médio" value={brl(ticketMedio)} hint="Média do mês" />
+          <StatCard label="Clientes" value={clientes} hint="Na sua carteira" href="/dashboard/clients" />
         </div>
 
-        {/* Serviços */}
-        <div className="card p-5 sm:p-6 rounded-3xl space-y-5">
-          <div>
-            <h3 className="text-base font-black text-ink tracking-tight">Seus serviços</h3>
-            <p className="text-xs text-gray-450 mt-0.5">Preços e duração cadastrados.</p>
+        {/* --- Serviços: tabela de verdade, não lista de cartões --- */}
+        <Card pad="p-0" className="lg:col-span-7 overflow-hidden">
+          <div className="flex items-start justify-between gap-3 p-5 sm:p-6 pb-4">
+            <div>
+              <h2 className="text-h3 text-heading">Seus serviços</h2>
+              <p className="text-caption text-n-500 mt-0.5">Preços e durações do seu catálogo.</p>
+            </div>
+            <Link
+              href="/dashboard/services"
+              className="shrink-0 inline-flex items-center gap-1 text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 rounded-chip"
+            >
+              Gerenciar <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
           </div>
 
-          <div className="divide-y divide-gray-150 max-h-[300px] overflow-y-auto scroll-touch -mx-1 px-1">
-            {services.length > 0 ? services.map((service) => (
-              <div key={service.id} className="py-3 flex justify-between items-center gap-3 text-xs">
-                <div className="min-w-0">
-                  <p className="font-bold text-ink truncate">{service.name}</p>
-                  <p className="text-[10px] text-gray-450 mt-0.5">{service.duration_minutes} minutos</p>
-                </div>
-                <span className="font-black text-ink shrink-0 tabular-nums">{formatPrice(service.price_cents)}</span>
-              </div>
-            )) : (
-              <p className="text-xs text-gray-450 py-6 text-center">Nenhum serviço cadastrado ainda.</p>
-            )}
-          </div>
+          {services.length > 0 ? (
+            <div className="max-h-[320px] overflow-y-auto scroll-touch">
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-10 bg-surface">
+                  <tr className="border-y border-line">
+                    <th scope="col" className="px-5 sm:px-6 py-2.5 overline text-n-500 font-semibold">Serviço</th>
+                    <th scope="col" className="px-3 py-2.5 overline text-n-500 font-semibold text-right">Duração</th>
+                    <th scope="col" className="px-5 sm:px-6 py-2.5 overline text-n-500 font-semibold text-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {services.map((s, i) => (
+                    <tr
+                      key={s.id}
+                      className={`group h-[52px] transition-ui hover:bg-wine-50/60 ${i % 2 === 1 ? 'bg-n-25' : ''}`}
+                    >
+                      <td className="px-5 sm:px-6 text-label text-heading">{s.name}</td>
+                      <td className="num px-3 text-caption text-n-500 text-right whitespace-nowrap">{s.duration_minutes} min</td>
+                      <td className="num px-5 sm:px-6 text-label font-semibold text-heading text-right whitespace-nowrap">
+                        {brl(s.price_cents)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="border-t border-line">
+              <EmptyState
+                title="Nenhum serviço cadastrado"
+                description="Cadastre o que você faz, com preço e duração, para as clientes conseguirem agendar."
+                action={
+                  <Link
+                    href="/dashboard/services"
+                    className="tap inline-flex items-center gap-1.5 h-11 px-4 rounded-control bg-wine-700 text-white text-label font-semibold shadow-wine transition-ui hover:bg-wine-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  >
+                    Cadastrar serviço
+                  </Link>
+                }
+              />
+            </div>
+          )}
+        </Card>
 
-          <Link href="/dashboard/services" className="block text-center w-full py-2.5 bg-cream hover:bg-sand text-xs font-bold text-wine-700 rounded-xl border border-gray-150 transition-colors">
-            Gerenciar serviços
-          </Link>
-        </div>
+        {/* --- Próximos 7 dias --- */}
+        <Card pad="p-5 sm:p-6" className="lg:col-span-5">
+          <h2 className="text-h3 text-heading">Próximos 7 dias</h2>
+          <p className="text-caption text-n-500 mt-0.5">O que já está reservado a partir de amanhã.</p>
+
+          <ul className="mt-4 divide-y divide-line">
+            {proximos.map((d, i) => (
+              <li key={d.iso} className="stagger-item flex items-center gap-3 h-[52px]" style={{ ['--i' as string]: i }}>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-label text-heading truncate">{d.weekday}</span>
+                  <span className="num block text-caption text-n-500">{d.diaMes}</span>
+                </span>
+                {d.count > 0 ? (
+                  <>
+                    <span className="num text-caption text-n-500 whitespace-nowrap">
+                      {d.count} {d.count === 1 ? 'horário' : 'horários'}
+                    </span>
+                    <span className="num text-label font-semibold text-heading whitespace-nowrap w-24 text-right">
+                      {brl(d.cents)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-caption text-n-400 whitespace-nowrap">livre</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
     </div>
   );
 };
+
 export default DashboardOverview;

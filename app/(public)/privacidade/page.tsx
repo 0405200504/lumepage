@@ -11,17 +11,17 @@ const LAST_UPDATE = '22 de junho de 2026';
 
 export default function PrivacidadePage() {
   return (
-    <div className="min-h-screen bg-cream py-10 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-[#efe9e6] shadow-sm p-7 sm:p-10">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-forest hover:opacity-80 transition-opacity">
+    <div className="min-h-screen bg-n-25 py-10 px-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-n-200 shadow-sm p-7 sm:p-10">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-wine-700 hover:opacity-80 transition-opacity">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Link>
 
-        <h1 className="mt-5 text-2xl font-black text-gray-900 tracking-tight">Política de Privacidade</h1>
-        <p className="mt-1 text-xs text-gray-450">Última atualização: {LAST_UPDATE}</p>
+        <h1 className="mt-5 text-2xl font-black text-n-900 tracking-tight">Política de Privacidade</h1>
+        <p className="mt-1 text-xs text-n-600">Última atualização: {LAST_UPDATE}</p>
 
-        <div className="mt-7 space-y-6 text-sm text-gray-600 leading-relaxed [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:tracking-tight [&_h2]:mt-7 [&_h2]:mb-2 [&_strong]:text-gray-800 [&_li]:ml-1">
+        <div className="mt-7 space-y-6 text-sm text-n-600 leading-relaxed [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-n-900 [&_h2]:tracking-tight [&_h2]:mt-7 [&_h2]:mb-2 [&_strong]:text-n-800 [&_li]:ml-1">
           <p>
             Esta Política explica como a <strong>Lume Agenda</strong> trata dados pessoais, em conformidade com a
             Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD). Ao usar a plataforma, você concorda com as
@@ -144,7 +144,7 @@ export default function PrivacidadePage() {
             <p>
               Para dúvidas ou solicitações sobre privacidade, escreva para <strong>contato@lumepremium.com</strong>.
             </p>
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs text-n-400">
               Operado por [RAZÃO SOCIAL / NOME], CNPJ/CPF [CNPJ ou CPF], [CIDADE/UF].
               {' '}Encarregado pelo tratamento de dados (DPO): [NOME / E-MAIL].
               {' '}(Preencha com os dados reais antes de cobrar de clientes.)

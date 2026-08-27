@@ -74,15 +74,15 @@ export default async function AdminSystemPage() {
 
         {storage && (
           <section className="card p-4">
-            <h2 className="text-sm font-bold text-ink mb-3">Uso do banco por tabela</h2>
+            <h2 className="text-label font-bold text-ink mb-3">Uso do banco por tabela</h2>
             <div className="h-2 rounded-full bg-surface-2 overflow-hidden mb-4" aria-hidden>
-              <span className={`block h-full rounded-full ${usedPct > 80 ? 'bg-[color:var(--color-bad)]' : 'bg-accent'}`} style={{ width: `${Math.min(100, usedPct)}%` }} />
+              <span className={`block h-full rounded-full ${usedPct > 80 ? 'bg-danger' : 'bg-accent'}`} style={{ width: `${Math.min(100, usedPct)}%` }} />
             </div>
             <ul className="space-y-1.5">
               {storage.tables.slice(0, 10).map(t => (
-                <li key={t.name} className="flex items-center gap-3 text-xs">
+                <li key={t.name} className="flex items-center gap-3 text-caption">
                   <span className="text-ink font-semibold flex-1 truncate">{t.name}</span>
-                  <span className="text-muted tabular-nums">{mb(t.bytes)}</span>
+                  <span className="text-muted num">{mb(t.bytes)}</span>
                 </li>
               ))}
             </ul>
@@ -90,8 +90,8 @@ export default async function AdminSystemPage() {
         )}
 
         <section className="card p-4 space-y-3">
-          <h2 className="text-sm font-bold text-ink flex items-center gap-2"><HardDrive className="h-4 w-4 text-muted" /> Manutenção</h2>
-          <p className="text-xs text-muted">
+          <h2 className="text-label font-bold text-ink flex items-center gap-2"><HardDrive className="h-4 w-4 text-muted" /> Manutenção</h2>
+          <p className="text-caption text-muted">
             Esvaziar a lixeira apaga em definitivo os agendamentos e clientes já excluídos pelas profissionais.
             Ação irreversível, registrada na auditoria.
           </p>
@@ -99,20 +99,20 @@ export default async function AdminSystemPage() {
             <NetworkTrashButton appointments={trash.appointments} clients={trash.clients} />
             <TestDataButton />
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-caption text-muted">
             Contas de teste (“page 1”…“page 5”, “teste”, e-mails @example.com) poluem KPIs, ranking e
             gráficos. A limpeza é reversível: elas vão para a lixeira, não somem.
           </p>
         </section>
 
         <section className="card p-4">
-          <h2 className="text-sm font-bold text-ink mb-2">Integração WhatsApp (uazapi)</h2>
+          <h2 className="text-label font-bold text-ink mb-2">Integração WhatsApp (uazapi)</h2>
           {missingWebhook.length > 0 ? (
-            <p className="text-xs text-[color:var(--color-warn)]">
+            <p className="text-caption text-warning">
               {missingWebhook.length} conta(s) com bot configurado mas <strong>sem webhook_secret</strong> — o bot não recebe mensagens.
             </p>
           ) : (
-            <p className="text-xs text-muted">Todas as contas com bot têm webhook configurado.</p>
+            <p className="text-caption text-muted">Todas as contas com bot têm webhook configurado.</p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             {configured.map(s => (
@@ -120,7 +120,7 @@ export default async function AdminSystemPage() {
                 <Badge tone={s.bot_enabled ? 'ok' : 'neutral'}>{s.professional_id.slice(0, 8)}…</Badge>
               </Link>
             ))}
-            {configured.length === 0 && <span className="text-xs text-muted">Nenhuma conta com bot configurado.</span>}
+            {configured.length === 0 && <span className="text-caption text-muted">Nenhuma conta com bot configurado.</span>}
           </div>
         </section>
       </div>

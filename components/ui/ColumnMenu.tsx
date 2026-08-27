@@ -47,10 +47,10 @@ export function ColumnMenu({ columns, hidden }: {
     <div className="relative" ref={box}>
       <button
         type="button" onClick={() => setOpen(v => !v)} aria-haspopup="menu" aria-expanded={open}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2 transition-colors"
+        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors"
       >
-        <Columns3 className="h-3.5 w-3.5" aria-hidden />
-        Colunas{hiddenCount > 0 && <span className="text-muted tabular-nums">({hiddenCount} oculta{hiddenCount > 1 ? 's' : ''})</span>}
+        <Columns3 className="h-4 w-4" aria-hidden />
+        Colunas{hiddenCount > 0 && <span className="text-muted num">({hiddenCount} oculta{hiddenCount > 1 ? 's' : ''})</span>}
       </button>
 
       {open && (
@@ -61,9 +61,9 @@ export function ColumnMenu({ columns, hidden }: {
               <button
                 key={c.key} type="button" role="menuitemcheckbox" aria-checked={on}
                 disabled={c.locked} onClick={() => toggle(c.key)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left hover:bg-surface-2 transition-colors disabled:opacity-40"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-caption text-left hover:bg-surface-2 transition-colors disabled:opacity-40"
               >
-                <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${on ? 'bg-forest border-forest text-white' : 'border-line'}`}>
+                <span className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${on ? 'bg-wine-700 border-wine-700 text-white' : 'border-line'}`}>
                   {on && <Check className="h-2.5 w-2.5" aria-hidden />}
                 </span>
                 <span className={on ? 'text-ink font-semibold' : 'text-muted'}>{c.label}</span>

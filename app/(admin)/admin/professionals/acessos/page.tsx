@@ -41,7 +41,7 @@ export default async function AccessOverviewPage() {
       subtitle="Por qual caminho cada conta entra — e quais não conseguem entrar de jeito nenhum."
       actions={
         <>
-          <Link href="/admin/professionals" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-ink text-xs font-bold hover:bg-surface-2 transition-colors">
+          <Link href="/admin/professionals" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-ink text-caption font-bold hover:bg-surface-2 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Profissionais
           </Link>
           <ExportCsvButton dataset="access" label="Exportar acessos" />
@@ -50,7 +50,7 @@ export default async function AccessOverviewPage() {
     >
       <div className="space-y-4">
         {!available && (
-          <p className="card px-4 py-3 text-xs font-semibold text-[color:var(--color-warn)] flex items-start gap-2">
+          <p className="card px-4 py-3 text-caption font-semibold text-warning flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden /> {reason}
           </p>
         )}
@@ -68,17 +68,17 @@ export default async function AccessOverviewPage() {
         <section className="card overflow-hidden">
           <div className="px-4 py-3 border-b border-line flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-muted" aria-hidden />
-            <h2 className="text-sm font-bold text-ink">{rows.length} conta(s)</h2>
-            <span className="text-[11px] text-muted ml-auto">Ordenado pelo acesso mais recente.</span>
+            <h2 className="text-label font-bold text-ink">{rows.length} conta(s)</h2>
+            <span className="text-caption text-muted ml-auto">Ordenado pelo acesso mais recente.</span>
           </div>
 
           {rows.length === 0 ? (
-            <p className="px-4 py-12 text-center text-xs text-muted">Nenhuma conta para mostrar.</p>
+            <p className="px-4 py-12 text-center text-caption text-muted">Nenhuma conta para mostrar.</p>
           ) : (
             <div className="overflow-x-auto scroll-touch">
               <table className="min-w-full text-left border-collapse">
                 <caption className="sr-only">Acesso das contas: e-mail de login, método, último acesso e sessões</caption>
-                <thead className="bg-surface-2 text-[11px] font-bold text-muted uppercase tracking-[0.08em]">
+                <thead className="bg-surface-2 text-caption font-bold text-muted uppercase tracking-[0.08em]">
                   <tr>
                     <th scope="col" className="px-4 py-3 border-b border-line min-w-[12rem]">Profissional</th>
                     <th scope="col" className="px-4 py-3 border-b border-line min-w-[15rem]">E-mail de login</th>
@@ -89,19 +89,19 @@ export default async function AccessOverviewPage() {
                     <th scope="col" className="px-4 py-3 border-b border-line text-right min-w-[13rem]">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm text-ink">
+                <tbody className="text-label text-ink">
                   {rows.map((r, i) => (
                     <tr key={r.id} className={`border-b border-line/70 hover:bg-accent-soft/70 transition-colors ${i % 2 === 1 ? 'bg-surface-2/35' : ''}`}>
                       <td className="px-4 py-2.5">
                         <Link href={`/admin/professionals/${r.id}?tab=access`} className="block">
                           <span className="block font-semibold text-ink truncate">{r.brandName}</span>
-                          <span className="block text-[11px] text-muted truncate">{r.name}</span>
+                          <span className="block text-caption text-muted truncate">{r.name}</span>
                         </Link>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="block text-xs text-ink break-all">{r.loginEmail}</span>
+                        <span className="block text-caption text-ink break-all">{r.loginEmail}</span>
                         {r.loginEmail.toLowerCase() !== r.businessEmail.toLowerCase() && (
-                          <span className="block text-[10px] text-muted truncate" title={r.businessEmail}>comercial: {r.businessEmail}</span>
+                          <span className="block text-caption text-muted truncate" title={r.businessEmail}>comercial: {r.businessEmail}</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5">
@@ -109,18 +109,18 @@ export default async function AccessOverviewPage() {
                       </td>
                       <td className="px-4 py-2.5">
                         {r.lastSignInAt ? (
-                          <span className="text-xs text-muted tabular-nums" title={formatDateTimeBR(r.lastSignInAt)}>
+                          <span className="text-caption text-muted num" title={formatDateTimeBR(r.lastSignInAt)}>
                             {formatRelativeBR(r.lastSignInAt)}
                           </span>
-                        ) : <span className="text-xs text-[color:var(--color-warn)] font-semibold">nunca</span>}
+                        ) : <span className="text-caption text-warning font-semibold">nunca</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">
+                      <td className="px-4 py-2.5 text-right num">
                         {r.activeSessions < 0
                           ? <span className="text-muted">—</span>
                           : <span className={r.activeSessions > 1 ? 'font-bold text-ink' : 'text-muted'}>{r.activeSessions}</span>}
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="text-xs text-muted tabular-nums">{formatDateBR(r.passwordSetAt, '—')}</span>
+                        <span className="text-caption text-muted num">{formatDateBR(r.passwordSetAt, '—')}</span>
                         {r.mustChangePassword && <Badge tone="warn">troca pendente</Badge>}
                       </td>
                       <td className="px-4 py-2.5">
@@ -137,7 +137,7 @@ export default async function AccessOverviewPage() {
           )}
         </section>
 
-        <p className="text-[11px] text-muted max-w-2xl">
+        <p className="text-caption text-muted max-w-2xl">
           Não existe tela de “ver a senha” — e não vai existir. Para o admin conseguir exibir uma
           senha, ela teria que estar guardada de forma reversível, e aí um vazamento do banco viraria
           o vazamento de todas as contas. Aqui a senha só existe como hash dentro do provedor de
@@ -152,8 +152,8 @@ function Flag({ tone, n, text }: { tone: 'bad' | 'warn' | 'neutral'; n: number; 
   const color = tone === 'bad' ? 'var(--color-bad)' : tone === 'warn' ? 'var(--color-warn)' : 'var(--color-muted)';
   return (
     <li className="card px-4 py-3 rounded-3xl">
-      <span className="block text-2xl font-black tabular-nums leading-none" style={{ color }}>{n}</span>
-      <span className="block text-[11px] text-muted mt-1.5 leading-snug">{text}</span>
+      <span className="block text-h2 font-semibold num leading-none" style={{ color }}>{n}</span>
+      <span className="block text-caption text-muted mt-1.5 leading-snug">{text}</span>
     </li>
   );
 }

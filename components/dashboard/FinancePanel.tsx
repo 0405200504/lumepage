@@ -26,6 +26,8 @@ import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
 import { QuickAddFab } from '../ui/QuickAddFab';
+import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/EmptyState';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
 import { LineChart } from '../ui/charts/LineChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
@@ -43,7 +45,13 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 const EXPENSE_CATS = ['Produtos e materiais', 'Aluguel', 'Energia/Água/Internet', 'Marketing', 'Salários/Comissões', 'Impostos', 'Equipamentos', 'Outros'];
 const INCOME_CATS = ['Serviço avulso', 'Venda de produto', 'Pacote/Plano', 'Outros'];
 // Paleta reduzida: tons de bordô + neutros (sem arco-íris).
-const DONUT_COLORS = ['#6b1525', '#8c2438', '#bc5d70', '#db97a6', '#ecc3cc', '#9a9aa3', '#c7c7cc', '#6b6b73'];
+// Monocromática dentro da escala vinho, com dois neutros no fim para as fatias
+// de cauda longa. Nenhum arco-íris: a categoria não muda de significado por cor.
+const DONUT_COLORS = [
+  'var(--color-wine-700)', 'var(--color-wine-600)', 'var(--color-wine-500)',
+  'var(--color-wine-400)', 'var(--color-wine-300)', 'var(--color-wine-200)',
+  'var(--color-n-400)', 'var(--color-n-300)',
+];
 const RATES_KEY = 'lume-payment-rates';
 
 const pad = (n: number) => n.toString().padStart(2, '0');
@@ -305,21 +313,19 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
   ];
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-surface border border-line rounded-xl p-1 shadow-soft">
-            <button onClick={() => step(-1)} aria-label="Mês anterior" className="p-2 rounded-lg hover:bg-surface-2 text-gray-450 hover:text-forest"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={() => step(1)} aria-label="Próximo mês" className="p-2 rounded-lg hover:bg-surface-2 text-gray-450 hover:text-forest"><ChevronRight className="h-4 w-4" /></button>
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="sm" iconOnly aria-label="Mês anterior" onClick={() => step(-1)} leadingIcon={<ChevronLeft className="h-5 w-5" />} />
+            <Button variant="ghost" size="sm" iconOnly aria-label="Próximo mês" onClick={() => step(1)} leadingIcon={<ChevronRight className="h-5 w-5" />} />
           </div>
-          <h3 className="text-lg font-bold text-heading tracking-tight capitalize">{MONTHS[cursor.m]} {cursor.y}</h3>
+          <h2 className="text-h2 text-heading capitalize">{MONTHS[cursor.m]} {cursor.y}</h2>
         </div>
         <div className="flex gap-2">
           <ExportMenu onCSV={exportLedgerCSV} />
-          <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs font-bold rounded-xl shadow-soft transition-colors">
-            <Plus className="h-4 w-4" /> Lançamento
-          </button>
+          <Button size="sm" onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-4 w-4" />}>Lançamento</Button>
         </div>
       </div>
 
@@ -346,24 +352,24 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 <div className="mt-4 divide-y divide-line">
                   {dreLines.map((l) => (
                     <div key={l.label} className="flex items-center justify-between py-2.5">
-                      <span className={`text-sm ${l.strong ? 'font-bold text-ink' : 'text-gray-450 font-medium'}`}>{l.label}</span>
-                      <span className={`text-sm font-bold tabular-nums ${l.value < 0 ? 'text-[color:var(--color-bad)]' : 'text-ink'}`}>{l.value < 0 ? '−' : ''}{brl(Math.abs(l.value))}</span>
+                      <span className={`text-label ${l.strong ? 'font-semibold text-ink' : 'text-n-600 font-medium'}`}>{l.label}</span>
+                      <span className={`text-label font-semibold num ${l.value < 0 ? 'text-danger' : 'text-ink'}`}>{l.value < 0 ? '−' : ''}{brl(Math.abs(l.value))}</span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between py-3">
-                    <span className="text-sm font-bold text-heading">= Lucro líquido</span>
-                    <span className={`text-lg font-bold tabular-nums ${metrics.netProfit >= 0 ? 'text-[color:var(--color-ok)]' : 'text-[color:var(--color-bad)]'}`}>{brl(metrics.netProfit)}</span>
+                    <span className="text-label font-semibold text-heading">= Lucro líquido</span>
+                    <span className={`text-h2 font-semibold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>{brl(metrics.netProfit)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-1 pt-3 border-t border-line">
-                  <span className="text-xs font-bold text-gray-450 uppercase tracking-wider">Margem líquida</span>
-                  <span className={`text-sm font-bold ${metrics.margin >= 0 ? 'text-[color:var(--color-ok)]' : 'text-[color:var(--color-bad)]'}`}>{metrics.margin.toFixed(1)}%</span>
+                  <span className="overline text-n-500">Margem líquida</span>
+                  <span className={`text-label font-semibold ${metrics.margin >= 0 ? 'text-success' : 'text-danger'}`}>{metrics.margin.toFixed(1)}%</span>
                 </div>
                 {metrics.lostRevenue > 0 && (
-                  <p className="mt-3 text-[11px] text-gray-450">Receita perdida com cancelamentos/faltas no mês: <strong className="text-[color:var(--color-bad)]">{brl(metrics.lostRevenue)}</strong> (não entra no cálculo, é informativo).</p>
+                  <p className="mt-3 text-caption text-n-600">Receita perdida com cancelamentos/faltas no mês: <strong className="text-danger">{brl(metrics.lostRevenue)}</strong> (não entra no cálculo, é informativo).</p>
                 )}
                 {metrics.variableCosts === 0 && (
-                  <p className="mt-2 text-[11px] text-gray-450">Dica: informe o <strong>custo de insumos</strong> de cada serviço (tela Serviços) para o DRE calcular os custos variáveis.</p>
+                  <p className="mt-2 text-caption text-n-600">Dica: informe o <strong>custo de insumos</strong> de cada serviço (tela Serviços) para o DRE calcular os custos variáveis.</p>
                 )}
               </div>
 
@@ -372,22 +378,22 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 <SectionHeader title="Projeção do mês" subtitle={isCurrentMonth ? 'Estimativa até o fim do mês' : 'Disponível só no mês corrente'} icon={<TrendingUp className="h-4 w-4" />} />
                 {isCurrentMonth ? (
                   <>
-                    <p className="text-3xl font-bold text-heading mt-4 tabular-nums">{brl(projection.projected)}</p>
-                    <div className="mt-4 space-y-2 text-xs">
+                    <p className="text-h1 font-semibold text-heading mt-4 num">{brl(projection.projected)}</p>
+                    <div className="mt-4 space-y-2 text-caption">
                       <Row label="Já realizado" value={brl(projection.realized)} />
                       <Row label="Confirmados a vir" value={brl(projection.confirmedAhead)} />
                       <Row label="Estimativa (média histórica)" value={brl(projection.historicalRunRate)} muted />
                     </div>
-                    <p className="mt-3 text-[11px] text-gray-450">Soma o que já foi concluído, os agendamentos confirmados que ainda vão acontecer e uma estimativa dos dias restantes pela sua média diária dos últimos 90 dias.</p>
+                    <p className="mt-3 text-caption text-n-600">Soma o que já foi concluído, os agendamentos confirmados que ainda vão acontecer e uma estimativa dos dias restantes pela sua média diária dos últimos 90 dias.</p>
                   </>
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-center py-8">
-                    <p className="text-xs text-gray-450 max-w-[220px]">A projeção é calculada para o mês atual. Volte para {MONTHS[now.getMonth()]} para vê-la.</p>
+                    <p className="text-caption text-n-600 max-w-[220px]">A projeção é calculada para o mês atual. Volte para {MONTHS[now.getMonth()]} para vê-la.</p>
                   </div>
                 )}
-                <div className="mt-auto pt-4 border-t border-line flex items-center justify-between text-xs">
-                  <span className="text-gray-450 font-semibold">vs. mesmo mês de {cursor.y - 1}</span>
-                  <span className="font-bold text-ink tabular-nums">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)} → {compare(income, lyMetrics.grossRevenue + lyMetrics.manualIncome).deltaPct.toFixed(0)}%</span>
+                <div className="mt-auto pt-4 border-t border-line flex items-center justify-between text-caption">
+                  <span className="text-n-600 font-semibold">vs. mesmo mês de {cursor.y - 1}</span>
+                  <span className="font-semibold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)} → {compare(income, lyMetrics.grossRevenue + lyMetrics.manualIncome).deltaPct.toFixed(0)}%</span>
                 </div>
               </div>
             </div>
@@ -396,52 +402,52 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="card p-5 sm:p-6">
                 <SectionHeader title="Contas a receber" subtitle="Valores previstos ainda não realizados" icon={<ScrollText className="h-4 w-4" />}
-                  actions={<button onClick={() => setDrill('receivable')} className="text-[11px] font-bold text-forest hover:underline">Ver tudo →</button>} />
+                  actions={<button onClick={() => setDrill('receivable')} className="text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui">Ver tudo →</button>} />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button onClick={() => setDrill('receivable')} className="text-left rounded-xl border border-[color:var(--color-bad)]/20 bg-[color:var(--color-bad)]/5 p-4">
-                    <p className="flex items-center gap-1.5 text-[10px] font-bold text-[color:var(--color-bad)] uppercase tracking-wider"><Clock4 className="h-3.5 w-3.5" /> Vencido</p>
-                    <p className="text-xl font-bold text-[color:var(--color-bad)] mt-1 tabular-nums">{brl(receivables.overdue.total)}</p>
-                    <p className="text-[11px] text-gray-450 mt-0.5">{receivables.overdue.items.length} agendamento(s)</p>
+                  <button onClick={() => setDrill('receivable')} className="text-left rounded-xl border border-danger-border bg-danger-bg p-4">
+                    <p className="flex items-center gap-1.5 overline text-danger"><Clock4 className="h-3.5 w-3.5" /> Vencido</p>
+                    <p className="text-h2 font-semibold text-danger mt-1 num">{brl(receivables.overdue.total)}</p>
+                    <p className="text-caption text-n-600 mt-0.5">{receivables.overdue.items.length} agendamento(s)</p>
                   </button>
                   <div className="rounded-xl border border-line bg-surface-2 p-4">
-                    <p className="flex items-center gap-1.5 text-[10px] font-bold text-gray-450 uppercase tracking-wider"><Clock4 className="h-3.5 w-3.5" /> A vencer</p>
-                    <p className="text-xl font-bold text-ink mt-1 tabular-nums">{brl(receivables.dueSoon.total)}</p>
-                    <p className="text-[11px] text-gray-450 mt-0.5">{receivables.dueSoon.items.length} agendamento(s)</p>
+                    <p className="flex items-center gap-1.5 overline text-n-500"><Clock4 className="h-3.5 w-3.5" /> A vencer</p>
+                    <p className="text-h2 font-semibold text-ink mt-1 num">{brl(receivables.dueSoon.total)}</p>
+                    <p className="text-caption text-n-600 mt-0.5">{receivables.dueSoon.items.length} agendamento(s)</p>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] text-gray-450">Baseado em agendamentos pendentes/confirmados (data passada = vencido).</p>
+                <p className="mt-3 text-caption text-n-600">Baseado em agendamentos pendentes/confirmados (data passada = vencido).</p>
               </div>
 
               <div className="card p-5 sm:p-6">
                 <SectionHeader title="Por forma de pagamento" subtitle="Bruto, taxa e líquido no mês" icon={<CreditCard className="h-4 w-4" />}
-                  actions={<button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-[11px] font-bold text-forest hover:underline"><Sliders className="h-3.5 w-3.5" /> Taxas</button>} />
+                  actions={<button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-caption font-semibold text-wine-700 hover:text-wine-800 transition-ui"><Sliders className="h-3.5 w-3.5" /> Taxas</button>} />
                 {showRates && (
                   <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-3">
                     {['pix', 'debito', 'credito', 'dinheiro'].map(m => (
-                      <label key={m} className="flex items-center justify-between gap-2 text-[11px]">
-                        <span className="text-gray-450 font-semibold">{paymentLabel(m)}</span>
+                      <label key={m} className="flex items-center justify-between gap-2 text-caption">
+                        <span className="text-n-600 font-semibold">{paymentLabel(m)}</span>
                         <span className="flex items-center gap-1">
                           <input type="number" min={0} step={0.1} value={rates[m] ?? 0} onChange={e => updateRate(m, parseFloat(e.target.value) || 0)}
-                            className="w-14 px-1.5 py-1 text-right border border-line rounded-md bg-surface text-ink font-bold" />
-                          <span className="text-gray-450">%</span>
+                            className="w-14 px-1.5 py-1 text-right border border-line rounded-md bg-surface text-ink font-semibold" />
+                          <span className="text-n-600">%</span>
                         </span>
                       </label>
                     ))}
                   </div>
                 )}
                 {payments.length === 0 ? (
-                  <p className="text-xs text-gray-450 py-8 text-center">Sem vendas com forma de pagamento no mês.</p>
+                  <p className="text-caption text-n-600 py-8 text-center">Sem vendas com forma de pagamento no mês.</p>
                 ) : (
                   <div className="mt-4 space-y-2">
                     {payments.map(p => (
                       <div key={p.method} className="flex items-center justify-between gap-2 rounded-xl border border-line p-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-ink truncate">{p.label}</p>
-                          <p className="text-[11px] text-gray-450">{p.count} venda(s) · taxa {brl(p.fee)}</p>
+                          <p className="text-label font-semibold text-ink truncate">{p.label}</p>
+                          <p className="text-caption text-n-600">{p.count} venda(s) · taxa {brl(p.fee)}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-ink tabular-nums">{brl(p.net)}</p>
-                          <p className="text-[10px] text-gray-450">líquido de {brl(p.gross)}</p>
+                          <p className="text-label font-semibold text-ink num">{brl(p.net)}</p>
+                          <p className="text-caption text-n-600">líquido de {brl(p.gross)}</p>
                         </div>
                       </div>
                     ))}
@@ -457,7 +463,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 <LineChart
                   labels={netSeries.map(p => p.label)}
                   series={[
-                    { name: 'Faturamento', color: 'var(--color-gray-450)', values: netSeries.map(p => p.gross / 100) },
+                    { name: 'Faturamento', color: 'var(--color-n-600)', values: netSeries.map(p => p.gross / 100) },
                     { name: 'Lucro líquido', color: 'var(--color-wine-500)', values: netSeries.map(p => p.net / 100) },
                   ]}
                   format={(v) => brl(Math.round(v * 100))}
@@ -474,28 +480,30 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
               actions={<ExportMenu onCSV={exportLedgerCSV} />} />
             <div className="space-y-2 max-h-[600px] overflow-y-auto scroll-touch -mx-1 px-1">
               {monthItems.length === 0 ? (
-                <div className="text-center py-14 border border-dashed border-line rounded-2xl">
-                  <Wallet className="h-8 w-8 text-gray-450/60 mx-auto" />
-                  <p className="text-xs text-gray-450 mt-3">Nenhum lançamento neste mês.</p>
-                  <button onClick={() => setShowForm(true)} className="mt-3 text-xs font-bold text-forest hover:underline">Adicionar o primeiro →</button>
-                </div>
+                <EmptyState
+                  icon={<Wallet className="h-6 w-6" />}
+                  title="Nenhum lançamento neste mês"
+                  description="Entradas e saídas que você registrar aparecem aqui, junto com o que a agenda gera sozinha."
+                  actionText="Adicionar o primeiro"
+                  onAction={() => setShowForm(true)}
+                />
               ) : monthItems.map((i) => {
                 const inc = i.kind === 'income';
                 const isFixed = i.id.startsWith('fixed-');
                 return (
                   <div key={i.id} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2 transition-colors">
-                    <span className={`p-2 rounded-lg shrink-0 ${inc ? 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)]' : 'bg-[color:var(--color-bad)]/10 text-[color:var(--color-bad)]'}`}>
+                    <span className={`p-2 rounded-lg shrink-0 ${inc ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
                       {isFixed ? <Repeat className="h-4 w-4" /> : inc ? <ArrowUpCircle className="h-4 w-4" /> : <ArrowDownCircle className="h-4 w-4" />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-ink truncate">{i.category}</p>
-                      <p className="text-[11px] text-gray-450 truncate">{i.description || '—'} · {formatDateBR(i.date)}</p>
+                      <p className="text-label font-semibold text-ink truncate">{i.category}</p>
+                      <p className="text-caption text-n-600 truncate">{i.description || '—'} · {formatDateBR(i.date)}</p>
                     </div>
-                    <span className={`text-sm font-bold shrink-0 tabular-nums ${inc ? 'text-[color:var(--color-ok)]' : 'text-[color:var(--color-bad)]'}`}>{inc ? '+' : '−'}{brl(i.amount_cents)}</span>
+                    <span className={`text-label font-semibold shrink-0 num ${inc ? 'text-success' : 'text-danger'}`}>{inc ? '+' : '−'}{brl(i.amount_cents)}</span>
                     {i.auto ? (
-                      <span className="text-[8px] font-bold text-gray-450 bg-surface-2 rounded-full px-1.5 py-0.5 shrink-0 no-print">{isFixed ? 'FIXA' : 'AUTO'}</span>
+                      <span className="overline text-n-500 bg-n-100 rounded-full px-2 py-0.5 shrink-0 no-print">{isFixed ? 'FIXA' : 'AUTO'}</span>
                     ) : (
-                      <button onClick={() => remove(i.id)} disabled={deletingId === i.id} className="p-1.5 rounded-lg text-gray-450 hover:text-[color:var(--color-bad)] hover:bg-[color:var(--color-bad)]/10 transition-colors shrink-0 no-print">
+                      <button onClick={() => remove(i.id)} disabled={deletingId === i.id} className="p-1.5 rounded-lg text-n-600 hover:text-danger hover:bg-danger-bg transition-colors shrink-0 no-print">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     )}
@@ -515,7 +523,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
                 height={260}
                 labels={netSeries.map(p => p.label)}
                 series={[
-                  { name: 'Faturamento', color: 'var(--color-gray-450)', values: netSeries.map(p => p.gross / 100) },
+                  { name: 'Faturamento', color: 'var(--color-n-600)', values: netSeries.map(p => p.gross / 100) },
                   { name: 'Lucro líquido', color: 'var(--color-wine-500)', values: netSeries.map(p => p.net / 100) },
                 ]}
                 format={(v) => brl(Math.round(v * 100))}
@@ -530,7 +538,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Saídas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
-                {expenseByCat.length === 0 ? <p className="text-xs text-gray-450 py-8 text-center">Sem saídas no mês.</p> : (
+                {expenseByCat.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Sem saídas no mês.</p> : (
                   <DonutChart format={brl} data={expenseByCat.map(([cat, val], i): DonutSlice => ({ label: cat, value: val, color: DONUT_COLORS[i % DONUT_COLORS.length] }))} />
                 )}
               </div>
@@ -538,7 +546,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Entradas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
-                {incomeByCat.length === 0 ? <p className="text-xs text-gray-450 py-8 text-center">Sem entradas no mês.</p> : (
+                {incomeByCat.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Sem entradas no mês.</p> : (
                   <DonutChart format={brl} data={incomeByCat.map(([cat, val], i): DonutSlice => ({ label: cat, value: val, color: DONUT_COLORS[i % DONUT_COLORS.length] }))} />
                 )}
               </div>
@@ -552,37 +560,38 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
             <SectionHeader title="Contas fixas mensais" subtitle="Lançadas como saída todo mês, a partir do cadastro" icon={<Repeat className="h-4 w-4" />} />
             <form onSubmit={addFixed} className="flex flex-col sm:flex-row gap-2 my-5 no-print">
               <input placeholder="Ex: Aluguel do espaço" value={fxName} onChange={(e) => setFxName(e.target.value)}
-                className="flex-1 min-w-0 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500" />
+                className="flex-1 min-w-0 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
               <input inputMode="decimal" placeholder="R$ 0,00" value={fxAmount} onChange={(e) => setFxAmount(e.target.value)}
-                className="w-full sm:w-32 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500" />
-              <button type="submit" disabled={fxSaving} className="px-5 py-2.5 bg-forest hover:bg-forest-hover text-white rounded-xl font-bold text-xs disabled:opacity-60 shrink-0 transition-colors">Adicionar</button>
+                className="w-full sm:w-32 px-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+              <Button type="submit" loading={fxSaving} className="shrink-0">Adicionar</Button>
             </form>
             <div className="space-y-2">
               {fixedExpenses.filter(f => f.active).length === 0 ? (
-                <div className="text-center py-12 border border-dashed border-line rounded-2xl">
-                  <Repeat className="h-6 w-6 text-gray-450/50 mx-auto mb-2" />
-                  <p className="text-xs text-gray-450">Nenhuma conta fixa cadastrada.</p>
-                </div>
+                <EmptyState
+                  icon={<Repeat className="h-6 w-6" />}
+                  title="Nenhuma conta fixa"
+                  description="Aluguel, energia, internet — o que sai todo mês. Cadastre uma vez e o lançamento passa a se repetir sozinho."
+                />
               ) : fixedExpenses.filter(f => f.active).map(f => (
                 <div key={f.id} className="flex items-center justify-between rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
                   <div className="min-w-0 flex items-center gap-3">
-                    <span className="bg-[color:var(--color-bad)]/10 p-2 rounded-lg text-[color:var(--color-bad)]"><Repeat className="h-4 w-4" /></span>
+                    <span className="bg-danger-bg p-2 rounded-lg text-danger"><Repeat className="h-4 w-4" /></span>
                     <div>
-                      <p className="text-sm font-bold text-ink truncate">{f.name}</p>
-                      <p className="text-[11px] text-gray-450">Desde {formatDateBR(f.created_at.split('T')[0])}</p>
+                      <p className="text-label font-semibold text-ink truncate">{f.name}</p>
+                      <p className="text-caption text-n-600">Desde {formatDateBR(f.created_at.split('T')[0])}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-[color:var(--color-bad)] font-bold tabular-nums">{brl(f.amount_cents)} / mês</span>
-                    <button onClick={() => removeFixed(f.id)} className="p-1.5 rounded-lg text-gray-450 hover:text-[color:var(--color-bad)] hover:bg-[color:var(--color-bad)]/10 transition-colors no-print"><Trash2 className="h-4 w-4" /></button>
+                    <span className="text-danger font-semibold num">{brl(f.amount_cents)} / mês</span>
+                    <button onClick={() => removeFixed(f.id)} className="p-1.5 rounded-lg text-n-600 hover:text-danger hover:bg-danger-bg transition-colors no-print"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               ))}
             </div>
             {fixedMonthlyTotal > 0 && (
-              <div className="mt-6 pt-4 border-t border-line flex justify-between items-center text-sm">
-                <span className="font-bold text-ink">Total projetado todo mês:</span>
-                <span className="text-xl font-bold text-[color:var(--color-bad)] tabular-nums">{brl(fixedMonthlyTotal)}</span>
+              <div className="mt-6 pt-4 border-t border-line flex justify-between items-center text-label">
+                <span className="font-semibold text-ink">Total projetado todo mês:</span>
+                <span className="text-h2 font-semibold text-danger num">{brl(fixedMonthlyTotal)}</span>
               </div>
             )}
           </div>
@@ -600,44 +609,44 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
 
       {/* Modal Novo Lançamento */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-[#100b0c]/50 backdrop-blur-sm" onClick={() => setShowForm(false)} />
-          <div className="relative card w-full sm:max-w-md mx-0 sm:mx-4 rounded-b-none sm:rounded-2xl p-6 z-10 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-heading tracking-tight">Novo lançamento</h3>
-              <button onClick={() => setShowForm(false)} aria-label="Fechar" className="p-2 rounded-lg hover:bg-surface-2 text-gray-450"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Novo lançamento">
+          <div className="sheet-backdrop absolute inset-0" onClick={() => setShowForm(false)} />
+          <div className="sheet-panel relative w-full sm:max-w-md sm:mx-4 sm:rounded-hero p-6 z-10 safe-sheet sm:pb-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-h2 text-heading">Novo lançamento</h3>
+              <Button variant="ghost" size="sm" iconOnly aria-label="Fechar" onClick={() => setShowForm(false)} leadingIcon={<X className="h-5 w-5" />} />
             </div>
             <form onSubmit={submit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 bg-surface-2 rounded-xl p-1">
-                <button type="button" onClick={() => setFormType('expense')} className={`py-2.5 rounded-lg text-xs font-bold transition-all ${formType === 'expense' ? 'bg-[color:var(--color-bad)] text-white shadow-soft' : 'text-gray-450'}`}>Saída</button>
-                <button type="button" onClick={() => setFormType('income')} className={`py-2.5 rounded-lg text-xs font-bold transition-all ${formType === 'income' ? 'bg-[color:var(--color-ok)] text-white shadow-soft' : 'text-gray-450'}`}>Entrada</button>
+              <div className="grid grid-cols-2 gap-1 bg-n-100 rounded-control p-1" role="radiogroup" aria-label="Tipo de lançamento">
+                <button type="button" role="radio" aria-checked={formType === 'expense'} onClick={() => setFormType('expense')}
+                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${formType === 'expense' ? 'bg-danger text-white' : 'text-n-600 hover:text-heading'}`}>Saída</button>
+                <button type="button" role="radio" aria-checked={formType === 'income'} onClick={() => setFormType('income')}
+                  className={`h-10 rounded-chip text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${formType === 'income' ? 'bg-success text-white' : 'text-n-600 hover:text-heading'}`}>Entrada</button>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Valor (R$)</label>
+                <label className="block overline text-n-500 mb-1.5">Valor (R$)</label>
                 <input inputMode="decimal" required placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-lg font-bold text-ink focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500" />
+                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-control text-h2 font-semibold num text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Categoria</label>
+                <label className="block overline text-n-500 mb-1.5">Categoria</label>
                 <input list="fin-cats" placeholder="Selecione ou digite" value={category} onChange={(e) => setCategory(e.target.value)}
-                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500" />
+                  className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 <datalist id="fin-cats">{(formType === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c} />)}</datalist>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Data</label>
+                  <label className="block overline text-n-500 mb-1.5">Data</label>
                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-500/20" />
+                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-1.5">Descrição</label>
+                  <label className="block overline text-n-500 mb-1.5">Descrição</label>
                   <input placeholder="Opcional" value={description} onChange={(e) => setDescription(e.target.value)}
-                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-wine-500/20" />
+                    className="block w-full px-3 py-3 bg-surface-2 border border-line rounded-xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
               </div>
-              <button type="submit" disabled={saving} className="w-full py-3.5 bg-forest hover:bg-forest-hover text-white text-sm font-bold rounded-xl shadow-soft transition-colors disabled:opacity-60">
-                {saving ? 'Salvando...' : 'Salvar lançamento'}
-              </button>
+              <Button type="submit" size="lg" loading={saving} className="w-full">Salvar lançamento</Button>
             </form>
           </div>
         </div>
@@ -648,8 +657,8 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ professionalId, tran
 
 const Row: React.FC<{ label: string; value: string; muted?: boolean }> = ({ label, value, muted }) => (
   <div className="flex items-center justify-between">
-    <span className={`${muted ? 'text-gray-450' : 'text-ink'} font-medium`}>{label}</span>
-    <span className={`font-bold tabular-nums ${muted ? 'text-gray-450' : 'text-ink'}`}>{value}</span>
+    <span className={`${muted ? 'text-n-600' : 'text-ink'} font-medium`}>{label}</span>
+    <span className={`font-semibold num ${muted ? 'text-n-600' : 'text-ink'}`}>{value}</span>
   </div>
 );
 

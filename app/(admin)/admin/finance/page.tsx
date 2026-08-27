@@ -31,7 +31,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const delta = (cur: number, prev: number) => {
     if (!prev) return null;
     const p = ((cur - prev) / prev) * 100;
-    return <span className={`text-[11px] font-bold ${p >= 0 ? 'text-[color:var(--color-ok)]' : 'text-[color:var(--color-bad)]'}`}>{pct(p, 0)} vs período anterior</span>;
+    return <span className={`text-caption font-bold ${p >= 0 ? 'text-success' : 'text-danger'}`}>{pct(p, 0)} vs período anterior</span>;
   };
 
   const kpi = (label: string, value: string, hint?: React.ReactNode) => (
@@ -45,7 +45,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const secondary = ([
     { label: 'Em teste', value: saas.trialing },
     { label: 'Inadimplentes', value: saas.pastDue },
-    { label: 'Canceladas', value: saas.canceled, hint: <span className="text-[11px] text-muted">churn {pct(saas.churnRatePct, 1)}</span> },
+    { label: 'Canceladas', value: saas.canceled, hint: <span className="text-caption text-muted">churn {pct(saas.churnRatePct, 1)}</span> },
     { label: 'Sem plano (legadas)', value: saas.legacy },
   ] as const)
     .filter(k => k.value > 0)
@@ -66,7 +66,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           {noSubscriptions ? (
             /* Oito caixas com R$ 0,00 não são informação — são ruído. Enquanto
                nenhuma conta tiver plano, o bloco inteiro vira uma linha com a ação. */
-            <p className="card px-4 py-3.5 rounded-3xl text-xs text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="card px-4 py-3.5 rounded-3xl text-caption text-ink flex flex-wrap items-center gap-x-2 gap-y-1">
               <strong>Nenhuma assinatura ativa ainda.</strong>
               <span className="text-muted">
                 As {saas.legacy} conta(s) da rede estão como <strong className="text-ink">Legada</strong>, sem plano atribuído —
@@ -77,10 +77,10 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           ) : (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {kpi('MRR', brl(saas.mrrCents), <span className="text-[11px] text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>)}
+                {kpi('MRR', brl(saas.mrrCents), <span className="text-caption text-muted">{saas.activeSubscriptions} assinatura(s) ativa(s)</span>)}
                 {kpi('ARR', brl(saas.arrCents))}
                 {kpi('ARPA', brl(saas.arpaCents))}
-                {kpi('LTV estimado', brl(saas.ltvCents), <span className="text-[11px] text-muted">ARPA ÷ churn</span>)}
+                {kpi('LTV estimado', brl(saas.ltvCents), <span className="text-caption text-muted">ARPA ÷ churn</span>)}
               </div>
 
               {/* Segunda linha: só o que tem valor. O que está zerado vira uma frase. */}
@@ -89,7 +89,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                   {secondary.map(k => kpi(k.label, k.value, k.hint))}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted px-1">
+                <p className="text-caption text-muted px-1">
                   Nenhuma conta em teste, inadimplente ou cancelada — e {saas.legacy} legada(s).
                 </p>
               )}
@@ -98,9 +98,9 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
 
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="card p-4 sm:p-5 rounded-3xl">
-              <h3 className="text-xs font-bold text-ink mb-3">MRR mês a mês</h3>
+              <h3 className="text-caption font-bold text-ink mb-3">MRR mês a mês</h3>
               {noSubscriptions ? (
-                <p className="py-6 text-center text-xs text-muted">
+                <p className="py-6 text-center text-caption text-muted">
                   Sem assinatura, sem série. O gráfico aparece quando a primeira conta ganhar um plano.
                 </p>
               ) : (
@@ -109,7 +109,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                     points={saas.mrrSeries.map(s => ({ label: s.label, value: s.mrrCents, hint: `${s.label}: ${brl(s.mrrCents)}` }))}
                     format={brlCompact}
                   />
-                  <p className="mt-2 text-[11px] text-muted">
+                  <p className="mt-2 text-caption text-muted">
                     Reconstruído a partir da data de criação de cada conta e do preço do plano atual —
                     não há histórico de preço por mês antes da migration v33.
                   </p>
@@ -118,19 +118,19 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             </div>
 
             <div className="card rounded-3xl overflow-hidden">
-              <h3 className="px-4 py-3 text-xs font-bold text-ink border-b border-line">Assinaturas por plano</h3>
+              <h3 className="px-4 py-3 text-caption font-bold text-ink border-b border-line">Assinaturas por plano</h3>
               <ul className="divide-y divide-line">
                 {saas.byPlan.map(p => (
-                  <li key={p.key} className="px-4 py-2.5 flex items-center gap-3 text-xs">
+                  <li key={p.key} className="px-4 py-2.5 flex items-center gap-3 text-caption">
                     <span className="font-semibold text-ink flex-1">{p.name}</span>
-                    <span className="text-muted tabular-nums">{p.count} conta(s)</span>
-                    <span className="text-ink font-bold tabular-nums w-24 text-right">{brl(p.mrrCents)}</span>
+                    <span className="text-muted num">{p.count} conta(s)</span>
+                    <span className="text-ink font-bold num w-24 text-right">{brl(p.mrrCents)}</span>
                   </li>
                 ))}
-                {saas.byPlan.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Nenhum plano configurado.</li>}
+                {saas.byPlan.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhum plano configurado.</li>}
               </ul>
               <div className="px-4 py-2.5 border-t border-line">
-                <Link href="/admin/plans" className="text-xs font-bold text-accent-link hover:underline">Editar catálogo de planos →</Link>
+                <Link href="/admin/plans" className="text-caption font-bold text-accent-link hover:underline">Editar catálogo de planos →</Link>
               </div>
             </div>
           </div>
@@ -152,18 +152,18 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           </div>
 
           {network.concentrationPct >= 50 && network.byProfessional[0] && (
-            <p className="card px-4 py-3 flex items-start gap-2 text-xs text-[color:var(--color-bad)]">
+            <p className="card px-4 py-3 flex items-start gap-2 text-caption text-danger">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
               <span>
                 <strong>Risco de concentração:</strong> {network.byProfessional[0].name} responde por{' '}
-                <strong className="tabular-nums">{pct(network.concentrationPct, 0)}</strong> de todo o GMV do período.
+                <strong className="num">{pct(network.concentrationPct, 0)}</strong> de todo o GMV do período.
                 Perder essa conta é perder quase toda a atividade da plataforma.
               </span>
             </p>
           )}
 
           <div className="card p-4 sm:p-5 rounded-3xl">
-            <h3 className="text-xs font-bold text-ink mb-3">Faturamento por profissional</h3>
+            <h3 className="text-caption font-bold text-ink mb-3">Faturamento por profissional</h3>
             <RankedBars
               items={network.byProfessional.slice(0, 15).map(p => ({
                 id: p.id, label: p.name, value: p.gmvCents, sharePct: p.sharePct, alert: p.sharePct >= 50,

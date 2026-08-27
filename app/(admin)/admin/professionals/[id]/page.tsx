@@ -130,10 +130,10 @@ export default async function ProfessionalDetailPage({
         {/* Faixa de identidade */}
         <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5">
           <AccountStateGroup account={p} />
-          <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-link hover:underline">
+          <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-caption font-semibold text-accent-link hover:underline">
             /agendar/{p.slug} <ExternalLink className="h-3 w-3" />
           </Link>
-          {p.whatsapp && <span className="text-xs text-muted">WhatsApp {p.whatsapp}</span>}
+          {p.whatsapp && <span className="text-caption text-muted">WhatsApp {p.whatsapp}</span>}
         </div>
 
         {/* Abas */}
@@ -144,7 +144,7 @@ export default async function ProfessionalDetailPage({
               href={`/admin/professionals/${id}?tab=${t.key}`}
               scroll={false}
               aria-current={active === t.key ? 'page' : undefined}
-              className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              className={`px-3 py-2 text-caption font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${
                 active === t.key ? 'border-accent text-accent-link' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
@@ -159,8 +159,8 @@ export default async function ProfessionalDetailPage({
             {alerts.length > 0 && (
               <ul className="grid gap-2 sm:grid-cols-2">
                 {alerts.map((a, i) => (
-                  <li key={i} className={`card px-3 py-2.5 flex items-start gap-2 text-xs ${
-                    a.level === 'bad' ? 'text-[color:var(--color-bad)]' : a.level === 'warn' ? 'text-[color:var(--color-warn)]' : 'text-muted'
+                  <li key={i} className={`card px-3 py-2.5 flex items-start gap-2 text-caption ${
+                    a.level === 'bad' ? 'text-danger' : a.level === 'warn' ? 'text-warning' : 'text-muted'
                   }`}>
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
                     <span className="font-semibold">{a.text}</span>
@@ -182,22 +182,22 @@ export default async function ProfessionalDetailPage({
 
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="card p-4 sm:p-5 rounded-3xl">
-                <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-3">
+                <h2 className="text-label font-bold text-ink flex items-center gap-2 mb-3">
                   <TrendingUp className="h-4 w-4 text-muted" /> Agendamentos por mês
                 </h2>
                 <BarChart points={monthly.map(m => ({ label: m.label, value: m.count }))} format={v => String(Math.round(v))} />
               </section>
 
               <section className="card p-4 sm:p-5 rounded-3xl">
-                <h2 className="text-sm font-bold text-ink mb-3">Ativação da conta</h2>
+                <h2 className="text-label font-bold text-ink mb-3">Ativação da conta</h2>
                 <ul className="space-y-2">
                   {onboarding.map(step => (
-                    <li key={step.label} className="flex items-center gap-2 text-xs">
+                    <li key={step.label} className="flex items-center gap-2 text-caption">
                       {step.done
-                        ? <CheckCircle2 className="h-4 w-4 text-[color:var(--color-ok)] shrink-0" aria-hidden />
+                        ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
                         : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
                       <span className={step.done ? 'text-ink font-semibold' : 'text-muted'}>{step.label}</span>
-                      {step.hint && <span className="ml-auto text-[11px] text-muted tabular-nums">{step.hint}</span>}
+                      {step.hint && <span className="ml-auto text-caption text-muted num">{step.hint}</span>}
                     </li>
                   ))}
                 </ul>
@@ -217,16 +217,16 @@ export default async function ProfessionalDetailPage({
             </div>
 
             <section className="card overflow-hidden">
-              <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">Histórico de mudanças</h2>
+              <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Histórico de mudanças</h2>
               {history.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-muted">
+                <p className="px-4 py-8 text-center text-caption text-muted">
                   Nenhuma mudança registrada. O histórico começa a ser gravado a partir da migration v33.
                 </p>
               ) : (
                 <ul className="divide-y divide-line">
                   {history.map(h => (
-                    <li key={h.id} className="px-4 py-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="tabular-nums text-muted">{formatDateTimeBR(h.created_at)}</span>
+                    <li key={h.id} className="px-4 py-3 flex flex-wrap items-center gap-2 text-caption">
+                      <span className="num text-muted">{formatDateTimeBR(h.created_at)}</span>
                       <Badge tone="accent">{h.plan_key ?? 'sem plano'}</Badge>
                       <span className="text-muted">{h.status}</span>
                       {h.current_period_end && <span className="text-muted">até {formatDateBR(h.current_period_end)}</span>}
@@ -244,7 +244,7 @@ export default async function ProfessionalDetailPage({
         {active === 'access' && (
           accessPanel
             ? <AccessPanel data={accessPanel} />
-            : <p className="card px-4 py-8 text-center text-xs text-muted">
+            : <p className="card px-4 py-8 text-center text-caption text-muted">
                 Dados de acesso indisponíveis para esta conta.
               </p>
         )}
@@ -258,21 +258,21 @@ export default async function ProfessionalDetailPage({
         {active === 'appointments' && (
           <section className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Últimos agendamentos</h2>
-              <Link href={`/admin/appointments?prof=${id}`} className="text-xs font-bold text-accent-link hover:underline">Ver todos com filtro</Link>
+              <h2 className="text-label font-bold text-ink">Últimos agendamentos</h2>
+              <Link href={`/admin/appointments?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Ver todos com filtro</Link>
             </div>
             <ul className="divide-y divide-line">
               {recentAppointments.map(a => (
-                <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-xs">
-                  <span className="tabular-nums font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
-                  <span className="tabular-nums text-muted w-12">{formatTimeBR(a.start_time)}</span>
+                <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
+                  <span className="num font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
+                  <span className="num text-muted w-12">{formatTimeBR(a.start_time)}</span>
                   <span className="font-semibold text-ink flex-1 min-w-[8rem] truncate">{a.client_name}</span>
                   <span className="text-muted truncate max-w-[12rem]">{a.service?.name}</span>
-                  <span className="tabular-nums text-ink">{brl(a.service?.price_cents || 0)}</span>
+                  <span className="num text-ink">{brl(a.service?.price_cents || 0)}</span>
                   <AppointmentStatusBadge status={a.status} />
                 </li>
               ))}
-              {recentAppointments.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Nenhum agendamento.</li>}
+              {recentAppointments.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhum agendamento.</li>}
             </ul>
           </section>
         )}
@@ -281,19 +281,19 @@ export default async function ProfessionalDetailPage({
         {active === 'clients' && (
           <section className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">Clientes recentes</h2>
-              <Link href={`/admin/clients?prof=${id}`} className="text-xs font-bold text-accent-link hover:underline">Ver todas com filtro</Link>
+              <h2 className="text-label font-bold text-ink">Clientes recentes</h2>
+              <Link href={`/admin/clients?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Ver todas com filtro</Link>
             </div>
             <ul className="divide-y divide-line">
               {recentClients.map(c => (
-                <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-xs">
+                <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
                   <span className="font-semibold text-ink flex-1 min-w-[10rem] truncate">{c.name}</span>
-                  <span className="text-muted tabular-nums">{c.whatsapp}</span>
-                  <span className="text-muted tabular-nums">{c.total_appointments ?? 0} visita(s)</span>
-                  <span className="text-muted tabular-nums">{formatDateBR(c.last_appointment_at, 'nunca')}</span>
+                  <span className="text-muted num">{c.whatsapp}</span>
+                  <span className="text-muted num">{c.total_appointments ?? 0} visita(s)</span>
+                  <span className="text-muted num">{formatDateBR(c.last_appointment_at, 'nunca')}</span>
                 </li>
               ))}
-              {recentClients.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Nenhuma cliente.</li>}
+              {recentClients.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhuma cliente.</li>}
             </ul>
           </section>
         )}
@@ -308,16 +308,16 @@ export default async function ProfessionalDetailPage({
               {kpiCard('Atendimentos pagos', String(kpis.appointmentsTotal))}
             </div>
             <section className="card overflow-hidden">
-              <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">Serviços mais vendidos</h2>
+              <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Serviços mais vendidos</h2>
               <ul className="divide-y divide-line">
                 {topServices.map(s => (
-                  <li key={s.name} className="px-4 py-2.5 flex items-center gap-3 text-xs">
+                  <li key={s.name} className="px-4 py-2.5 flex items-center gap-3 text-caption">
                     <span className="font-semibold text-ink flex-1 truncate">{s.name}</span>
-                    <span className="text-muted tabular-nums">{s.count}×</span>
-                    <span className="text-ink tabular-nums font-semibold">{brl(s.revenueCents)}</span>
+                    <span className="text-muted num">{s.count}×</span>
+                    <span className="text-ink num font-semibold">{brl(s.revenueCents)}</span>
                   </li>
                 ))}
-                {topServices.length === 0 && <li className="px-4 py-8 text-center text-xs text-muted">Sem vendas registradas.</li>}
+                {topServices.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Sem vendas registradas.</li>}
               </ul>
             </section>
           </div>
@@ -332,9 +332,9 @@ export default async function ProfessionalDetailPage({
               {kpiCard('Automações', bot.automationsOn ? 'Ativas' : 'Desligadas')}
               {kpiCard('Mensagens (mês)', String(bot.messagesMonth))}
             </div>
-            <div className="card p-4 text-xs text-muted space-y-2">
+            <div className="card p-4 text-caption text-muted space-y-2">
               <p className="flex items-center gap-2"><Bot className="h-4 w-4" /> Servidor uazapi: <span className="text-ink font-semibold">{bot.number ?? '—'}</span></p>
-              <p className="flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Conversas esperando atendimento humano: <span className="text-ink font-semibold tabular-nums">{bot.conversationsWaiting}</span></p>
+              <p className="flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Conversas esperando atendimento humano: <span className="text-ink font-semibold num">{bot.conversationsWaiting}</span></p>
               <p className="pt-2 border-t border-line">
                 Ligar/desligar o bot e editar a persona é feito no painel da profissional —
                 use <strong className="text-ink">Entrar como</strong> acima. As mudanças ficam registradas na auditoria.
@@ -347,17 +347,17 @@ export default async function ProfessionalDetailPage({
         {active === 'services' && (
           <section className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-ink">{services.length} serviço(s) cadastrado(s)</h2>
-              <span className="text-[11px] text-muted">É isto que a cliente vê na página de agendamento.</span>
+              <h2 className="text-label font-bold text-ink">{services.length} serviço(s) cadastrado(s)</h2>
+              <span className="text-caption text-muted">É isto que a cliente vê na página de agendamento.</span>
             </div>
             {services.length === 0 ? (
-              <p className="px-4 py-10 text-center text-xs text-muted">
+              <p className="px-4 py-10 text-center text-caption text-muted">
                 Nenhum serviço cadastrado — a página de agendamento dela está vazia e ninguém consegue marcar horário.
               </p>
             ) : (
               <table className="min-w-full text-left border-collapse">
                 <caption className="sr-only">Serviços da profissional com preço e duração</caption>
-                <thead className="bg-surface-2 text-[11px] font-bold text-muted uppercase tracking-[0.08em]">
+                <thead className="bg-surface-2 text-caption font-bold text-muted uppercase tracking-[0.08em]">
                   <tr>
                     <th scope="col" className="px-4 py-2.5 border-b border-line">Serviço</th>
                     <th scope="col" className="px-4 py-2.5 border-b border-line text-right">Duração</th>
@@ -366,18 +366,18 @@ export default async function ProfessionalDetailPage({
                     <th scope="col" className="px-4 py-2.5 border-b border-line">Situação</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm">
+                <tbody className="text-label">
                   {services.map(s => {
                     const sold = topServices.find(t => t.name === s.name);
                     return (
                       <tr key={s.id} className="border-b border-line/70">
                         <td className="px-4 py-2.5">
                           <span className="block font-semibold text-ink">{s.name}</span>
-                          {s.description && <span className="block text-[11px] text-muted truncate max-w-md">{s.description}</span>}
+                          {s.description && <span className="block text-caption text-muted truncate max-w-md">{s.description}</span>}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-muted">{s.duration_minutes} min</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-ink">{brl(s.price_cents)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-muted">{sold ? `${sold.count}×` : '—'}</td>
+                        <td className="px-4 py-2.5 text-right num text-muted">{s.duration_minutes} min</td>
+                        <td className="px-4 py-2.5 text-right num font-semibold text-ink">{brl(s.price_cents)}</td>
+                        <td className="px-4 py-2.5 text-right num text-muted">{sold ? `${sold.count}×` : '—'}</td>
                         <td className="px-4 py-2.5">{s.is_active ? <Badge tone="ok">ativo</Badge> : <Badge tone="neutral">inativo</Badge>}</td>
                       </tr>
                     );
@@ -392,24 +392,24 @@ export default async function ProfessionalDetailPage({
         {active === 'conversations' && conversations && (
           <section className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-ink">Conversas de WhatsApp desta conta</h2>
-              <Link href={`/admin/conversations?prof=${id}`} className="text-xs font-bold text-accent-link hover:underline">Abrir na tela cheia</Link>
+              <h2 className="text-label font-bold text-ink">Conversas de WhatsApp desta conta</h2>
+              <Link href={`/admin/conversations?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Abrir na tela cheia</Link>
             </div>
             {conversations.rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-xs text-muted">Nenhuma conversa registrada.</p>
+              <p className="px-4 py-10 text-center text-caption text-muted">Nenhuma conversa registrada.</p>
             ) : (
               <ul className="divide-y divide-line">
                 {conversations.rows.map(c => (
-                  <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                    <Link href={`/admin/conversations/${c.id}`} className="font-semibold text-ink hover:underline w-36 shrink-0 tabular-nums">
+                  <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption">
+                    <Link href={`/admin/conversations/${c.id}`} className="font-semibold text-ink hover:underline w-36 shrink-0 num">
                       {c.clientPhone}
                     </Link>
                     <span className="text-muted flex-1 min-w-[10rem] truncate">{c.lastMessage || '—'}</span>
-                    <span className="text-muted tabular-nums">{c.messageCount} msg</span>
+                    <span className="text-muted num">{c.messageCount} msg</span>
                     {c.botPaused
                       ? <Badge tone="warn">esperando {formatDurationBR(c.waitingHours * 3_600_000)}</Badge>
                       : <Badge tone="neutral">bot atendendo</Badge>}
-                    <span className="text-muted tabular-nums w-24 text-right">{formatDateTimeBR(c.lastMessageAt)}</span>
+                    <span className="text-muted num w-24 text-right">{formatDateTimeBR(c.lastMessageAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -422,8 +422,8 @@ export default async function ProfessionalDetailPage({
           <div className="grid gap-4 lg:grid-cols-12">
             <section className="card overflow-hidden lg:col-span-7">
               <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-                <h2 className="text-sm font-bold text-ink">Prévia de /agendar/{p.slug}</h2>
-                <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-bold text-accent-link hover:underline">
+                <h2 className="text-label font-bold text-ink">Prévia de /agendar/{p.slug}</h2>
+                <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-caption font-bold text-accent-link hover:underline">
                   Abrir em tamanho real <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
@@ -435,32 +435,32 @@ export default async function ProfessionalDetailPage({
               />
             </section>
 
-            <section className="card p-4 lg:col-span-5 space-y-3 text-xs">
-              <h2 className="text-sm font-bold text-ink">O que a cliente encontra</h2>
+            <section className="card p-4 lg:col-span-5 space-y-3 text-caption">
+              <h2 className="text-label font-bold text-ink">O que a cliente encontra</h2>
               <ul className="space-y-2">
                 <li className="flex items-center gap-2">
                   {services.filter(s => s.is_active).length > 0
-                    ? <CheckCircle2 className="h-4 w-4 text-[color:var(--color-ok)] shrink-0" aria-hidden />
-                    : <AlertTriangle className="h-4 w-4 text-[color:var(--color-bad)] shrink-0" aria-hidden />}
-                  <span className={services.filter(s => s.is_active).length > 0 ? 'text-ink' : 'text-[color:var(--color-bad)] font-semibold'}>
+                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
+                    : <AlertTriangle className="h-4 w-4 text-danger shrink-0" aria-hidden />}
+                  <span className={services.filter(s => s.is_active).length > 0 ? 'text-ink' : 'text-danger font-semibold'}>
                     {services.filter(s => s.is_active).length} serviço(s) ativo(s) para escolher
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
                   {p.logo_url
-                    ? <CheckCircle2 className="h-4 w-4 text-[color:var(--color-ok)] shrink-0" aria-hidden />
+                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
                     : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
                   <span className={p.logo_url ? 'text-ink' : 'text-muted'}>Logo da marca</span>
                 </li>
                 <li className="flex items-center gap-2">
                   {p.public_bio
-                    ? <CheckCircle2 className="h-4 w-4 text-[color:var(--color-ok)] shrink-0" aria-hidden />
+                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
                     : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
                   <span className={p.public_bio ? 'text-ink' : 'text-muted'}>Texto de apresentação</span>
                 </li>
                 <li className="flex items-center gap-2">
                   {p.whatsapp
-                    ? <CheckCircle2 className="h-4 w-4 text-[color:var(--color-ok)] shrink-0" aria-hidden />
+                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
                     : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
                   <span className={p.whatsapp ? 'text-ink' : 'text-muted'}>WhatsApp de contato</span>
                 </li>
@@ -482,14 +482,14 @@ export default async function ProfessionalDetailPage({
         {/* ————— Logs ————— */}
         {active === 'logs' && (
           <section className="card overflow-hidden">
-            <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">O que o admin fez nesta conta</h2>
+            <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">O que o admin fez nesta conta</h2>
             {audit.rows.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs text-muted">Nada registrado ainda.</p>
+              <p className="px-4 py-8 text-center text-caption text-muted">Nada registrado ainda.</p>
             ) : (
               <ul className="divide-y divide-line">
                 {audit.rows.map(r => (
-                  <li key={r.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-xs">
-                    <span className="tabular-nums text-muted w-36">{formatDateTimeBR(r.created_at)}</span>
+                  <li key={r.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
+                    <span className="num text-muted w-36">{formatDateTimeBR(r.created_at)}</span>
                     <Badge tone="neutral">{r.action}</Badge>
                     <span className="text-muted flex-1 truncate">{JSON.stringify(r.after ?? {})}</span>
                     <span className="text-muted">{r.admin_email}</span>

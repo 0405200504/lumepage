@@ -28,13 +28,13 @@ export default async function AnamnesisPublicPage({ params }: PageProps) {
 
   if (!response) {
     return (
-      <div className="min-h-screen bg-[#f7f3ee] flex flex-col items-center justify-center p-4 select-none">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#efe9e6] shadow-xl text-center flex flex-col items-center">
-          <div className="p-4 bg-red-50 text-red-600 rounded-2xl mb-4">
+      <div className="min-h-screen bg-n-50 flex flex-col items-center justify-center p-4 select-none">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-n-200 shadow-xl text-center flex flex-col items-center">
+          <div className="p-4 bg-danger-bg text-danger rounded-2xl mb-4">
             <AlertCircle className="h-8 w-8" />
           </div>
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">Ficha não encontrada</h2>
-          <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+          <h2 className="text-lg font-black text-n-900 tracking-tight">Ficha não encontrada</h2>
+          <p className="mt-2 text-xs text-n-500 leading-relaxed">
             Este link de ficha não existe ou foi removido. Confira com a sua profissional se o link está correto.
           </p>
         </div>
@@ -48,13 +48,13 @@ export default async function AnamnesisPublicPage({ params }: PageProps) {
 
   if (response.status === 'completed') {
     return (
-      <div className="min-h-screen bg-[#f7f3ee] flex flex-col items-center justify-center p-4 select-none">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#efe9e6] shadow-xl text-center flex flex-col items-center">
+      <div className="min-h-screen bg-n-50 flex flex-col items-center justify-center p-4 select-none">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-n-200 shadow-xl text-center flex flex-col items-center">
           <div className="p-4 rounded-2xl mb-4" style={{ backgroundColor: `${accent}14`, color: accent }}>
             <CheckCircle2 className="h-8 w-8" />
           </div>
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">Ficha já preenchida ✨</h2>
-          <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+          <h2 className="text-lg font-black text-n-900 tracking-tight">Ficha já preenchida ✨</h2>
+          <p className="mt-2 text-xs text-n-500 leading-relaxed">
             Esta ficha já foi respondida e enviada para {brandName}. Você pode baixar a sua cópia em PDF abaixo.
           </p>
           <a
@@ -73,7 +73,7 @@ export default async function AnamnesisPublicPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f3ee] flex flex-col items-center py-6 sm:py-12 px-4">
+    <div className="min-h-screen bg-n-50 flex flex-col items-center py-6 sm:py-12 px-4">
       <div className="max-w-2xl w-full">
         <AnamnesisFillForm
           token={response.token}
@@ -83,7 +83,7 @@ export default async function AnamnesisPublicPage({ params }: PageProps) {
           questions={response.questions_snapshot}
           design={response.design_snapshot}
         />
-        <p className="text-center text-[10px] text-gray-400 mt-6">
+        <p className="text-center text-[10px] text-n-400 mt-6">
           Suas respostas são enviadas com segurança diretamente para {brandName}.
         </p>
       </div>

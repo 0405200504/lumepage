@@ -127,14 +127,14 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
   const clearFilters = () => { setSearch(''); setFService(''); setFStatus(''); setFStart(''); setFEnd(''); setFMin(''); setFMax(''); };
 
   const columns: Column<SaleRow>[] = [
-    { key: 'date', header: 'Data', sortValue: r => r.date, cell: r => <span className="font-semibold text-gray-450">{formatDateBR(r.date)}</span> },
+    { key: 'date', header: 'Data', sortValue: r => r.date, cell: r => <span className="font-semibold text-n-600">{formatDateBR(r.date)}</span> },
     { key: 'client', header: 'Cliente', sortValue: r => r.client, cell: r => <span className="font-bold text-ink">{r.client}</span> },
-    { key: 'service', header: 'Serviço', sortValue: r => r.serviceName, cell: r => <span className="text-gray-450">{r.serviceName}{r.extra > 0 && <span className="text-forest font-bold"> +{r.extra}</span>}</span> },
-    { key: 'payment', header: 'Pagamento', sortValue: r => r.payment, cell: r => <span className="text-gray-450 capitalize">{r.payment || '—'}</span> },
+    { key: 'service', header: 'Serviço', sortValue: r => r.serviceName, cell: r => <span className="text-n-600">{r.serviceName}{r.extra > 0 && <span className="text-wine-700 font-bold"> +{r.extra}</span>}</span> },
+    { key: 'payment', header: 'Pagamento', sortValue: r => r.payment, cell: r => <span className="text-n-600 capitalize">{r.payment || '—'}</span> },
     { key: 'status', header: 'Status', sortValue: r => r.status, cell: r => (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'completed' ? 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)]' : 'bg-forest/10 text-forest'}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-bold ${r.status === 'completed' ? 'bg-success-bg text-success' : 'bg-wine-700/10 text-wine-700'}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
     ) },
-    { key: 'amount', header: 'Valor', align: 'right', sortValue: r => r.amount, cell: r => <span className="font-bold text-ink tabular-nums">{brl(r.amount)}</span> },
+    { key: 'amount', header: 'Valor', align: 'right', sortValue: r => r.amount, cell: r => <span className="font-bold text-ink num">{brl(r.amount)}</span> },
   ];
 
   const exportSalesCSV = () => {
@@ -173,7 +173,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
     { key: 'month', label: 'Este mês' }, { key: 'year', label: 'Este ano' }, { key: 'all', label: 'Tudo' },
   ];
 
-  const inputCls = 'px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500';
+  const inputCls = 'px-3 py-2 bg-surface-2 border border-line rounded-xl text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -184,7 +184,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
           <div className="flex items-center gap-1 bg-surface border border-line rounded-xl p-1 shadow-soft shrink-0">
             {periods.map(p => (
               <button key={p.key} onClick={() => setPeriod(p.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all-custom ${period === p.key ? 'bg-[color:var(--color-accent-soft)] text-forest' : 'text-gray-450 hover:text-ink'}`}>{p.label}</button>
+                className={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-ui ${period === p.key ? 'bg-[color:var(--color-accent-soft)] text-wine-700' : 'text-n-600 hover:text-ink'}`}>{p.label}</button>
             ))}
           </div>
         )}
@@ -215,9 +215,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 <div className="mt-5 space-y-3">
                   {funnelStages.map((st, i) => (
                     <div key={st.label}>
-                      <div className="flex justify-between text-[11px] mb-1">
+                      <div className="flex justify-between text-caption mb-1">
                         <span className="font-semibold text-ink">{st.label}</span>
-                        <span className="font-bold text-ink tabular-nums">{st.value} <span className="text-gray-450 font-semibold">({st.pct.toFixed(0)}%)</span></span>
+                        <span className="font-bold text-ink num">{st.value} <span className="text-n-600 font-semibold">({st.pct.toFixed(0)}%)</span></span>
                       </div>
                       <div className="h-2.5 rounded-full bg-surface-2 overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${Math.max(2, (st.value / funnelMax) * 100)}%`, background: i === 3 ? 'var(--color-bad)' : 'var(--color-wine-500)' }} />
@@ -245,11 +245,11 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             <div className="card p-4 no-print">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-450" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-n-600" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente ou serviço…"
-                    className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-500/20 focus:border-wine-500" />
+                    className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
                 </div>
-                <button onClick={() => setShowFilters(s => !s)} className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-colors ${hasActiveFilters ? 'border-forest text-forest bg-forest/5' : 'border-line text-gray-450 hover:bg-surface-2'}`}>
+                <button onClick={() => setShowFilters(s => !s)} className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-caption font-bold border transition-colors ${hasActiveFilters ? 'border-wine-700 text-wine-700 bg-wine-700/5' : 'border-line text-n-600 hover:bg-surface-2'}`}>
                   <Filter className="h-3.5 w-3.5" /> Filtros{hasActiveFilters ? ' •' : ''}
                 </button>
                 <ExportMenu onCSV={exportSalesCSV} />
@@ -270,7 +270,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                   <input inputMode="decimal" value={fMin} onChange={e => setFMin(e.target.value)} placeholder="Valor mín. (R$)" className={inputCls} />
                   <input inputMode="decimal" value={fMax} onChange={e => setFMax(e.target.value)} placeholder="Valor máx. (R$)" className={inputCls} />
                   {hasActiveFilters && (
-                    <button onClick={clearFilters} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-gray-450 hover:text-[color:var(--color-bad)] border border-line">
+                    <button onClick={clearFilters} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-caption font-bold text-n-600 hover:text-danger border border-line">
                       <X className="h-3.5 w-3.5" /> Limpar
                     </button>
                   )}
@@ -280,8 +280,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
 
             <div className="card overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-line">
-                <h3 className="text-base font-bold text-heading">Histórico de vendas</h3>
-                <span className="text-[10px] font-bold text-gray-450">{filteredRows.length} de {allRows.length}</span>
+                <h3 className="text-body font-bold text-heading">Histórico de vendas</h3>
+                <span className="text-caption font-bold text-n-600">{filteredRows.length} de {allRows.length}</span>
               </div>
               <DataTable columns={columns} rows={filteredRows} rowKey={r => r.id} pageSize={25}
                 initialSort={{ key: 'date', dir: 'desc' }} emptyLabel="Nenhuma venda encontrada com esses filtros." />
@@ -295,16 +295,16 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             <SectionHeader title="Análise por serviço" subtitle={`Receita, ticket e participação no ${label}`} icon={<Sparkles className="h-4 w-4" />}
               actions={<ExportMenu onCSV={exportServicesCSV} />} />
             <div className="mt-5 space-y-2">
-              {svcStats.length === 0 ? <p className="text-xs text-gray-450 py-8 text-center">Nenhuma venda no período.</p> : svcStats.map((s, idx) => (
+              {svcStats.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda no período.</p> : svcStats.map((s, idx) => (
                 <div key={s.id} className="rounded-xl border border-line p-4 hover:bg-surface-2 transition-colors">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-ink truncate">{idx + 1}. {s.name}</p>
-                      <p className="text-[11px] text-gray-450 mt-0.5">{s.count} vendas · ticket {brl(s.ticket)} · {s.share.toFixed(1)}% do faturamento</p>
+                      <p className="text-label font-bold text-ink truncate">{idx + 1}. {s.name}</p>
+                      <p className="text-caption text-n-600 mt-0.5">{s.count} vendas · ticket {brl(s.ticket)} · {s.share.toFixed(1)}% do faturamento</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <Sparkline data={s.spark.map(v => v / 100)} />
-                      <span className="text-sm font-bold text-ink tabular-nums">{brl(s.revenue)}</span>
+                      <span className="text-label font-bold text-ink num">{brl(s.revenue)}</span>
                     </div>
                   </div>
                   <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden mt-3">
@@ -328,17 +328,17 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Melhores clientes" subtitle={`Por valor gasto no ${label}`} icon={<Crown className="h-4 w-4" />} />
               <div className="mt-5 space-y-2">
-                {topClients.length === 0 ? <p className="text-xs text-gray-450 py-8 text-center">Nenhuma venda no período.</p> : topClients.map((c, idx) => (
+                {topClients.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda no período.</p> : topClients.map((c, idx) => (
                   <div key={c.key} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2 transition-colors">
-                    <span className="h-7 w-7 rounded-full bg-forest/10 text-forest text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
+                    <span className="h-7 w-7 rounded-full bg-wine-700/10 text-wine-700 text-caption font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-ink truncate">{c.name}</p>
-                      <p className="text-[11px] text-gray-450">{c.visits} visita(s)</p>
+                      <p className="text-label font-bold text-ink truncate">{c.name}</p>
+                      <p className="text-caption text-n-600">{c.visits} visita(s)</p>
                     </div>
                     <div className="flex-1 max-w-[120px] h-1.5 rounded-full bg-surface-2 overflow-hidden hidden sm:block">
                       <div className="h-full rounded-full bg-wine-500" style={{ width: `${Math.max(4, (c.spent / maxClient) * 100)}%` }} />
                     </div>
-                    <span className="text-sm font-bold text-ink tabular-nums shrink-0">{brl(c.spent)}</span>
+                    <span className="text-label font-bold text-ink num shrink-0">{brl(c.spent)}</span>
                   </div>
                 ))}
               </div>

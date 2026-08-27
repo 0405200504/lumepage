@@ -44,13 +44,13 @@ export function PendingConversationsWidget({ initialConversations, showEmptyStat
   if (conversations.length === 0) {
     if (!showEmptyState) return null;
     return (
-      <div className="bg-white rounded-3xl border border-[#efe9e6] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl border border-n-200 shadow-sm overflow-hidden">
         <div className="flex flex-col items-center justify-center text-center px-6 py-14">
-          <div className="w-12 h-12 rounded-2xl bg-[#f7f3ee] flex items-center justify-center mb-4">
-            <MessageCircle className="h-5 w-5 text-gray-400" />
+          <div className="w-12 h-12 rounded-2xl bg-n-50 flex items-center justify-center mb-4">
+            <MessageCircle className="h-5 w-5 text-n-400" />
           </div>
-          <h2 className="text-sm font-bold text-gray-900">Nenhuma conversa pendente</h2>
-          <p className="text-xs text-gray-400 mt-1 max-w-xs">
+          <h2 className="text-label font-bold text-n-900">Nenhuma conversa pendente</h2>
+          <p className="text-caption text-n-400 mt-1 max-w-xs">
             Quando o bot pausar um atendimento e a cliente precisar de você, a conversa aparece aqui.
           </p>
         </div>
@@ -68,21 +68,21 @@ export function PendingConversationsWidget({ initialConversations, showEmptyStat
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-[#efe9e6] shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#efe9e6]">
-        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center">
-          <MessageCircle className="h-4 w-4 text-amber-600" />
+    <div className="bg-white rounded-3xl border border-n-200 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-n-200">
+        <div className="w-8 h-8 rounded-xl bg-warning-bg flex items-center justify-center">
+          <MessageCircle className="h-4 w-4 text-warning" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold text-gray-900">Conversas Pendentes</h2>
-          <p className="text-xs text-gray-400">A cliente aguarda seu atendimento direto</p>
+          <h2 className="text-label font-bold text-n-900">Conversas Pendentes</h2>
+          <p className="text-caption text-n-400">A cliente aguarda seu atendimento direto</p>
         </div>
-        <span className="text-xs font-bold text-white bg-amber-500 rounded-full px-2 py-0.5 min-w-[20px] text-center">
+        <span className="text-caption font-bold text-white bg-warning rounded-full px-2 py-0.5 min-w-[20px] text-center">
           {conversations.length}
         </span>
       </div>
 
-      <div className="divide-y divide-[#f5f0ed]">
+      <div className="divide-y divide-n-50">
         {conversations.map(conv => {
           const lastMsg = lastClientMessage(conv.messages);
           const displayName = conv.client_name || formatPhone(conv.client_phone);
@@ -90,25 +90,25 @@ export function PendingConversationsWidget({ initialConversations, showEmptyStat
 
           return (
             <div key={conv.client_phone} className="flex items-start gap-3 px-5 py-4">
-              <div className="w-9 h-9 rounded-2xl bg-[#f7f3ee] flex items-center justify-center shrink-0 mt-0.5">
-                <Phone className="h-4 w-4 text-gray-400" />
+              <div className="w-9 h-9 rounded-2xl bg-n-50 flex items-center justify-center shrink-0 mt-0.5">
+                <Phone className="h-4 w-4 text-n-400" />
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{timeAgo(conv.last_message_at)}</span>
+                  <span className="text-label font-semibold text-n-900 truncate">{displayName}</span>
+                  <span className="text-caption text-n-400 shrink-0">{timeAgo(conv.last_message_at)}</span>
                 </div>
                 {conv.client_name && (
-                  <p className="text-xs text-gray-400 mb-0.5">{formatPhone(conv.client_phone)}</p>
+                  <p className="text-caption text-n-400 mb-0.5">{formatPhone(conv.client_phone)}</p>
                 )}
                 {lastMsg && (
-                  <p className="text-xs text-gray-500 truncate mb-2">"{lastMsg}"</p>
+                  <p className="text-caption text-n-500 truncate mb-2">"{lastMsg}"</p>
                 )}
                 <button
                   onClick={() => handleResume(conv.client_phone)}
                   disabled={isResuming || isPending}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#500b18] bg-[#f7f0f0] hover:bg-[#f0e5e5] rounded-xl px-3 py-1.5 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 text-caption font-semibold text-wine-700 bg-n-100 hover:bg-n-150 rounded-xl px-3 py-1.5 transition-colors disabled:opacity-50"
                 >
                   <Bot className="h-3 w-3" />
                   {isResuming ? 'Retomando...' : 'Retomar Bot'}

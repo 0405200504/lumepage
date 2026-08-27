@@ -32,12 +32,12 @@ export async function UpgradeRequired({
           <Lock className="h-6 w-6" />
         </div>
 
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-wine-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-3 py-1 text-caption font-semibold uppercase tracking-[0.18em] text-wine-700">
           <Sparkles className="h-3 w-3" /> Plano {PLAN_LABEL[plan]}
         </span>
 
-        <h2 className="mt-4 text-2xl font-black tracking-tight text-ink">{CAPABILITY_LABEL[capability]}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink/60">
+        <h2 className="mt-4 text-h2 font-semibold tracking-tight text-ink">{CAPABILITY_LABEL[capability]}</h2>
+        <p className="mt-2 text-label leading-relaxed text-ink/60">
           Este recurso faz parte do plano <strong className="font-bold text-ink">{PLAN_LABEL[plan]}</strong>.
           Faça upgrade para desbloquear e continuar crescendo com a Lume.
         </p>
@@ -47,8 +47,8 @@ export async function UpgradeRequired({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="tap mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition-all hover:shadow-lg"
-            style={{ background: 'linear-gradient(135deg, #8c2438 0%, #500b18 100%)' }}
+            className="tap mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-label font-bold text-white shadow-md transition-ui hover:shadow-lg"
+            style={{ background: 'linear-gradient(135deg, var(--color-wine-600) 0%, var(--color-wine-800) 100%)' }}
           >
             Fazer upgrade para {PLAN_LABEL[plan]} <ArrowRight className="h-4 w-4" />
           </a>

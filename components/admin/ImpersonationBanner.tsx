@@ -51,8 +51,8 @@ export function ImpersonationBanner({ brandName, adminEmail, readOnly, expiresAt
   return (
     <div
       role="status"
-      className={`sticky top-0 z-50 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-white text-xs font-bold
-        ${readOnly ? 'bg-[color:var(--color-warn)]' : 'bg-[color:var(--color-bad)]'}`}
+      className={`sticky top-0 z-50 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-white text-caption font-bold
+        ${readOnly ? 'bg-warning' : 'bg-danger'}`}
     >
       <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
 
@@ -61,14 +61,14 @@ export function ImpersonationBanner({ brandName, adminEmail, readOnly, expiresAt
         <span className="hidden sm:inline"> · sessão de suporte de {adminEmail}</span>
       </span>
 
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-[0.08em] text-[10px]">
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-[0.08em] text-caption">
         {readOnly ? <Eye className="h-3 w-3" aria-hidden /> : <Pencil className="h-3 w-3" aria-hidden />}
         {readOnly ? 'somente leitura' : 'pode editar'}
       </span>
 
       {clock && (
         <span
-          className={`tabular-nums px-2 py-0.5 rounded-full bg-black/20 ${ending ? 'animate-pulse' : ''}`}
+          className={`num px-2 py-0.5 rounded-full bg-black/20 ${ending ? 'animate-pulse' : ''}`}
           aria-label={`Sessão expira em ${clock}`}
         >
           expira em {clock}

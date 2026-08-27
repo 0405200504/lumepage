@@ -25,8 +25,8 @@ export function FieldGroup({ title, hint, children }: {
   return (
     <section className="space-y-3">
       <div>
-        <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-450">{title}</h4>
-        {hint && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{hint}</p>}
+        <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-n-600">{title}</h4>
+        {hint && <p className="text-[11px] text-n-400 mt-1 leading-relaxed">{hint}</p>}
       </div>
       <div className="space-y-3">{children}</div>
     </section>
@@ -50,13 +50,13 @@ interface TextProps {
 }
 
 const inputCls =
-  'w-full px-3 py-2.5 text-[13px] bg-white border border-gray-150 rounded-xl outline-none ' +
-  'focus:border-forest focus:ring-2 focus:ring-forest/10 transition-colors placeholder:text-gray-300';
+  'w-full px-3 py-2.5 text-[13px] bg-white border border-n-200 rounded-xl outline-none ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-colors placeholder:text-n-300';
 
 function Counter({ value, max }: { value: string; max: number }) {
   const over = value.length > max * 0.9;
   return (
-    <span className={`text-[10px] tabular-nums ${over ? 'text-amber-600 font-bold' : 'text-gray-300'}`}>
+    <span className={`text-[10px] tabular-nums ${over ? 'text-warning font-bold' : 'text-n-300'}`}>
       {value.length}/{max}
     </span>
   );
@@ -67,7 +67,7 @@ export function TextField({ label, value, onChange, max, placeholder, hint, type
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2 mb-1.5">
-        <label htmlFor={id} className="text-[11px] font-bold text-gray-600">{label}</label>
+        <label htmlFor={id} className="text-[11px] font-bold text-n-600">{label}</label>
         <Counter value={value} max={max} />
       </div>
       <input
@@ -79,7 +79,7 @@ export function TextField({ label, value, onChange, max, placeholder, hint, type
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
       />
-      {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
+      {hint && <p className="text-[10px] text-n-400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function TextArea({ label, value, onChange, max, placeholder, hint, rows 
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2 mb-1.5">
-        <label htmlFor={id} className="text-[11px] font-bold text-gray-600">{label}</label>
+        <label htmlFor={id} className="text-[11px] font-bold text-n-600">{label}</label>
         <Counter value={value} max={max} />
       </div>
       <textarea
@@ -101,7 +101,7 @@ export function TextArea({ label, value, onChange, max, placeholder, hint, rows 
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
       />
-      {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
+      {hint && <p className="text-[10px] text-n-400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -114,14 +114,14 @@ export function ColorField({ label, value, onChange, hint }: {
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="text-[11px] font-bold text-gray-600 block mb-1.5">{label}</label>
+      <label htmlFor={id} className="text-[11px] font-bold text-n-600 block mb-1.5">{label}</label>
       <div className="flex items-center gap-2">
         <input
           id={id}
           type="color"
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="h-10 w-12 rounded-xl border border-gray-150 bg-white cursor-pointer p-1"
+          className="h-10 w-12 rounded-xl border border-n-200 bg-white cursor-pointer p-1"
         />
         <input
           type="text"
@@ -131,7 +131,7 @@ export function ColorField({ label, value, onChange, hint }: {
           maxLength={7}
         />
       </div>
-      {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
+      {hint && <p className="text-[10px] text-n-400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -149,13 +149,13 @@ export function Toggle({ label, hint, checked, onChange, disabled }: {
         aria-checked={checked}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className={`mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? 'bg-forest' : 'bg-gray-200'} ${disabled ? '' : 'cursor-pointer'}`}
+        className={`mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? 'bg-wine-700' : 'bg-n-200'} ${disabled ? '' : 'cursor-pointer'}`}
       >
         <span className={`block h-4 w-4 bg-white rounded-full shadow-xs transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
       </button>
       <span className="min-w-0">
-        <span className="block text-[13px] font-semibold text-gray-700">{label}</span>
-        {hint && <span className="block text-[11px] text-gray-400 mt-0.5 leading-relaxed">{hint}</span>}
+        <span className="block text-[13px] font-semibold text-n-700">{label}</span>
+        {hint && <span className="block text-[11px] text-n-400 mt-0.5 leading-relaxed">{hint}</span>}
       </span>
     </label>
   );
@@ -190,13 +190,13 @@ export function ImageField({ label, value, onChange, professionalId, kind, hint,
 
   return (
     <div>
-      <label className="text-[11px] font-bold text-gray-600 block mb-1.5">{label}</label>
+      <label className="text-[11px] font-bold text-n-600 block mb-1.5">{label}</label>
       <div className="flex items-start gap-3">
-        <div className={`${ratio} w-20 shrink-0 rounded-xl overflow-hidden bg-sand border border-gray-150 grid place-items-center`}>
+        <div className={`${ratio} w-20 shrink-0 rounded-xl overflow-hidden bg-n-100 border border-n-200 grid place-items-center`}>
           {value
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={value} alt="" className="h-full w-full object-cover" />
-            : <ImageIcon className="h-5 w-5 text-gray-300" />}
+            : <ImageIcon className="h-5 w-5 text-n-300" />}
         </div>
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-wrap gap-2">
@@ -204,7 +204,7 @@ export function ImageField({ label, value, onChange, professionalId, kind, hint,
               type="button"
               disabled={busy}
               onClick={() => ref.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl bg-forest hover:bg-forest-hover text-white disabled:opacity-60 cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl bg-wine-700 hover:bg-wine-800 text-white disabled:opacity-60 cursor-pointer transition-colors"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {busy ? 'Enviando…' : value ? 'Trocar' : 'Enviar foto'}
@@ -213,13 +213,13 @@ export function ImageField({ label, value, onChange, professionalId, kind, hint,
               <button
                 type="button"
                 onClick={() => onChange('')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl border border-gray-150 text-gray-500 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl border border-n-200 text-n-500 hover:bg-n-50 cursor-pointer transition-colors"
               >
                 <X className="h-3.5 w-3.5" /> Remover
               </button>
             )}
           </div>
-          {hint && <p className="text-[10px] text-gray-400 leading-relaxed">{hint}</p>}
+          {hint && <p className="text-[10px] text-n-400 leading-relaxed">{hint}</p>}
         </div>
       </div>
       <input
@@ -257,31 +257,31 @@ export function Repeater<T extends { id: string }>({
   return (
     <div className="space-y-3">
       {items.length === 0 && emptyHint && (
-        <p className="text-[11px] text-gray-400 bg-sand border border-gray-150 rounded-xl px-3 py-3 leading-relaxed">
+        <p className="text-[11px] text-n-400 bg-n-100 border border-n-200 rounded-xl px-3 py-3 leading-relaxed">
           {emptyHint}
         </p>
       )}
 
       {items.map((item, i) => (
-        <div key={item.id} className="rounded-2xl border border-gray-150 bg-white p-3.5 space-y-3">
+        <div key={item.id} className="rounded-2xl border border-n-200 bg-white p-3.5 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-n-400">
               {i + 1} de {items.length}
             </span>
             <div className="flex items-center gap-1">
               <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0}
                 aria-label="Subir"
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 disabled:opacity-30 cursor-pointer">
+                className="p-1.5 rounded-lg text-n-400 hover:bg-n-50 disabled:opacity-30 cursor-pointer">
                 <ChevronUp className="h-3.5 w-3.5" />
               </button>
               <button type="button" onClick={() => move(i, i + 1)} disabled={i === items.length - 1}
                 aria-label="Descer"
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 disabled:opacity-30 cursor-pointer">
+                className="p-1.5 rounded-lg text-n-400 hover:bg-n-50 disabled:opacity-30 cursor-pointer">
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))}
                 aria-label="Excluir"
-                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 cursor-pointer">
+                className="p-1.5 rounded-lg text-danger hover:bg-danger-bg cursor-pointer">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -298,12 +298,12 @@ export function Repeater<T extends { id: string }>({
         <button
           type="button"
           onClick={() => onChange([...items, makeNew()])}
-          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] font-bold rounded-xl border border-dashed border-gray-250 text-gray-500 hover:border-forest hover:text-forest cursor-pointer transition-colors"
+          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] font-bold rounded-xl border border-dashed border-n-300 text-n-500 hover:border-wine-700 hover:text-wine-700 cursor-pointer transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> {addLabel}
         </button>
       ) : (
-        <p className="text-[10px] text-gray-400 text-center">Limite de {max} itens atingido.</p>
+        <p className="text-[10px] text-n-400 text-center">Limite de {max} itens atingido.</p>
       )}
     </div>
   );

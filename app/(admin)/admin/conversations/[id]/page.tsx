@@ -28,17 +28,17 @@ export default async function ConversationThreadPage({ params }: { params: Promi
         <>
           <ResolveConversationButton id={row.id} paused={row.botPaused} />
           <a href={buildWhatsappLink(row.clientPhone, '')} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-[#226045] hover:bg-surface-2">
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-success hover:bg-surface-2">
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
           </a>
-          <Link href="/admin/conversations" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-xs font-bold text-ink hover:bg-surface-2">
+          <Link href="/admin/conversations" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2">
             <ArrowLeft className="h-3.5 w-3.5" /> Voltar
           </Link>
         </>
       }
     >
       <div className="space-y-4">
-        <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5 text-xs">
+        <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5 text-caption">
           {row.botPaused ? <Badge tone="warn">esperando humano há {row.waitingHours}h</Badge> : <Badge tone="ok">bot respondendo</Badge>}
           <span className="text-muted">Última mensagem em {formatDateTimeBR(row.lastMessageAt)}</span>
         </div>
@@ -47,15 +47,15 @@ export default async function ConversationThreadPage({ params }: { params: Promi
         <ul className="space-y-2 max-w-3xl">
           {messages.map((m, i) => (
             <li key={i} className={`flex ${m.role === 'assistant' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs ${
+              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-caption ${
                 m.role === 'assistant' ? 'bg-accent-soft text-ink' : 'card'
               }`}>
                 <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className="mt-1 text-[10px] text-muted">{m.role === 'assistant' ? 'bot' : 'cliente'} · {formatDateTimeBR(new Date(m.at))}</p>
+                <p className="mt-1 text-caption text-muted">{m.role === 'assistant' ? 'bot' : 'cliente'} · {formatDateTimeBR(new Date(m.at))}</p>
               </div>
             </li>
           ))}
-          {messages.length === 0 && <li className="card py-10 text-center text-xs text-muted">Sem mensagens registradas.</li>}
+          {messages.length === 0 && <li className="card py-10 text-center text-caption text-muted">Sem mensagens registradas.</li>}
         </ul>
       </div>
     </LayoutAdmin>

@@ -50,7 +50,7 @@ export function GoogleButton({ label = 'Continuar com Google' }: { label?: strin
       type="button"
       onClick={handleGoogle}
       disabled={loading}
-      className="tap flex items-center justify-center gap-2.5 w-full py-3.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-2xl hover:bg-gray-50 transition-all-custom disabled:opacity-60"
+      className="tap flex items-center justify-center gap-2.5 w-full py-3.5 bg-white border border-n-200 text-n-700 text-label font-bold rounded-2xl hover:bg-n-50 transition-ui disabled:opacity-60"
     >
       <GoogleIcon />
       <span>{loading ? 'Abrindo…' : label}</span>

@@ -61,7 +61,7 @@ export function DataTable<T>({
     <div>
       <div className="overflow-x-auto scroll-touch">
         <table className="min-w-full text-left">
-          <thead className="text-[10px] font-bold text-gray-450 uppercase tracking-wider border-b border-line bg-surface-2/50">
+          <thead className="text-caption font-bold text-n-600 uppercase tracking-wider border-b border-line bg-surface-2/50">
             <tr>
               {columns.map(col => {
                 const sortable = !!col.sortValue;
@@ -71,7 +71,7 @@ export function DataTable<T>({
                     {sortable ? (
                       <button onClick={() => toggleSort(col.key)} className={`inline-flex items-center gap-1 hover:text-ink transition-colors ${activeSort ? 'text-ink' : ''}`}>
                         {col.header}
-                        {!activeSort ? <ChevronsUpDown className="h-3 w-3 opacity-50" /> : sort!.dir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                        {!activeSort ? <ChevronsUpDown className="h-4 w-4 opacity-50" /> : sort!.dir === 'desc' ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                       </button>
                     ) : col.header}
                   </th>
@@ -79,7 +79,7 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-line text-sm text-ink">
+          <tbody className="divide-y divide-line text-label text-ink">
             {pageRows.map(row => (
               <tr
                 key={rowKey(row)}
@@ -94,25 +94,25 @@ export function DataTable<T>({
               </tr>
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={columns.length} className="py-12 text-center text-xs text-gray-450">{emptyLabel}</td></tr>
+              <tr><td colSpan={columns.length} className="py-12 text-center text-caption text-n-600">{emptyLabel}</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       {sorted.length > pageSize && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-line text-xs no-print">
-          <span className="text-gray-450 font-semibold">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-line text-caption no-print">
+          <span className="text-n-600 font-semibold">
             {safePage * pageSize + 1}–{Math.min(sorted.length, (safePage + 1) * pageSize)} de {sorted.length}
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0}
-              className="p-1.5 rounded-lg border border-line text-gray-450 hover:bg-surface-2 disabled:opacity-40 transition-colors">
+              className="p-1.5 rounded-lg border border-line text-n-600 hover:bg-surface-2 disabled:opacity-40 transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="px-2 font-bold text-ink">{safePage + 1}/{pageCount}</span>
             <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1}
-              className="p-1.5 rounded-lg border border-line text-gray-450 hover:bg-surface-2 disabled:opacity-40 transition-colors">
+              className="p-1.5 rounded-lg border border-line text-n-600 hover:bg-surface-2 disabled:opacity-40 transition-colors">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>

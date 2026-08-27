@@ -53,7 +53,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         ))}
       </svg>
       <div className="flex-1 min-w-0 space-y-1.5 w-full">
-        {centerLabel && <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">{centerLabel}</p>}
+        {centerLabel && <p className="text-caption font-bold text-n-600 uppercase tracking-wider mb-2">{centerLabel}</p>}
         {data.map((d, i) => (
           <div
             key={d.key ?? d.label}
@@ -64,15 +64,15 @@ export const DonutChart: React.FC<DonutChartProps> = ({
           >
             <span className="flex items-center gap-2 min-w-0">
               <span className="inline-block h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
-              <span className="text-xs font-semibold text-ink truncate">{d.label}</span>
+              <span className="text-caption font-semibold text-ink truncate">{d.label}</span>
             </span>
-            <span className="text-xs font-bold text-ink shrink-0 tabular-nums">
+            <span className="text-caption font-bold text-ink shrink-0 num">
               {format(d.value)}
-              <span className="text-gray-450 font-semibold ml-1">{total > 0 ? `${Math.round((d.value / total) * 100)}%` : '0%'}</span>
+              <span className="text-n-600 font-semibold ml-1">{total > 0 ? `${Math.round((d.value / total) * 100)}%` : '0%'}</span>
             </span>
           </div>
         ))}
-        {total === 0 && <p className="text-xs text-gray-450">Sem dados no período.</p>}
+        {total === 0 && <p className="text-caption text-n-600">Sem dados no período.</p>}
       </div>
     </div>
   );

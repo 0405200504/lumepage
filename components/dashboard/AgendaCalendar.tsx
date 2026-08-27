@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, ChevronDown, CalendarDays, CalendarRange, LayoutGrid,
-  X, MessageCircle, Clock, PartyPopper, Sparkles, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
-  SlidersHorizontal, Lock,
+  X, MessageCircle, Clock, PartyPopper, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
+  SlidersHorizontal, Lock, UtensilsCrossed,
 } from 'lucide-react';
 import { Appointment, Service, TimeBlock, Task, Client, AvailabilityRule } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
@@ -17,6 +17,10 @@ import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointmen
 import { AppointmentStatus } from '@/types/database';
 import { QuickAppointmentModal } from './QuickAppointmentModal';
 import { QuickAddFab } from '../ui/QuickAddFab';
+import { Button } from '../ui/Button';
+import { PillGroup } from '../ui/PillGroup';
+import { StatusPill } from '../ui/StatusPill';
+import { EmptyState } from '../ui/EmptyState';
 import { CalendarPlus } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 
@@ -294,44 +298,61 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   ];
 
   return (
-    <div className="select-none animate-fade-up">
-      <div className="flex gap-5 items-start">
+    <div className="select-none">
+      <div className="flex gap-6 items-start">
         {/* Painel lateral (desktop) */}
-        <div className="hidden lg:block w-60 shrink-0 sticky top-2">{sidebar}</div>
+        <div className="hidden lg:block w-60 shrink-0 sticky top-20">{sidebar}</div>
 
         {/* Coluna principal */}
         <div className="flex-1 min-w-0 space-y-4">
           {/* Topbar */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden inline-flex items-center gap-1.5 px-3 py-2.5 bg-paper border border-gray-150 rounded-2xl text-xs font-bold text-forest shadow-soft hover:bg-cream transition-colors" aria-label="Filtros">
-                <SlidersHorizontal className="h-3.5 w-3.5" /> Filtros{hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-wine-600" />}
-              </button>
-              <button onClick={jumpToday} className="px-4 py-2.5 bg-paper border border-gray-150 rounded-2xl text-xs font-bold text-forest shadow-soft hover:bg-cream transition-colors">Hoje</button>
-              <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft">
-                <button onClick={() => step(-1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Anterior"><ChevronLeft className="h-4 w-4" /></button>
-                <button onClick={() => step(1)} className="p-2 rounded-xl hover:bg-cream text-gray-450 hover:text-forest transition-colors" aria-label="Próximo"><ChevronRight className="h-4 w-4" /></button>
+            <div className="flex items-center gap-2 min-w-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden"
+                leadingIcon={<SlidersHorizontal className="h-4 w-4" />}
+              >
+                Filtros
+                {hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-wine-700" aria-label="filtros ativos" />}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={jumpToday}>Hoje</Button>
+              <div className="flex items-center gap-0.5">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Período anterior" onClick={() => step(-1)} leadingIcon={<ChevronLeft className="h-5 w-5" />} />
+                <Button variant="ghost" size="sm" iconOnly aria-label="Próximo período" onClick={() => step(1)} leadingIcon={<ChevronRight className="h-5 w-5" />} />
               </div>
-              <h3 className="text-lg md:text-xl font-black text-forest tracking-tight ml-1 capitalize">{title}</h3>
+              <h2 className="text-h2 text-heading capitalize truncate ml-1">{title}</h2>
             </div>
 
-            <div className="flex items-center bg-paper border border-gray-150 rounded-2xl p-1 shadow-soft self-start">
-              {([{ k: 'day', label: 'Dia', icon: Clock }, { k: 'week', label: 'Semana', icon: CalendarRange }, { k: 'month', label: 'Mês', icon: CalendarDays }, { k: 'year', label: 'Ano', icon: LayoutGrid }] as const).map(({ k, label, icon: Icon }) => (
-                <button key={k} onClick={() => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all-custom ${view === k ? 'surface-wine text-white shadow-soft' : 'text-gray-450 hover:text-forest'}`}>
-                  <Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
+            <PillGroup
+              ariaLabel="Visão da agenda"
+              value={view}
+              onChange={(k) => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }}
+              items={[
+                { key: 'day', label: 'Dia', icon: <Clock className="h-4 w-4" />, labelHiddenOnMobile: true },
+                { key: 'week', label: 'Semana', icon: <CalendarRange className="h-4 w-4" />, labelHiddenOnMobile: true },
+                { key: 'month', label: 'Mês', icon: <CalendarDays className="h-4 w-4" />, labelHiddenOnMobile: true },
+                { key: 'year', label: 'Ano', icon: <LayoutGrid className="h-4 w-4" />, labelHiddenOnMobile: true },
+              ]}
+            />
           </div>
 
-          {/* Legenda */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold text-gray-450">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#2e7d5b]" /> Confirmado</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b07a23]" /> Pendente</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-wine-700" /> Finalizado</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#b23a48]" /> Falta</span>
-            {showTasks && <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-3 w-3 text-wine-600" /> Tarefa (arraste p/ mover)</span>}
-            {showHolidays && <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-3 w-3 text-wine-500" /> Feriado</span>}
+          {/* Legenda — as cores saem de STATUS_META, a mesma fonte que pinta os
+              blocos na grade. Enquanto eram hex escritos à mão aqui, a legenda
+              podia mentir sobre o que estava desenhado ao lado. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-n-600">
+            {(['confirmed', 'pending', 'completed', 'no_show'] as const).map((st) => {
+              const m = statusMeta(st);
+              return (
+                <span key={st} className="inline-flex items-center gap-1.5">
+                  <span className={`h-2 w-2 rounded-full ${m.dot}`} aria-hidden /> {m.label}
+                </span>
+              );
+            })}
+            {showTasks && <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-4 w-4 text-wine-700" aria-hidden /> Tarefa (arraste para mover)</span>}
+            {showHolidays && <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-4 w-4 text-wine-700" aria-hidden /> Feriado</span>}
           </div>
 
           {view === 'day' && (
@@ -351,12 +372,12 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 
       {/* Drawer de filtros (mobile) */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-[88%] max-w-xs h-full bg-cream overflow-y-auto p-4 shadow-glow animate-slide-right">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-black text-forest">Filtros & opções</p>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl hover:bg-paper text-gray-450"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-50 lg:hidden flex" role="dialog" aria-modal="true" aria-label="Filtros e opções">
+          <div className="sheet-backdrop absolute inset-0" onClick={() => setSidebarOpen(false)} />
+          <aside className="relative w-[88%] max-w-xs h-full bg-bg overflow-y-auto scroll-touch p-4 shadow-lg animate-slide-right">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-label font-semibold text-heading">Filtros e opções</p>
+              <Button variant="ghost" size="sm" iconOnly aria-label="Fechar filtros" onClick={() => setSidebarOpen(false)} leadingIcon={<X className="h-5 w-5" />} />
             </div>
             {sidebar}
           </aside>
@@ -404,22 +425,32 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 const MINI_WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
-  <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5 w-full text-left py-0.5" role="switch" aria-checked={checked}>
-    <span className={`relative h-5 w-9 rounded-full transition-colors shrink-0 ${checked ? 'bg-wine-600' : 'bg-gray-250'}`}>
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${checked ? 'left-[1.125rem]' : 'left-0.5'}`} />
+  <button
+    type="button"
+    onClick={() => onChange(!checked)}
+    role="switch"
+    aria-checked={checked}
+    className="flex items-center gap-2.5 w-full text-left min-h-11 rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+  >
+    <span className={`relative h-5 w-9 rounded-full shrink-0 transition-ui ${checked ? 'bg-wine-700' : 'bg-n-300'}`}>
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-n-0 shadow-xs transition-ui ${checked ? 'left-[1.125rem]' : 'left-0.5'}`} />
     </span>
-    <span className="text-[13px] font-semibold text-ink">{label}</span>
+    <span className="text-label text-ink">{label}</span>
   </button>
 );
 
 const SelectField: React.FC<{ label: string; value: string; onChange: (v: string) => void; children: React.ReactNode }> = ({ label, value, onChange, children }) => (
   <label className="block">
-    <span className="text-[13px] font-bold text-ink mb-1 block">{label}</span>
+    <span className="text-label text-ink mb-1.5 block">{label}</span>
     <div className="relative">
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-paper border border-gray-150 rounded-xl pl-3 pr-8 py-2 text-sm text-ink shadow-xs focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-11 appearance-none bg-surface border border-line rounded-control pl-3 pr-9 text-label text-ink shadow-xs transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+      >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-450" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-n-500" aria-hidden />
     </div>
   </label>
 );
@@ -461,14 +492,16 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
   return (
     <div className="space-y-5">
       {/* Mini-calendário */}
-      <div className="card p-3">
+      <div className="card p-4">
         <div className="flex items-center justify-between mb-2">
-          <button onClick={() => onStepMonth(-1)} className="p-1.5 rounded-lg hover:bg-cream text-gray-450 hover:text-forest" aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></button>
-          <p className="text-[13px] font-black text-forest capitalize">{MONTHS[miniCursor.getMonth()]} de {miniCursor.getFullYear()}</p>
-          <button onClick={() => onStepMonth(1)} className="p-1.5 rounded-lg hover:bg-cream text-gray-450 hover:text-forest" aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></button>
+          <Button variant="ghost" size="sm" iconOnly aria-label="Mês anterior" onClick={() => onStepMonth(-1)} leadingIcon={<ChevronLeft className="h-4 w-4" />} />
+          <p className="text-label text-heading capitalize">{MONTHS[miniCursor.getMonth()]} de {miniCursor.getFullYear()}</p>
+          <Button variant="ghost" size="sm" iconOnly aria-label="Próximo mês" onClick={() => onStepMonth(1)} leadingIcon={<ChevronRight className="h-4 w-4" />} />
         </div>
         <div className="grid grid-cols-7">
-          {MINI_WEEKDAYS.map((w, i) => <div key={i} className={`text-center text-[10px] font-bold py-1 ${i === 0 ? 'text-wine-400' : 'text-gray-450/70'}`}>{w}</div>)}
+          {MINI_WEEKDAYS.map((w, i) => (
+            <div key={i} className="text-center text-micro font-semibold py-1 text-n-500">{w}</div>
+          ))}
           {days.map((d, i) => {
             const iso = isoOf(d);
             const inMonth = d.getMonth() === miniCursor.getMonth();
@@ -476,10 +509,20 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
             const isSelected = iso === selectedISO;
             const has = (apptByDate[iso] || []).some(a => a.status !== 'cancelled');
             return (
-              <button key={i} onClick={() => onPickDay(d)} className="aspect-square flex items-center justify-center">
-                <span className={`relative flex items-center justify-center h-7 w-7 text-[11px] rounded-full transition-colors ${isToday ? 'surface-wine text-white font-bold' : isSelected ? 'bg-wine-100 text-wine-700 font-bold' : inMonth ? 'text-ink hover:bg-cream' : 'text-gray-450/40'}`}>
+              <button
+                key={i}
+                onClick={() => onPickDay(d)}
+                aria-current={isToday ? 'date' : undefined}
+                aria-label={`${d.getDate()} de ${MONTHS[d.getMonth()]}`}
+                className="aspect-square flex items-center justify-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600"
+              >
+                <span className={`num relative flex items-center justify-center h-7 w-7 text-micro rounded-full transition-ui ${
+                  isToday ? 'bg-wine-700 text-white font-semibold'
+                  : isSelected ? 'bg-wine-50 text-wine-700 font-semibold'
+                  : inMonth ? 'text-ink hover:bg-n-100' : 'text-n-400'}`}
+                >
                   {d.getDate()}
-                  {has && !isToday && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-wine-600" />}
+                  {has && !isToday && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-wine-700" aria-hidden />}
                 </span>
               </button>
             );
@@ -489,9 +532,9 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
 
       {/* Filtros */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-base font-black text-forest">Filtros</p>
-          <button onClick={onClearFilters} disabled={!hasFilters} className="text-[13px] font-bold text-wine-600 hover:text-wine-700 disabled:text-gray-450/50 disabled:cursor-default transition-colors">Limpar filtros</button>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-label font-semibold text-heading">Filtros</p>
+          <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={!hasFilters}>Limpar</Button>
         </div>
         <SelectField label="Status" value={filterStatus} onChange={(v) => setFilterStatus(v as 'all' | AppointmentStatus)}>
           <option value="all">Todos</option>
@@ -513,8 +556,13 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
 
       {/* Opções avançadas */}
       <div className="space-y-2.5">
-        <button onClick={() => setAdvOpen(o => !o)} className="flex items-center gap-1.5 text-[13px] font-black text-wine-600 hover:text-wine-700">
-          Opções avançadas <ChevronDown className={`h-4 w-4 transition-transform ${advOpen ? 'rotate-180' : ''}`} />
+        <button
+          onClick={() => setAdvOpen(o => !o)}
+          aria-expanded={advOpen}
+          className="flex items-center gap-1.5 min-h-11 text-label font-semibold text-wine-600 hover:text-wine-700 transition-ui rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+        >
+          Opções avançadas
+          <ChevronDown className={`h-4 w-4 transition-transform duration-[220ms] ease-out ${advOpen ? 'rotate-180' : ''}`} aria-hidden />
         </button>
         {advOpen && (
           <div className="space-y-2 pt-0.5">
@@ -535,10 +583,10 @@ const TaskChip: React.FC<{ task: Task; onOpen?: () => void; compact?: boolean }>
     onDragStart={(e) => { e.dataTransfer.setData(TASK_DND, task.id); e.dataTransfer.effectAllowed = 'move'; }}
     onClick={(e) => { e.stopPropagation(); onOpen?.(); }}
     title={task.content}
-    className={`group/task flex items-center gap-1 rounded-md border px-1.5 py-0.5 cursor-grab active:cursor-grabbing bg-wine-700/8 border-wine-700/25 text-wine-800 ${task.done ? 'opacity-50 line-through' : ''}`}
+    className={`group/task flex items-center gap-1 rounded-chip border px-1.5 py-0.5 cursor-grab active:cursor-grabbing bg-wine-50 border-wine-100 text-wine-700 ${task.done ? 'opacity-50 line-through' : ''}`}
   >
-    <GripVertical className="h-2.5 w-2.5 shrink-0 opacity-50" />
-    <span className={`truncate ${compact ? 'text-[9px]' : 'text-[10px]'} font-semibold`}>
+    <GripVertical className="h-4 w-4 shrink-0 opacity-40" aria-hidden />
+    <span className={`truncate text-micro font-semibold ${compact ? 'max-w-full' : ''}`}>
       {task.due_time ? `${task.due_time.substring(0, 5)} ` : ''}{task.content}
     </span>
   </div>
@@ -550,9 +598,9 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-gray-150 bg-cream/60">
-        {WEEKDAYS_SHORT.map((w, i) => (
-          <div key={w} className={`py-2.5 text-center text-[10px] font-black uppercase tracking-wider ${i === 0 ? 'text-wine-500' : 'text-gray-450'}`}>{w}</div>
+      <div className="grid grid-cols-7 border-b border-line bg-n-25">
+        {WEEKDAYS_SHORT.map((w) => (
+          <div key={w} className="py-2.5 text-center overline text-n-500">{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7">
@@ -571,22 +619,22 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
               key={idx}
               onClick={() => onSelectDay(iso)}
               {...dropProps(iso)}
-              className={`group relative min-h-[112px] text-left p-2 border-b border-r border-gray-150 transition-colors hover:bg-cream/70 cursor-pointer ${!inMonth ? 'bg-cream/40' : ''} ${(holiday || isSunday) && inMonth ? 'bg-wine-50/50' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isDragOver ? 'ring-2 ring-inset ring-wine-700/50 bg-wine-50' : ''}`}
+              className={`group relative min-h-[112px] text-left p-2 border-b border-r border-line transition-ui cursor-pointer ${!inMonth ? 'bg-n-25' : ''} ${(holiday || isSunday) && inMonth ? 'bg-wine-50/60' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isDragOver ? 'ring-2 ring-inset ring-wine-700 bg-wine-50' : 'hover:bg-n-50'}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center justify-center h-6 w-6 text-[11px] font-bold rounded-full ${isToday ? 'surface-wine text-white shadow-soft' : inMonth ? 'text-ink' : 'text-gray-450/50'}`}>{day.getDate()}</span>
-                {appts.length > 0 && <span className="text-[9px] font-black text-wine-600 bg-wine-100/70 rounded-full px-1.5 py-0.5">{appts.length}</span>}
+                <span className={`num inline-flex items-center justify-center h-6 w-6 text-micro font-semibold rounded-full ${isToday ? 'bg-wine-700 text-white' : inMonth ? 'text-ink' : 'text-n-400'}`}>{day.getDate()}</span>
+                {appts.length > 0 && <span className="num text-micro font-semibold text-wine-700 bg-wine-50 rounded-full px-1.5">{appts.length}</span>}
               </div>
-              {holiday && <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-wine-600 truncate"><PartyPopper className="h-2.5 w-2.5 shrink-0" /><span className="truncate">{holiday.name}</span></div>}
-              {hasBlock && !holiday && <div className="mt-1 text-[9px] font-bold text-gray-450 truncate">Bloqueio</div>}
+              {holiday && <div className="mt-1 flex items-center gap-1 text-micro font-semibold text-wine-700 truncate"><PartyPopper className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{holiday.name}</span></div>}
+              {hasBlock && !holiday && <div className="mt-1 text-micro font-semibold text-n-500 truncate">Bloqueio</div>}
               <div className="mt-1 space-y-1">
                 {appts.slice(0, 2).map((a: Appointment) => {
                   const m = statusMeta(a.status);
-                  return <div key={a.id} className={`truncate rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${m.block}`}>{a.start_time.substring(0, 5)} {a.client_name.split(' ')[0]}</div>;
+                  return <div key={a.id} className={`num truncate rounded-chip border px-1.5 py-0.5 text-micro font-semibold ${m.block}`}>{a.start_time.substring(0, 5)} {a.client_name.split(' ')[0]}</div>;
                 })}
-                {appts.length > 2 && <div className="text-[9px] font-bold text-gray-450 pl-1">+{appts.length - 2} agend.</div>}
+                {appts.length > 2 && <div className="text-micro font-semibold text-n-500 pl-1">+{appts.length - 2} agendamentos</div>}
                 {dayTasks.slice(0, 2).map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} compact />)}
-                {dayTasks.length > 2 && <div className="text-[9px] font-bold text-wine-600 pl-1">+{dayTasks.length - 2} tarefas</div>}
+                {dayTasks.length > 2 && <div className="text-micro font-semibold text-wine-700 pl-1">+{dayTasks.length - 2} tarefas</div>}
               </div>
             </div>
           );
@@ -675,27 +723,31 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
   return (
     <div className="card p-0 overflow-hidden">
       {/* Cabeçalho do dia */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-150 ${isToday ? 'bg-wine-50/60' : 'bg-paper'}`}>
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center justify-center h-9 w-9 rounded-full text-sm font-black ${isToday ? 'surface-wine text-white' : 'text-forest bg-cream'}`}>{cursor.getDate()}</span>
+      <div className={`flex items-center justify-between gap-3 px-5 py-4 border-b border-line ${isToday ? 'bg-wine-50/60' : 'bg-surface'}`}>
+        <div className="flex items-center gap-3">
+          <span className={`num inline-flex items-center justify-center h-10 w-10 rounded-control text-label font-semibold ${isToday ? 'bg-wine-700 text-white' : 'text-heading bg-n-100'}`}>{cursor.getDate()}</span>
           <div>
-            <p className="text-xs font-black text-forest capitalize">{WEEKDAYS_SHORT[cursor.getDay()]}{isToday ? ' · Hoje' : ''}</p>
-            <p className="text-[11px] font-semibold text-gray-450">{appts.length} agendamento{appts.length === 1 ? '' : 's'}</p>
+            <p className="text-label font-semibold text-heading capitalize">{WEEKDAYS_SHORT[cursor.getDay()]}{isToday ? ' · Hoje' : ''}</p>
+            <p className="num text-caption text-n-500">{appts.length} {appts.length === 1 ? 'agendamento' : 'agendamentos'}</p>
           </div>
         </div>
-        {holiday && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600 bg-wine-50 px-2 py-1 rounded-lg"><PartyPopper className="h-3 w-3" /> {holiday.name}</span>}
+        {holiday && (
+          <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-wine-700 bg-wine-50 border border-wine-100 px-2.5 py-1 rounded-full">
+            <PartyPopper className="h-4 w-4" aria-hidden /> {holiday.name}
+          </span>
+        )}
       </div>
 
       {/* Tarefas sem horário */}
       {untimedTasks.length > 0 && (
-        <div className="px-4 py-2.5 border-b border-gray-150 space-y-1.5 bg-paper/60">
+        <div className="px-5 py-3 border-b border-line space-y-1.5 bg-n-25">
           {untimedTasks.map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} />)}
         </div>
       )}
 
       {fullDayBlock && (
-        <div className="mx-4 my-3 flex items-center gap-2 text-xs font-bold text-[#b23a48] bg-[#b23a48]/8 border border-[#b23a48]/20 rounded-xl px-3 py-2.5">
-          <Clock className="h-4 w-4" /> Dia bloqueado{fullDayBlock.reason ? ` — ${fullDayBlock.reason}` : ' (dia inteiro)'}
+        <div className="mx-5 my-4 flex items-center gap-2 text-label font-semibold text-danger bg-danger-bg border border-danger-border rounded-control px-3 py-2.5">
+          <Clock className="h-5 w-5 shrink-0" aria-hidden /> Dia bloqueado{fullDayBlock.reason ? ` — ${fullDayBlock.reason}` : ' (dia inteiro)'}
         </div>
       )}
 
@@ -709,7 +761,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 const min = rangeStartMin + i * 30;
                 const isHour = min % 60 === 0;
                 return (
-                  <div key={i} className={`absolute right-2 -translate-y-1/2 tabular-nums ${isHour ? 'text-[10px] font-bold text-gray-450' : 'text-[9px] font-semibold text-gray-450/55'}`} style={{ top: yOf(min) }}>
+                  <div key={i} className={`num absolute right-2 -translate-y-1/2 text-micro ${isHour ? 'font-semibold text-n-600' : 'text-n-400'}`} style={{ top: yOf(min) }}>
                     {pad(Math.floor(min / 60))}:{pad(min % 60)}
                   </div>
                 );
@@ -718,7 +770,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
             {/* Coluna de eventos */}
             <div
-              className={`relative flex-1 border-l border-gray-150 transition-colors ${isDragOver ? 'bg-wine-50/60' : ''}`}
+              className={`relative flex-1 border-l border-n-200 transition-colors ${isDragOver ? 'bg-wine-50/60' : ''}`}
               onDragOver={(e) => { if (e.dataTransfer.types.includes(APPT_DND)) { e.preventDefault(); setIsDragOver(true); } }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={(e) => {
@@ -740,8 +792,8 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
               {/* Ghost de "clique p/ encaixar" no horário sob o cursor */}
               {hoverMin !== null && (
-                <div className="absolute left-1 right-1 z-[5] rounded-lg border-2 border-dashed border-wine-400/70 bg-wine-50/70 flex items-center px-2 pointer-events-none" style={{ top: yOf(hoverMin), height: SNAP * PXM }}>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-wine-600"><Plus className="h-3 w-3" /> Encaixar às {pad(Math.floor(hoverMin / 60))}:{pad(hoverMin % 60)}</span>
+                <div className="absolute left-1 right-1 z-[5] rounded-chip border border-dashed border-wine-400 bg-wine-50 flex items-center px-2 pointer-events-none" style={{ top: yOf(hoverMin), height: SNAP * PXM }}>
+                  <span className="num inline-flex items-center gap-1 text-micro font-semibold text-wine-700"><Plus className="h-4 w-4" aria-hidden /> Encaixar às {pad(Math.floor(hoverMin / 60))}:{pad(hoverMin % 60)}</span>
                 </div>
               )}
 
@@ -750,36 +802,40 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 const h = startHour + i;
                 return (
                   <React.Fragment key={h}>
-                    <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(h * 60) }} />
-                    <div className="absolute left-0 right-0 border-t border-dashed border-gray-150/45 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
+                    <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(h * 60) }} />
+                    <div className="absolute left-0 right-0 border-t border-dashed border-n-150 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
                   </React.Fragment>
                 );
               })}
-              <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(endHour * 60) }} />
+              <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(endHour * 60) }} />
 
               {/* Horário de almoço (cinza claro) — sempre visível, atrás dos agendamentos */}
               {lunch && (
                 <div
-                  className="absolute left-1 right-1 rounded-lg bg-gray-100 border border-gray-200/80 px-2 py-0.5 overflow-hidden pointer-events-none"
+                  className="absolute left-1 right-1 rounded-chip bg-n-100 border border-line px-2 py-0.5 overflow-hidden pointer-events-none"
                   style={{ top: yOf(tmin(lunch.start)), height: Math.max((tmin(lunch.end) - tmin(lunch.start)) * PXM, 16) }}
                 >
-                  <p className="text-[10px] font-bold text-gray-400 truncate">🍽️ Almoço · {lunch.start.substring(0, 5)}–{lunch.end.substring(0, 5)}</p>
+                  <p className="num flex items-center gap-1 text-micro font-semibold text-n-500 truncate">
+                    <UtensilsCrossed className="h-4 w-4 shrink-0" aria-hidden /> Almoço · {lunch.start.substring(0, 5)}–{lunch.end.substring(0, 5)}
+                  </p>
                 </div>
               )}
 
               {/* Bloqueios de horário */}
               {timedBlocks.map((b, i) => (
-                <div key={`b${i}`} className="absolute rounded-lg bg-gray-150/70 border border-dashed border-gray-300 left-1 right-1 px-2 py-0.5 overflow-hidden pointer-events-none"
+                <div key={`b${i}`} className="absolute rounded-chip bg-n-150 border border-dashed border-n-300 left-1 right-1 px-2 py-0.5 overflow-hidden pointer-events-none"
                   style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 16) }}>
-                  <p className="text-[10px] font-bold text-gray-500 truncate">🔒 {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}</p>
+                  <p className="num flex items-center gap-1 text-micro font-semibold text-n-600 truncate">
+                    <Lock className="h-4 w-4 shrink-0" aria-hidden /> {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}
+                  </p>
                 </div>
               ))}
 
               {/* Linha do "agora" */}
               {nowInRange && (
                 <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#b23a48] -ml-1.5 shadow" />
-                  <div className="flex-1 border-t-2 border-[#b23a48]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-danger -ml-1.5 shadow-xs" />
+                  <div className="flex-1 border-t-2 border-danger" />
                 </div>
               )}
 
@@ -795,7 +851,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                     onDragStart={(e) => apptDragStart(e, a.id)}
                     onClick={() => onSelectDay(iso)}
                     title="Arraste para reagendar · clique para ver"
-                    className={`group absolute z-10 text-left rounded-lg border px-2 py-1 overflow-hidden shadow-soft cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] ${m.block}`}
+                    className={`group absolute z-10 text-left rounded-chip border px-2 py-1 overflow-hidden shadow-xs cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-600 ${m.block}`}
                     style={{
                       top: yOf(s) + 1,
                       height: height - 2,
@@ -803,10 +859,10 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                       width: `calc(${widthPct}% - 8px)`,
                     }}
                   >
-                    <GripVertical className="absolute right-0.5 top-0.5 h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-                    <p className="text-[10px] font-black tabular-nums leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
-                    <p className="text-[11px] font-bold truncate leading-tight">{a.client_name}</p>
-                    {height > 46 && <p className="text-[9px] opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
+                    <GripVertical className="absolute right-0.5 top-0.5 h-4 w-4 opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden />
+                    <p className="num text-micro font-semibold leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
+                    <p className="text-caption font-semibold truncate leading-tight">{a.client_name}</p>
+                    {height > 46 && <p className="text-micro opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
                   </button>
                 );
               })}
@@ -818,15 +874,15 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                   <div
                     key={`task-${t.id}`}
                     onClick={(e) => { e.stopPropagation(); onSelectDay(iso); }}
-                    className={`absolute z-10 left-1 right-1 flex items-center gap-1.5 rounded-lg border px-2 py-1 cursor-pointer shadow-soft bg-wine-700/8 border-wine-700/25 text-wine-800 ${t.done ? 'opacity-50 line-through' : ''}`}
+                    className={`absolute z-10 left-1 right-1 flex items-center gap-1.5 rounded-chip border px-2 py-1 cursor-pointer shadow-xs bg-wine-50 border-wine-100 text-wine-700 ${t.done ? 'opacity-50 line-through' : ''}`}
                     style={{
                       top: yOf(taskMin),
                       height: Math.max(HOUR_H * 0.4, 22),
                     }}
                   >
-                    <NotebookPen className="h-3 w-3 shrink-0 text-wine-600" />
-                    <span className="text-[10px] font-black tabular-nums shrink-0">{t.due_time!.substring(0, 5)}</span>
-                    <span className="text-[11px] font-bold truncate">{t.content}</span>
+                    <NotebookPen className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="num text-micro font-semibold shrink-0">{t.due_time!.substring(0, 5)}</span>
+                    <span className="text-caption font-semibold truncate">{t.content}</span>
                   </div>
                 );
               })}
@@ -834,8 +890,11 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
           </div>
 
           {appts.length === 0 && timedBlocks.length === 0 && timedTasks.length === 0 && (
-            <div className="px-4 py-3 text-center border-t border-gray-150">
-              <p className="text-xs text-gray-450/80 font-semibold">Nenhum agendamento neste dia 🌿 — toque num horário para encaixar uma cliente.</p>
+            <div className="border-t border-line">
+              <EmptyState
+                title="Dia livre"
+                description="Nenhum agendamento, bloqueio ou tarefa aqui. Toque em qualquer horário da grade para encaixar uma cliente."
+              />
             </div>
           )}
         </div>
@@ -890,7 +949,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
   return (
     <div className="card p-0 overflow-hidden">
       {/* Cabeçalho dos dias */}
-      <div className="flex border-b border-gray-150 bg-cream/60">
+      <div className="flex border-b border-line bg-n-25">
         <div className="w-14 shrink-0" />
         {days.map((d) => {
           const iso = isoOf(d);
@@ -898,10 +957,15 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
           const holiday = holidayMap[iso];
           const count = activeOf(apptByDate[iso]).length;
           return (
-            <button key={iso} onClick={() => onSelectDay(iso)} className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-gray-150 hover:bg-cream transition-colors ${(holiday || d.getDay() === 0) ? 'bg-wine-50/50' : ''}`}>
-              <p className={`text-[10px] font-black uppercase tracking-wider ${d.getDay() === 0 ? 'text-wine-500' : 'text-gray-450'}`}>{WEEKDAYS_SHORT[d.getDay()]}</p>
-              <span className={`mt-0.5 inline-flex items-center justify-center h-7 w-7 text-xs font-bold rounded-full ${isToday ? 'surface-wine text-white' : 'text-ink'}`}>{d.getDate()}</span>
-              {count > 0 && <p className="text-[8px] font-bold text-wine-600 truncate">{count} agend.</p>}
+            <button
+              key={iso}
+              onClick={() => onSelectDay(iso)}
+              aria-current={isToday ? 'date' : undefined}
+              className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-line transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600 ${(holiday || d.getDay() === 0) ? 'bg-wine-50/60' : ''}`}
+            >
+              <p className="overline text-n-500">{WEEKDAYS_SHORT[d.getDay()]}</p>
+              <span className={`num mt-0.5 inline-flex items-center justify-center h-7 w-7 text-caption font-semibold rounded-full ${isToday ? 'bg-wine-700 text-white' : 'text-ink'}`}>{d.getDate()}</span>
+              {count > 0 && <p className="num text-micro font-semibold text-wine-700 truncate">{count}</p>}
             </button>
           );
         })}
@@ -915,7 +979,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
             {Array.from({ length: hours * 2 + 1 }, (_, i) => {
               const min = rangeStartMin + i * 30;
               const isHour = min % 60 === 0;
-              return <div key={i} className={`absolute right-2 -translate-y-1/2 tabular-nums ${isHour ? 'text-[10px] font-bold text-gray-450' : 'text-[9px] font-semibold text-gray-450/55'}`} style={{ top: yOf(min) }}>{pad(Math.floor(min / 60))}:{pad(min % 60)}</div>;
+              return <div key={i} className={`num absolute right-2 -translate-y-1/2 text-micro ${isHour ? 'font-semibold text-n-600' : 'text-n-400'}`} style={{ top: yOf(min) }}>{pad(Math.floor(min / 60))}:{pad(min % 60)}</div>;
             })}
           </div>
 
@@ -939,7 +1003,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
 
             return (
               <div key={iso}
-                className={`relative flex-1 min-w-0 border-l border-gray-150 transition-colors ${dragOverIso === iso ? 'bg-wine-50/60' : isToday ? 'bg-wine-50/25' : ''}`}
+                className={`relative flex-1 min-w-0 border-l border-line transition-ui ${dragOverIso === iso ? 'bg-wine-50' : isToday ? 'bg-wine-50/40' : ''}`}
                 onDragOver={(e) => { if (e.dataTransfer.types.includes(APPT_DND)) { e.preventDefault(); setDragOverIso(iso); } }}
                 onDragLeave={() => setDragOverIso(o => (o === iso ? null : o))}
                 onDrop={(e) => {
@@ -961,8 +1025,8 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
 
                 {/* Ghost de "clique p/ encaixar" */}
                 {hover && hover.iso === iso && (
-                  <div className="absolute left-0.5 right-0.5 z-[5] rounded-md border-2 border-dashed border-wine-400/70 bg-wine-50/70 flex items-center justify-center pointer-events-none" style={{ top: yOf(hover.min), height: SNAP * PXM }}>
-                    <span className="text-[9px] font-bold text-wine-600 tabular-nums">+ {pad(Math.floor(hover.min / 60))}:{pad(hover.min % 60)}</span>
+                  <div className="absolute left-0.5 right-0.5 z-[5] rounded-chip border border-dashed border-wine-400 bg-wine-50 flex items-center justify-center pointer-events-none" style={{ top: yOf(hover.min), height: SNAP * PXM }}>
+                    <span className="num text-micro font-semibold text-wine-700">+ {pad(Math.floor(hover.min / 60))}:{pad(hover.min % 60)}</span>
                   </div>
                 )}
 
@@ -971,28 +1035,28 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   const h = startHour + i;
                   return (
                     <React.Fragment key={h}>
-                      <div className="absolute left-0 right-0 border-t border-gray-150/80 pointer-events-none" style={{ top: yOf(h * 60) }} />
-                      <div className="absolute left-0 right-0 border-t border-dashed border-gray-150/45 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
+                      <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(h * 60) }} />
+                      <div className="absolute left-0 right-0 border-t border-dashed border-n-150 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
                     </React.Fragment>
                   );
                 })}
 
                 {/* Almoço */}
                 {lunch && (
-                  <div className="absolute left-0.5 right-0.5 rounded-md bg-gray-100 border border-gray-200/80 overflow-hidden pointer-events-none" style={{ top: yOf(tmin(lunch.start)), height: Math.max((tmin(lunch.end) - tmin(lunch.start)) * PXM, 12) }} />
+                  <div className="absolute left-0.5 right-0.5 rounded-chip bg-n-100 border border-line overflow-hidden pointer-events-none" style={{ top: yOf(tmin(lunch.start)), height: Math.max((tmin(lunch.end) - tmin(lunch.start)) * PXM, 12) }} aria-hidden />
                 )}
 
                 {/* Bloqueios */}
                 {blocks.map((b, i) => (
-                  <div key={`b${i}`} className="absolute left-0.5 right-0.5 rounded-md bg-gray-150/70 border border-dashed border-gray-300 overflow-hidden pointer-events-none px-1" style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 12) }}>
-                    <p className="text-[8px] font-bold text-gray-500 truncate">🔒 {b.start_time!.substring(0, 5)}</p>
+                  <div key={`b${i}`} className="absolute left-0.5 right-0.5 rounded-chip bg-n-150 border border-dashed border-n-300 overflow-hidden pointer-events-none px-1" style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 12) }}>
+                    <p className="num flex items-center gap-0.5 text-micro font-semibold text-n-600 truncate"><Lock className="h-4 w-4 shrink-0" aria-hidden /> {b.start_time!.substring(0, 5)}</p>
                   </div>
                 ))}
 
                 {/* Linha do "agora" */}
                 {isToday && nowMin >= rangeStartMin && nowMin <= endHour * 60 && (
                   <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
-                    <span className="h-2 w-2 rounded-full bg-[#b23a48] -ml-1 shadow" /><div className="flex-1 border-t-2 border-[#b23a48]" />
+                    <span className="h-2 w-2 rounded-full bg-danger -ml-1 shadow-xs" /><div className="flex-1 border-t-2 border-danger" />
                   </div>
                 )}
 
@@ -1003,10 +1067,10 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   const height = Math.max((e - s) * PXM, 20);
                   return (
                     <button key={a.id} draggable onDragStart={(ev) => apptDragStart(ev, a.id)} onClick={() => onSelectDay(iso)} title="Arraste para reagendar · clique para ver"
-                      className={`absolute z-10 text-left rounded-md border px-1 py-0.5 overflow-hidden shadow-soft cursor-grab active:cursor-grabbing ${m.block}`}
+                      className={`absolute z-10 text-left rounded-chip border px-1 py-0.5 overflow-hidden shadow-xs cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-600 ${m.block}`}
                       style={{ top: yOf(s) + 1, height: height - 2, left: `calc(${lane * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
-                      <p className="text-[9px] font-black tabular-nums leading-tight">{a.start_time.substring(0, 5)}</p>
-                      <p className="text-[10px] font-bold truncate leading-tight">{a.client_name.split(' ')[0]}</p>
+                      <p className="num text-micro font-semibold leading-tight">{a.start_time.substring(0, 5)}</p>
+                      <p className="text-micro font-semibold truncate leading-tight">{a.client_name.split(' ')[0]}</p>
                     </button>
                   );
                 })}
@@ -1014,9 +1078,9 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                 {/* Tarefas com horário */}
                 {tTasks.map((t) => (
                   <div key={`t${t.id}`} onClick={(ev) => { ev.stopPropagation(); onSelectDay(iso); }}
-                    className={`absolute z-10 left-0.5 right-0.5 flex items-center gap-1 rounded-md border px-1 py-0.5 cursor-pointer shadow-soft bg-wine-700/8 border-wine-700/25 text-wine-800 ${t.done ? 'opacity-50 line-through' : ''}`}
+                    className={`absolute z-10 left-0.5 right-0.5 flex items-center gap-1 rounded-chip border px-1 py-0.5 cursor-pointer shadow-xs bg-wine-50 border-wine-100 text-wine-700 ${t.done ? 'opacity-50 line-through' : ''}`}
                     style={{ top: yOf(tmin(t.due_time!)), height: 20 }}>
-                    <NotebookPen className="h-2.5 w-2.5 shrink-0 text-wine-600" /><span className="text-[9px] font-bold truncate">{t.content}</span>
+                    <NotebookPen className="h-4 w-4 shrink-0" aria-hidden /><span className="text-micro font-semibold truncate">{t.content}</span>
                   </div>
                 ))}
               </div>
@@ -1037,13 +1101,16 @@ const YearView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
         const gridStart = startOfWeek(new Date(year, m, 1));
         const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
         return (
-          <div key={m} className="card p-3">
-            <button onClick={() => onPickMonth(m)} className="w-full text-left mb-2 flex items-center justify-between group">
-              <span className="text-sm font-black text-forest capitalize group-hover:underline">{MONTHS[m]}</span>
-              <CalendarDays className="h-3.5 w-3.5 text-gray-450 group-hover:text-forest" />
+          <div key={m} className="card p-4">
+            <button
+              onClick={() => onPickMonth(m)}
+              className="w-full text-left mb-2 flex items-center justify-between gap-2 min-h-11 rounded-chip transition-ui hover:text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            >
+              <span className="text-label font-semibold text-heading capitalize">{MONTHS[m]}</span>
+              <CalendarDays className="h-4 w-4 text-n-500" aria-hidden />
             </button>
             <div className="grid grid-cols-7 gap-0.5">
-              {WEEKDAYS_SHORT.map((w, i) => <div key={w} className={`text-center text-[8px] font-bold ${i === 0 ? 'text-wine-400' : 'text-gray-450/60'}`}>{w[0]}</div>)}
+              {WEEKDAYS_SHORT.map((w) => <div key={w} className="text-center text-micro font-semibold text-n-500">{w[0]}</div>)}
               {days.map((day, i) => {
                 const iso = isoOf(day);
                 const inMonth = day.getMonth() === m;
@@ -1052,9 +1119,9 @@ const YearView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                 const count = activeOf(apptByDate[iso]).length + (taskByDate[iso]?.length || 0);
                 return (
                   <div key={i} className="aspect-square flex items-center justify-center">
-                    <span className={`relative flex items-center justify-center h-5 w-5 text-[9px] rounded-full ${!inMonth ? 'text-gray-450/30' : isToday ? 'surface-wine text-white font-bold' : holiday ? 'text-wine-600 font-bold ring-1 ring-wine-300' : 'text-ink'}`}>
+                    <span className={`num relative flex items-center justify-center h-5 w-5 text-micro rounded-full ${!inMonth ? 'text-n-400' : isToday ? 'bg-wine-700 text-white font-semibold' : holiday ? 'text-wine-700 font-semibold ring-1 ring-wine-200' : 'text-ink'}`}>
                       {day.getDate()}
-                      {inMonth && count > 0 && !isToday && <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-wine-600" />}
+                      {inMonth && count > 0 && !isToday && <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-wine-700" aria-hidden />}
                     </span>
                   </div>
                 );
@@ -1105,37 +1172,80 @@ const DayDetail: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-[#1a0e12]/45 backdrop-blur-sm" onClick={onClose} />
-      <aside className="relative w-full max-w-md h-full bg-paper shadow-glow flex flex-col animate-slide-right">
-        <div className="surface-wine text-white p-6 flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Detalhes do dia</p>
-            <h3 className="text-lg font-black mt-1 capitalize">{longLabel}</h3>
-            {holiday && <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/12 rounded-full px-2.5 py-1"><PartyPopper className="h-3 w-3" /> {holiday.name}</span>}
-            <button onClick={() => onQuickBook(iso)} className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-[11px] font-bold transition-colors">
-              <CalendarPlus className="h-3.5 w-3.5" /> Encaixar cliente neste dia
+      <div className="sheet-backdrop absolute inset-0" onClick={onClose} />
+      <aside className="relative w-full max-w-md h-full bg-surface shadow-lg flex flex-col animate-slide-right" role="dialog" aria-modal="true" aria-label={`Detalhes de ${longLabel}`}>
+        <div className="surface-wine text-white p-6 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="overline text-white/60">Detalhes do dia</p>
+            <h3 className="text-h2 mt-1 capitalize">{longLabel}</h3>
+            {holiday && (
+              <span className="mt-2 inline-flex items-center gap-1.5 text-caption font-semibold bg-white/15 rounded-full px-2.5 py-1">
+                <PartyPopper className="h-4 w-4" aria-hidden /> {holiday.name}
+              </span>
+            )}
+            <button
+              onClick={() => onQuickBook(iso)}
+              className="tap mt-4 inline-flex items-center gap-1.5 h-11 px-4 bg-white/15 hover:bg-white/25 rounded-control text-label font-semibold transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <CalendarPlus className="h-4 w-4" aria-hidden /> Encaixar cliente neste dia
             </button>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition-colors"><X className="h-5 w-5" /></button>
+          <button
+            onClick={onClose}
+            aria-label="Fechar detalhes do dia"
+            className="tap shrink-0 h-11 w-11 inline-flex items-center justify-center rounded-control hover:bg-white/12 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto scroll-touch p-5 space-y-6">
           {/* Tarefas / notas do dia */}
           <div>
-            <p className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-2 flex items-center gap-1.5"><NotebookPen className="h-3.5 w-3.5" /> Tarefas & notas</p>
-            <form onSubmit={submitTask} className="flex gap-2 mb-2">
-              <input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Nova tarefa neste dia..." className="flex-1 min-w-0 px-3 py-2 bg-cream/60 border border-gray-150 rounded-xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700" />
-              <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} title="Horário (opcional)" className="w-24 shrink-0 px-2 py-2 bg-cream/60 border border-gray-150 rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
-              <button type="submit" disabled={saving} className="shrink-0 px-3 surface-wine text-white rounded-xl hover:opacity-95 disabled:opacity-60" aria-label="Adicionar"><Plus className="h-4 w-4" /></button>
+            <p className="overline text-n-500 mb-2 flex items-center gap-1.5"><NotebookPen className="h-4 w-4" aria-hidden /> Tarefas e notas</p>
+            <form onSubmit={submitTask} className="flex gap-2 mb-3">
+              <input
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                placeholder="Nova tarefa neste dia…"
+                className="flex-1 min-w-0 h-11 px-3 bg-surface border border-line rounded-control text-label text-ink placeholder-n-400 transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              />
+              <input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                title="Horário (opcional)"
+                aria-label="Horário da tarefa (opcional)"
+                className="num w-24 shrink-0 h-11 px-2 bg-surface border border-line rounded-control text-label text-ink transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              />
+              <Button type="submit" size="md" iconOnly loading={saving} aria-label="Adicionar tarefa" leadingIcon={<Plus className="h-5 w-5" />} />
             </form>
             <div className="space-y-1.5">
               {tasks.length === 0 ? (
-                <p className="text-[11px] text-gray-450/70 py-1">Nenhuma tarefa para este dia.</p>
+                <p className="text-caption text-n-500 py-1">Nenhuma tarefa para este dia.</p>
               ) : tasks.map((t) => (
-                <div key={t.id} className="group flex items-center gap-2.5 rounded-xl border border-gray-150 px-2.5 py-2">
-                  <button type="button" onClick={() => onToggleTask(t)} className={`h-5 w-5 shrink-0 rounded-md border flex items-center justify-center transition-all ${t.done ? 'bg-wine-700 border-wine-700 text-white' : 'border-gray-250 hover:border-wine-700'}`}>{t.done && <Check className="h-3.5 w-3.5" />}</button>
-                  <span className={`flex-1 text-sm ${t.done ? 'line-through text-gray-450' : 'text-ink'}`}>{t.due_time ? <b className="text-wine-700">{t.due_time.substring(0, 5)} </b> : ''}{t.content}</span>
-                  <button type="button" onClick={() => onRemoveTask(t)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-450 hover:text-[#b23a48] transition-all"><Trash2 className="h-3.5 w-3.5" /></button>
+                <div key={t.id} className="group flex items-center gap-2.5 rounded-control border border-line px-2.5 py-2">
+                  <button
+                    type="button"
+                    onClick={() => onToggleTask(t)}
+                    role="checkbox"
+                    aria-checked={t.done}
+                    aria-label={`Marcar "${t.content}" como concluída`}
+                    className={`h-5 w-5 shrink-0 rounded-chip border flex items-center justify-center transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${t.done ? 'bg-wine-700 border-wine-700 text-white' : 'border-n-300 hover:border-wine-700'}`}
+                  >
+                    {t.done && <Check className="h-4 w-4" />}
+                  </button>
+                  <span className={`flex-1 text-label ${t.done ? 'line-through text-n-500' : 'text-ink'}`}>
+                    {t.due_time ? <b className="num text-wine-700">{t.due_time.substring(0, 5)} </b> : ''}{t.content}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveTask(t)}
+                    aria-label={`Excluir tarefa "${t.content}"`}
+                    className="h-9 w-9 inline-flex items-center justify-center shrink-0 rounded-chip text-n-500 hover:bg-danger-bg hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -1143,32 +1253,59 @@ const DayDetail: React.FC<{
 
           {/* Agendamentos do dia */}
           <div>
-            <p className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-2 flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Agendamentos</p>
+            <p className="overline text-n-500 mb-2 flex items-center gap-1.5"><CalendarDays className="h-4 w-4" aria-hidden /> Agendamentos</p>
             {blocks.length > 0 && (
-              <div className="rounded-2xl border border-gray-150 bg-cream/60 p-3 text-xs text-gray-450 mb-2">
-                <p className="font-bold text-ink mb-1">Bloqueios</p>
-                {blocks.map((b) => <p key={b.id}>• {b.block_type === 'full_day' ? 'Dia inteiro' : `${b.start_time?.substring(0, 5)}–${b.end_time?.substring(0, 5)}`}{b.reason ? ` — ${b.reason}` : ''}</p>)}
+              <div className="rounded-control border border-line bg-n-50 p-3 text-caption text-n-600 mb-3">
+                <p className="text-label font-semibold text-heading mb-1">Bloqueios</p>
+                {blocks.map((b) => (
+                  <p key={b.id} className="num">
+                    • {b.block_type === 'full_day' ? 'Dia inteiro' : `${b.start_time?.substring(0, 5)}–${b.end_time?.substring(0, 5)}`}{b.reason ? ` — ${b.reason}` : ''}
+                  </p>
+                ))}
               </div>
             )}
             {ordered.length === 0 ? (
-              <div className="text-center py-8"><Sparkles className="h-7 w-7 text-wine-200 mx-auto" /><p className="text-xs text-gray-450 mt-2">Nenhum agendamento.</p></div>
+              <EmptyState
+                title="Nenhum agendamento"
+                description="Este dia ainda não tem horários marcados."
+                action={
+                  <Button variant="secondary" size="sm" onClick={() => onQuickBook(iso)} leadingIcon={<CalendarPlus className="h-4 w-4" />}>
+                    Encaixar cliente
+                  </Button>
+                }
+              />
             ) : ordered.map((a) => {
               const m = statusMeta(a.status);
               const isEditing = editingId === a.id;
               return (
-                <div key={a.id} className="rounded-2xl border border-gray-150 bg-paper shadow-soft mb-2 overflow-hidden">
+                <div key={a.id} className="card mb-2 p-0 overflow-hidden">
                   {/* Cabeçalho do card */}
-                  <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-black text-forest"><Clock className="h-3.5 w-3.5" />{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</span>
+                  <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
+                    <span className="num inline-flex items-center gap-1.5 text-label font-semibold text-heading">
+                      <Clock className="h-4 w-4 text-n-500" aria-hidden />{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.badge}`}>{m.label}</span>
-                      <button onClick={() => setEditingId(isEditing ? null : a.id)} className="p-1 text-gray-450 hover:text-wine-700 transition-colors rounded-lg hover:bg-cream" title={isEditing ? 'Fechar edição' : 'Editar'}><Pencil className="h-3.5 w-3.5" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); onRemoveAppt(a.id); }} className="p-1 text-gray-450 hover:text-[#b23a48] transition-colors rounded-lg hover:bg-cream" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <StatusPill tone={m.tone}>{m.label}</StatusPill>
+                      <button
+                        onClick={() => setEditingId(isEditing ? null : a.id)}
+                        aria-label={isEditing ? 'Fechar edição' : `Editar agendamento de ${a.client_name}`}
+                        aria-expanded={isEditing}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onRemoveAppt(a.id); }}
+                        aria-label={`Excluir agendamento de ${a.client_name}`}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-danger-bg hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                   <div className="px-4 pb-3">
-                    <h4 className="font-bold text-sm text-ink">{a.client_name}</h4>
-                    <p className="text-xs text-gray-450">{formatServiceNames(resolveAppointmentServices(a, services)) || a.service?.name}</p>
+                    <h4 className="text-label font-semibold text-heading">{a.client_name}</h4>
+                    <p className="text-caption text-n-500">{formatServiceNames(resolveAppointmentServices(a, services)) || a.service?.name}</p>
                   </div>
 
                   {/* Formulário de edição (inline) */}
@@ -1190,7 +1327,14 @@ const DayDetail: React.FC<{
                   {/* Lembrete — só quando não está editando */}
                   {!isEditing && a.status !== 'cancelled' && (
                     <div className="px-4 pb-4">
-                      <a href={buildReminderLink(a, reminderTemplate)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#226045] bg-[#2e7d5b]/10 hover:bg-[#2e7d5b]/16 border border-[#2e7d5b]/20 rounded-xl px-3 py-1.5 transition-colors"><MessageCircle className="h-3.5 w-3.5" /> Enviar lembrete</a>
+                      <a
+                        href={buildReminderLink(a, reminderTemplate)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tap inline-flex items-center gap-1.5 h-9 px-3 text-caption font-semibold text-success bg-success-bg hover:bg-success hover:text-white border border-success-border hover:border-success rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                      >
+                        <MessageCircle className="h-4 w-4" aria-hidden /> Enviar lembrete
+                      </a>
                     </div>
                   )}
                 </div>
@@ -1232,53 +1376,47 @@ const EditApptForm: React.FC<{
   };
 
   return (
-    <div className="border-t border-gray-150 bg-cream/40 px-4 py-3 space-y-3">
-      <p className="text-[10px] font-bold text-gray-450 uppercase tracking-wider">Reagendar / editar</p>
+    <div className="border-t border-line bg-n-25 px-4 py-4 space-y-3">
+      <p className="overline text-n-500">Reagendar ou editar</p>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Data</label>
+          <label className="text-caption text-n-600 mb-1 block">Data</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Horário</label>
+          <label className="text-caption text-n-600 mb-1 block">Horário</label>
           <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15" />
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
         </div>
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Serviço</label>
+        <label className="text-caption text-n-600 mb-1 block">Serviço</label>
         <select value={serviceId} onChange={e => setServiceId(e.target.value)}
-          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15">
+          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
           {services.filter(s => s.is_active).map(s => (
             <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes}min)</option>
           ))}
         </select>
         {selectedService && (
-          <p className="text-[10px] text-gray-450 mt-0.5">Término previsto: {computedEndTime(startTime, selectedService)}</p>
+          <p className="num text-caption text-n-500 mt-1">Término previsto: {computedEndTime(startTime, selectedService)}</p>
         )}
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Status</label>
+        <label className="text-caption text-n-600 mb-1 block">Status</label>
         <select value={status} onChange={e => setStatus(e.target.value as AppointmentStatus)}
-          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15">
+          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
           {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-[10px] font-semibold text-gray-450 mb-0.5 block">Observações</label>
+        <label className="text-caption text-n-600 mb-1 block">Observações</label>
         <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre o agendamento..."
-          className="w-full px-2 py-1.5 text-xs border border-gray-150 rounded-xl bg-paper focus:outline-none focus:ring-2 focus:ring-wine-700/15 resize-none" />
+          className="w-full px-2.5 py-2 text-label text-ink border border-line rounded-control bg-surface resize-none transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
       </div>
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} disabled={saving}
-          className="flex-1 py-2 rounded-xl surface-wine text-white text-xs font-bold disabled:opacity-60 hover:opacity-90 transition-opacity">
-          {saving ? 'Salvando...' : 'Salvar'}
-        </button>
-        <button onClick={onCancel} disabled={saving}
-          className="flex-1 py-2 rounded-xl border border-gray-150 text-xs font-bold text-gray-450 hover:bg-cream transition-colors">
-          Cancelar
-        </button>
+        <Button onClick={handleSave} loading={saving} className="flex-1">Salvar</Button>
+        <Button variant="secondary" onClick={onCancel} disabled={saving} className="flex-1">Cancelar</Button>
       </div>
     </div>
   );

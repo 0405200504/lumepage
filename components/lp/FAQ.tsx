@@ -76,7 +76,7 @@ function Item({
           {q}
         </span>
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-ui duration-300 ${
             open
               ? "rotate-45 border-bordo bg-bordo text-offwhite"
               : "border-grafite/20 text-grafite"

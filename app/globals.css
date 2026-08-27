@@ -1,188 +1,31 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
 /* =========================================================
    LUME · DESIGN SYSTEM
-   Paleta: BORDÔ (acento pontual) + NEUTROS.
-   Minimalista, clean e profissional. Tema único (claro).
+   ---------------------------------------------------------
+   Os TOKENS moram em `app/styles/tokens.css` — cor, tipografia,
+   raio, elevação e movimento saem de lá e só de lá. Este arquivo
+   é a camada de base + as classes de componente que consomem
+   esses tokens.
+
+   Tailwind v4 é CSS-first: não há `tailwind.config.ts`; o bloco
+   @theme do tokens.css É a configuração.
    ========================================================= */
 
-@theme {
-  /* — Bordô (escala) — acento, não plano de fundo — */
-  --color-wine-50:  #fbf2f4;
-  --color-wine-100: #f6e1e6;
-  --color-wine-200: #ecc3cc;
-  --color-wine-300: #db97a6;
-  --color-wine-400: #bc5d70;
-  --color-wine-500: #8c2438;
-  --color-wine-600: #6b1525;
-  --color-wine-700: #500b18; /* bordô brand */
-  --color-wine-800: #3a0811;
-  --color-wine-900: #26040a;
-
-  /* — Superfícies (neutras: branco + cinza muito claro) — */
-  --color-cream: #fafafa;   /* fundo da página */
-  --color-paper: #ffffff;   /* cartões */
-  --color-sand:  #f4f4f5;   /* superfície neutra suave */
-
-  /* — Aliases semânticos (use nos componentes) — */
-  --color-bg:       #fafafa; /* = cream */
-  --color-surface:  #ffffff; /* = paper */
-  --color-surface-2:#f4f4f5; /* inputs / trilhos / áreas internas sutis */
-  --color-line:     #e9e9ec; /* bordas/divisores 1px */
-  --color-muted:    #6b6b73; /* labels uppercase / texto auxiliar */
-  --color-faint:    #9a9aa3; /* texto terciário / placeholder */
-  --color-heading:  #18181b; /* títulos e números grandes (neutros) */
-
-  /* — Bordô = ACENTO pontual (botão primário, FAB, estado ativo, links) — */
-  --color-forest: #6b1525;          /* primário / acento forte */
-  --color-forest-hover: #500b18;    /* hover do primário (= brand) */
-  --color-accent: #6b1525;          /* alias do primário */
-  --color-accent-link: #8c2438;     /* links de ação / 1 dado-chave por tela */
-  --color-accent-soft: #fbeef1;     /* fundo de aba/dia ativo (discreto) */
-  --color-accent-soft-border: #f0d6dc;
-  --color-lima: #eccbd2;
-  --color-lima-hover: #e0b4be;
-
-  /* — Neutros: escala de 12 passos (antes eram 3 tons soltos) — */
-  --color-n-25:  #fcfcfd;
-  --color-n-50:  #fafafa;
-  --color-n-100: #f4f4f5;
-  --color-n-150: #e9e9ec;
-  --color-n-200: #dddde1;
-  --color-n-300: #c4c4ca;
-  --color-n-400: #9a9aa3;
-  --color-n-500: #6b6b73;
-  --color-n-600: #52525a;
-  --color-n-700: #3f3f46;
-  --color-n-800: #27272a;
-  --color-n-900: #18181b;
-  --color-n-950: #0e0e11;
-
-  /* Aliases herdados (mantidos: muito código já os usa) */
-  --color-ink: #27272a;
-  --color-gray-150: #e9e9ec; /* = line */
-  --color-gray-250: #ddddE1; /* = line-strong (hover/foco) */
-  --color-gray-450: #6b6b73; /* = muted */
-
-  /* — Superfícies em camadas (o admin era tudo branco com a mesma sombra) — */
-  --color-surface-3: #ededf0;  /* área interna mais funda */
-  --color-line-strong: #dddde1;
-
-  /* — Acentos de status (semânticos, independentes do bordô) — */
-  --color-ok: #15803d;
-  --color-warn: #b07a23;
-  --color-bad: #c0203c;
-
-  /* — Tipografia (Manrope — sans leve e delicada, títulos e corpo) — */
-  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-
-  /* — Raios (moderados e consistentes — premium/SaaS) — */
-  --radius-card: 0.875rem;  /* cartões (14px) */
-  --radius-3xl: 1rem;
-  --radius-4xl: 1.25rem;
-  --radius-5xl: 1.5rem;
-
-  /* — Sombras (profundidade real, em camadas — premium sem pesar) — */
-  --shadow-xs:   0 1px 2px rgba(16, 16, 20, 0.05);
-  --shadow-soft: 0 1px 2px rgba(16, 16, 20, 0.04), 0 4px 10px -6px rgba(16, 16, 20, 0.08);
-  --shadow-md:   0 2px 4px rgba(16, 16, 20, 0.05), 0 8px 20px -10px rgba(16, 16, 20, 0.14);
-  --shadow-lg:   0 10px 30px -14px rgba(16, 16, 20, 0.16), 0 28px 56px -28px rgba(16, 16, 20, 0.18);
-  --shadow-glow: 0 20px 56px -26px rgba(80, 11, 24, 0.32);
-}
-
-/* =========================================================
-   DARK MODE
-   As utilities do Tailwind v4 leem var(--color-*), então basta
-   redefinir os tokens: qualquer elemento dentro de [data-theme='dark']
-   herda o tema. O painel admin marca o atributo na casca (sem flash,
-   porque o valor vem de cookie lido no servidor).
-   ========================================================= */
-[data-theme='dark'] {
-  --color-bg: #0e0e11;
-  --color-cream: #0e0e11;
-  --color-surface: #17171b;
-  --color-paper: #17171b;
-  --color-surface-2: #1e1e24;
-  --color-surface-3: #26262d;
-  --color-sand: #1e1e24;
-  --color-line: #2a2a31;
-  --color-line-strong: #3a3a43;
-  --color-gray-150: #2a2a31;
-  --color-gray-250: #3a3a43;
-  --color-muted: #a1a1aa;
-  --color-gray-450: #a1a1aa;
-  --color-faint: #71717a;
-  --color-heading: #fafafa;
-  --color-ink: #ededf0;
-
-  /* Marca sobre fundo escuro precisa clarear para manter contraste AA */
-  --color-accent: #d98a9c;
-  --color-accent-link: #e8a9b8;
-  --color-accent-soft: #2c1a20;
-  --color-accent-soft-border: #40252d;
-  --color-forest: #b8536a;
-  --color-forest-hover: #cf6b82;
-
-  --color-ok: #4ade80;
-  --color-warn: #fbbf24;
-  --color-bad: #f87171;
-
-  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 10px -6px rgba(0, 0, 0, 0.6);
-  --shadow-md:   0 2px 4px rgba(0, 0, 0, 0.45), 0 8px 20px -10px rgba(0, 0, 0, 0.7);
-  --shadow-lg:   0 10px 30px -14px rgba(0, 0, 0, 0.8), 0 28px 56px -28px rgba(0, 0, 0, 0.9);
-}
-
-/* Quem não escolheu tema segue o sistema. */
-@media (prefers-color-scheme: dark) {
-  [data-theme='system'] {
-    --color-bg: #0e0e11;
-    --color-cream: #0e0e11;
-    --color-surface: #17171b;
-    --color-paper: #17171b;
-    --color-surface-2: #1e1e24;
-    --color-surface-3: #26262d;
-    --color-sand: #1e1e24;
-    --color-line: #2a2a31;
-    --color-line-strong: #3a3a43;
-    --color-gray-150: #2a2a31;
-    --color-gray-250: #3a3a43;
-    --color-muted: #a1a1aa;
-    --color-gray-450: #a1a1aa;
-    --color-faint: #71717a;
-    --color-heading: #fafafa;
-    --color-ink: #ededf0;
-    --color-accent: #d98a9c;
-    --color-accent-link: #e8a9b8;
-    --color-accent-soft: #2c1a20;
-    --color-accent-soft-border: #40252d;
-    --color-forest: #b8536a;
-    --color-forest-hover: #cf6b82;
-    --color-ok: #4ade80;
-    --color-warn: #fbbf24;
-    --color-bad: #f87171;
-  }
-}
-
-/* A superfície de vidro e o cartão elevado precisam acompanhar o tema.
-   BUG CORRIGIDO: `[data-theme='system'] .glass` estava FORA do @media, então a
-   barra superior do admin pintava de carvão escuro mesmo com o sistema em claro —
-   e os tokens de texto continuavam os do tema claro. Resultado: "Financeiro",
-   "Profissionais" e o breadcrumb em cinza-escuro sobre cinza-escuro (~2:1). Agora
-   a versão escura do vidro só entra quando o tema realmente é escuro. */
+/* A superfície de vidro e o cartão elevado acompanham o tema. */
 [data-theme='dark'] .glass {
-  background: rgba(23, 23, 27, 0.92);
+  background: color-mix(in oklab, var(--color-surface) 92%, transparent);
 }
 [data-theme='dark'] .card-elevated {
-  background: linear-gradient(180deg, #1b1b21 0%, #17171b 100%);
+  background: var(--color-surface);
 }
 @media (prefers-color-scheme: dark) {
   [data-theme='system'] .glass {
-    background: rgba(23, 23, 27, 0.92);
+    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
   }
   [data-theme='system'] .card-elevated {
-    background: linear-gradient(180deg, #1b1b21 0%, #17171b 100%);
+    background: var(--color-surface);
   }
 }
 
@@ -196,12 +39,20 @@ html {
 }
 
 /* Respeita usuários que pedem menos movimento e elimina jank de animação */
+/* Bloco GLOBAL (não por componente): quem pede menos movimento recebe
+   mudanças de opacidade e nada mais — transform, deslize e escala saem. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+  /* O transform é a fonte do enjoo: some com ele, não só acelera. */
+  *, *::before, *::after {
+    transform: none !important;
   }
 }
 
@@ -271,11 +122,21 @@ button, a, label, select, [role='button'], summary {
 
 /* Feedback tátil: o elemento "afunda" ao toque, como app nativo */
 .tap {
-  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease;
+  transition: transform var(--dur-instant) var(--ease-out),
+              opacity var(--dur-instant) var(--ease-out);
   touch-action: manipulation; /* remove o atraso de 300ms no toque */
 }
 .tap:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
+}
+
+/* Hover SÓ onde existe mouse. Em tela de toque o :hover "gruda" depois do
+   tap e o item fica aceso até o próximo toque em outro lugar. */
+@media (hover: none), (pointer: coarse) {
+  button:hover, a:hover, [role='button']:hover, summary:hover {
+    /* neutraliza qualquer hover herdado em ponteiro grosso */
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -283,10 +144,10 @@ button, a, label, select, [role='button'], summary {
   button:active,
   a:active,
   [role='button']:active {
-    transform: scale(0.975);
+    transform: scale(0.97);
   }
   button, a, [role='button'] {
-    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--dur-instant) var(--ease-out);
   }
 
   /* iOS dá zoom automático em inputs com fonte < 16px ao focar.
@@ -327,16 +188,32 @@ svg.lucide {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-gray-250); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-gray-450); }
-::selection { background: rgba(140, 36, 56, 0.14); color: var(--color-wine-700); }
+::selection { background: var(--color-wine-100); color: var(--color-wine-800); }
 
 /* — Utilitários — */
-/* Anima só o necessário (não "all") — mais fluido e sem repaint desnecessário */
-.transition-all-custom {
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+/* Transição padrão de UI. Existe para que NADA no projeto precise de
+   a transição-coringa: a lista é nomeada e só contém propriedades que o
+   compositor resolve sem relayout. Nunca anime width/height/top/left. */
+@utility transition-ui {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+/* Rótulo de seção em caixa alta. Estilo, não tamanho — roda em `caption`. */
+@utility overline {
+  font-size: var(--text-caption);
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Números: dígito de largura fixa, senão os R$ tremem a cada atualização. */
+@utility num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* Vidro / glassmorphism sutil.
@@ -378,71 +255,96 @@ svg.lucide {
 /* Foco visível e consistente (acessibilidade + cara de produto sério).
    Só aparece na navegação por teclado, nunca atrapalha o toque/clique. */
 :focus-visible {
-  outline: 2px solid var(--color-wine-500);
+  outline: 2px solid var(--color-wine-600);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 :focus:not(:focus-visible) { outline: none; }
 
 /* Superfície bordô com profundidade (futurista) — brilho radial + granulado sutil */
+/* Superfície vinho — o ÚNICO elemento gráfico da tela.
+   Monocromática dentro da escala (nada de multi-matiz), com dois centros
+   deslocados e GRÃO por cima. O grão é o que tira o aspecto de "gradiente
+   do Figma" e dá a textura das referências. */
 .surface-wine {
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(130% 120% at 100% -10%, rgba(188, 93, 112, 0.5) 0%, transparent 52%),
-    radial-gradient(120% 130% at 0% 110%, rgba(140, 36, 56, 0.42) 0%, transparent 55%),
-    linear-gradient(158deg, #500b18 0%, #3a0811 55%, #26040a 100%);
+    radial-gradient(circle at 15% 10%, var(--color-wine-700) 0%, transparent 55%),
+    radial-gradient(circle at 85% 90%, var(--color-wine-800) 0%, transparent 50%),
+    var(--color-wine-950);
 }
-/* Luz discreta no topo (fica ATRÁS do conteúdo, nunca intercepta cliques) */
+/* Grão + hairline. Fica ATRÁS do conteúdo e nunca intercepta cliques. */
 .surface-wine::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.surface-wine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  border-radius: inherit;
 }
 
 /* Borda luminosa fina */
 .ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 
-/* Cartão padrão: 1px sutil + sombra em camadas + realce superior discreto (premium) */
+/* Cartão em repouso: sombra leve E borda leve. Nunca as duas fortes ao
+   mesmo tempo — é o que faz card parecer adesivo colado na tela. */
 .card {
   position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Cartão elevado: gradiente branco sutil + hairline + glow no hover (KPIs, modais) */
+/* Cartão clicável: sobe 2px no hover, e só onde existe mouse. */
+.card-interactive {
+  transition-property: box-shadow, border-color, transform;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-interactive:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-line-strong);
+    transform: translateY(-2px);
+  }
+}
+
+/* Alias herdado — mesma superfície do .card, sem o gradiente e o glow que
+   davam "elevação decorativa" a cartão que não é clicável. */
 .card-elevated {
   position: relative;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fcfcfd 100%);
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-sm);
+  transition-property: box-shadow, border-color, transform;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-out);
 }
-.card-elevated:hover {
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-  border-color: var(--color-accent-soft-border);
+@media (hover: hover) and (pointer: fine) {
+  .card-elevated:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-line-strong);
+  }
 }
 
-/* Glow bordô reutilizável (halos, realces futuristas) */
-.glow-wine { box-shadow: 0 0 0 1px rgba(80, 11, 24, 0.06), 0 18px 48px -22px rgba(80, 11, 24, 0.3); }
+/* Sombra tingida do CTA primário — e SÓ dele. */
+.glow-wine { box-shadow: var(--shadow-wine); }
 
-/* Número-chave com leve gradiente bordô (dado de destaque) */
-.text-gradient-wine {
-  background: linear-gradient(120deg, #6b1525 0%, #8c2438 55%, #bc5d70 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+/* Número-chave em vinho chapado. O gradiente no texto reduzia o contraste
+   justamente no dígito mais importante da tela. */
+.text-gradient-wine { color: var(--color-wine-700); }
 
 /* Divisores 1px com leve gradiente (mais fino/premium que uma borda chapada) */
 .hairline-t { border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--color-line) 20%, var(--color-line) 80%, transparent) 1; }
@@ -473,6 +375,116 @@ svg.lucide {
 }
 .animate-slide-up { animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
+/* =========================================================
+   ENTRADA DE LISTA · stagger
+   Até 6 itens entram escalonados de 40ms; do 7º em diante a lista
+   já apareceu e o atraso vira espera. O índice vem do JSX por
+   --i (style={{ '--i': i }}).
+   ========================================================= */
+.stagger-item {
+  animation: fade-up var(--dur-base) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 5) * 40ms);
+}
+
+/* Troca de rota: só o conteúdo se move — a navegação nunca anima junto. */
+.route-fade {
+  animation: route-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes route-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================================
+   BOTTOM SHEET (mobile) · sem modal em tela pequena
+   ========================================================= */
+.sheet-backdrop {
+  background: rgba(46, 7, 16, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fade-in var(--dur-base) var(--ease-out) both;
+}
+.sheet-panel {
+  background: var(--color-surface);
+  border-top-left-radius: var(--radius-hero);
+  border-top-right-radius: var(--radius-hero);
+  box-shadow: var(--shadow-lg);
+  animation: sheet-in var(--dur-slow) var(--ease-out) both;
+}
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--color-n-300);
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Toast: entra pelo topo no desktop, pelo rodapé no mobile. */
+@keyframes toast-in-top {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-in-bottom {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast-in { animation: toast-in-bottom var(--dur-base) var(--ease-out) both; }
+@media (min-width: 640px) {
+  .toast-in { animation-name: toast-in-top; }
+}
+
+/* Chip de ícone — 40x40, fundo neutro, ícone que herda a cor do texto.
+   Existe UM chip neutro e UM chip de destaque. Não há chip azul, verde
+   ou lilás por card: era a paleta vazando. */
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  flex: none;
+  border-radius: var(--radius-control);
+  background: var(--color-n-100);
+  color: var(--color-n-600);
+}
+.icon-chip[data-accent='true'] {
+  background: var(--color-wine-50);
+  color: var(--color-wine-700);
+}
+
+/* Tooltip do rail: 400ms de atraso na ENTRADA e saída imediata. Sem o
+   atraso ele pisca a cada passagem de mouse rumo ao conteúdo. */
+.rail-tooltip {
+  pointer-events: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  z-index: 50;
+  white-space: nowrap;
+  border-radius: var(--radius-chip);
+  background: var(--color-n-900);
+  color: var(--color-n-0);
+  padding: 6px 10px;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  box-shadow: var(--shadow-md);
+  transition: opacity var(--dur-fast) var(--ease-out);
+  transition-delay: 0ms;
+}
+.group:hover > .rail-tooltip,
+.group:focus-visible > .rail-tooltip {
+  opacity: 1;
+  transition-delay: 400ms;
+}
+
 /* Safe-area (PWA / notch) */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
@@ -486,16 +498,16 @@ svg.lucide {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: var(--color-surface-2);
-  border-radius: 0.5rem;
+  background: var(--color-n-100);
+  border-radius: var(--radius-chip);
 }
 .skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
-  animation: shimmer 1.4s infinite;
+  background: linear-gradient(90deg, var(--color-n-100), var(--color-n-150), var(--color-n-100));
+  animation: shimmer 1.4s linear infinite;
 }
 
 /* =========================================================
@@ -697,7 +709,9 @@ body:has(.lp-page) {
     font-size: 0.875rem;
     line-height: 1.25rem;
     font-weight: 600;
-    transition: all 300ms;
+    transition-property: background-color, border-color, color, box-shadow, transform;
+    transition-duration: 300ms;
+    transition-timing-function: var(--ease-out);
   }
 
   .btn-primary {

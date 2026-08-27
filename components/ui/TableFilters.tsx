@@ -57,7 +57,7 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-9 pl-9 pr-8 rounded-xl border border-line bg-surface text-sm text-ink placeholder-faint focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-500"
+        className="w-full h-9 pl-9 pr-8 rounded-xl border border-line bg-surface text-label text-ink placeholder-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
       />
       {pending
         ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted" aria-hidden />
@@ -66,7 +66,7 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
             type="button" onClick={() => { setValue(''); push(''); }} aria-label="Limpar busca"
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-ink hover:bg-surface-2"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
         )}
     </div>
@@ -99,7 +99,7 @@ export function FilterSelect({ basePath, name, label, options, allLabel = 'Todos
         const next = e.target.value;
         startTransition(() => router.push(buildHref(basePath, searchParams, { [name]: next === 'all' ? null : next }), { scroll: false }));
       }}
-      className={`h-9 px-3 rounded-xl border border-line bg-surface text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15 ${className}`}
+      className={`h-9 px-3 rounded-xl border border-line bg-surface text-caption font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${className}`}
     >
       <option value="all">{allLabel}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -121,9 +121,9 @@ export function ClearFilters({ basePath, keys }: { basePath: string; keys: strin
     <button
       type="button"
       onClick={() => router.push(buildHref(basePath, searchParams, patch), { scroll: false })}
-      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
     >
-      <X className="h-3.5 w-3.5" />
+      <X className="h-4 w-4" />
       Limpar filtros ({active.length})
     </button>
   );

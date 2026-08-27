@@ -32,8 +32,8 @@ export async function AdminNotices({ professionalId, subscriptionStatus, hasBot 
   if (!notices.length) return null;
 
   const style = (level: string) =>
-    level === 'warn' ? { cls: 'bg-[color:var(--color-warn)]/10 text-[color:var(--color-warn)] ring-[color:var(--color-warn)]/20', Icon: AlertTriangle }
-      : level === 'success' ? { cls: 'bg-[color:var(--color-ok)]/10 text-[color:var(--color-ok)] ring-[color:var(--color-ok)]/20', Icon: Sparkles }
+    level === 'warn' ? { cls: 'bg-warning-bg text-warning ring-warning-border', Icon: AlertTriangle }
+      : level === 'success' ? { cls: 'bg-success-bg text-success ring-success-border', Icon: Sparkles }
       : { cls: 'bg-accent-soft text-accent-link ring-accent-soft-border', Icon: Info };
 
   return (
@@ -44,8 +44,8 @@ export async function AdminNotices({ professionalId, subscriptionStatus, hasBot 
           <li key={n.id} className={`rounded-xl px-3.5 py-2.5 ring-1 flex items-start gap-2.5 ${cls}`}>
             <Icon className="h-4 w-4 shrink-0 mt-px" aria-hidden />
             <span className="min-w-0">
-              <span className="block text-xs font-bold">{n.title}</span>
-              <span className="block text-xs opacity-90 whitespace-pre-wrap">{n.body}</span>
+              <span className="block text-caption font-bold">{n.title}</span>
+              <span className="block text-caption opacity-90 whitespace-pre-wrap">{n.body}</span>
             </span>
           </li>
         );

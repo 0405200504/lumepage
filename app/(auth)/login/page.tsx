@@ -88,10 +88,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="light" className="h-12 text-white mb-5" />
-          <h2 className="text-2xl font-black text-white tracking-tight">
+          <h2 className="text-h2 font-semibold text-white tracking-tight">
             {mode === 'manager' ? 'Acesso do Gerente' : 'Bem-vinda de volta'}
           </h2>
-          <p className="text-xs text-white/55 mt-1.5">
+          <p className="text-caption text-white/55 mt-1.5">
             {mode === 'manager' ? 'Gerencie as contas das suas funcionárias'
               : 'Acesse seu painel de agenda profissional'}
           </p>
@@ -107,7 +107,7 @@ export default function LoginPage() {
               key={k}
               type="button"
               onClick={() => setMode(k)}
-              className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all-custom ${
+              className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-caption font-bold transition-ui ${
                 mode === k ? 'bg-white text-wine-700 shadow-md' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -125,12 +125,12 @@ export default function LoginPage() {
         <div className="card-elevated glow-wine p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
                 Endereço de E-mail
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-gray-450" />
+                  <Mail className="h-4 w-4 text-n-600" />
                 </div>
                 <input
                   type="email"
@@ -138,30 +138,30 @@ export default function LoginPage() {
                   placeholder="voce@suamarca.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 bg-cream/60 border border-gray-150 rounded-2xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 transition-all"
+                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider mb-2">
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
                 Senha de Acesso
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-gray-450" />
+                  <Lock className="h-4 w-4 text-n-600" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 bg-cream/60 border border-gray-150 rounded-2xl text-sm placeholder-gray-450/60 focus:outline-none focus:ring-2 focus:ring-wine-700/15 focus:border-wine-700 transition-all"
+                  className="block w-full pl-10 pr-10 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-450 hover:text-forest"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-n-600 hover:text-wine-700"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -171,7 +171,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-sm font-bold rounded-2xl shadow-soft transition-all-custom cursor-pointer disabled:opacity-60"
+              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-label font-bold rounded-2xl shadow-soft transition-ui cursor-pointer disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
               <span>{isLoading ? 'Autenticando...' : 'Acessar Painel'}</span>
@@ -180,18 +180,18 @@ export default function LoginPage() {
 
           {/* Separador + login com Google */}
           <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-gray-150" />
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">ou</span>
-            <span className="h-px flex-1 bg-gray-150" />
+            <span className="h-px flex-1 bg-n-200" />
+            <span className="text-caption font-bold text-n-400 uppercase tracking-wider">ou</span>
+            <span className="h-px flex-1 bg-n-200" />
           </div>
           <GoogleButton label="Entrar com Google" />
 
           {/* Nova sessão de Registro */}
-          <div className="mt-6 pt-5 border-t border-gray-150 text-center">
-            <p className="text-sm font-bold text-gray-900 mb-3">Ainda não usa o Lume?</p>
+          <div className="mt-6 pt-5 border-t border-n-200 text-center">
+            <p className="text-label font-bold text-n-900 mb-3">Ainda não usa o Lume?</p>
             <Link 
               href="/register"
-              className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-cream border-2 border-wine-700 text-wine-700 text-sm font-bold rounded-2xl hover:bg-wine-50 transition-all-custom"
+              className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-n-25 border-2 border-wine-700 text-wine-700 text-label font-bold rounded-2xl hover:bg-wine-50 transition-ui"
             >
               <UserPlus className="h-4 w-4" />
               <span>Comece seus 7 dias grátis</span>
@@ -203,7 +203,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleDemo}
               disabled={demoLoading}
-              className="text-[11px] font-semibold text-gray-500 hover:text-wine-700 underline underline-offset-2"
+              className="text-caption font-semibold text-n-500 hover:text-wine-700 underline underline-offset-2"
             >
               {demoLoading ? 'Abrindo demo...' : 'Apenas testar a plataforma na conta de exemplo'}
             </button>

@@ -66,7 +66,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
       {/* Modal Container */}
       <div 
-        className={`bg-white w-full sm:max-w-[540px] flex flex-col relative z-10 overflow-hidden shadow-2xl transition-all duration-300 border border-gray-100
+        className={`bg-white w-full sm:max-w-[540px] flex flex-col relative z-10 overflow-hidden shadow-2xl transition-ui duration-300 border border-n-100
           ${/* Mobile: Bottom Sheet | Desktop: Centralizado */ ''}
           absolute bottom-0 rounded-t-[32px] max-h-[92vh] animate-slide-up
           sm:relative sm:bottom-auto sm:rounded-[32px] sm:max-h-[85vh] sm:animate-scale-in`
@@ -75,21 +75,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         
         {/* Barra de Arrastar/Indicador visual no Mobile */}
         <div className="flex justify-center py-2.5 sm:hidden">
-          <div className="w-12 h-1 bg-gray-200 rounded-full" />
+          <div className="w-12 h-1 bg-n-200 rounded-full" />
         </div>
 
         {/* Cabeçalho do Modal com botão fechar */}
-        <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-100 sm:pt-6">
+        <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-n-100 sm:pt-6">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-forest animate-pulse" />
-            <span className="text-[10px] font-extrabold text-forest uppercase tracking-widest">
+            <div className="h-2 w-2 rounded-full bg-wine-700 animate-pulse" />
+            <span className="text-caption font-extrabold text-wine-700 uppercase tracking-widest">
               Agendamento Online Lume
             </span>
           </div>
           
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-gray-50 text-gray-400 hover:text-forest rounded-full transition-colors cursor-pointer"
+            className="p-2 hover:bg-n-50 text-n-400 hover:text-wine-700 rounded-full transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -101,16 +101,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             // Skeleton Loader Premium
             <div className="p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 bg-gray-100 rounded-2xl animate-pulse" />
+                <div className="h-16 w-16 bg-n-100 rounded-2xl animate-pulse" />
                 <div className="space-y-2 flex-1">
-                  <div className="h-5 bg-gray-100 rounded-md w-1/2 animate-pulse" />
-                  <div className="h-3.5 bg-gray-100 rounded-md w-3/4 animate-pulse" />
+                  <div className="h-5 bg-n-100 rounded-md w-1/2 animate-pulse" />
+                  <div className="h-3.5 bg-n-100 rounded-md w-3/4 animate-pulse" />
                 </div>
               </div>
               <div className="pt-4 space-y-3">
-                <div className="h-12 bg-gray-50 rounded-2xl animate-pulse w-full" />
-                <div className="h-12 bg-gray-50 rounded-2xl animate-pulse w-full" />
-                <div className="h-12 bg-gray-50 rounded-2xl animate-pulse w-full" />
+                <div className="h-12 bg-n-50 rounded-2xl animate-pulse w-full" />
+                <div className="h-12 bg-n-50 rounded-2xl animate-pulse w-full" />
+                <div className="h-12 bg-n-50 rounded-2xl animate-pulse w-full" />
               </div>
             </div>
           ) : professional && services ? (
@@ -127,7 +127,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               }}
             />
           ) : (
-            <div className="p-12 text-center text-xs text-gray-400">
+            <div className="p-12 text-center text-xs text-n-400">
               Falha ao carregar os dados.
             </div>
           )}

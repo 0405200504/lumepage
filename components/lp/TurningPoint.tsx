@@ -82,7 +82,7 @@ export default function TurningPoint() {
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {pilares.map((p, i) => (
             <Reveal key={p.n} delay={i * 0.1}>
-              <div className="flex h-full flex-col rounded-lp-3xl border border-rose/50 bg-lp-cream p-7 transition-all duration-300 hover:border-bordo/40 hover:shadow-lp-card sm:p-8">
+              <div className="flex h-full flex-col rounded-lp-3xl border border-rose/50 bg-lp-cream p-7 transition-ui duration-300 hover:border-bordo/40 hover:shadow-lp-card sm:p-8">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-bordo/20 bg-offwhite text-bordo shadow-lp-soft">
                   <PillarIcon name={p.icon} />
                 </div>

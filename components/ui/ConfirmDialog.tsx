@@ -28,22 +28,27 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  /* Paleta semântica do design system. O vermelho/âmbar/esmeralda padrão do
+     Tailwind não existe na marca — era paleta vazando para dentro do produto.
+     O destrutivo NUNCA usa a escala wine-*: se usasse, o botão de excluir
+     ficaria igual ao botão primário e a profissional apagaria achando que
+     estava salvando. */
   const getThemeClasses = () => {
     switch (type) {
       case 'danger':
         return {
-          iconBg: 'bg-red-50 text-red-600',
-          btnBg: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-200'
+          iconBg: 'bg-danger-bg text-danger',
+          btnBg: 'bg-danger hover:brightness-95 text-white',
         };
       case 'warning':
         return {
-          iconBg: 'bg-amber-50 text-amber-600',
-          btnBg: 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-200'
+          iconBg: 'bg-warning-bg text-warning',
+          btnBg: 'bg-warning hover:brightness-95 text-white',
         };
       default:
         return {
-          iconBg: 'bg-emerald-50 text-emerald-700',
-          btnBg: 'bg-forest hover:bg-forest-hover text-white focus:ring-forest/20'
+          iconBg: 'bg-wine-50 text-wine-700',
+          btnBg: 'bg-wine-700 hover:bg-wine-800 text-white',
         };
     }
   };
@@ -54,7 +59,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Background overlay */}
       <div
-        className="absolute inset-0 bg-[#1a0e12]/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-wine-950/50 backdrop-blur-sm transition-opacity"
         onClick={isLoading ? undefined : onCancel}
       />
 
@@ -65,8 +70,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <AlertCircle className="h-6 w-6" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-gray-900 leading-tight">{title}</h3>
-            <p className="mt-2 text-xs text-gray-500 leading-relaxed">{description}</p>
+            <h3 className="text-body font-bold text-n-900 leading-tight">{title}</h3>
+            <p className="mt-2 text-caption text-n-500 leading-relaxed">{description}</p>
           </div>
         </div>
 
@@ -75,7 +80,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             disabled={isLoading}
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none"
+            className="px-4 py-2 border border-n-200 rounded-xl text-caption font-semibold text-n-600 hover:bg-n-50 transition-colors "
           >
             {cancelText}
           </button>
@@ -83,7 +88,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             disabled={isLoading}
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 transition-all flex items-center gap-1.5 ${theme.btnBg}`}
+            className={`px-4 py-2 rounded-xl text-caption font-semibold transition-ui flex items-center gap-1.5 ${theme.btnBg}`}
           >
             {isLoading ? 'Aguarde...' : confirmText}
           </button>

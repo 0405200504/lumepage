@@ -64,7 +64,7 @@ export function TableSelectionProvider({ pageIds, children }: { pageIds: string[
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-const boxClass = 'h-4 w-4 rounded border-gray-250 text-wine-700 accent-[color:var(--color-wine-700)] cursor-pointer';
+const boxClass = 'h-4 w-4 rounded border-n-300 text-wine-700 accent-[color:var(--color-wine-700)] cursor-pointer';
 
 /** Caixa de uma linha. Usar dentro do `cell` de uma coluna. */
 export function RowCheckbox({ id, label }: { id: string; label?: string }) {
@@ -139,10 +139,10 @@ export function BulkActionsBar({ actions, noun = 'registro' }: { actions: BulkAc
     <div className="no-print fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-slide-up">
       <div className="flex flex-col gap-1.5">
         {error && (
-          <p className="text-[11px] font-bold text-white bg-[color:var(--color-bad)] rounded-lg px-3 py-1.5 shadow-md">{error}</p>
+          <p className="text-caption font-bold text-white bg-danger rounded-lg px-3 py-1.5 shadow-md">{error}</p>
         )}
         <div className="flex items-center gap-2 rounded-2xl bg-surface border border-line shadow-lg px-3 py-2.5">
-          <span className="text-xs font-bold text-ink tabular-nums px-1">
+          <span className="text-caption font-bold text-ink num px-1">
             {count} {noun}{count > 1 ? 's' : ''} selecionado{count > 1 ? 's' : ''}
           </span>
           <span className="h-5 w-px bg-line" aria-hidden />
@@ -152,13 +152,13 @@ export function BulkActionsBar({ actions, noun = 'registro' }: { actions: BulkAc
               type="button"
               disabled={running !== null}
               onClick={() => run(action)}
-              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-caption font-bold transition-colors disabled:opacity-50 ${
                 action.destructive
-                  ? 'text-[color:var(--color-bad)] hover:bg-[color:var(--color-bad)]/10'
+                  ? 'text-danger hover:bg-danger-bg'
                   : 'text-ink hover:bg-surface-2'
               }`}
             >
-              {running === action.label ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : action.icon}
+              {running === action.label ? <Loader2 className="h-4 w-4 animate-spin" /> : action.icon}
               {action.label}
             </button>
           ))}

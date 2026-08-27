@@ -34,19 +34,19 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
     : rows;
 
   const columns: ServerColumn<AdminAuditRow>[] = [
-    { key: 'when', header: 'Quando', primary: true, cell: r => <span className="tabular-nums text-xs text-ink">{formatDateTimeBR(r.created_at)}</span> },
-    { key: 'admin', header: 'Quem', cell: r => <span className="text-xs text-muted truncate">{r.admin_email ?? '—'}</span> },
+    { key: 'when', header: 'Quando', primary: true, cell: r => <span className="num text-caption text-ink">{formatDateTimeBR(r.created_at)}</span> },
+    { key: 'admin', header: 'Quem', cell: r => <span className="text-caption text-muted truncate">{r.admin_email ?? '—'}</span> },
     { key: 'action', header: 'Ação', cell: r => <Badge tone="accent">{r.action}</Badge> },
-    { key: 'entity', header: 'Alvo', cell: r => <span className="text-[11px] text-muted truncate">{r.entity_type}{r.entity_id ? ` · ${r.entity_id.slice(0, 12)}…` : ''}</span> },
+    { key: 'entity', header: 'Alvo', cell: r => <span className="text-caption text-muted truncate">{r.entity_type}{r.entity_id ? ` · ${r.entity_id.slice(0, 12)}…` : ''}</span> },
     {
       key: 'diff', header: 'Antes → depois', hideOnMobile: true,
       cell: r => (
-        <span className="block max-w-md truncate text-[11px] text-muted font-mono" title={`${JSON.stringify(r.before ?? null)} → ${JSON.stringify(r.after ?? null)}`}>
+        <span className="block max-w-md truncate text-caption text-muted font-mono" title={`${JSON.stringify(r.before ?? null)} → ${JSON.stringify(r.after ?? null)}`}>
           {JSON.stringify(r.before ?? null)} → {JSON.stringify(r.after ?? null)}
         </span>
       ),
     },
-    { key: 'ip', header: 'IP', hideOnMobile: true, cell: r => <span className="text-[11px] text-muted tabular-nums">{r.ip ?? '—'}</span> },
+    { key: 'ip', header: 'IP', hideOnMobile: true, cell: r => <span className="text-caption text-muted num">{r.ip ?? '—'}</span> },
   ];
 
   return (

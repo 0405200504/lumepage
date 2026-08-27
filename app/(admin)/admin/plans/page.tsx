@@ -41,7 +41,7 @@ export default async function AdminPlansPage() {
     >
       <div className="space-y-4">
         {!persisted && (
-          <p className="card px-4 py-3 flex items-start gap-2 text-xs text-[color:var(--color-warn)]">
+          <p className="card px-4 py-3 flex items-start gap-2 text-caption text-warning">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
             <span>
               Exibindo o catálogo embutido no código. Rode <code className="font-mono">supabase/migration_v33_plans.sql</code> para
@@ -61,8 +61,8 @@ export default async function AdminPlansPage() {
         </div>
 
         {legacy > 0 && (
-          <p className="text-xs text-muted px-1">
-            <strong className="text-ink tabular-nums">{legacy}</strong> conta(s) sem plano atribuído (“legadas”): criadas antes do
+          <p className="text-caption text-muted px-1">
+            <strong className="text-ink num">{legacy}</strong> conta(s) sem plano atribuído (“legadas”): criadas antes do
             marco de assinatura, com acesso cheio. Atribua um plano no detalhe de cada conta para que entrem no MRR.
           </p>
         )}

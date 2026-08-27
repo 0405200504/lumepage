@@ -6,7 +6,7 @@ import Link from 'next/link';
  * -------------------
  * Mesmo vocabulário visual dos cartões do painel da profissional
  * (components/dashboard/DashboardOverview.tsx): `card-elevated` arredondado, ícone
- * dentro de um quadradinho tintado, número grande em Manrope black com tabular-nums
+ * dentro de um quadradinho tintado, número grande em Manrope black com num
  * e rótulo em cinza abaixo. O admin não tem um sistema visual próprio — é o mesmo
  * produto, e um KPI daqui deve ser reconhecível como um KPI de lá.
  */
@@ -16,9 +16,9 @@ export type StatTint = 'wine' | 'indigo' | 'amber' | 'emerald';
 
 const TINT: Record<StatTint, string> = {
   wine: 'bg-wine-700/10 text-wine-700',
-  indigo: 'bg-indigo-500/10 text-indigo-600',
-  amber: 'bg-amber-500/10 text-amber-600',
-  emerald: 'bg-emerald-500/10 text-emerald-600',
+  indigo: 'bg-info/10 text-info',
+  amber: 'bg-warning/10 text-warning',
+  emerald: 'bg-success/10 text-success',
 };
 
 export function StatCard({ label, value, note, href, icon, tint = 'wine', className = '' }: {
@@ -38,9 +38,9 @@ export function StatCard({ label, value, note, href, icon, tint = 'wine', classN
           {icon}
         </span>
       )}
-      <p className={`text-xl sm:text-2xl font-black text-ink leading-none tabular-nums ${icon ? 'mt-4' : ''}`}>{value}</p>
-      <span className="text-[11px] font-bold text-gray-450 mt-1.5 block">{label}</span>
-      {note && <span className="block text-[10px] text-gray-450 font-medium mt-0.5">{note}</span>}
+      <p className={`text-h2 sm:text-h2 font-semibold text-ink leading-none num ${icon ? 'mt-4' : ''}`}>{value}</p>
+      <span className="text-caption font-bold text-n-600 mt-1.5 block">{label}</span>
+      {note && <span className="block text-caption text-n-600 font-medium mt-0.5">{note}</span>}
     </>
   );
 
@@ -60,9 +60,9 @@ export function SectionHeader({ title, note, action, icon }: {
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3">
-      {icon && <span className="text-gray-450 shrink-0">{icon}</span>}
-      <h2 className="text-sm font-bold text-ink">{title}</h2>
-      {note && <span className="text-[11px] text-gray-450">{note}</span>}
+      {icon && <span className="text-n-600 shrink-0">{icon}</span>}
+      <h2 className="text-label font-bold text-ink">{title}</h2>
+      {note && <span className="text-caption text-n-600">{note}</span>}
       {action && <span className="ml-auto">{action}</span>}
     </div>
   );
@@ -71,7 +71,7 @@ export function SectionHeader({ title, note, action, icon }: {
 /** Estado vazio de uma linha só, com a ação ao lado. */
 export function EmptyLine({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <p className="card px-4 py-3.5 text-xs text-gray-450 flex flex-wrap items-center gap-x-2 gap-y-1">
+    <p className="card px-4 py-3.5 text-caption text-n-600 flex flex-wrap items-center gap-x-2 gap-y-1">
       <span>{children}</span>
       {action}
     </p>
@@ -84,7 +84,7 @@ export function RuleList({ children }: { children: React.ReactNode }) {
 }
 
 export function RuleItem({ children, href }: { children: React.ReactNode; href?: string }) {
-  const cls = 'flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-xs';
+  const cls = 'flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-caption';
   return href
     ? <li><Link href={href} className={`${cls} hover:bg-surface-2 transition-colors`}>{children}</Link></li>
     : <li className={cls}>{children}</li>;

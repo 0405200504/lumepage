@@ -147,7 +147,7 @@ export default function PricingPlans({
               type="button"
               onClick={() => setAnual(false)}
               aria-pressed={!anual}
-              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-ui duration-300 ${
                 !anual
                   ? "bg-bordo text-offwhite shadow-lp-soft"
                   : "text-grafite/60 hover:text-bordo"
@@ -159,7 +159,7 @@ export default function PricingPlans({
               type="button"
               onClick={() => setAnual(true)}
               aria-pressed={anual}
-              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-ui duration-300 ${
                 anual
                   ? "bg-bordo text-offwhite shadow-lp-soft"
                   : "text-grafite/60 hover:text-bordo"

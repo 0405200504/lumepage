@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, ShieldAlert, RefreshCw, HelpCircle } from 'lucide-react';
+import Link from 'next/link';
+import { RefreshCw, HelpCircle, ChevronRight, ShieldAlert } from 'lucide-react';
 import { OPEN_ONBOARDING_EVENT } from '@/components/onboarding/OnboardingTour';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
 
 interface HeaderProps {
-  /** Opcionais: se omitidos, o título é derivado da rota atual (usado no app do profissional).
+  /** Opcionais: se omitidos, o título vem da rota (app da profissional).
    *  O admin continua passando title/subtitle explicitamente. */
   title?: string;
   subtitle?: string;
@@ -15,125 +18,167 @@ interface HeaderProps {
   role: 'super_admin' | 'professional';
 }
 
-// Mapa rota → título/subtítulo (app do profissional).
-const ROUTE_META: Record<string, { title: string; subtitle?: string }> = {
+/** Mapa rota → título/subtítulo/trilha (app da profissional). */
+const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: string }> = {
   '/dashboard': {
     title: 'Início',
-    subtitle: 'Acompanhe suas estatísticas operacionais de hoje e os próximos atendimentos marcados.',
+    subtitle: 'Seu dia, seu faturamento e o que precisa de atenção.',
   },
   '/dashboard/agenda': {
     title: 'Agenda',
     subtitle: 'Ano, mês e semana — agendamentos, feriados e tarefas (arraste para remarcar).',
+    crumb: 'Atendimento',
   },
   '/dashboard/appointments': {
-    title: 'Gestão de Agendamentos',
-    subtitle: 'Acompanhe, aprove e gerencie os horários agendados pelos seus clientes finais.',
+    title: 'Agendamentos',
+    subtitle: 'Acompanhe, aprove e gerencie os horários agendados pelas suas clientes.',
+    crumb: 'Atendimento',
   },
   '/dashboard/waitlist': {
-    title: 'Lista de Espera',
+    title: 'Lista de espera',
     subtitle: 'Clientes aguardando horário — contate, encaixe ou organize as solicitações.',
+    crumb: 'Atendimento',
+  },
+  '/dashboard/tasks': {
+    title: 'Tarefas e notas',
+    subtitle: 'Anote o que é importante. Com data e horário, a tarefa aparece na sua Agenda.',
+    crumb: 'Atendimento',
   },
   '/dashboard/availability': {
-    title: 'Disponibilidade Semanal',
-    subtitle: 'Configure o seu horário de funcionamento regular e intervalo de almoço para cada dia da semana.',
+    title: 'Disponibilidade',
+    subtitle: 'Configure o horário de funcionamento e o intervalo de almoço de cada dia.',
+    crumb: 'Seu negócio',
   },
   '/dashboard/blocks': {
-    title: 'Bloqueio de Horários',
-    subtitle: 'Feche dias específicos ou horas do expediente para folgas, imprevistos ou atendimentos externos.',
+    title: 'Bloqueios',
+    subtitle: 'Feche dias ou horas do expediente para folgas, imprevistos e atendimentos externos.',
+    crumb: 'Seu negócio',
   },
   '/dashboard/clients': {
-    title: 'Carteira de Clientes',
-    subtitle: 'Acompanhe histórico, reative clientes sumidas e monitore faltas para fidelizar mais.',
+    title: 'Contatos',
+    subtitle: 'Histórico, clientes sumidas e faltas — tudo o que ajuda a fidelizar.',
+    crumb: 'Clientes',
   },
   '/dashboard/anamnese': {
-    title: 'Fichas de Anamnese',
+    title: 'Fichas de anamnese',
     subtitle: 'Crie fichas, envie por link para as clientes responderem e receba tudo em PDF.',
+    crumb: 'Clientes',
   },
   '/dashboard/finance': {
     title: 'Contas',
-    subtitle: 'Seu controle financeiro completo: o que entrou, o que saiu, lucro e quanto sobrou.',
+    subtitle: 'O que entrou, o que saiu, lucro e quanto sobrou.',
+    crumb: 'Dinheiro',
   },
+  '/dashboard/sales': { title: 'Vendas', crumb: 'Dinheiro' },
   '/dashboard/services': {
-    title: 'Catálogo de Serviços',
-    subtitle: 'Defina os procedimentos, tempos de duração e os valores exibidos para os seus clientes na página de agendamentos.',
+    title: 'Serviços',
+    subtitle: 'Procedimentos, durações e valores exibidos na sua página de agendamento.',
+    crumb: 'Seu negócio',
   },
+  '/dashboard/site': { title: 'Minha Página', crumb: 'Seu negócio' },
   '/dashboard/settings': {
-    title: 'Configurações da Conta',
-    subtitle: 'Customize suas informações de contato, regras comerciais para novos agendamentos e cores de marca.',
+    title: 'Configurações',
+    subtitle: 'Contato, regras comerciais para novos agendamentos e cores de marca.',
+    crumb: 'Seu negócio',
   },
-  '/dashboard/tasks': {
-    title: 'Tarefas & Notas',
-    subtitle: 'Anote o que é importante. Com data e horário, a tarefa aparece na sua Agenda.',
-  },
+  '/dashboard/whatsapp': { title: 'WhatsApp', crumb: 'Clientes' },
+  '/dashboard/whatsapp/conversas': { title: 'Conversas', crumb: 'Clientes' },
 };
 
-export const Header: React.FC<HeaderProps> = ({
-  title,
-  subtitle,
-  userName,
-  userEmail,
-  role,
-}) => {
+/**
+ * Topbar de 64px.
+ *
+ * Fundo transparente sobre o off-white da aplicação; o blur e a borda
+ * inferior só entram DEPOIS de 8px de rolagem — em repouso a barra não
+ * desenha uma linha que não precisa existir.
+ *
+ * No celular ela colapsa: em repouso mostra saudação em duas linhas; ao
+ * rolar, encolhe para 52px com o título e as ações.
+ */
+export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, role }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
-  const handleRefresh = () => startRefresh(() => router.refresh());
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const meta = ROUTE_META[pathname];
   const resolvedTitle = title ?? meta?.title ?? 'Lume';
   const resolvedSubtitle = subtitle ?? meta?.subtitle;
+  const crumb = meta?.crumb;
 
   return (
-    <header className="flex justify-between items-center gap-3 glass hairline-b px-4 sm:px-6 py-3.5 sm:py-5 pt-safe sticky top-0 z-30 select-none">
-      <div className="min-w-0" data-tour="page-header">
-        <h2 className="text-xl font-black text-ink tracking-tight leading-tight truncate">{resolvedTitle}</h2>
-        {/* Subtítulo descritivo só no desktop — no celular o header fica enxuto, cara de app */}
-        {resolvedSubtitle && <p className="hidden sm:block text-xs text-gray-450 mt-1 max-w-2xl">{resolvedSubtitle}</p>}
-      </div>
-
-      {/* Rever tutorial — reabre o tour de boas-vindas (só no app do profissional) */}
-      {role === 'professional' && (
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
-          title="Rever o tutorial de boas-vindas"
-          aria-label="Rever tutorial"
-          className="shrink-0 ml-auto inline-flex items-center justify-center h-9 w-9 rounded-full sm:rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </button>
-      )}
-
-      {/* Botão de atualizar — recarrega os dados sem recarregar a página (router.refresh) */}
-      <button
-        type="button"
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        title="Atualizar dados sem recarregar a página"
-        aria-label="Atualizar"
-        className="shrink-0 ml-auto inline-flex items-center justify-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-full sm:rounded-xl bg-paper/80 border border-gray-150 text-forest shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-all-custom disabled:opacity-60"
+    <header
+      data-scrolled={scrolled || undefined}
+      className="sticky top-0 z-30 select-none pt-safe transition-ui
+        data-[scrolled]:border-b data-[scrolled]:border-line
+        data-[scrolled]:bg-bg/80 data-[scrolled]:backdrop-blur-[20px]"
+    >
+      <div
+        className="flex items-center gap-3 px-4 lg:px-8 max-w-[1400px] mx-auto w-full
+          h-[76px] data-[scrolled]:h-[52px] lg:h-16 lg:data-[scrolled]:h-16 transition-[height] duration-[220ms] ease-out"
+        data-scrolled={scrolled || undefined}
       >
-        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        <span className="hidden sm:inline text-xs font-bold">{isRefreshing ? 'Atualizando…' : 'Atualizar'}</span>
-      </button>
-
-      {/* No mobile: só o avatar limpo (estilo app). No desktop: caixa com nome/email. */}
-      <div className="flex items-center gap-0 sm:gap-3 shrink-0 sm:bg-paper/80 sm:border sm:border-gray-150 rounded-full sm:rounded-2xl p-0 sm:p-2.5 sm:shadow-soft">
-        <div className="h-9 w-9 bg-gradient-to-br from-wine-700/12 to-wine-500/8 ring-1 ring-wine-700/10 text-forest rounded-full sm:rounded-xl flex items-center justify-center font-bold shrink-0">
-          {role === 'super_admin' ? (
-            <ShieldAlert className="h-5 w-5 text-forest" />
-          ) : (
-            <User className="h-5 w-5 text-forest" />
+        <div className="min-w-0 flex-1" data-tour="page-header">
+          {crumb && (
+            <p className="hidden lg:flex items-center gap-1 text-caption text-n-500 mb-0.5">
+              <Link href="/dashboard" className="hover:text-heading transition-ui">Painel</Link>
+              <ChevronRight className="h-4 w-4" aria-hidden />
+              <span>{crumb}</span>
+            </p>
+          )}
+          <h1 className="text-h2 text-heading truncate">{resolvedTitle}</h1>
+          {resolvedSubtitle && !scrolled && (
+            <p className="hidden lg:block text-caption text-n-500 mt-0.5 max-w-2xl truncate">
+              {resolvedSubtitle}
+            </p>
           )}
         </div>
 
-        <div className="text-left hidden sm:block">
-          <p className="text-xs font-bold text-ink leading-none">{userName}</p>
-          <span className="text-[10px] text-gray-450 mt-1 block truncate max-w-[150px]" title={userEmail}>
-            {userEmail}
+        <div className="flex items-center gap-2 shrink-0">
+          {role === 'professional' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="Rever o tutorial de boas-vindas"
+              title="Rever o tutorial de boas-vindas"
+              onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
+              leadingIcon={<HelpCircle className="h-5 w-5" />}
+            />
+          )}
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => startRefresh(() => router.refresh())}
+            disabled={isRefreshing}
+            title="Atualizar os dados sem recarregar a página"
+            leadingIcon={<RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+            className="max-lg:w-9 max-lg:px-0"
+          >
+            <span className="hidden lg:inline">{isRefreshing ? 'Atualizando…' : 'Atualizar'}</span>
+          </Button>
+
+          <span title={`${userName} · ${userEmail}`} className="lg:hidden">
+            {role === 'super_admin' ? (
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-wine-50 text-wine-700">
+                <ShieldAlert className="h-5 w-5" />
+              </span>
+            ) : (
+              <Avatar name={userName} size="sm" />
+            )}
           </span>
         </div>
       </div>
     </header>
   );
 };
+
 export default Header;

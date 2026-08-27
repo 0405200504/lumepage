@@ -27,7 +27,7 @@ export function RankedBars({ items, format, emptyText = 'Sem movimento no perío
   emptyText?: string;
 }) {
   if (items.length === 0) {
-    return <p className="py-8 text-center text-xs text-muted">{emptyText}</p>;
+    return <p className="py-8 text-center text-caption text-muted">{emptyText}</p>;
   }
 
   const max = Math.max(1, ...items.map(i => i.value));
@@ -36,14 +36,14 @@ export function RankedBars({ items, format, emptyText = 'Sem movimento no perío
     <ul className="space-y-1.5">
       {items.map(item => (
         <li key={item.id} className="group">
-          <div className="flex items-baseline gap-2 text-xs">
+          <div className="flex items-baseline gap-2 text-caption">
             <span className="font-semibold text-ink truncate min-w-0 flex-1" title={item.label}>{item.label}</span>
             {item.sharePct !== undefined && (
-              <span className={`tabular-nums text-[11px] ${item.alert ? 'text-[color:var(--color-bad)] font-bold' : 'text-muted'}`}>
+              <span className={`num text-caption ${item.alert ? 'text-danger font-bold' : 'text-muted'}`}>
                 {item.sharePct.toFixed(0)}%
               </span>
             )}
-            <span className="tabular-nums font-bold text-ink w-24 text-right">{format(item.value)}</span>
+            <span className="num font-bold text-ink w-24 text-right">{format(item.value)}</span>
           </div>
           <div className="mt-1 h-1.5 rounded-full bg-surface-2 overflow-hidden" aria-hidden>
             <div

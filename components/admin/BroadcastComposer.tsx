@@ -39,14 +39,14 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15';
-  const label = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-muted mb-1';
+  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const label = 'block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1';
   const tone = { info: 'accent', warn: 'warn', success: 'ok' } as const;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="card p-4 space-y-3">
-        <h2 className="text-sm font-bold text-ink">Novo aviso</h2>
+        <h2 className="text-label font-bold text-ink">Novo aviso</h2>
 
         <label className="block">
           <span className={label}>Título</span>
@@ -57,7 +57,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
         <label className="block">
           <span className={label}>Mensagem</span>
           <textarea rows={4} maxLength={600} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            className="w-full px-3 py-2 rounded-xl border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-wine-700/15"
+            className="w-full px-3 py-2 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
             placeholder="O que a profissional precisa saber." />
         </label>
 
@@ -86,9 +86,9 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
 
         <div>
           <span className={label}>Preview</span>
-          <div className={`rounded-xl px-3 py-2.5 text-xs ring-1 ${
-            form.level === 'warn' ? 'bg-[color:var(--color-warn)]/10 ring-[color:var(--color-warn)]/20 text-[color:var(--color-warn)]'
-              : form.level === 'success' ? 'bg-[color:var(--color-ok)]/10 ring-[color:var(--color-ok)]/20 text-[color:var(--color-ok)]'
+          <div className={`rounded-xl px-3 py-2.5 text-caption ring-1 ${
+            form.level === 'warn' ? 'bg-warning-bg ring-warning-border text-warning'
+              : form.level === 'success' ? 'bg-success-bg ring-success-border text-success'
               : 'bg-accent-soft ring-accent-soft-border text-accent-link'
           }`}>
             <p className="font-bold">{form.title || 'Título do aviso'}</p>
@@ -97,30 +97,30 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
         </div>
 
         <button type="button" disabled={busy || !form.title.trim() || !form.body.trim()} onClick={publish}
-          className="w-full h-9 rounded-xl bg-forest hover:bg-forest-hover text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
+          className="w-full h-9 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Publicar aviso
         </button>
 
         {!available && (
-          <p className="text-[11px] text-[color:var(--color-warn)]">
+          <p className="text-caption text-warning">
             Rode <code className="font-mono">supabase/migration_v34_admin_system.sql</code> para habilitar os avisos.
           </p>
         )}
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="px-4 py-3 text-sm font-bold text-ink border-b border-line">Avisos publicados</h2>
+        <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Avisos publicados</h2>
         <ul className="divide-y divide-line max-h-[32rem] overflow-y-auto">
           {notices.map(n => (
             <li key={n.id} className="px-4 py-3 flex items-start gap-3">
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-ink truncate">{n.title}</span>
+                  <span className="text-caption font-bold text-ink truncate">{n.title}</span>
                   <Badge tone={tone[n.level]}>{n.audience}</Badge>
                   {!n.active && <Badge tone="neutral">oculto</Badge>}
                 </span>
-                <span className="block text-[11px] text-muted mt-0.5 line-clamp-2">{n.body}</span>
-                <span className="block text-[10px] text-faint mt-1 tabular-nums">
+                <span className="block text-caption text-muted mt-0.5 line-clamp-2">{n.body}</span>
+                <span className="block text-caption text-faint mt-1 num">
                   {formatDateTimeBR(n.created_at)} · {n.created_by}
                 </span>
               </span>
@@ -131,7 +131,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
               </button>
             </li>
           ))}
-          {notices.length === 0 && <li className="px-4 py-10 text-center text-xs text-muted">Nenhum aviso publicado ainda.</li>}
+          {notices.length === 0 && <li className="px-4 py-10 text-center text-caption text-muted">Nenhum aviso publicado ainda.</li>}
         </ul>
       </section>
     </div>
