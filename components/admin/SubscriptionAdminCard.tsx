@@ -123,7 +123,7 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
         <div>
           <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Plano</label>
           <select value={plan} onChange={(e) => setPlan(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
             <option value="">Sem plano</option>
             <option value="start">Start</option>
             <option value="pro">Pro</option>
@@ -133,7 +133,7 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
         <div>
           <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Situação</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'trialing')}
-            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+            className="block w-full px-3 py-2.5 border border-n-200 bg-white rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
             <option value="active">Ativo (acesso liberado)</option>
             <option value="trialing">Em teste (trial)</option>
           </select>
@@ -141,7 +141,7 @@ export const SubscriptionAdminCard: React.FC<Props> = ({ professional }) => {
         <div>
           <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Vencimento do acesso</label>
           <input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
         </div>
       </div>
 

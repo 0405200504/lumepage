@@ -391,7 +391,7 @@ function ChangeEmailDialog({ current, brandName, onClose, onSave }: {
         <label className="block">
           <span className="block text-caption font-bold uppercase tracking-[0.08em] text-muted mb-1">Novo e-mail de login</span>
           <input type="email" value={value} onChange={e => setValue(e.target.value)} placeholder="novo@email.com"
-            className="w-full h-9 px-3 rounded-lg border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            className="w-full h-9 px-3 rounded-lg border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
         </label>
 
         <p className="text-caption text-muted">

@@ -38,7 +38,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     }
   };
 
-  const field = 'block w-full pl-10 pr-10 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui';
+  const field = 'block w-full pl-10 pr-10 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui';
 
   return (
     <form onSubmit={submit} className="space-y-5">

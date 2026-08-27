@@ -13,7 +13,7 @@ import {
   monthRange, compare, clientRecurrence, funnel, serviceStats, topClientsBySpend,
   monthlySeries, inRange as inDateRange,
 } from '@/lib/analytics';
-import { KpiCard } from '../ui/KpiCard';
+import { IndexGrid } from '../ui/IndexGrid';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
@@ -132,7 +132,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
     { key: 'service', header: 'Serviço', sortValue: r => r.serviceName, cell: r => <span className="text-n-600">{r.serviceName}{r.extra > 0 && <span className="text-wine-700 font-bold"> +{r.extra}</span>}</span> },
     { key: 'payment', header: 'Pagamento', sortValue: r => r.payment, cell: r => <span className="text-n-600 capitalize">{r.payment || '—'}</span> },
     { key: 'status', header: 'Status', sortValue: r => r.status, cell: r => (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-bold ${r.status === 'completed' ? 'bg-success-bg text-success' : 'bg-wine-700/10 text-wine-700'}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-bold ${r.status === 'completed' ? 'text-success' : 'bg-wine-50 text-wine-700'}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
     ) },
     { key: 'amount', header: 'Valor', align: 'right', sortValue: r => r.amount, cell: r => <span className="font-bold text-ink num">{brl(r.amount)}</span> },
   ];
@@ -173,7 +173,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
     { key: 'month', label: 'Este mês' }, { key: 'year', label: 'Este ano' }, { key: 'all', label: 'Tudo' },
   ];
 
-  const inputCls = 'px-3 py-2 bg-surface-2 border border-line rounded-xl text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const inputCls = 'px-3 py-2 bg-surface-2 border border-line rounded-xl text-caption text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -181,10 +181,11 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <Segmented items={tabs} value={activeTab} onChange={setActiveTab} />
         {activeTab !== 'sales' && (
-          <div className="flex items-center gap-1 bg-surface border border-line rounded-xl p-1 shadow-soft shrink-0">
+          <div className="segmented shrink-0">
             {periods.map(p => (
-              <button key={p.key} onClick={() => setPeriod(p.key)}
-                className={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-ui ${period === p.key ? 'bg-[color:var(--color-accent-soft)] text-wine-700' : 'text-n-600 hover:text-ink'}`}>{p.label}</button>
+              <button key={p.key} onClick={() => setPeriod(p.key)} data-active={period === p.key ? 'true' : undefined}>
+                {p.label}
+              </button>
             ))}
           </div>
         )}
@@ -194,19 +195,29 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
         {/* ===================== VISÃO GERAL ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-              <KpiCard label={`Faturamento (${label})`} value={brl(curRevenue)} icon={<DollarSign className="h-5 w-5" />} comparison={showCompare ? cmpRev : undefined} spark={revSpark} accent />
-              <KpiCard label={`Ticket médio (${label})`} value={brl(curTicket)} icon={<Tag className="h-5 w-5" />} comparison={showCompare ? cmpTkt : undefined} />
-              <KpiCard label={`Total de vendas (${label})`} value={String(curCount)} icon={<ReceiptText className="h-5 w-5" />} comparison={showCompare ? cmpQt : undefined} />
-            </div>
+            {/* Sete KPIs em duas grades de índices divididas por hairline —
+                antes eram sete cards soltos, cada um com seu iconezinho num
+                quadrado cinza, o mesmo ruído do financeiro. */}
+            <IndexGrid
+              cols={3}
+              items={[
+                { label: `Faturamento (${label})`, value: brl(curRevenue), accent: true,
+                  delta: showCompare ? { pct: cmpRev.deltaPct } : undefined },
+                { label: `Ticket médio (${label})`, value: brl(curTicket),
+                  delta: showCompare ? { pct: cmpTkt.deltaPct } : undefined },
+                { label: `Total de vendas (${label})`, value: String(curCount), format: 'mono',
+                  delta: showCompare ? { pct: cmpQt.deltaPct } : undefined },
+              ]}
+            />
 
-            {/* Recorrência */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard label="Novos clientes" value={String(recurrence.newClients)} icon={<UserPlus className="h-5 w-5" />} hint={`${recurrence.returning} recorrentes`} />
-              <KpiCard label="Taxa de retorno" value={`${recurrence.returnRate.toFixed(0)}%`} icon={<Repeat2 className="h-5 w-5" />} hint="clientes que voltaram" />
-              <KpiCard label="Frequência média" value={recurrence.avgDaysBetween ? `${recurrence.avgDaysBetween} dias` : '—'} icon={<Repeat2 className="h-5 w-5" />} hint="entre visitas" />
-              <KpiCard label="LTV médio" value={brl(recurrence.ltv)} icon={<Crown className="h-5 w-5" />} hint="por cliente (geral)" />
-            </div>
+            <IndexGrid
+              items={[
+                { label: 'Novos clientes', value: String(recurrence.newClients), format: 'mono', hint: `${recurrence.returning} recorrentes` },
+                { label: 'Taxa de retorno', value: `${recurrence.returnRate.toFixed(0)}%`, format: 'mono', hint: 'clientes que voltaram' },
+                { label: 'Frequência média', value: recurrence.avgDaysBetween ? `${recurrence.avgDaysBetween} dias` : '—', format: 'mono', hint: 'entre visitas' },
+                { label: 'LTV médio', value: brl(recurrence.ltv), hint: 'por cliente (geral)' },
+              ]}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Funil */}
@@ -247,7 +258,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-n-600" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente ou serviço…"
-                    className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+                    className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-line rounded-xl text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
                 </div>
                 <button onClick={() => setShowFilters(s => !s)} className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-caption font-bold border transition-colors ${hasActiveFilters ? 'border-wine-700 text-wine-700 bg-wine-700/5' : 'border-line text-n-600 hover:bg-surface-2'}`}>
                   <Filter className="h-3.5 w-3.5" /> Filtros{hasActiveFilters ? ' •' : ''}
@@ -319,18 +330,20 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
         {/* ===================== CLIENTES ===================== */}
         {activeTab === 'clients' && (
           <div className="space-y-4 animate-fade-up">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard label="Clientes no período" value={String(recurrence.newClients + recurrence.returning)} icon={<Users className="h-5 w-5" />} hint={`${recurrence.newClients} novos`} />
-              <KpiCard label="Recorrentes" value={String(recurrence.returning)} icon={<Repeat2 className="h-5 w-5" />} />
-              <KpiCard label="Taxa de retorno" value={`${recurrence.returnRate.toFixed(0)}%`} icon={<Percent className="h-5 w-5" />} />
-              <KpiCard label="LTV médio" value={brl(recurrence.ltv)} icon={<Crown className="h-5 w-5" />} accent />
-            </div>
+            <IndexGrid
+              items={[
+                { label: 'Clientes no período', value: String(recurrence.newClients + recurrence.returning), format: 'mono', hint: `${recurrence.newClients} novos` },
+                { label: 'Recorrentes', value: String(recurrence.returning), format: 'mono' },
+                { label: 'Taxa de retorno', value: `${recurrence.returnRate.toFixed(0)}%`, format: 'mono' },
+                { label: 'LTV médio', value: brl(recurrence.ltv), accent: true },
+              ]}
+            />
             <div className="card p-5 sm:p-6">
               <SectionHeader title="Melhores clientes" subtitle={`Por valor gasto no ${label}`} icon={<Crown className="h-4 w-4" />} />
               <div className="mt-5 space-y-2">
                 {topClients.length === 0 ? <p className="text-caption text-n-600 py-8 text-center">Nenhuma venda no período.</p> : topClients.map((c, idx) => (
                   <div key={c.key} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2 transition-colors">
-                    <span className="h-7 w-7 rounded-full bg-wine-700/10 text-wine-700 text-caption font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
+                    <span className="h-7 w-7 rounded-full bg-wine-50 text-wine-700 text-caption font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-label font-bold text-ink truncate">{c.name}</p>
                       <p className="text-caption text-n-600">{c.visits} visita(s)</p>

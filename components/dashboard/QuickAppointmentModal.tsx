@@ -151,14 +151,14 @@ export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
           {/* Cliente */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="relative" ref={nameFieldRef}>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Cliente *</label>
+              <label className="mono-micro text-n-500 block mb-1.5">Cliente *</label>
               <input
                 value={name}
                 onChange={e => { setName(e.target.value); setPickedClientId(null); setShowSuggestions(true); }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder="Buscar ou digitar nome"
                 autoComplete="off"
-                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700" />
+                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700" />
               {pickedClientId && (
                 <UserCheck className="absolute right-2.5 top-[30px] h-4 w-4 text-wine-700 pointer-events-none" />
               )}
@@ -177,15 +177,15 @@ export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
               )}
             </div>
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">WhatsApp *</label>
+              <label className="mono-micro text-n-500 block mb-1.5">WhatsApp *</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="5515999999999" inputMode="tel"
-                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700" />
+                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700" />
             </div>
           </div>
 
           {/* Serviços */}
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="mono-micro text-n-500 block mb-1.5 flex items-center gap-1">
               <Layers className="h-3 w-3" /> Serviço(s) *
             </label>
             {activeServices.length === 0 ? (
@@ -208,26 +208,26 @@ export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
           {/* Data / Hora / Duração */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Data *</label>
+              <label className="mono-micro text-n-500 block mb-1.5">Data *</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700" />
+                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700" />
             </div>
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Horário *</label>
+              <label className="mono-micro text-n-500 block mb-1.5">Horário *</label>
               <input type="time" value={time} onChange={e => setTime(e.target.value)}
-                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption text-center font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700" />
+                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption text-center font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700" />
             </div>
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Clock className="h-3 w-3" /> Min</label>
+              <label className="mono-micro text-n-500 block mb-1.5 flex items-center gap-1"><Clock className="h-3 w-3" /> Min</label>
               <input type="number" min={5} step={5} value={duration}
                 onChange={e => { setDurationTouched(true); setDuration(Math.max(5, parseInt(e.target.value) || 0)); }}
-                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption text-center font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700" />
+                className="block w-full px-2 py-2.5 border border-n-200 rounded-xl text-caption text-center font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700" />
             </div>
           </div>
 
           {/* Pagamento */}
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Forma de pagamento (opcional)</label>
+            <label className="mono-micro text-n-500 block mb-1.5">Forma de pagamento (opcional)</label>
             <div className="flex flex-wrap gap-1.5">
               {PAYMENT_METHODS.map(method => (
                 <button type="button" key={method} onClick={() => setPaymentMethod(paymentMethod === method ? '' : method)}
@@ -240,9 +240,9 @@ export const QuickAppointmentModal: React.FC<QuickAppointmentModalProps> = ({
 
           {/* Observações */}
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">Observações (opcional)</label>
+            <label className="mono-micro text-n-500 block mb-1.5">Observações (opcional)</label>
             <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Detalhes do atendimento..."
-              className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption placeholder-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 resize-none" />
+              className="field-input resize-none" />
           </div>
 
           {/* Encaixe (sobreposição) */}

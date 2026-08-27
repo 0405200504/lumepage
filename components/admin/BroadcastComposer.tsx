@@ -39,7 +39,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
   const label = 'block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1';
   const tone = { info: 'accent', warn: 'warn', success: 'ok' } as const;
 
@@ -57,7 +57,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
         <label className="block">
           <span className={label}>Mensagem</span>
           <textarea rows={4} maxLength={600} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            className="w-full px-3 py-2 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+            className="w-full px-3 py-2 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             placeholder="O que a profissional precisa saber." />
         </label>
 

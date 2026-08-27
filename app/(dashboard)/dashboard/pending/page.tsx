@@ -3,6 +3,7 @@ import { dbService } from '@/lib/supabase/db';
 import { PendingConversationsWidget } from '@/components/dashboard/PendingConversationsWidget';
 import { professionalCan } from '@/lib/subscription/guard';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata = {
   title: 'Conversas Pendentes | Lume',
@@ -18,11 +19,12 @@ export default async function PendingConversationsPage() {
   const pendingConvs = await dbService.getPausedConversations(professionalId).catch(() => []);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-h2 font-bold text-n-900">Conversas Pendentes</h1>
-        <p className="text-label text-n-400">Atendimentos que aguardam seu contato direto.</p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        trail={['Atendimento IA', `${pendingConvs.length} pendente(s)`]}
+        title="Conversas pendentes"
+        description="Atendimentos em que o bot foi pausado e a cliente aguarda seu contato direto."
+      />
       <PendingConversationsWidget initialConversations={pendingConvs} showEmptyState />
     </div>
   );

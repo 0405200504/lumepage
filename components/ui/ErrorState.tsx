@@ -17,8 +17,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
   className = '',
 }) => (
-  <div className={`flex flex-col items-center justify-center text-center py-12 px-4 rounded-2xl border border-danger-border bg-danger-bg ${className}`}>
-    <div className="p-3 rounded-2xl bg-danger-bg text-danger mb-3">
+  <div className={`flex flex-col items-center justify-center text-center py-12 px-4 rounded-surface border border-line ${className}`}>
+    <div className="p-2.5 rounded-badge border border-line text-danger mb-3">
       <AlertTriangle className="h-6 w-6" />
     </div>
     <h3 className="text-label font-bold text-heading">{title}</h3>

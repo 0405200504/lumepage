@@ -111,7 +111,7 @@ export default function RegisterPage() {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
+                    className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
                   />
                 </div>
               </div>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
                     required
                     value={formData.brandName}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
+                    className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
                   />
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
+                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
                 />
               </div>
             </div>
@@ -161,7 +161,7 @@ export default function RegisterPage() {
                   placeholder="(00) 00000-0000"
                   value={formData.whatsapp}
                   onChange={handleChange}
-                  className="block w-full px-4 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
+                  className="block w-full px-4 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
                 />
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                   placeholder="Mínimo 8 caracteres"
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 transition-ui"
+                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
                 />
               </div>
             </div>

@@ -177,10 +177,22 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.015em;
 }
 
-/* Ícones (Lucide) padronizados em traço FINO e uniforme.
-   CSS sobrepõe o atributo stroke-width do SVG → vale para todos os ícones. */
+/* Ícones (Lucide) forçados à geometria técnica.
+   O lucide vem com stroke 2, `linecap: round` e `linejoin: round` — a
+   terminação arredondada é a razão de os ícones lerem como "amadores".
+   Traço 1.25 + ponta reta + junta em esquadro muda a leitura mais do que
+   trocar o desenho: o mesmo ícone passa a parecer desenho de engenharia.
+   CSS sobrepõe os atributos do SVG → vale para todos, sem tocar no JSX. */
 svg.lucide {
-  stroke-width: 1.5px;
+  stroke-width: 1.25px;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+/* Duas exceções: no círculo e no arco a ponta reta não aparece, mas em
+   traço de 1px o `miter` de um ângulo muito agudo vira farpa. */
+svg.lucide circle,
+svg.lucide ellipse {
+  stroke-linejoin: round;
 }
 
 /* — Scrollbar — */
@@ -253,9 +265,17 @@ svg.lucide {
 }
 
 /* Foco visível e consistente (acessibilidade + cara de produto sério).
-   Só aparece na navegação por teclado, nunca atrapalha o toque/clique. */
+   Só aparece na navegação por teclado, nunca atrapalha o toque/clique.
+
+   O anel é SEMPRE --wine-700, com offset de 2px, em qualquer elemento —
+   inclusive no botão destrutivo e no campo com erro. Vermelho (--danger)
+   e --signal estão reservados a significado: erro e indicação ao vivo.
+   Um anel de foco vermelho em volta de "Excluir" faria o teclado parecer
+   que já disparou a ação; e um anel que muda de cor conforme o botão
+   ensina que a cor do foco quer dizer alguma coisa, quando ela só quer
+   dizer "é aqui que você está". */
 :focus-visible {
-  outline: 2px solid var(--color-wine-600);
+  outline: 2px solid var(--color-wine-700);
   outline-offset: 2px;
 }
 :focus:not(:focus-visible) { outline: none; }
@@ -296,59 +316,60 @@ svg.lucide {
 /* Borda luminosa fina */
 .ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 
-/* Cartão em repouso: sombra leve E borda leve. Nunca as duas fortes ao
-   mesmo tempo — é o que faz card parecer adesivo colado na tela. */
+/* Cartão em repouso: fundo + HAIRLINE, e mais nada. Zero sombra.
+   A sombra difusa era o que dava o ar de adesivo colado na tela; num
+   instrumento a superfície é plana e o que a delimita é o traço de 1px.
+   Elevação se faz ESCURECENDO a borda, não borrando pixel embaixo. */
 .card {
   position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-surface);
-  box-shadow: var(--shadow-sm);
 }
 
-/* Cartão clicável: sobe 2px no hover, e só onde existe mouse. */
+/* Cartão clicável: a borda escurece. Sem levitar, sem sombra. */
 .card-interactive {
-  transition-property: box-shadow, border-color, transform;
-  transition-duration: var(--dur-base);
+  transition-property: border-color, background-color, color;
+  transition-duration: var(--dur-fast);
   transition-timing-function: var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .card-interactive:hover {
-    box-shadow: var(--shadow-md);
     border-color: var(--color-line-strong);
-    transform: translateY(-2px);
   }
 }
 
-/* Alias herdado — mesma superfície do .card, sem o gradiente e o glow que
-   davam "elevação decorativa" a cartão que não é clicável. */
+/* Alias herdado — mesma superfície do .card. */
 .card-elevated {
   position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-surface);
-  box-shadow: var(--shadow-sm);
-  transition-property: box-shadow, border-color, transform;
-  transition-duration: var(--dur-base);
+  transition-property: border-color, background-color, color;
+  transition-duration: var(--dur-fast);
   transition-timing-function: var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .card-elevated:hover {
-    box-shadow: var(--shadow-md);
     border-color: var(--color-line-strong);
   }
 }
 
-/* Sombra tingida do CTA primário — e SÓ dele. */
+/* O CTA não brilha mais. A classe fica porque o JSX antigo a referencia;
+   o token que ela consome foi neutralizado em tokens.css. Um botão vinho
+   chapado sobre branco já é o elemento mais forte da tela — o halo só
+   somava o "premium suave" que estávamos tirando. */
 .glow-wine { box-shadow: var(--shadow-wine); }
 
 /* Número-chave em vinho chapado. O gradiente no texto reduzia o contraste
    justamente no dígito mais importante da tela. */
 .text-gradient-wine { color: var(--color-wine-700); }
 
-/* Divisores 1px com leve gradiente (mais fino/premium que uma borda chapada) */
-.hairline-t { border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--color-line) 20%, var(--color-line) 80%, transparent) 1; }
-.hairline-b { border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--color-line) 20%, var(--color-line) 80%, transparent) 1; }
+/* Divisórias de PONTA A PONTA. O gradiente que desvanecia nas laterais
+   era o gesto que mais amaciava a interface: uma linha que não chega na
+   borda não estrutura nada. Agora ela atravessa. */
+.hairline-t { border-top: 1px solid var(--color-line); }
+.hairline-b { border-bottom: 1px solid var(--color-line); }
 
 /* — Animações — */
 @keyframes slide-right {
@@ -440,23 +461,31 @@ svg.lucide {
   .toast-in { animation-name: toast-in-top; }
 }
 
-/* Chip de ícone — 40x40, fundo neutro, ícone que herda a cor do texto.
-   Existe UM chip neutro e UM chip de destaque. Não há chip azul, verde
-   ou lilás por card: era a paleta vazando. */
+/* Chip de ícone — QUADRADO de 30px, raio 4, hairline, fundo TRANSPARENTE.
+   O quadradinho cinza preenchido, repetido oito vezes numa tela de KPIs,
+   era ruído puro: oito manchas do mesmo tom disputando com o número que
+   importa. Vazio e delimitado por traço, ele vira porta-ícone, não mancha.
+   O ícone herda `currentColor`: nunca tem cor própria. */
 .icon-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  width: 40px;
+  height: 30px;
+  width: 30px;
   flex: none;
-  border-radius: var(--radius-control);
-  background: var(--color-n-100);
+  border-radius: var(--radius-badge);
+  border: 1px solid var(--color-line);
+  background: transparent;
   color: var(--color-n-600);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
 }
+/* Ativo: o chanfro entra aqui também — é a assinatura do estado. */
 .icon-chip[data-accent='true'] {
   background: var(--color-wine-50);
+  border-color: var(--color-wine-200);
   color: var(--color-wine-700);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
 }
 
 /* Tooltip do rail: 400ms de atraso na ENTRADA e saída imediata. Sem o
@@ -499,7 +528,7 @@ svg.lucide {
   position: relative;
   overflow: hidden;
   background: var(--color-n-100);
-  border-radius: var(--radius-chip);
+  border-radius: var(--radius-badge);
 }
 .skeleton::after {
   content: '';
@@ -508,6 +537,468 @@ svg.lucide {
   transform: translateX(-100%);
   background: linear-gradient(90deg, var(--color-n-100), var(--color-n-150), var(--color-n-100));
   animation: shimmer 1.4s linear infinite;
+}
+
+/* =========================================================
+   CAMADA TÉCNICA
+   ---------------------------------------------------------
+   As cinco alavancas que transformam "premium suave" em
+   "instrumento de medição": monoespaçada, linha, chanfro,
+   bracket e tick. Tudo aqui é traço — nenhuma sombra, nenhum
+   preenchimento decorativo.
+   ========================================================= */
+
+/* ── MONOESPAÇADA ──────────────────────────────────────────
+   Mono é para DADO: horário, duração, data, ID, delta, unidade,
+   cabeçalho de tabela, rótulo de eixo. Dinheiro NÃO entra —
+   R$ em mono vira cupom fiscal; ele fica em sans com `num`. */
+@utility mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0;
+}
+
+/* O micro-label: 10px, caixa alta, tracking largo. É o elemento
+   que mais rápido comunica "técnico" — o header de página, o
+   cabeçalho de coluna e o rótulo de KPI vivem nele. */
+@utility mono-micro {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mesma coisa em 12px, para quando o 10 fica apertado demais
+   (rótulo de eixo com data completa, legenda de gráfico). */
+@utility mono-caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── CHANFRO · a assinatura ────────────────────────────────
+   Um canto cortado a 45°, SEMPRE no inferior direito. Entra em
+   card hero, item ativo/selecionado, selo de status e botão
+   primário — e em nada mais. É um detalhe de 10px que assina a
+   interface inteira. */
+.chamfer {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+.chamfer-s {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+}
+
+/* ⚠️ `clip-path` corta a borda de 1px junto com o canto: um card
+   chanfrado com `border` perde a hairline inteira, não só no canto.
+   A solução é desenhar a linha como SUPERFÍCIE: a moldura é um
+   retângulo da cor da linha, chanfrado, com 1px de padding; o
+   conteúdo é um filho da cor do fundo, chanfrado 1px menor. O que
+   sobra do pai nos 1px de padding É a hairline, e ela acompanha o
+   corte do canto. */
+.chamfer-frame {
+  background: var(--color-line);
+  padding: 1px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+.chamfer-frame > .chamfer-inner {
+  background: var(--color-surface);
+  height: 100%;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+}
+.chamfer-frame[data-active='true'] {
+  background: var(--color-wine-700);
+}
+.chamfer-frame[data-active='true'] > .chamfer-inner {
+  background: var(--color-wine-50);
+}
+
+/* ── CORNER BRACKETS · "área de medição" ───────────────────
+   Cartão de destaque não leva borda completa: leva quatro cantos
+   em L. É a marca visual do visor de instrumento — delimita sem
+   fechar. O elemento precisa de `position: relative`. */
+.brackets {
+  position: relative;
+}
+.brackets::before,
+.brackets::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+/* ::before desenha o L de cima-esquerda; o de baixo-direita vem
+   do ::after. Os outros dois cantos ficam com os filhos
+   .bracket-tr / .bracket-bl quando a tela pede os quatro. */
+.brackets::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid var(--color-line-strong);
+  border-left: 1px solid var(--color-line-strong);
+}
+.brackets::after {
+  right: 0;
+  bottom: 0;
+  border-right: 1px solid var(--color-line-strong);
+  border-bottom: 1px solid var(--color-line-strong);
+}
+/* Os quatro cantos: acrescente `data-corners="4"` e os dois
+   cantos restantes aparecem via gradiente de fundo, sem exigir
+   dois elementos vazios no JSX. */
+.brackets[data-corners='4'] {
+  background-image:
+    linear-gradient(var(--color-line-strong), var(--color-line-strong)),
+    linear-gradient(var(--color-line-strong), var(--color-line-strong)),
+    linear-gradient(var(--color-line-strong), var(--color-line-strong)),
+    linear-gradient(var(--color-line-strong), var(--color-line-strong));
+  background-repeat: no-repeat;
+  /* topo-direita: traço horizontal + vertical | base-esquerda: idem */
+  background-size: 12px 1px, 1px 12px, 12px 1px, 1px 12px;
+  background-position:
+    right 0 top 0,
+    right 0 top 0,
+    left 0 bottom 0,
+    left 0 bottom 0;
+}
+
+/* ── GRID DE FUNDO · o papel milimetrado ───────────────────
+   Duas famílias de linha de 1px a cada 32px, desvanecendo para
+   baixo. Opacidade baixíssima de propósito: tem que se notar só
+   quando se procura. Se der para "ver o quadriculado", errou. */
+.field-grid {
+  position: relative;
+  isolation: isolate;
+}
+.field-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(to right, var(--color-grid) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(to bottom, var(--color-grid) 0 1px, transparent 1px 32px);
+  -webkit-mask-image: radial-gradient(ellipse at top, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse at top, #000 0%, transparent 75%);
+  opacity: 0.55;
+}
+
+/* ── GRÃO ──────────────────────────────────────────────────
+   2% de ruído sobre o fundo da aplicação. Tira o aspecto de
+   "retângulo branco do Figma" sem custar cor nenhuma.
+   Nome com prefixo `app-`: `.grain` já existe e pertence à LP. */
+.app-grain::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity, 0.02);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Mesma textura, CONTIDA num elemento em vez de fixa na viewport. Existe para
+   o styleguide poder mostrar o grão numa amostra — e para ampliá-lo via
+   --grain-opacity / --grain-scale, já que a 2% ele é (corretamente) invisível
+   fora de uma superfície grande. */
+.grain-swatch {
+  position: relative;
+  isolation: isolate;
+}
+.grain-swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity, 0.02);
+  background-size: var(--grain-scale, 160px) var(--grain-scale, 160px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── TICKS DE RÉGUA ────────────────────────────────────────
+   Toda régua temporal ganha hierarquia de marcação: 6px na hora
+   cheia, 3px na meia. A agenda usava tracejado igual para tudo —
+   sem hierarquia, a régua não mede nada. */
+.tick-major,
+.tick-minor {
+  position: relative;
+}
+.tick-major::before,
+.tick-minor::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  background: var(--tick);
+}
+.tick-major::before { width: 6px; }
+.tick-minor::before { width: 3px; opacity: 0.7; }
+
+/* Régua vertical de referência (eixo de gráfico, coluna de horas) */
+.rule-y {
+  border-left: 1px solid var(--color-line);
+}
+
+/* ── TRACEJADO COM SIGNIFICADO ─────────────────────────────
+   Linha tracejada quer dizer UMA coisa em todo o produto:
+   PREVISTO / NÃO CONFIRMADO / VAZIO. Receita prevista, slot
+   livre, moldura de estado vazio. Nunca decoração. */
+.line-dashed {
+  border: 1px dashed var(--color-line-strong);
+}
+.line-dashed-t { border-top: 1px dashed var(--color-line-strong); }
+
+/* ── PONTO DE STATUS ───────────────────────────────────────
+   6px. Substitui a pílula pastel gorda, que era o elemento mais
+   amador da tela de serviços. O ponto colore; o rótulo, ao lado,
+   fica em mono e na cor do texto — legível em qualquer tom. */
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex: none;
+  background: currentColor;
+}
+/* O ponto AO VIVO pisca UMA vez quando o estado muda, não em loop:
+   luz de instrumento avisa e para; luz que pisca sempre vira enfeite. */
+.status-dot[data-live='true'] {
+  background: var(--color-signal);
+  animation: signal-blink var(--dur-slow) var(--ease-out) 2;
+}
+@keyframes signal-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* ── LINHA DO "AGORA" ──────────────────────────────────────
+   O único lugar onde --signal atravessa a tela. 1px, com um
+   ponto de 6px na ponta esquerda e o horário em mono. */
+.now-line {
+  position: relative;
+  height: 0;
+  border-top: 1px solid var(--color-signal);
+}
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-signal);
+}
+
+/* ── TABELA DENSA ──────────────────────────────────────────
+   O arquétipo que faltava. Linha de 44px (alvo de toque), cabeçalho
+   mono sticky, divisória de PONTA A PONTA, numérico à direita com
+   dígito de largura fixa, ação revelada no hover da linha. */
+.table-tech {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body-sm);
+}
+.table-tech thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line-strong);
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-n-500);
+}
+.table-tech tbody td {
+  height: 44px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+.table-tech tbody tr:last-child td {
+  border-bottom: 0;
+}
+/* Zebra discreta: n-25 é quase branco — separa sem listrar. */
+.table-tech tbody tr:nth-child(even) td {
+  background: var(--color-n-25);
+}
+@media (hover: hover) and (pointer: fine) {
+  .table-tech tbody tr:hover td {
+    background: var(--color-n-50);
+  }
+  /* Ações só aparecem na linha sob o cursor: 17 linhas × 2 botões
+     sempre visíveis é ruído; sob demanda é ferramenta. */
+  .table-tech .row-actions {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .table-tech tbody tr:hover .row-actions,
+  .table-tech tbody tr:focus-within .row-actions {
+    opacity: 1;
+  }
+}
+/* Coluna numérica: à direita, mono, dígito de largura fixa. */
+.table-tech .col-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── REVELAÇÃO DE DADOS ────────────────────────────────────
+   Ao carregar, a hairline "desenha" da esquerda para a direita.
+   Uma vez só, no primeiro render — não é loop, não é hover.
+   O bloco global de prefers-reduced-motion lá em cima já zera
+   a duração de tudo isto. */
+@keyframes draw-line {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.draw-line {
+  transform-origin: left center;
+  animation: draw-line 220ms var(--ease-out) both;
+}
+
+/* Números grandes assentam depois de um embaralhado curto. O
+   embaralhamento em si é do JS (CountUp); aqui fica só a máscara
+   de opacidade que evita o "pulo" do primeiro quadro. */
+@keyframes settle-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.settle-in { animation: settle-in 280ms var(--ease-out) both; }
+
+/* ── SEGMENTED CONTROL · retangular ────────────────────────
+   Substitui os grupos de pílula. Sem raio grande, sem fundo
+   preenchido no ativo: o ativo é marcado por um traço de 2px
+   na base, do jeito que um seletor de instrumento marca. */
+.segmented {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  /* Um segmented de cinco posições não cabe em 375px. Ele ROLA dentro da
+     própria moldura em vez de esticar a página: sem isto, a tela inteira
+     ganhava scroll horizontal e o `overflow: hidden` de antes simplesmente
+     cortava as últimas abas, que ficavam inalcançáveis. */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.segmented::-webkit-scrollbar { display: none; }
+.segmented > button {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-n-600);
+  border-left: 1px solid var(--color-line);
+  transition: color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
+}
+.segmented > button:first-child { border-left: 0; }
+/* 44px por padrão, 36px a partir de `sm`. A regra é por LARGURA, não por
+   `pointer: coarse`: um notebook com tela sensível ao toque reporta ponteiro
+   fino, e um tablet em modo desktop reporta grosso — os dois erram. A largura
+   da viewport é o proxy honesto de "isto está sendo tocado com o dedo", e é o
+   mesmo critério que o Button usa. */
+.segmented > button { min-height: 44px; }
+@media (min-width: 640px) {
+  .segmented > button { min-height: 36px; }
+}
+.segmented > button[aria-selected='true'],
+.segmented > button[data-active='true'] {
+  color: var(--color-wine-700);
+  background: var(--color-wine-50);
+}
+.segmented > button[aria-selected='true']::after,
+.segmented > button[data-active='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-wine-700);
+}
+@media (hover: hover) and (pointer: fine) {
+  .segmented > button:hover { background: var(--color-n-50); color: var(--color-ink); }
+  .segmented > button[aria-selected='true']:hover { background: var(--color-wine-50); }
+}
+
+/* ── CAMPO DE FORMULÁRIO ───────────────────────────────────
+   40px, raio 6, hairline. Foco = borda vinho + anel de 2px.
+   Erro em --danger, nunca em wine-*.
+
+   ⚠️ O bloco vai em `@layer components` de propósito. Fora de layer, CSS
+   comum VENCE as utilities do Tailwind (que vivem na layer `utilities`) —
+   e `.field-input { padding: 0 12px }` anulava qualquer `pl-9` aplicado no
+   JSX. O sintoma: todo campo de busca com ícone à esquerda renderizava o
+   texto POR CIMA do ícone. Dentro da layer, a utility ganha, que é o
+   comportamento que se espera de uma classe de componente. */
+@layer components {
+.field-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-chip);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.field-input::placeholder { color: var(--color-n-400); }
+.field-input:focus {
+  outline: none;
+  border-color: var(--color-wine-700);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-wine-700) 22%, transparent);
+}
+.field-input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+/* O campo com erro mantém a BORDA em --danger (é ela que comunica o erro),
+   mas o anel de foco continua vinho como em qualquer outro elemento. Anel
+   vermelho tornaria a cor do foco variável e ambígua — e a mensagem de erro
+   abaixo do campo já diz o que está errado. */
+.field-input[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-wine-700) 22%, transparent);
+}
+textarea.field-input { height: auto; padding: 10px 12px; }
+}
+
+/* ── SEÇÃO DE CONFIGURAÇÃO ─────────────────────────────────
+   Seções separadas por hairline de ponta a ponta. Sem card
+   dentro de card — a moldura aninhada é o que faz a tela de
+   ajustes parecer uma pilha de caixas. */
+.settings-section + .settings-section {
+  border-top: 1px solid var(--color-line);
 }
 
 /* =========================================================

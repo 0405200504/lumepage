@@ -31,7 +31,7 @@ export function ForcePasswordChange() {
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-11 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const field = 'w-full h-11 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 bg-wine-950/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Trocar senha">

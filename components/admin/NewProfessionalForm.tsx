@@ -179,7 +179,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: Amanda Costa"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
@@ -193,7 +193,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: Amanda Costa Estética"
                   value={brandName}
                   onChange={(e) => handleBrandNameChange(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
@@ -207,7 +207,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: amanda-costa"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 font-mono"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700 font-mono"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: 11999999999"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
@@ -235,7 +235,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: amanda@estetica.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
@@ -248,7 +248,7 @@ export function NewProfessionalForm() {
                   placeholder="Ex: @amandacosta.estetica"
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
             </div>
@@ -262,7 +262,7 @@ export function NewProfessionalForm() {
                 placeholder="Ex: Especialista em limpeza de pele e cuidado personalizado..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
               />
             </div>
 
@@ -280,7 +280,7 @@ export function NewProfessionalForm() {
                   placeholder="Av. Paulista, 1000 - Sala 42"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
@@ -294,7 +294,7 @@ export function NewProfessionalForm() {
                     placeholder="São Paulo"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="block w-full min-w-0 px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                    className="block w-full min-w-0 px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                   />
                   <input
                     type="text"
@@ -302,7 +302,7 @@ export function NewProfessionalForm() {
                     maxLength={2}
                     value={state}
                     onChange={(e) => setState(e.target.value.toUpperCase())}
-                    className="block w-12 px-2 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700 text-center font-bold"
+                    className="block w-12 px-2 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700 text-center font-bold"
                   />
                 </div>
               </div>

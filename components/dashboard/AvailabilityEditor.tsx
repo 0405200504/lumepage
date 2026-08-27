@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AvailabilityRule } from '@/types/database';
-import { Clock, Save, AlertCircle, Calendar } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import { PageHeader } from '../ui/PageHeader';
 import { updateAvailabilityAction } from '@/app/actions/professional';
 
 interface AvailabilityEditorProps {
@@ -114,29 +115,24 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
 
   return (
     <form onSubmit={handleSave} className="space-y-6 select-none max-w-4xl">
-      {/* Aviso */}
-      <div className="bg-white border border-n-200 rounded-3xl p-5 shadow-xs flex gap-3.5 items-start">
-        <div className="p-2.5 bg-wine-50 text-wine-700 rounded-xl shrink-0">
-          <AlertCircle className="h-5 w-5" />
-        </div>
-        <div className="text-caption text-n-500 leading-relaxed">
-          <p className="font-bold text-n-800">Regras de Expediente</p>
-          <p className="mt-1">
-            Defina em quais dias você realiza atendimentos e as faixas de horários disponíveis. Os intervalos de almoço 
-            serão bloqueados automaticamente na página pública para evitar agendamentos nesses períodos.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        trail={['Expediente', `${Object.values(rulesState).filter(r => r.is_active).length} dia(s) ativo(s)`]}
+        title="Horários de expediente"
+        description="Em quais dias você atende e em que faixas. O intervalo de almoço é bloqueado automaticamente na página pública."
+      />
 
       {/* Lista de Dias */}
-      <div className="bg-white border border-n-200 rounded-3xl shadow-xs divide-y divide-n-200">
+      <div className="card overflow-hidden divide-y divide-line">
         {WEEKDAYS.map((day) => {
           const state = rulesState[day.value];
           return (
             <div 
               key={day.value}
-              className={`p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-colors ${
-                state.is_active ? 'bg-white' : 'bg-n-50/50 opacity-60'
+              /* Dia inativo não fica translúcido: `opacity-60` apagava também
+                 o rótulo e o horário, que continuam sendo informação. Ele fica
+                 sobre n-25, e o interruptor conta o resto. */
+              className={`p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-ui ${
+                state.is_active ? 'bg-surface' : 'bg-n-25'
               }`}
             >
               {/* Nome do dia / Ativar */}
@@ -146,11 +142,11 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                   id={`active-${day.value}`}
                   checked={state.is_active}
                   onChange={(e) => handleChange(day.value, 'is_active', e.target.checked)}
-                  className="h-5 w-5 rounded-md border-n-300 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer"
+                  className="h-5 w-5 rounded-badge border-n-300 accent-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 cursor-pointer"
                 />
                 <label 
                   htmlFor={`active-${day.value}`} 
-                  className="text-label font-bold text-n-800 cursor-pointer"
+                  className="text-body-sm font-semibold text-heading cursor-pointer"
                 >
                   {day.label}
                 </label>
@@ -160,13 +156,13 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                 <div className="flex-1 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-6 text-caption text-n-700">
                   {/* Expediente */}
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-n-400">Expediente:</span>
+                    <span className="mono-micro text-n-500">Expediente</span>
                     <input
                       type="time"
                       required
                       value={state.start_time}
                       onChange={(e) => handleChange(day.value, 'start_time', e.target.value)}
-                      className="px-2.5 py-1.5 border border-n-200 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 text-center font-bold"
+                      className="field-input mono w-[6.5rem] text-center"
                     />
                     <span className="text-n-600">às</span>
                     <input
@@ -174,7 +170,7 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                       required
                       value={state.end_time}
                       onChange={(e) => handleChange(day.value, 'end_time', e.target.value)}
-                      className="px-2.5 py-1.5 border border-n-200 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 text-center font-bold"
+                      className="field-input mono w-[6.5rem] text-center"
                     />
                   </div>
 
@@ -186,10 +182,10 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                         id={`break-${day.value}`}
                         checked={state.has_break}
                         onChange={(e) => handleChange(day.value, 'has_break', e.target.checked)}
-                        className="h-4.5 w-4.5 rounded-sm border-n-300 text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 cursor-pointer"
+                        className="h-4 w-4 rounded-badge border-n-300 accent-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 cursor-pointer"
                       />
-                      <label htmlFor={`break-${day.value}`} className="font-semibold text-n-400 cursor-pointer">
-                        Intervalo Almoço:
+                      <label htmlFor={`break-${day.value}`} className="mono-micro text-n-500 cursor-pointer">
+                        Intervalo
                       </label>
                     </div>
 
@@ -200,7 +196,7 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                           required={state.has_break}
                           value={state.break_start}
                           onChange={(e) => handleChange(day.value, 'break_start', e.target.value)}
-                          className="px-2.5 py-1.5 border border-n-200 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 text-center font-bold"
+                          className="field-input mono w-[6.5rem] text-center"
                         />
                         <span className="text-n-600">às</span>
                         <input
@@ -208,7 +204,7 @@ export const AvailabilityEditor: React.FC<AvailabilityEditorProps> = ({
                           required={state.has_break}
                           value={state.break_end}
                           onChange={(e) => handleChange(day.value, 'break_end', e.target.value)}
-                          className="px-2.5 py-1.5 border border-n-200 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 text-center font-bold"
+                          className="field-input mono w-[6.5rem] text-center"
                         />
                       </div>
                     )}

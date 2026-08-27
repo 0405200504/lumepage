@@ -11,8 +11,15 @@ export interface StatusMeta {
   badge: string;
   /** cor do ponto/indicador */
   dot: string;
-  /** preenchimento de bloco no calendário */
+  /**
+   * Superfície do bloco no calendário. É a MESMA para todos os status, de
+   * propósito: com um fundo pastel por status, um dia cheio virava um mosaico
+   * de menta, âmbar, azul e salmão em que nada se destacava porque tudo
+   * gritava. Quem carrega o status agora é `bar` — 3px na aresta esquerda.
+   */
   block: string;
+  /** Barra de 3px à esquerda do bloco. É aqui que a cor do status vive. */
+  bar: string;
 }
 
 /**
@@ -27,37 +34,42 @@ export const STATUS_META: Record<AppointmentStatus, StatusMeta> = {
   pending: {
     label: 'Pendente',
     tone: 'warning',
-    badge: 'bg-warning-bg text-warning border border-warning-border',
+    badge: 'border border-line text-warning',
     dot: 'bg-warning',
-    block: 'bg-warning-bg border-warning-border text-warning',
+    block: 'bg-surface border-line text-ink',
+    bar: 'bg-warning',
   },
   confirmed: {
     label: 'Confirmado',
     tone: 'success',
-    badge: 'bg-success-bg text-success border border-success-border',
+    badge: 'border border-line text-success',
     dot: 'bg-success',
-    block: 'bg-success-bg border-success-border text-success',
+    block: 'bg-surface border-line text-ink',
+    bar: 'bg-success',
   },
   completed: {
     label: 'Finalizado',
     tone: 'info',
-    badge: 'bg-info-bg text-info border border-info-border',
+    badge: 'border border-line text-info',
     dot: 'bg-info',
-    block: 'bg-info-bg border-info-border text-info',
+    block: 'bg-surface border-line text-ink',
+    bar: 'bg-info',
   },
   cancelled: {
     label: 'Cancelado',
     tone: 'neutral',
-    badge: 'bg-n-100 text-n-500 border border-n-200 line-through',
+    badge: 'border border-line text-n-500 line-through',
     dot: 'bg-n-400',
-    block: 'bg-n-100 border-n-200 text-n-500 line-through',
+    block: 'bg-n-25 border-line text-n-500 line-through',
+    bar: 'bg-n-400',
   },
   no_show: {
     label: 'Falta',
     tone: 'danger',
-    badge: 'bg-danger-bg text-danger border border-danger-border',
+    badge: 'border border-line text-danger',
     dot: 'bg-danger',
-    block: 'bg-danger-bg border-danger-border text-danger',
+    block: 'bg-surface border-line text-ink',
+    bar: 'bg-danger',
   },
 };
 

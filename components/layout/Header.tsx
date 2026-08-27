@@ -126,9 +126,12 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
           h-[76px] data-[scrolled]:h-[52px] lg:h-16 lg:data-[scrolled]:h-16 transition-[height] duration-[220ms] ease-out"
         data-scrolled={scrolled || undefined}
       >
-        {/* No celular a navegação inteira vive atrás deste botão — não há
-            mais barra fixa no rodapé comendo 60px de tela. */}
-        {role === 'professional' && (
+        {/* O hambúrguer SAIU do topo no celular. A navegação agora vive na
+            barra de abas do rodapé (components/layout/TabBar), onde o polegar
+            alcança — e o menu completo abre pelo item "Mais" de lá. Um botão
+            de 40px no canto superior esquerdo era o ponto mais distante do
+            dedo em toda a tela. Ele permanece só onde não há tab bar. */}
+        {role !== 'professional' && (
           <Button
             variant="ghost"
             size="md"

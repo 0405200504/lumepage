@@ -130,7 +130,7 @@ function PlanDialog({ id, brandName, plan, subscriptionStatus, endsAt, onClose, 
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600';
+  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label="Mudar plano">

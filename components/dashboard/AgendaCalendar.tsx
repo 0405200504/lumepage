@@ -18,7 +18,9 @@ import { AppointmentStatus } from '@/types/database';
 import { QuickAppointmentModal } from './QuickAppointmentModal';
 import { QuickAddFab } from '../ui/QuickAddFab';
 import { Button } from '../ui/Button';
-import { PillGroup } from '../ui/PillGroup';
+import { Segmented } from '../ui/Segmented';
+import { MonoTrail } from '../ui/Mono';
+import { StatusLabel } from '../ui/StatusDot';
 import { StatusPill } from '../ui/StatusPill';
 import { EmptyState } from '../ui/EmptyState';
 import { CalendarPlus } from 'lucide-react';
@@ -261,6 +263,26 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
       : `${ws.getDate()} ${MONTHS[ws.getMonth()].slice(0, 3)} – ${we.getDate()} ${MONTHS[we.getMonth()].slice(0, 3)} ${we.getFullYear()}`;
   }, [view, cursor]);
 
+  /** Quantos agendamentos o período visível contém — alimenta a trilha mono
+   *  do header. É a resposta a "quantos hoje/nesta semana" sem contar na mão. */
+  const periodCount = useMemo(() => {
+    const inRange = (d: Date) => {
+      if (view === 'day') return isoOf(d) === isoOf(cursor);
+      if (view === 'week') {
+        const ws = startOfWeek(cursor);
+        return d >= ws && d <= addDays(ws, 6);
+      }
+      if (view === 'month') return d.getMonth() === cursor.getMonth() && d.getFullYear() === cursor.getFullYear();
+      return d.getFullYear() === cursor.getFullYear();
+    };
+    let n = 0;
+    for (const iso in apptByDate) {
+      const [y, mo, dd] = iso.split('-').map(Number);
+      if (inRange(new Date(y, mo - 1, dd))) n += activeOf(apptByDate[iso]).length;
+    }
+    return n;
+  }, [apptByDate, view, cursor, activeOf]);
+
   const dropProps = (iso: string) => ({
     onDragOver: (e: React.DragEvent) => { if (e.dataTransfer.types.includes(TASK_DND)) { e.preventDefault(); setDragOverISO(iso); } },
     onDragLeave: () => setDragOverISO(o => (o === iso ? null : o)),
@@ -305,9 +327,23 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 
         {/* Coluna principal */}
         <div className="flex-1 min-w-0 space-y-4">
-          {/* Topbar */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
+          {/* Topbar. O título ganhou a trilha mono de contexto acima e os
+              quatro botões de visão viraram um segmented retangular — antes
+              eram pílulas com uma cápsula deslizando entre elas. */}
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <MonoTrail
+                items={[
+                  'Agenda',
+                  VIEW_LABEL[view],
+                  `${periodCount} agendamento${periodCount === 1 ? '' : 's'}`,
+                ]}
+                className="mb-1"
+              />
+              <h2 className="text-h2 text-heading capitalize truncate">{title}</h2>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="secondary"
                 size="sm"
@@ -316,43 +352,65 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
                 leadingIcon={<SlidersHorizontal className="h-4 w-4" />}
               >
                 Filtros
-                {hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-wine-700" aria-label="filtros ativos" />}
+                {hasFilters && <span className="status-dot text-[color:var(--color-signal)]" aria-label="filtros ativos" />}
               </Button>
-              <Button variant="secondary" size="sm" onClick={jumpToday}>Hoje</Button>
-              <div className="flex items-center gap-0.5">
-                <Button variant="ghost" size="sm" iconOnly aria-label="Período anterior" onClick={() => step(-1)} leadingIcon={<ChevronLeft className="h-5 w-5" />} />
-                <Button variant="ghost" size="sm" iconOnly aria-label="Próximo período" onClick={() => step(1)} leadingIcon={<ChevronRight className="h-5 w-5" />} />
-              </div>
-              <h2 className="text-h2 text-heading capitalize truncate ml-1">{title}</h2>
-            </div>
 
-            <PillGroup
-              ariaLabel="Visão da agenda"
-              value={view}
-              onChange={(k) => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }}
-              items={[
-                { key: 'day', label: 'Dia', icon: <Clock className="h-4 w-4" />, labelHiddenOnMobile: true },
-                { key: 'week', label: 'Semana', icon: <CalendarRange className="h-4 w-4" />, labelHiddenOnMobile: true },
-                { key: 'month', label: 'Mês', icon: <CalendarDays className="h-4 w-4" />, labelHiddenOnMobile: true },
-                { key: 'year', label: 'Ano', icon: <LayoutGrid className="h-4 w-4" />, labelHiddenOnMobile: true },
-              ]}
-            />
+              {/* Contador de período: setas encostadas no "Hoje", numa moldura
+                  só — o mesmo controle do financeiro. */}
+              <div className="segmented">
+                <button onClick={() => step(-1)} aria-label="Período anterior">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button onClick={jumpToday}>Hoje</button>
+                <button onClick={() => step(1)} aria-label="Próximo período">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <Segmented
+                ariaLabel="Visão da agenda"
+                value={view}
+                onChange={(k) => { if ((k === 'day' || k === 'week') && view !== k) setCursor(today); setView(k); }}
+                items={[
+                  { key: 'day', label: 'Dia' },
+                  { key: 'week', label: 'Semana' },
+                  { key: 'month', label: 'Mês' },
+                  { key: 'year', label: 'Ano' },
+                ]}
+              />
+            </div>
           </div>
 
           {/* Legenda — as cores saem de STATUS_META, a mesma fonte que pinta os
               blocos na grade. Enquanto eram hex escritos à mão aqui, a legenda
               podia mentir sobre o que estava desenhado ao lado. */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-n-600">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {(['confirmed', 'pending', 'completed', 'no_show'] as const).map((st) => {
               const m = statusMeta(st);
-              return (
-                <span key={st} className="inline-flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${m.dot}`} aria-hidden /> {m.label}
-                </span>
-              );
+              return <StatusLabel key={st} tone={m.tone}>{m.label}</StatusLabel>;
             })}
-            {showTasks && <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-4 w-4 text-wine-700" aria-hidden /> Tarefa (arraste para mover)</span>}
-            {showHolidays && <span className="inline-flex items-center gap-1.5"><PartyPopper className="h-4 w-4 text-wine-700" aria-hidden /> Feriado</span>}
+            {/* "Livre" entra na legenda porque o tracejado agora SIGNIFICA algo
+                na grade — e um código só é código quando está explicado. */}
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3 border-t border-dashed border-line-strong" aria-hidden />
+              <span className="mono-micro text-n-600">Bloqueado</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3 h-px bg-[color:var(--color-signal)]" aria-hidden />
+              <span className="mono-micro text-n-600">Agora</span>
+            </span>
+            {showTasks && (
+              <span className="inline-flex items-center gap-1.5">
+                <NotebookPen className="h-3.5 w-3.5 text-wine-700" aria-hidden />
+                <span className="mono-micro text-n-600">Tarefa</span>
+              </span>
+            )}
+            {showHolidays && (
+              <span className="inline-flex items-center gap-1.5">
+                <PartyPopper className="h-3.5 w-3.5 text-wine-700" aria-hidden />
+                <span className="mono-micro text-n-600">Feriado</span>
+              </span>
+            )}
           </div>
 
           {view === 'day' && (
@@ -376,7 +434,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           <div className="sheet-backdrop absolute inset-0" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-[88%] max-w-xs h-full bg-bg overflow-y-auto scroll-touch p-4 shadow-lg animate-slide-right">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-label font-semibold text-heading">Filtros e opções</p>
+              <p className="mono-micro text-n-900">Filtros e opções</p>
               <Button variant="ghost" size="sm" iconOnly aria-label="Fechar filtros" onClick={() => setSidebarOpen(false)} leadingIcon={<X className="h-5 w-5" />} />
             </div>
             {sidebar}
@@ -424,29 +482,34 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 /* ---------------- PAINEL LATERAL (mini-calendário + filtros + opções) ---------------- */
 const MINI_WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
+/** Rótulo da visão na trilha mono do header. */
+const VIEW_LABEL: Record<string, string> = { day: 'Dia', week: 'Semana', month: 'Mês', year: 'Ano' };
+
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
   <button
     type="button"
     onClick={() => onChange(!checked)}
     role="switch"
     aria-checked={checked}
-    className="flex items-center gap-2.5 w-full text-left min-h-11 rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+    className="flex items-center gap-2.5 w-full text-left min-h-11 rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
   >
-    <span className={`relative h-5 w-9 rounded-full shrink-0 transition-ui ${checked ? 'bg-wine-700' : 'bg-n-300'}`}>
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-n-0 shadow-xs transition-ui ${checked ? 'left-[1.125rem]' : 'left-0.5'}`} />
+    {/* Retangular, raio 4 — `rounded-full` sobrou para avatar e ponto de status. */}
+    <span className={`relative h-5 w-9 rounded-badge border shrink-0 transition-ui ${checked ? 'bg-wine-700 border-wine-700' : 'bg-n-100 border-line'}`}>
+      <span className={`absolute top-0.5 h-3.5 w-3.5 rounded-[3px] bg-n-0 transition-ui ${checked ? 'left-[1.125rem]' : 'left-0.5'}`} />
     </span>
-    <span className="text-label text-ink">{label}</span>
+    <span className="text-body-sm text-ink">{label}</span>
   </button>
 );
 
+/** Rótulo em mono acima do campo — o arquétipo 4 do design system. */
 const SelectField: React.FC<{ label: string; value: string; onChange: (v: string) => void; children: React.ReactNode }> = ({ label, value, onChange, children }) => (
   <label className="block">
-    <span className="text-label text-ink mb-1.5 block">{label}</span>
+    <span className="mono-micro text-n-500 mb-1.5 block">{label}</span>
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-11 appearance-none bg-surface border border-line rounded-control pl-3 pr-9 text-label text-ink shadow-xs transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+        className="field-input appearance-none pr-9 cursor-pointer"
       >
         {children}
       </select>
@@ -495,12 +558,12 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
       <div className="card p-4">
         <div className="flex items-center justify-between mb-2">
           <Button variant="ghost" size="sm" iconOnly aria-label="Mês anterior" onClick={() => onStepMonth(-1)} leadingIcon={<ChevronLeft className="h-4 w-4" />} />
-          <p className="text-label text-heading capitalize">{MONTHS[miniCursor.getMonth()]} de {miniCursor.getFullYear()}</p>
+          <p className="mono-micro text-n-900">{MONTHS[miniCursor.getMonth()].slice(0, 3)} {miniCursor.getFullYear()}</p>
           <Button variant="ghost" size="sm" iconOnly aria-label="Próximo mês" onClick={() => onStepMonth(1)} leadingIcon={<ChevronRight className="h-4 w-4" />} />
         </div>
         <div className="grid grid-cols-7">
           {MINI_WEEKDAYS.map((w, i) => (
-            <div key={i} className="text-center text-micro font-semibold py-1 text-n-500">{w}</div>
+            <div key={i} className="mono-micro text-center py-1 text-n-400">{w}</div>
           ))}
           {days.map((d, i) => {
             const iso = isoOf(d);
@@ -514,15 +577,18 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
                 onClick={() => onPickDay(d)}
                 aria-current={isToday ? 'date' : undefined}
                 aria-label={`${d.getDate()} de ${MONTHS[d.getMonth()]}`}
-                className="aspect-square flex items-center justify-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600"
+                className="aspect-square flex items-center justify-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-700"
               >
-                <span className={`num relative flex items-center justify-center h-7 w-7 text-micro rounded-full transition-ui ${
+                <span className={`mono relative flex items-center justify-center h-7 w-7 text-micro rounded-badge transition-ui ${
                   isToday ? 'bg-wine-700 text-white font-semibold'
                   : isSelected ? 'bg-wine-50 text-wine-700 font-semibold'
                   : inMonth ? 'text-ink hover:bg-n-100' : 'text-n-400'}`}
                 >
                   {d.getDate()}
-                  {has && !isToday && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-wine-700" aria-hidden />}
+                  {/* Ponto de "tem agendamento": 3px, e ele é o resumo do mês
+                      inteiro — por isso fica no vinho da marca, não em signal,
+                      que está reservado ao "agora". */}
+                  {has && !isToday && <span className="absolute bottom-0 h-[3px] w-[3px] rounded-full bg-wine-700" aria-hidden />}
                 </span>
               </button>
             );
@@ -533,7 +599,7 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
       {/* Filtros */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-label font-semibold text-heading">Filtros</p>
+          <p className="mono-micro text-n-900">Filtros</p>
           <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={!hasFilters}>Limpar</Button>
         </div>
         <SelectField label="Status" value={filterStatus} onChange={(v) => setFilterStatus(v as 'all' | AppointmentStatus)}>
@@ -559,7 +625,7 @@ const AgendaSidebar: React.FC<AgendaSidebarProps> = ({
         <button
           onClick={() => setAdvOpen(o => !o)}
           aria-expanded={advOpen}
-          className="flex items-center gap-1.5 min-h-11 text-label font-semibold text-wine-600 hover:text-wine-700 transition-ui rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+          className="flex items-center gap-1.5 min-h-11 mono-micro text-wine-700 hover:text-wine-800 transition-ui rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
         >
           Opções avançadas
           <ChevronDown className={`h-4 w-4 transition-transform duration-[220ms] ease-out ${advOpen ? 'rotate-180' : ''}`} aria-hidden />
@@ -622,15 +688,22 @@ const MonthView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holid
               className={`group relative min-h-[112px] text-left p-2 border-b border-r border-line transition-ui cursor-pointer ${!inMonth ? 'bg-n-25' : ''} ${(holiday || isSunday) && inMonth ? 'bg-wine-50/60' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isDragOver ? 'ring-2 ring-inset ring-wine-700 bg-wine-50' : 'hover:bg-n-50'}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`num inline-flex items-center justify-center h-6 w-6 text-micro font-semibold rounded-full ${isToday ? 'bg-wine-700 text-white' : inMonth ? 'text-ink' : 'text-n-400'}`}>{day.getDate()}</span>
-                {appts.length > 0 && <span className="num text-micro font-semibold text-wine-700 bg-wine-50 rounded-full px-1.5">{appts.length}</span>}
+                <span className={`mono inline-flex items-center justify-center h-6 w-6 text-micro rounded-badge ${isToday ? 'bg-wine-700 text-white chamfer-s' : inMonth ? 'text-ink' : 'text-n-400'}`}>{day.getDate()}</span>
+                {appts.length > 0 && <span className="mono-micro text-wine-700 border border-wine-200 bg-wine-50 rounded-badge px-1.5 py-0.5">{appts.length}</span>}
               </div>
               {holiday && <div className="mt-1 flex items-center gap-1 text-micro font-semibold text-wine-700 truncate"><PartyPopper className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{holiday.name}</span></div>}
               {hasBlock && !holiday && <div className="mt-1 text-micro font-semibold text-n-500 truncate">Bloqueio</div>}
               <div className="mt-1 space-y-1">
                 {appts.slice(0, 2).map((a: Appointment) => {
                   const m = statusMeta(a.status);
-                  return <div key={a.id} className={`num truncate rounded-chip border px-1.5 py-0.5 text-micro font-semibold ${m.block}`}>{a.start_time.substring(0, 5)} {a.client_name.split(' ')[0]}</div>;
+                  return (
+                    <div key={a.id} className={`flex items-center gap-1 truncate rounded-badge border overflow-hidden ${m.block}`}>
+                      <span className={`w-[3px] self-stretch shrink-0 ${m.bar}`} aria-hidden />
+                      <span className="mono-micro truncate px-1 py-0.5">
+                        {a.start_time.substring(0, 5)} {a.client_name.split(' ')[0]}
+                      </span>
+                    </div>
+                  );
                 })}
                 {appts.length > 2 && <div className="text-micro font-semibold text-n-500 pl-1">+{appts.length - 2} agendamentos</div>}
                 {dayTasks.slice(0, 2).map((t) => <TaskChip key={t.id} task={t} onOpen={() => onSelectDay(iso)} compact />)}
@@ -732,7 +805,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
           </div>
         </div>
         {holiday && (
-          <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-wine-700 bg-wine-50 border border-wine-100 px-2.5 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1.5 mono-micro text-wine-700 bg-wine-50 border border-wine-200 px-2 py-1 rounded-badge chamfer-s">
             <PartyPopper className="h-4 w-4" aria-hidden /> {holiday.name}
           </span>
         )}
@@ -746,7 +819,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
       )}
 
       {fullDayBlock && (
-        <div className="mx-5 my-4 flex items-center gap-2 text-label font-semibold text-danger bg-danger-bg border border-danger-border rounded-control px-3 py-2.5">
+        <div className="mx-5 my-4 flex items-center gap-2 text-body-sm text-danger border border-line rounded-chip px-3 py-2.5">
           <Clock className="h-5 w-5 shrink-0" aria-hidden /> Dia bloqueado{fullDayBlock.reason ? ` — ${fullDayBlock.reason}` : ' (dia inteiro)'}
         </div>
       )}
@@ -757,13 +830,29 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
           <div className="flex" style={{ height: totalH }}>
             {/* Régua de horas (rótulos de 30 em 30 min) */}
             <div className="relative w-14 shrink-0 select-none">
+              {/* Só a HORA CHEIA ganha rótulo. Antes a calha imprimia 08:00,
+                  08:30, 09:00, 09:30… — o dobro de números, todos parecidos, e
+                  o olho perdia a contagem das horas. A meia hora continua
+                  marcada, mas por um TICK de 3px, não por texto. */}
               {Array.from({ length: hours * 2 + 1 }, (_, i) => {
                 const min = rangeStartMin + i * 30;
                 const isHour = min % 60 === 0;
                 return (
-                  <div key={i} className={`num absolute right-2 -translate-y-1/2 text-micro ${isHour ? 'font-semibold text-n-600' : 'text-n-400'}`} style={{ top: yOf(min) }}>
-                    {pad(Math.floor(min / 60))}:{pad(min % 60)}
-                  </div>
+                  <React.Fragment key={i}>
+                    {isHour && (
+                      <div
+                        className="mono-micro absolute right-3 -translate-y-1/2 text-n-500"
+                        style={{ top: yOf(min) }}
+                      >
+                        {pad(Math.floor(min / 60))}:{pad(min % 60)}
+                      </div>
+                    )}
+                    {/* tick: 6px na hora cheia, 3px na meia */}
+                    <div
+                      className="absolute right-0 h-px bg-[color:var(--color-tick)] pointer-events-none"
+                      style={{ top: yOf(min), width: isHour ? 6 : 3, opacity: isHour ? 1 : 0.7 }}
+                    />
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -797,14 +886,20 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 </div>
               )}
 
-              {/* Linhas de hora (cheia) + meia-hora (fraca) */}
+              {/* A meia hora PERDEU a linha tracejada que atravessava a grade.
+                  Dois motivos: ela tinha o mesmo peso da hora cheia e anulava
+                  a hierarquia da régua; e gastava como decoração o tracejado
+                  que no sistema novo significa "vazio/previsto" — o mesmo
+                  traço do bloqueio logo abaixo. A meia hora agora é marcada
+                  pelo tick de 3px na calha, e só. */}
               {Array.from({ length: hours }, (_, i) => {
                 const h = startHour + i;
                 return (
-                  <React.Fragment key={h}>
-                    <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(h * 60) }} />
-                    <div className="absolute left-0 right-0 border-t border-dashed border-n-150 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
-                  </React.Fragment>
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 h-px pointer-events-none"
+                    style={{ top: yOf(h * 60), background: 'var(--color-grid)' }}
+                  />
                 );
               })}
               <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(endHour * 60) }} />
@@ -823,7 +918,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
               {/* Bloqueios de horário */}
               {timedBlocks.map((b, i) => (
-                <div key={`b${i}`} className="absolute rounded-chip bg-n-150 border border-dashed border-n-300 left-1 right-1 px-2 py-0.5 overflow-hidden pointer-events-none"
+                <div key={`b${i}`} className="absolute rounded-badge bg-n-25 line-dashed left-1 right-1 px-2 py-0.5 overflow-hidden pointer-events-none"
                   style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 16) }}>
                   <p className="num flex items-center gap-1 text-micro font-semibold text-n-600 truncate">
                     <Lock className="h-4 w-4 shrink-0" aria-hidden /> {b.reason || 'Bloqueado'} · {b.start_time!.substring(0, 5)}–{b.end_time!.substring(0, 5)}
@@ -831,11 +926,18 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 </div>
               ))}
 
-              {/* Linha do "agora" */}
+              {/* Linha do "agora" — o único --signal da tela.
+                  Era `--danger` com 2px e uma bolinha de 10px: vermelho de erro
+                  atravessando a agenda inteira, competindo com o selo de
+                  "cancelado" pelo mesmo vermelho. Agora é 1px em --signal, com
+                  o ponto de 6px e o HORÁRIO em mono na ponta — quem olha de
+                  longe sabe que horas são sem procurar a calha. */}
               {nowInRange && (
-                <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
-                  <span className="h-2.5 w-2.5 rounded-full bg-danger -ml-1.5 shadow-xs" />
-                  <div className="flex-1 border-t-2 border-danger" />
+                <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: yOf(nowMin) }}>
+                  <div className="now-line" />
+                  <span className="mono-micro absolute right-0 -top-2 bg-surface pl-1 text-[color:var(--color-signal-ink)]">
+                    {pad(Math.floor(nowMin / 60))}:{pad(nowMin % 60)}
+                  </span>
                 </div>
               )}
 
@@ -851,7 +953,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                     onDragStart={(e) => apptDragStart(e, a.id)}
                     onClick={() => onSelectDay(iso)}
                     title="Arraste para reagendar · clique para ver"
-                    className={`group absolute z-10 text-left rounded-chip border px-2 py-1 overflow-hidden shadow-xs cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-600 ${m.block}`}
+                    className={`group absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
                     style={{
                       top: yOf(s) + 1,
                       height: height - 2,
@@ -859,10 +961,27 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                       width: `calc(${widthPct}% - 8px)`,
                     }}
                   >
-                    <GripVertical className="absolute right-0.5 top-0.5 h-4 w-4 opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden />
-                    <p className="num text-micro font-semibold leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</p>
-                    <p className="text-caption font-semibold truncate leading-tight">{a.client_name}</p>
-                    {height > 46 && <p className="text-micro opacity-80 truncate">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</p>}
+                    {/* A cor do status mora NESTA barra de 3px. O bloco em si é
+                        neutro — com um fundo pastel por status, um dia cheio
+                        virava mosaico e nada se destacava. */}
+                    <span className={`w-[3px] shrink-0 ${m.bar}`} aria-hidden />
+                    {/* Abaixo de 40px (um atendimento de 30min ocupa ~28px) o
+                        bloco COLAPSA para uma linha: nome à esquerda, horário à
+                        direita. Empilhado, a segunda linha era cortada no meio
+                        e o que sumia era justamente o nome da cliente. */}
+                    {height < 40 ? (
+                      <span className="min-w-0 flex-1 px-2 flex items-center gap-2">
+                        <span className="text-micro font-semibold truncate leading-tight">{a.client_name}</span>
+                        <span className="mono-micro text-n-500 ml-auto shrink-0">{a.start_time.substring(0, 5)}</span>
+                      </span>
+                    ) : (
+                      <span className="min-w-0 flex-1 px-2 py-1">
+                        <GripVertical className="absolute right-0.5 top-0.5 h-4 w-4 opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden />
+                        <span className="mono-micro text-n-500 block leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</span>
+                        <span className="text-caption font-semibold truncate leading-tight block">{a.client_name}</span>
+                        {height > 60 && <span className="mono-micro text-n-500 truncate block">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</span>}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -961,10 +1080,10 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
               key={iso}
               onClick={() => onSelectDay(iso)}
               aria-current={isToday ? 'date' : undefined}
-              className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-line transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-600 ${(holiday || d.getDay() === 0) ? 'bg-wine-50/60' : ''}`}
+              className={`flex-1 min-w-0 py-2 px-1 text-center border-l border-line transition-ui hover:bg-n-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-wine-700 ${(holiday || d.getDay() === 0) ? 'bg-wine-50/60' : ''}`}
             >
               <p className="overline text-n-500">{WEEKDAYS_SHORT[d.getDay()]}</p>
-              <span className={`num mt-0.5 inline-flex items-center justify-center h-7 w-7 text-caption font-semibold rounded-full ${isToday ? 'bg-wine-700 text-white' : 'text-ink'}`}>{d.getDate()}</span>
+              <span className={`mono mt-0.5 inline-flex items-center justify-center h-7 w-7 text-caption rounded-badge ${isToday ? 'bg-wine-700 text-white chamfer-s' : 'text-ink'}`}>{d.getDate()}</span>
               {count > 0 && <p className="num text-micro font-semibold text-wine-700 truncate">{count}</p>}
             </button>
           );
@@ -1030,14 +1149,15 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   </div>
                 )}
 
-                {/* Linhas de hora / meia-hora */}
+                {/* Só a hora cheia atravessa — mesma regra da visão de dia. */}
                 {Array.from({ length: hours }, (_, i) => {
                   const h = startHour + i;
                   return (
-                    <React.Fragment key={h}>
-                      <div className="absolute left-0 right-0 border-t border-line pointer-events-none" style={{ top: yOf(h * 60) }} />
-                      <div className="absolute left-0 right-0 border-t border-dashed border-n-150 pointer-events-none" style={{ top: yOf(h * 60 + 30) }} />
-                    </React.Fragment>
+                    <div
+                      key={h}
+                      className="absolute left-0 right-0 h-px pointer-events-none"
+                      style={{ top: yOf(h * 60), background: 'var(--color-grid)' }}
+                    />
                   );
                 })}
 
@@ -1048,7 +1168,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
 
                 {/* Bloqueios */}
                 {blocks.map((b, i) => (
-                  <div key={`b${i}`} className="absolute left-0.5 right-0.5 rounded-chip bg-n-150 border border-dashed border-n-300 overflow-hidden pointer-events-none px-1" style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 12) }}>
+                  <div key={`b${i}`} className="absolute left-0.5 right-0.5 rounded-badge bg-n-25 line-dashed overflow-hidden pointer-events-none px-1" style={{ top: yOf(tmin(b.start_time!)), height: Math.max((tmin(b.end_time!) - tmin(b.start_time!)) * PXM, 12) }}>
                     <p className="num flex items-center gap-0.5 text-micro font-semibold text-n-600 truncate"><Lock className="h-4 w-4 shrink-0" aria-hidden /> {b.start_time!.substring(0, 5)}</p>
                   </div>
                 ))}
@@ -1056,7 +1176,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                 {/* Linha do "agora" */}
                 {isToday && nowMin >= rangeStartMin && nowMin <= endHour * 60 && (
                   <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: yOf(nowMin) }}>
-                    <span className="h-2 w-2 rounded-full bg-danger -ml-1 shadow-xs" /><div className="flex-1 border-t-2 border-danger" />
+                    <div className="now-line flex-1" />
                   </div>
                 )}
 
@@ -1067,10 +1187,15 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   const height = Math.max((e - s) * PXM, 20);
                   return (
                     <button key={a.id} draggable onDragStart={(ev) => apptDragStart(ev, a.id)} onClick={() => onSelectDay(iso)} title="Arraste para reagendar · clique para ver"
-                      className={`absolute z-10 text-left rounded-chip border px-1 py-0.5 overflow-hidden shadow-xs cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-600 ${m.block}`}
+                      className={`absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
                       style={{ top: yOf(s) + 1, height: height - 2, left: `calc(${lane * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
-                      <p className="num text-micro font-semibold leading-tight">{a.start_time.substring(0, 5)}</p>
-                      <p className="text-micro font-semibold truncate leading-tight">{a.client_name.split(' ')[0]}</p>
+                      <span className={`w-[3px] shrink-0 ${m.bar}`} aria-hidden />
+                      <span className="min-w-0 flex-1 px-1 py-0.5">
+                        {height >= 34 && (
+                          <span className="mono-micro text-n-500 block leading-tight">{a.start_time.substring(0, 5)}</span>
+                        )}
+                        <span className="text-micro font-semibold truncate leading-tight block">{a.client_name.split(' ')[0]}</span>
+                      </span>
                     </button>
                   );
                 })}
@@ -1104,7 +1229,7 @@ const YearView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
           <div key={m} className="card p-4">
             <button
               onClick={() => onPickMonth(m)}
-              className="w-full text-left mb-2 flex items-center justify-between gap-2 min-h-11 rounded-chip transition-ui hover:text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+              className="w-full text-left mb-2 flex items-center justify-between gap-2 min-h-11 rounded-chip transition-ui hover:text-wine-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             >
               <span className="text-label font-semibold text-heading capitalize">{MONTHS[m]}</span>
               <CalendarDays className="h-4 w-4 text-n-500" aria-hidden />
@@ -1119,7 +1244,7 @@ const YearView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                 const count = activeOf(apptByDate[iso]).length + (taskByDate[iso]?.length || 0);
                 return (
                   <div key={i} className="aspect-square flex items-center justify-center">
-                    <span className={`num relative flex items-center justify-center h-5 w-5 text-micro rounded-full ${!inMonth ? 'text-n-400' : isToday ? 'bg-wine-700 text-white font-semibold' : holiday ? 'text-wine-700 font-semibold ring-1 ring-wine-200' : 'text-ink'}`}>
+                    <span className={`mono relative flex items-center justify-center h-5 w-5 text-micro rounded-badge ${!inMonth ? 'text-n-400' : isToday ? 'bg-wine-700 text-white' : holiday ? 'text-wine-700 ring-1 ring-wine-200' : 'text-ink'}`}>
                       {day.getDate()}
                       {inMonth && count > 0 && !isToday && <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-wine-700" aria-hidden />}
                     </span>
@@ -1179,7 +1304,7 @@ const DayDetail: React.FC<{
             <p className="overline text-white/60">Detalhes do dia</p>
             <h3 className="text-h2 mt-1 capitalize">{longLabel}</h3>
             {holiday && (
-              <span className="mt-2 inline-flex items-center gap-1.5 text-caption font-semibold bg-white/15 rounded-full px-2.5 py-1">
+              <span className="mt-2 inline-flex items-center gap-1.5 text-caption font-semibold bg-white/15 rounded-badge px-2.5 py-1">
                 <PartyPopper className="h-4 w-4" aria-hidden /> {holiday.name}
               </span>
             )}
@@ -1208,7 +1333,7 @@ const DayDetail: React.FC<{
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 placeholder="Nova tarefa neste dia…"
-                className="flex-1 min-w-0 h-11 px-3 bg-surface border border-line rounded-control text-label text-ink placeholder-n-400 transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="flex-1 min-w-0 h-11 px-3 bg-surface border border-line rounded-control text-label text-ink placeholder-n-400 transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
               />
               <input
                 type="time"
@@ -1216,7 +1341,7 @@ const DayDetail: React.FC<{
                 onChange={(e) => setNewTime(e.target.value)}
                 title="Horário (opcional)"
                 aria-label="Horário da tarefa (opcional)"
-                className="num w-24 shrink-0 h-11 px-2 bg-surface border border-line rounded-control text-label text-ink transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                className="num w-24 shrink-0 h-11 px-2 bg-surface border border-line rounded-control text-label text-ink transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
               />
               <Button type="submit" size="md" iconOnly loading={saving} aria-label="Adicionar tarefa" leadingIcon={<Plus className="h-5 w-5" />} />
             </form>
@@ -1231,7 +1356,7 @@ const DayDetail: React.FC<{
                     role="checkbox"
                     aria-checked={t.done}
                     aria-label={`Marcar "${t.content}" como concluída`}
-                    className={`h-5 w-5 shrink-0 rounded-chip border flex items-center justify-center transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${t.done ? 'bg-wine-700 border-wine-700 text-white' : 'border-n-300 hover:border-wine-700'}`}
+                    className={`h-5 w-5 shrink-0 rounded-chip border flex items-center justify-center transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${t.done ? 'bg-wine-700 border-wine-700 text-white' : 'border-n-300 hover:border-wine-700'}`}
                   >
                     {t.done && <Check className="h-4 w-4" />}
                   </button>
@@ -1242,7 +1367,7 @@ const DayDetail: React.FC<{
                     type="button"
                     onClick={() => onRemoveTask(t)}
                     aria-label={`Excluir tarefa "${t.content}"`}
-                    className="h-9 w-9 inline-flex items-center justify-center shrink-0 rounded-chip text-n-500 hover:bg-danger-bg hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                    className="h-9 w-9 inline-flex items-center justify-center shrink-0 rounded-chip text-n-500 hover:bg-n-100 hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1290,14 +1415,14 @@ const DayDetail: React.FC<{
                         onClick={() => setEditingId(isEditing ? null : a.id)}
                         aria-label={isEditing ? 'Fechar edição' : `Editar agendamento de ${a.client_name}`}
                         aria-expanded={isEditing}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onRemoveAppt(a.id); }}
                         aria-label={`Excluir agendamento de ${a.client_name}`}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-danger-bg hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-danger transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1331,7 +1456,7 @@ const DayDetail: React.FC<{
                         href={buildReminderLink(a, reminderTemplate)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="tap inline-flex items-center gap-1.5 h-9 px-3 text-caption font-semibold text-success bg-success-bg hover:bg-success hover:text-white border border-success-border hover:border-success rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+                        className="tap inline-flex items-center gap-1.5 h-9 px-3 text-caption font-semibold text-success bg-success-bg hover:bg-success hover:text-white border border-success-border hover:border-success rounded-chip transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                       >
                         <MessageCircle className="h-4 w-4" aria-hidden /> Enviar lembrete
                       </a>
@@ -1382,18 +1507,18 @@ const EditApptForm: React.FC<{
         <div>
           <label className="text-caption text-n-600 mb-1 block">Data</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
         </div>
         <div>
           <label className="text-caption text-n-600 mb-1 block">Horário</label>
           <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
         </div>
       </div>
       <div>
         <label className="text-caption text-n-600 mb-1 block">Serviço</label>
         <select value={serviceId} onChange={e => setServiceId(e.target.value)}
-          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
           {services.filter(s => s.is_active).map(s => (
             <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes}min)</option>
           ))}
@@ -1405,14 +1530,14 @@ const EditApptForm: React.FC<{
       <div>
         <label className="text-caption text-n-600 mb-1 block">Status</label>
         <select value={status} onChange={e => setStatus(e.target.value as AppointmentStatus)}
-          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600">
+          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
           {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
       <div>
         <label className="text-caption text-n-600 mb-1 block">Observações</label>
         <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre o agendamento..."
-          className="w-full px-2.5 py-2 text-label text-ink border border-line rounded-control bg-surface resize-none transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+          className="w-full px-2.5 py-2 text-label text-ink border border-line rounded-control bg-surface resize-none transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
       </div>
       <div className="flex gap-2 pt-1">
         <Button onClick={handleSave} loading={saving} className="flex-1">Salvar</Button>

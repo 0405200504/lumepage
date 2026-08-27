@@ -57,7 +57,7 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-9 pl-9 pr-8 rounded-xl border border-line bg-surface text-label text-ink placeholder-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+        className="w-full h-9 pl-9 pr-8 rounded-xl border border-line bg-surface text-label text-ink placeholder-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
       />
       {pending
         ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted" aria-hidden />
@@ -99,7 +99,7 @@ export function FilterSelect({ basePath, name, label, options, allLabel = 'Todos
         const next = e.target.value;
         startTransition(() => router.push(buildHref(basePath, searchParams, { [name]: next === 'all' ? null : next }), { scroll: false }));
       }}
-      className={`h-9 px-3 rounded-xl border border-line bg-surface text-caption font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 ${className}`}
+      className={`h-9 px-3 rounded-xl border border-line bg-surface text-caption font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${className}`}
     >
       <option value="all">{allLabel}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

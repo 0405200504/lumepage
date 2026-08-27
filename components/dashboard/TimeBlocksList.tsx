@@ -5,8 +5,14 @@ import { useRouter } from 'next/navigation';
 import { TimeBlock, BlockType } from '@/types/database';
 import { Plus, Trash2, Calendar, Clock, Lock, X, Save } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { PageHeader } from '../ui/PageHeader';
+import { TechTable } from '../ui/TechTable';
+import { StatusLabel } from '../ui/StatusDot';
+import { MonoValue } from '../ui/Mono';
+import { EmptyState } from '../ui/EmptyState';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { QuickAddFab } from '../ui/QuickAddFab';
 import { createTimeBlockAction, deleteTimeBlockAction } from '@/app/actions/professional';
 
 interface TimeBlocksListProps {
@@ -100,133 +106,109 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
   };
 
   return (
-    <div className="space-y-6 select-none">
-      {/* Topo com botão */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-n-200 shadow-xs">
-        <div className="flex items-center gap-2 text-wine-700">
-          <Lock className="h-5 w-5" />
-          <span className="text-caption font-bold">{initialBlocks.length} bloqueios ativos</span>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-1 px-4 py-2.5 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Bloquear Horário</span>
-        </button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        trail={['Bloqueios', `${initialBlocks.length} ativo(s)`]}
+        title="Bloqueios de horário"
+        description="Períodos em que a agenda não aceita agendamento."
+        actions={
+          <Button size="md" onClick={handleOpenCreate} leadingIcon={<Plus className="h-[18px] w-[18px]" />}>
+            Bloquear horário
+          </Button>
+        }
+      />
 
-      <QuickAddFab actions={[{ label: 'Bloquear horário', icon: Plus, onClick: handleOpenCreate }]} />
-
-      {/* Cards (mobile) */}
-      <div className="lg:hidden space-y-3">
-        {initialBlocks.length > 0 ? (
-          initialBlocks.map((block) => {
-            const dateObj = new Date(`${block.date}T12:00:00`);
+      {/* ARQUÉTIPO 2 · o período em mono é o dado da tela, e numa tabela ele
+          fica alinhado em coluna: dá para varrer a lista e ver os buracos.
+          Como cartões, cada data ficava num canto diferente. */}
+      <Card pad="p-0" className="overflow-hidden">
+        <TechTable
+          rows={initialBlocks}
+          rowKey={(b) => b.id}
+          initialSort={{ key: 'date', dir: 'asc' }}
+          empty={
+            <EmptyState
+              framed={false}
+              title="Nenhum bloqueio cadastrado"
+              description="Bloqueie férias, feriados ou compromissos pessoais para que ninguém consiga agendar nesses horários."
+              actionText="Bloquear horário"
+              onAction={handleOpenCreate}
+            />
+          }
+          columns={[
+            {
+              key: 'date',
+              header: 'Data',
+              width: '1%',
+              className: 'whitespace-nowrap',
+              sortValue: (b) => b.date,
+              cell: (b) => {
+                const d = new Date(`${b.date}T12:00:00`);
+                return (
+                  <span className="inline-flex flex-col">
+                    <MonoValue className="text-body-sm text-ink">{d.toLocaleDateString('pt-BR')}</MonoValue>
+                    <span className="mono-micro text-n-500">
+                      {d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase()}
+                    </span>
+                  </span>
+                );
+              },
+            },
+            {
+              key: 'period',
+              header: 'Período',
+              className: 'whitespace-nowrap',
+              cell: (b) =>
+                b.block_type === 'full_day' ? (
+                  <StatusLabel tone="danger">Dia inteiro</StatusLabel>
+                ) : (
+                  <MonoValue className="text-body-sm text-ink">
+                    {b.start_time?.substring(0, 5)}–{b.end_time?.substring(0, 5)}
+                  </MonoValue>
+                ),
+            },
+            {
+              key: 'reason',
+              header: 'Motivo',
+              width: '100%',
+              cell: (b) => (
+                <span className={b.reason ? 'text-ink' : 'text-n-400'}>
+                  {b.reason || '—'}
+                </span>
+              ),
+            },
+          ]}
+          mobileRow={(b) => {
+            const d = new Date(`${b.date}T12:00:00`);
             return (
-              <div key={block.id} className="bg-white border border-n-200 rounded-3xl shadow-xs p-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-bold text-n-800">{dateObj.toLocaleDateString('pt-BR')}</p>
-                  <div className="mt-1.5">
-                    {block.block_type === 'full_day' ? (
-                      <span className="text-caption font-bold text-danger bg-danger-bg border border-danger-border/50 rounded-md px-2 py-0.5">Dia Inteiro</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-caption font-semibold text-n-700">
-                        <Clock className="h-3.5 w-3.5 text-n-600" />
-                        {block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-caption text-n-500 mt-1.5">
-                    {block.reason || <span className="italic text-n-400">Bloqueio manual de agenda</span>}
-                  </p>
+              <>
+                <div className="flex items-baseline gap-2">
+                  <MonoValue className="text-body-sm text-heading">{d.toLocaleDateString('pt-BR')}</MonoValue>
+                  <span className="text-caption text-n-500 truncate">{b.reason || '—'}</span>
                 </div>
-                <button
-                  onClick={() => { setBlockToDelete(block.id); setIsDeleteOpen(true); }}
-                  title="Remover bloqueio"
-                  className="tap p-2.5 hover:bg-danger-bg text-danger rounded-xl transition-colors border border-danger-border/50 shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                <div className="mt-1">
+                  {b.block_type === 'full_day' ? (
+                    <StatusLabel tone="danger">Dia inteiro</StatusLabel>
+                  ) : (
+                    <MonoValue className="text-micro text-n-500">
+                      {b.start_time?.substring(0, 5)}–{b.end_time?.substring(0, 5)}
+                    </MonoValue>
+                  )}
+                </div>
+              </>
             );
-          })
-        ) : (
-          <div className="bg-white border border-n-200 rounded-3xl shadow-xs py-12 text-center text-caption text-n-600">
-            Você não tem nenhum bloqueio de horário ativo na sua agenda.
-          </div>
-        )}
-      </div>
-
-      {/* Lista de Bloqueios (desktop) */}
-      <div className="hidden lg:block bg-white border border-n-200 rounded-3xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-n-200 text-left">
-            <thead className="bg-n-50/40 text-caption font-bold text-n-400 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4">Data do Bloqueio</th>
-                <th className="px-6 py-4">Duração / Período</th>
-                <th className="px-6 py-4">Motivo / Descrição</th>
-                <th className="px-6 py-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-n-200 text-label text-n-700">
-              {initialBlocks.length > 0 ? (
-                initialBlocks.map((block) => {
-                  const dateObj = new Date(`${block.date}T12:00:00`);
-                  return (
-                    <tr key={block.id} className="hover:bg-n-50/20 transition-colors">
-                      {/* Data */}
-                      <td className="px-6 py-4 whitespace-nowrap font-bold text-n-800">
-                        {dateObj.toLocaleDateString('pt-BR')}
-                      </td>
-
-                      {/* Horário */}
-                      <td className="px-6 py-4 whitespace-nowrap text-caption">
-                        {block.block_type === 'full_day' ? (
-                          <span className="font-bold text-danger bg-danger-bg border border-danger-border/50 rounded-md px-2 py-0.5">
-                            Dia Inteiro
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1 font-semibold text-n-700">
-                            <Clock className="h-3.5 w-3.5 text-n-600" />
-                            <span>{block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Motivo */}
-                      <td className="px-6 py-4 max-w-xs truncate text-caption text-n-500" title={block.reason || 'Sem descrição'}>
-                        {block.reason || <span className="italic text-n-400">Bloqueio manual de agenda</span>}
-                      </td>
-
-                      {/* Ações */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button
-                          onClick={() => {
-                            setBlockToDelete(block.id);
-                            setIsDeleteOpen(true);
-                          }}
-                          title="Remover bloqueio"
-                          className="p-2 hover:bg-danger-bg text-danger rounded-xl transition-colors border border-danger-border/50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-12 text-center text-caption text-n-600">
-                    Você não tem nenhum bloqueio de horário ativo na sua agenda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          }}
+          actions={(b) => (
+            <Button
+              size="sm" variant="ghost" iconOnly
+              aria-label={`Remover bloqueio de ${new Date(`${b.date}T12:00:00`).toLocaleDateString('pt-BR')}`}
+              onClick={() => { setBlockToDelete(b.id); setIsDeleteOpen(true); }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        />
+      </Card>
 
       {/* Modal para Adicionar Bloqueio */}
       {isOpenModal && (
@@ -254,7 +236,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
 
             <div className="space-y-4 text-caption">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Selecione a Data *
                 </label>
                 <input
@@ -262,12 +244,12 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Tipo de Bloqueio *
                 </label>
                 <div className="flex gap-2">
@@ -299,7 +281,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
               {blockType === 'custom_time' && (
                 <div className="grid grid-cols-2 gap-3 animate-slide-down">
                   <div>
-                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                    <label className="mono-micro text-n-500 block mb-1.5">
                       Horário Inicial *
                     </label>
                     <input
@@ -312,7 +294,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                    <label className="mono-micro text-n-500 block mb-1.5">
                       Horário Final *
                     </label>
                     <input
@@ -327,7 +309,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
               )}
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="mono-micro text-n-500 block mb-1.5">
                   Motivo do Bloqueio (Opcional)
                 </label>
                 <textarea
@@ -335,7 +317,7 @@ export const TimeBlocksList: React.FC<TimeBlocksListProps> = ({
                   placeholder="Ex: Folga, compromisso médico, feriado, etc..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="block w-full px-3 py-2 border border-n-200 rounded-xl text-caption placeholder-n-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600 focus:border-wine-700"
+                  className="field-input"
                 />
               </div>
             </div>

@@ -147,7 +147,7 @@ export function PushNotificationBanner() {
         <button
           onClick={handleDismiss}
           aria-label="Dispensar"
-          className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600"
+          className="tap shrink-0 h-8 w-8 -mt-1 -mr-1 inline-flex items-center justify-center rounded-chip text-n-500 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
         >
           <X className="h-4 w-4" />
         </button>

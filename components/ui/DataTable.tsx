@@ -61,7 +61,7 @@ export function DataTable<T>({
     <div>
       <div className="overflow-x-auto scroll-touch">
         <table className="min-w-full text-left">
-          <thead className="text-caption font-bold text-n-600 uppercase tracking-wider border-b border-line bg-surface-2/50">
+          <thead className="mono-micro text-n-500 border-b border-line bg-surface-2/50">
             <tr>
               {columns.map(col => {
                 const sortable = !!col.sortValue;

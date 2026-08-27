@@ -32,8 +32,8 @@ export async function AdminNotices({ professionalId, subscriptionStatus, hasBot 
   if (!notices.length) return null;
 
   const style = (level: string) =>
-    level === 'warn' ? { cls: 'bg-warning-bg text-warning ring-warning-border', Icon: AlertTriangle }
-      : level === 'success' ? { cls: 'bg-success-bg text-success ring-success-border', Icon: Sparkles }
+    level === 'warn' ? { cls: 'text-warning ring-warning-border', Icon: AlertTriangle }
+      : level === 'success' ? { cls: 'text-success ring-success-border', Icon: Sparkles }
       : { cls: 'bg-accent-soft text-accent-link ring-accent-soft-border', Icon: Info };
 
   return (

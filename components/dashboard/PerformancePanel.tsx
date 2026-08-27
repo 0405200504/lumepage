@@ -44,7 +44,7 @@ const Bars: React.FC<{ data: { label: string; value: number }[]; format?: (v: nu
         <div key={d.label} className="flex items-center gap-3">
           <span className="text-caption font-semibold text-n-600 w-16 shrink-0 truncate" title={d.label}>{d.label}</span>
           <div className="flex-1 h-5 bg-n-25 rounded-full overflow-hidden">
-            <div className="h-full bg-wine-700/80 rounded-full transition-ui" style={{ width: `${(d.value / max) * 100}%` }} />
+            <div className="h-full bg-wine-500 rounded-full transition-ui" style={{ width: `${(d.value / max) * 100}%` }} />
           </div>
           <span className="text-caption font-bold text-ink w-16 shrink-0 text-right">{format ? format(d.value) : d.value}</span>
         </div>
@@ -155,10 +155,10 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
         {period === 'custom' && (
           <div className="flex flex-wrap items-center gap-2">
             <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
-              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
             <span className="text-caption text-n-600">até</span>
             <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
-              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-600" />
+              className="text-caption font-semibold text-ink bg-n-50 border border-n-200 rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
           </div>
         )}
       </div>
@@ -182,17 +182,17 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
           {/* Destaques */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="card p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Star className="h-5 w-5" /></div>
+              <div className="p-2.5 rounded-2xl bg-wine-50 text-wine-700"><Star className="h-5 w-5" /></div>
               <div className="min-w-0">
-                <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Serviço mais vendido</p>
+                <p className="mono-micro text-n-500">Serviço mais vendido</p>
                 <p className="text-label font-bold text-ink truncate">{data.topServices[0]?.label || '—'}</p>
                 {data.topServices[0] && <p className="text-caption text-n-600">{data.topServices[0].value}x no período</p>}
               </div>
             </div>
             <div className="card p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-wine-700/8 text-wine-700"><Crown className="h-5 w-5" /></div>
+              <div className="p-2.5 rounded-2xl bg-wine-50 text-wine-700"><Crown className="h-5 w-5" /></div>
               <div className="min-w-0">
-                <p className="text-caption font-bold text-n-600 uppercase tracking-wider">Cliente que mais agendou</p>
+                <p className="mono-micro text-n-500">Cliente que mais agendou</p>
                 <p className="text-label font-bold text-ink truncate">{data.topClient?.[0] || '—'}</p>
                 {data.topClient && <p className="text-caption text-n-600">{data.topClient[1]} agendamentos</p>}
               </div>
@@ -223,15 +223,15 @@ export const PerformancePanel: React.FC<PerformancePanelProps> = ({ appointments
 
 const Kpi: React.FC<{ icon: React.ReactNode; label: string; value: string; muted?: boolean }> = ({ icon, label, value, muted }) => (
   <div className="card p-4">
-    <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-n-100 text-n-600' : 'bg-wine-700/8 text-wine-700'}`}>{icon}</div>
-    <p className="text-caption font-bold text-n-600 uppercase tracking-wider">{label}</p>
+    <div className={`inline-flex p-2 rounded-xl mb-2 ${muted ? 'bg-n-100 text-n-600' : 'bg-wine-50 text-wine-700'}`}>{icon}</div>
+    <p className="mono-micro text-n-500">{label}</p>
     <p className="text-h3 font-bold text-ink mt-0.5">{value}</p>
   </div>
 );
 
 const ChartCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="card p-5">
-    <p className="text-caption font-bold text-n-600 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {title}</p>
+    <p className="mono-micro text-n-500 mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {title}</p>
     {children}
   </div>
 );
