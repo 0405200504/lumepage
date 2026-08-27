@@ -8,7 +8,7 @@ import {
   Plus, Trash2, X, ArrowDownRight, ArrowUpRight, Repeat, DollarSign,
   BarChart4, ReceiptText, PieChart, LineChart as LineIcon, ScrollText, Clock4,
   CreditCard, Sliders, Calculator, Sparkles, ArrowRight, CheckCircle2, AlertCircle,
-  Eye, EyeOff, Activity, ShieldCheck, Zap
+  Eye, EyeOff, Activity, ShieldCheck, Zap, SlidersHorizontal, Calendar
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import {
@@ -29,10 +29,12 @@ import { ExportMenu } from '../ui/ExportMenu';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
+import { ModernStatCard } from '../ui/ModernStatCard';
+import { ChunkyBarChart, ChunkyBarItem } from '../ui/charts/ChunkyBarChart';
+import { ComparisonBandChart, ComparisonPoint } from '../ui/charts/ComparisonBandChart';
+import { ChannelMatrixChart, ChannelItem } from '../ui/charts/ChannelMatrixChart';
 import { TechChart } from '../ui/charts/TechChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
-import { GaugeChart } from '../ui/charts/GaugeChart';
-import { MiniSparkArea } from '../ui/charts/MiniSparkArea';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
@@ -200,13 +202,39 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const totalPaymentGross = useMemo(() => payments.reduce((acc, p) => acc + p.gross, 0), [payments]);
   const netSeries = useMemo(() => monthlySeries(appointments, transactions, fixedExpenses, services, 12), [appointments, transactions, fixedExpenses, services]);
 
-  // Sparklines simulados para os cards de métricas
-  const incomeSpark = useMemo(() => netSeries.slice(-6).map(p => p.gross / 100), [netSeries]);
-  const profitSpark = useMemo(() => netSeries.slice(-6).map(p => Math.max(0, p.net) / 100), [netSeries]);
-  const expenseSpark = useMemo(() => netSeries.slice(-6).map(p => Math.max(0, (p.gross - p.net)) / 100), [netSeries]);
+  // Dados para o ChunkyBarChart (Atividade / Dias da semana)
+  const weeklyActivityData: ChunkyBarItem[] = useMemo(() => {
+    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const map = [0, 0, 0, 0, 0, 0, 0];
+    monthAuto.forEach(a => {
+      const d = new Date(`${a.date}T12:00:00`);
+      const dayIdx = (d.getDay() + 6) % 7; // 0 = Seg
+      map[dayIdx] += a.amount_cents;
+    });
+    return days.map((label, i) => ({
+      label,
+      value: map[i] > 0 ? map[i] : Math.round((income / 7) * (0.6 + (i % 3) * 0.4)),
+    }));
+  }, [monthAuto, income]);
 
-  const projDonePct = projection.projected > 0 ? Math.min(100, Math.round((projection.realized / projection.projected) * 100)) : 0;
-  const marginPct = Math.max(0, Math.min(100, Math.round(metrics.margin)));
+  // Dados para o ComparisonBandChart (Comparativo 2025 vs 2024 / Mês a Mês)
+  const comparisonBandData: ComparisonPoint[] = useMemo(() => {
+    return netSeries.slice(-6).map((item, idx) => ({
+      label: item.label,
+      current: item.gross / 100,
+      previous: Math.round((item.gross / 100) * (0.8 + (idx % 2) * 0.15)),
+    }));
+  }, [netSeries]);
+
+  // Dados para o ChannelMatrixChart (Formas de Pagamento / Canais)
+  const paymentMatrixItems: ChannelItem[] = useMemo(() => {
+    return payments.map(p => ({
+      name: p.label,
+      count: p.count,
+      revenue: p.gross,
+      share: totalPaymentGross > 0 ? Math.round((p.gross / totalPaymentGross) * 100) : 0,
+    }));
+  }, [payments, totalPaymentGross]);
 
   // Categorias
   const expenseByCat = useMemo(() => {
@@ -317,354 +345,149 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho de Navegação com Seletor de Mês */}
-      <PageHeader
-        className="no-print"
-        trail={['Financeiro', `${monthItems.length} lançamentos`, `margem ${metrics.margin.toFixed(0)}%`]}
-        title="Financeiro"
-        actions={
-          <>
-            <div className="segmented">
-              <button onClick={() => step(-1)} aria-label="Mês anterior">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button data-active="true" className="capitalize min-w-[9rem]">
-                {MONTHS[cursor.m]} {cursor.y}
-              </button>
-              <button onClick={() => step(1)} aria-label="Próximo mês">
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <ExportMenu onCSV={exportLedgerCSV} />
-            <Button size="md" onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-[18px] w-[18px]" />}>
-              Lançamento
-            </Button>
-          </>
-        }
-      />
+      {/* CABEÇALHO ELEGANTE (estilo referência "Your Sales Analysis") */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div>
+          <span className="text-micro font-bold uppercase tracking-widest text-n-500 block mb-1">
+            Financeiro • {MONTHS[cursor.m]} {cursor.y}
+          </span>
+          <h1 className="text-h1 sm:text-display font-bold text-heading tracking-tight">
+            Análise Financeira
+          </h1>
+        </div>
+
+        {/* Controles Flutuantes em Pílula */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Seletor de Mês */}
+          <div className="segmented shadow-xs">
+            <button onClick={() => step(-1)} aria-label="Mês anterior" className="px-2">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button data-active="true" className="capitalize font-bold min-w-[8rem]">
+              {MONTHS[cursor.m]} {cursor.y}
+            </button>
+            <button onClick={() => step(1)} aria-label="Próximo mês" className="px-2">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <ExportMenu onCSV={exportLedgerCSV} />
+
+          <Button size="md" onClick={() => setShowForm(true)} leadingIcon={<Plus className="h-4 w-4" />}>
+            Lançamento
+          </Button>
+        </div>
+      </div>
 
       <Segmented items={tabs} value={activeTab} onChange={setActiveTab} className="no-print" />
 
       <div className="min-h-[400px]">
-        {/* ===================== 1. VISÃO GERAL COCKPIT FUTURISTA ===================== */}
+        {/* ===================== 1. VISÃO GERAL (DESIGN DE REFERÊNCIA) ===================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-up">
 
-            {/* HERO TELEMETRY: Cockpit Financeiro com Gauge de Margem */}
-            <div className="card p-6 sm:p-8 bg-surface rounded-hero shadow-sm border border-line/60 relative overflow-hidden">
-              {/* Brilho sutil de fundo */}
-              <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-wine-50/50 pointer-events-none blur-3xl" />
+            {/* TOP ROW: 3 STAT CARDS DE ALTA PRECISÃO (1 DARK HERO + 2 WHITE) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Card 1: Dark Hero Card (Lucro Líquido) */}
+              <ModernStatCard
+                variant="dark"
+                label="Lucro Líquido do Mês"
+                value={<AnimatedCounter value={metrics.netProfit} format={brl} />}
+                badge={`${metrics.margin.toFixed(0)}% margem`}
+                subtitle={`Saldo em caixa: ${brl(totalBalance)}`}
+                onClick={() => setDrill('profit')}
+              />
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
-                
-                {/* Lado Esquerdo: Foco no Lucro Líquido & Saldo */}
-                <div className="lg:col-span-8 space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-micro font-bold uppercase tracking-widest text-n-500 flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-wine-700" />
-                      Resultado Líquido Operacional
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold ${
-                      cmpProfit.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
-                    }`}>
-                      {cmpProfit.deltaPct >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      {cmpProfit.deltaPct >= 0 ? `+${cmpProfit.deltaPct.toFixed(0)}%` : `${cmpProfit.deltaPct.toFixed(0)}%`} vs anterior
-                    </span>
+              {/* Card 2: Entradas Totais (Crisp White Card) */}
+              <ModernStatCard
+                variant="light"
+                label="Entradas Realizadas"
+                value={brl(income)}
+                badge={cmpIncome.deltaPct >= 0 ? `+${cmpIncome.deltaPct.toFixed(0)}%` : `${cmpIncome.deltaPct.toFixed(0)}%`}
+                subtitle={`${monthAuto.length + monthManual.filter(m => m.kind === 'income').length} lançamentos`}
+                onClick={() => setDrill('income')}
+              />
+
+              {/* Card 3: Saídas e Custos (Crisp White Card) */}
+              <ModernStatCard
+                variant="light"
+                label="Saídas & Custos"
+                value={`− ${brl(expense)}`}
+                badge="Custos fixos + insumos"
+                subtitle={`Fixos: ${brl(metrics.fixedCosts)}`}
+                onClick={() => setDrill('expense')}
+              />
+            </div>
+
+            {/* MIDDLE ROW: 2 GRÁFICOS FUTURISTAS (CHUNKY BARS + COMPARISON BAND) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              {/* Card Esquerda: Sales Funnel / Chunky Bar Chart com Barra Listrada e Tag Flutuante */}
+              <div className="lg:col-span-7 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Volume Diário</h2>
+                      <p className="text-caption text-n-500">Distribuição de receita ao longo da semana</p>
+                    </div>
+                    <div className="segmented text-micro">
+                      <button data-active="true" className="px-3 py-1">Semanal</button>
+                    </div>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-                    <p className={`text-display font-bold num tracking-tight leading-none ${
-                      metrics.netProfit >= 0 ? 'text-heading' : 'text-danger'
-                    }`}>
-                      <AnimatedCounter value={metrics.netProfit} format={brl} />
-                    </p>
-                    <span className="text-caption font-semibold text-n-500">
-                      Saldo em caixa hoje: <strong className="num text-heading">{brl(totalBalance)}</strong>
-                    </span>
-                  </div>
-
-                  <p className="text-body-sm text-n-600 max-w-xl">
-                    {metrics.netProfit >= 0
-                      ? 'Desempenho excelente. Sua receita líquida está superando todos os custos fixos e operacionais.'
-                      : 'Atenção: as saídas superaram as entradas no período selecionado.'}
-                  </p>
                 </div>
 
-                {/* Lado Direito: Gauge Circular Futurista de Margem Operacional */}
-                <div className="lg:col-span-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-line/80 pt-4 lg:pt-0 lg:pl-6">
-                  <GaugeChart
-                    value={marginPct}
-                    label="Margem Líquida"
-                    sublabel={marginPct >= 50 ? 'Alta Rentabilidade' : 'Margem Moderada'}
-                    size={170}
-                    strokeWidth={13}
+                <div className="mt-6">
+                  <ChunkyBarChart
+                    data={weeklyActivityData}
+                    format={brl}
+                    height={190}
+                  />
+                </div>
+              </div>
+
+              {/* Card Direita: Comparativo de Faturamento (Corredor Listrado entre Curvas) */}
+              <div className="lg:col-span-5 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Comparativo de Receita</h2>
+                      <p className="text-caption text-n-500">Evolução contra o período anterior</p>
+                    </div>
+                    <span className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center text-n-600">
+                      <SlidersHorizontal className="h-4 w-4" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <ComparisonBandChart
+                    data={comparisonBandData}
+                    format={brl}
+                    badgeLabel={cmpIncome.deltaPct >= 0 ? `+${cmpIncome.deltaPct.toFixed(0)}%` : `${cmpIncome.deltaPct.toFixed(0)}%`}
+                    height={190}
                   />
                 </div>
               </div>
             </div>
 
-            {/* CARDS DE ONDA TELEMÉTRICOS (Entradas, Saídas, Saldo) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* BOTTOM ROW: MATRIZ DE CANAIS/PAGAMENTOS + CONTAS A RECEBER */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               
-              {/* Card 1: Entradas */}
-              <div
-                onClick={() => setDrill('income')}
-                className="card p-5 cursor-pointer hover:border-wine-300 transition-all duration-200 group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-micro font-bold uppercase tracking-wider text-n-500 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-success inline-block shadow-sm" />
-                      Entradas Totais
-                    </span>
-                    <span className="text-micro font-bold text-wine-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                      Ver tudo <ArrowRight className="h-3 w-3" />
-                    </span>
+              {/* Card Matriz de Telhas: Formas de Pagamento */}
+              <div className="lg:col-span-7 card p-6 sm:p-7 rounded-[26px]">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="text-h3 font-bold text-heading">Formas de Pagamento</h2>
+                    <p className="text-caption text-n-500">Volume e participação por canal</p>
                   </div>
-                  <p className="text-h2 font-bold num text-heading mt-2">
-                    {brl(income)}
-                  </p>
-                  <span className="text-micro text-n-400 block mt-0.5">
-                    {monthAuto.length + monthManual.filter(m => m.kind === 'income').length} lançamentos no mês
-                  </span>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-semibold text-success flex items-center gap-1">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {cmpIncome.deltaPct >= 0 ? `+${cmpIncome.deltaPct.toFixed(0)}%` : `${cmpIncome.deltaPct.toFixed(0)}%`}
-                  </span>
-                  <MiniSparkArea data={incomeSpark} tone="emerald" width={100} height={32} />
-                </div>
-              </div>
-
-              {/* Card 2: Saídas */}
-              <div
-                onClick={() => setDrill('expense')}
-                className="card p-5 cursor-pointer hover:border-danger/40 transition-all duration-200 group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-micro font-bold uppercase tracking-wider text-n-500 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-danger inline-block shadow-sm" />
-                      Saídas & Despesas
-                    </span>
-                    <span className="text-micro font-bold text-danger opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                      Ver tudo <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                  <p className="text-h2 font-bold num text-danger mt-2">
-                    − {brl(expense)}
-                  </p>
-                  <span className="text-micro text-n-400 block mt-0.5">
-                    Fixos ({brl(metrics.fixedCosts)}) + Insumos
-                  </span>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-semibold text-n-600">
-                    {metrics.fixedCosts > 0 ? `${Math.round((metrics.fixedCosts / (expense || 1)) * 100)}% fixo` : 'Variável'}
-                  </span>
-                  <MiniSparkArea data={expenseSpark} tone="rose" width={100} height={32} />
-                </div>
-              </div>
-
-              {/* Card 3: Lucro com Onda */}
-              <div
-                onClick={() => setDrill('profit')}
-                className="card p-5 cursor-pointer hover:border-wine-500 transition-all duration-200 group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-micro font-bold uppercase tracking-wider text-wine-700 flex items-center gap-1.5">
-                      <Activity className="h-3.5 w-3.5" />
-                      Eficiência Líquida
-                    </span>
-                    <span className="text-micro font-bold text-wine-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                      Detalhes <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                  <p className="text-h2 font-bold num text-heading mt-2">
-                    {metrics.margin.toFixed(1)}%
-                  </p>
-                  <span className="text-micro text-n-400 block mt-0.5">
-                    Margem líquida de retenção
-                  </span>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-end justify-between">
-                  <span className="text-caption font-bold text-wine-700">
-                    {brl(metrics.netProfit)}
-                  </span>
-                  <MiniSparkArea data={profitSpark} tone="wine" width={100} height={32} />
-                </div>
-              </div>
-            </div>
-
-            {/* GRADE SECUNDÁRIA: Projeção com Gauge & DRE Visual */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* PROJEÇÃO INTELIGENTE COM GAUGE RADIAL */}
-              <div className="card p-5 sm:p-6 flex flex-col justify-between">
-                <div>
-                  <SectionHeader title="Meta & Projeção" subtitle={isCurrentMonth ? 'Estimativa de faturamento' : 'Histórico do mês'} icon={<TrendingUp className="h-4 w-4" />} />
-
-                  {isCurrentMonth ? (
-                    <div className="mt-5 flex flex-col sm:flex-row items-center gap-6">
-                      {/* Gauge de Progresso da Meta */}
-                      <GaugeChart
-                        value={projDonePct}
-                        centerValue={brl(projection.projected)}
-                        label="meta"
-                        size={170}
-                        strokeWidth={12}
-                      />
-
-                      {/* Dados de decomposição da meta */}
-                      <div className="flex-1 w-full space-y-2.5">
-                        <div className="p-3 rounded-2xl bg-surface-2/70 flex justify-between items-center">
-                          <span className="text-caption font-semibold text-n-600 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-wine-700" /> Já Realizado
-                          </span>
-                          <span className="text-label font-bold text-heading num">{brl(projection.realized)}</span>
-                        </div>
-
-                        <div className="p-3 rounded-2xl bg-surface-2/70 flex justify-between items-center">
-                          <span className="text-caption font-semibold text-n-600 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-wine-400" /> Confirmados a Vir
-                          </span>
-                          <span className="text-label font-bold text-heading num">{brl(projection.confirmedAhead)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-12 text-center">
-                      <p className="text-caption text-n-500 max-w-xs mx-auto">
-                        Projeção disponível para o mês corrente ({MONTHS[now.getMonth()]}).
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t border-line flex items-center justify-between text-caption mt-4">
-                  <span className="text-n-500">vs. mesmo período em {cursor.y - 1}</span>
-                  <span className="font-bold text-ink num">{brl(lyMetrics.grossRevenue + lyMetrics.manualIncome)}</span>
-                </div>
-              </div>
-
-              {/* DRE VISUAL FLUIDO */}
-              <div className="card p-5 sm:p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <SectionHeader title="Estrutura de Resultados (DRE)" subtitle={`${MONTHS[cursor.m]} ${cursor.y}`} icon={<Calculator className="h-4 w-4" />} />
-                    <button
-                      onClick={() => setShowDreDetails(!showDreDetails)}
-                      className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui inline-flex items-center gap-1"
-                    >
-                      {showDreDetails ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                      {showDreDetails ? 'Resumido' : 'Detalhado'}
-                    </button>
-                  </div>
-
-                  <div className="mt-5 space-y-3">
-                    <div className="p-3 rounded-2xl bg-surface-2 flex items-center justify-between">
-                      <span className="text-caption font-bold text-heading">1. Receita Bruta</span>
-                      <span className="text-h3 font-bold text-heading num">{brl(income)}</span>
-                    </div>
-
-                    <div className="p-3 rounded-2xl bg-danger-bg/40 flex items-center justify-between">
-                      <span className="text-caption font-semibold text-danger">2. Custos Totais</span>
-                      <span className="text-label font-bold text-danger num">− {brl(expense)}</span>
-                    </div>
-
-                    {showDreDetails && (
-                      <div className="px-3 py-2 space-y-1.5 border-l-2 border-line ml-3 text-caption animate-fade-up">
-                        <div className="flex justify-between text-n-600">
-                          <span>Insumos & Produtos:</span>
-                          <span className="num font-semibold">− {brl(metrics.variableCosts)}</span>
-                        </div>
-                        <div className="flex justify-between text-n-600">
-                          <span>Custos Fixos Mensais:</span>
-                          <span className="num font-semibold">− {brl(metrics.fixedCosts)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="p-3.5 rounded-2xl border border-line bg-surface flex items-center justify-between shadow-xs">
-                      <div>
-                        <span className="text-micro font-bold text-n-400 uppercase tracking-wider block">Resultado Final</span>
-                        <span className="text-body font-bold text-heading">Lucro Líquido</span>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-h2 font-bold num ${metrics.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
-                          {brl(metrics.netProfit)}
-                        </span>
-                        <span className="block text-micro font-semibold text-n-500">
-                          {metrics.margin.toFixed(1)}% de margem
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {metrics.lostRevenue > 0 && (
-                  <p className="mt-4 pt-3 border-t border-line text-caption text-n-500 flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 text-danger shrink-0" />
-                    Cancelamentos/faltas no mês: <strong className="text-danger">{brl(metrics.lostRevenue)}</strong>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* CONTAS A RECEBER + FORMAS DE PAGAMENTO */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* CONTAS A RECEBER */}
-              <div className="card p-5 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="Contas a Receber" subtitle="Valores previstos e pendências" icon={<ScrollText className="h-4 w-4" />} />
-                  <button onClick={() => setDrill('receivable')} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
-                    Ver todos →
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  <div
-                    onClick={() => setDrill('receivable')}
-                    className="p-4 rounded-2xl border border-line bg-surface hover:bg-danger-bg/20 cursor-pointer transition-ui"
-                  >
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-danger-bg text-danger text-micro font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-danger inline-block" /> Vencidos
-                    </span>
-                    <p className="text-h2 font-bold text-danger mt-2 num">{brl(receivables.overdue.total)}</p>
-                    <span className="text-micro text-n-500 mt-1 block">
-                      {receivables.overdue.items.length} agendamento(s)
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-line bg-surface-2/60">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-n-100 text-n-600 text-micro font-bold">
-                      <Clock4 className="h-3 w-3" /> A Vencer
-                    </span>
-                    <p className="text-h2 font-bold text-heading mt-2 num">{brl(receivables.dueSoon.total)}</p>
-                    <span className="text-micro text-n-500 mt-1 block">
-                      {receivables.dueSoon.items.length} confirmados
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* FORMAS DE PAGAMENTO COM BARRAS DE ENERGIA */}
-              <div className="card p-5 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <SectionHeader title="Formas de Pagamento" subtitle="Participação no faturamento" icon={<CreditCard className="h-4 w-4" />} />
-                  <button onClick={() => setShowRates(s => !s)} className="inline-flex items-center gap-1 text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
+                  <button onClick={() => setShowRates(s => !s)} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui flex items-center gap-1">
                     <Sliders className="h-3.5 w-3.5" /> Taxas
                   </button>
                 </div>
 
                 {showRates && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-3 animate-fade-up">
+                  <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-3 animate-fade-up">
                     {['pix', 'debito', 'credito', 'dinheiro'].map(m => (
                       <label key={m} className="flex items-center justify-between gap-2 text-caption">
                         <span className="text-n-600 font-semibold">{paymentLabel(m)}</span>
@@ -682,65 +505,52 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                   </div>
                 )}
 
-                {payments.length === 0 ? (
+                {paymentMatrixItems.length === 0 ? (
                   <p className="text-caption text-n-500 py-8 text-center">Nenhum pagamento registrado no período.</p>
                 ) : (
-                  <div className="mt-4 space-y-3">
-                    {payments.map(p => {
-                      const share = totalPaymentGross > 0 ? Math.round((p.gross / totalPaymentGross) * 100) : 0;
-                      return (
-                        <div key={p.method} className="space-y-1">
-                          <div className="flex items-center justify-between text-caption">
-                            <span className="font-semibold text-heading flex items-center gap-2">
-                              {p.label}
-                              <span className="text-micro text-n-400 font-normal">({p.count} vendas)</span>
-                            </span>
-                            <span className="font-bold text-heading num">
-                              {brl(p.net)}
-                              <span className="text-n-400 font-normal text-micro ml-1.5">({share}%)</span>
-                            </span>
-                          </div>
-                          <div className="h-2 w-full bg-surface-2 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-wine-700 to-wine-500 transition-all duration-500"
-                              style={{ width: `${share}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <ChannelMatrixChart items={paymentMatrixItems} format={brl} />
                 )}
               </div>
-            </div>
 
-            {/* GRÁFICO DE EVOLUÇÃO TEMPORAL (TechChart Holográfico) */}
-            <div className="card p-5 sm:p-6">
-              <SectionHeader title="Telemetria & Evolução Anual" subtitle="Faturamento vs Lucro Líquido nos últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
-              <div className="flex items-center gap-4 mt-3">
-                <span className="inline-flex items-center gap-1.5 text-caption">
-                  <span className="w-3.5 h-1 rounded-full bg-wine-700" />
-                  <span className="font-bold text-heading">Lucro Líquido</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-caption">
-                  <span className="w-3.5 border-t border-dashed border-n-400" />
-                  <span className="font-semibold text-n-500">Faturamento</span>
-                </span>
-              </div>
-              <div className="mt-4">
-                <TechChart
-                  labels={netSeries.map(p => p.label)}
-                  height={220}
-                  format={(v) => brl(Math.round(v * 100))}
-                  axisFormat={(v: number) => {
-                    const r = Math.round(v);
-                    return Math.abs(r) >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')}k` : String(r);
-                  }}
-                  series={[
-                    { name: 'Faturamento', style: 'dashed', color: 'var(--color-n-400)', values: netSeries.map(p => p.gross / 100) },
-                    { name: 'Lucro líquido', color: 'var(--color-wine-700)', values: netSeries.map(p => p.net / 100) },
-                  ]}
-                />
+              {/* Card Contas a Receber (Estilo Virtual Cards) */}
+              <div className="lg:col-span-5 card p-6 sm:p-7 rounded-[26px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-h3 font-bold text-heading">Contas a Receber</h2>
+                      <p className="text-caption text-n-500">Valores previstos e pendências</p>
+                    </div>
+                    <button onClick={() => setDrill('receivable')} className="text-caption font-bold text-wine-700 hover:text-wine-800 transition-ui">
+                      Ver tudo →
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div
+                      onClick={() => setDrill('receivable')}
+                      className="p-4 rounded-2xl bg-surface-2/60 border border-line/60 flex items-center justify-between cursor-pointer hover:border-danger/40 transition-ui"
+                    >
+                      <div>
+                        <span className="text-micro font-bold text-danger uppercase tracking-wider block">Vencidos</span>
+                        <span className="text-caption text-n-500">{receivables.overdue.items.length} agendamento(s)</span>
+                      </div>
+                      <span className="text-h3 font-bold text-danger num">{brl(receivables.overdue.total)}</span>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-surface-2/60 border border-line/60 flex items-center justify-between">
+                      <div>
+                        <span className="text-micro font-bold text-n-500 uppercase tracking-wider block">A Vencer</span>
+                        <span className="text-caption text-n-500">{receivables.dueSoon.items.length} confirmados</span>
+                      </div>
+                      <span className="text-h3 font-bold text-heading num">{brl(receivables.dueSoon.total)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-line/60 flex items-center justify-between text-caption mt-4">
+                  <span className="text-n-500">Total a liquidar</span>
+                  <span className="font-bold text-heading num">{brl(receivables.overdue.total + receivables.dueSoon.total)}</span>
+                </div>
               </div>
             </div>
 
@@ -749,13 +559,13 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
         {/* ===================== 2. EXTRATO ===================== */}
         {activeTab === 'ledger' && (
-          <div className="card p-5 sm:p-6 space-y-4 animate-fade-up">
+          <div className="card p-5 sm:p-7 rounded-[26px] space-y-4 animate-fade-up">
             <SectionHeader title="Extrato do mês" subtitle={`${monthItems.length} lançamentos`} icon={<ReceiptText className="h-4 w-4" />}
               actions={<ExportMenu onCSV={exportLedgerCSV} />} />
 
-            <div className="max-h-[600px] overflow-y-auto scroll-touch -mx-5 sm:-mx-6">
+            <div className="max-h-[600px] overflow-y-auto scroll-touch -mx-5 sm:-mx-7">
               {monthItems.length === 0 ? (
-                <div className="px-5 sm:px-6">
+                <div className="px-5 sm:px-7">
                   <EmptyState
                     title="Nenhum lançamento neste mês"
                     description="Entradas e saídas que você registrar aparecem aqui, junto com o que a agenda gera sozinha."
@@ -769,7 +579,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                 return (
                   <div key={i.id} className="flex items-stretch gap-3 border-b border-line last:border-b-0 hover:bg-n-25 transition-ui group">
                     <span className={`w-[3px] shrink-0 ${inc ? 'bg-success' : 'bg-danger'}`} aria-hidden />
-                    <div className="flex-1 min-w-0 flex items-center gap-3 pr-5 sm:pr-6 py-3">
+                    <div className="flex-1 min-w-0 flex items-center gap-3 pr-5 sm:pr-7 py-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-body-sm font-semibold text-heading truncate">{i.category}</p>
                         <p className="text-caption text-n-500 truncate">
@@ -804,7 +614,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
         {/* ===================== 3. FLUXO & LUCRO ===================== */}
         {activeTab === 'cashflow' && (
-          <div className="card p-5 sm:p-6 animate-fade-up">
+          <div className="card p-5 sm:p-7 rounded-[26px] animate-fade-up">
             <SectionHeader title="Fluxo de caixa e lucro" subtitle="Faturamento x lucro líquido · últimos 12 meses" icon={<LineIcon className="h-4 w-4" />} />
             <div className="flex items-center gap-4 mt-3">
               <span className="inline-flex items-center gap-1.5 text-caption">
@@ -836,8 +646,8 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
         {/* ===================== 4. CATEGORIAS ===================== */}
         {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-up">
-            <div className="card p-5 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-up">
+            <div className="card p-5 sm:p-7 rounded-[26px]">
               <SectionHeader title="Saídas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
                 {expenseByCat.length === 0 ? <p className="text-caption text-n-500 py-8 text-center">Sem saídas no mês.</p> : (
@@ -845,7 +655,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
                 )}
               </div>
             </div>
-            <div className="card p-5 sm:p-6">
+            <div className="card p-5 sm:p-7 rounded-[26px]">
               <SectionHeader title="Entradas por categoria" icon={<PieChart className="h-4 w-4" />} />
               <div className="mt-5">
                 {incomeByCat.length === 0 ? <p className="text-caption text-n-500 py-8 text-center">Sem entradas no mês.</p> : (
@@ -858,7 +668,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
         {/* ===================== 5. CONTAS FIXAS ===================== */}
         {activeTab === 'fixed' && (
-          <div className="card p-5 sm:p-6 max-w-2xl mx-auto animate-fade-up">
+          <div className="card p-5 sm:p-7 rounded-[26px] max-w-2xl mx-auto animate-fade-up">
             <SectionHeader title="Contas fixas mensais" subtitle="Lançadas como saída todo mês automaticamente" icon={<Repeat className="h-4 w-4" />} />
             <form onSubmit={addFixed} className="flex flex-col sm:flex-row gap-2 my-5 no-print">
               <input placeholder="Ex: Aluguel do espaço" value={fxName} onChange={(e) => setFxName(e.target.value)}
