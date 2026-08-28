@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAADpTBlyHh2xfwgge';
 
-/** True quando o captcha está configurado (controla se o agendamento deve exigir token). */
-export const turnstileConfigured = !!SITE_KEY;
+export const turnstileConfigured = !!DEFAULT_SITE_KEY;
 
 declare global {
   interface Window {
@@ -33,25 +32,41 @@ function loadScript(): Promise<void> {
   return scriptLoading;
 }
 
+interface TurnstileWidgetProps {
+  onVerify: (token: string) => void;
+  siteKey?: string;
+  theme?: 'light' | 'dark' | 'auto';
+  className?: string;
+}
+
 /**
- * Widget do Cloudflare Turnstile. Quando NEXT_PUBLIC_TURNSTILE_SITE_KEY não está
- * configurada, não renderiza nada (modo desligado) — não atrapalha o agendamento.
- * Chama onVerify com o token quando a cliente passa no captcha (em geral, automático).
+ * Widget do Cloudflare Turnstile.
+ * Renderiza a verificação de segurança invisível / gerenciada da Cloudflare.
  */
-export default function TurnstileWidget({ onVerify }: { onVerify: (token: string) => void }) {
+export default function TurnstileWidget({
+  onVerify,
+  siteKey = DEFAULT_SITE_KEY,
+  theme = 'auto',
+  className = '',
+}: TurnstileWidgetProps) {
   const ref = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!SITE_KEY || !ref.current) return;
+    if (!siteKey || !ref.current) return;
     let cancelled = false;
 
     loadScript().then(() => {
       if (cancelled || !ref.current || !window.turnstile) return;
-      widgetId.current = window.turnstile.render(ref.current, {
-        sitekey: SITE_KEY,
-        callback: (token: string) => onVerify(token),
-      });
+      try {
+        widgetId.current = window.turnstile.render(ref.current, {
+          sitekey: siteKey,
+          theme: theme,
+          callback: (token: string) => onVerify(token),
+        });
+      } catch (err) {
+        console.warn('[TurnstileWidget]', err);
+      }
     });
 
     return () => {
@@ -60,8 +75,8 @@ export default function TurnstileWidget({ onVerify }: { onVerify: (token: string
         try { window.turnstile.remove(widgetId.current); } catch { /* noop */ }
       }
     };
-  }, [onVerify]);
+  }, [onVerify, siteKey, theme]);
 
-  if (!SITE_KEY) return null;
-  return <div ref={ref} className="flex justify-center my-3" />;
+  if (!siteKey) return null;
+  return <div ref={ref} className={`flex justify-center my-2.5 min-h-[45px] ${className}`} />;
 }

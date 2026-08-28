@@ -9,6 +9,7 @@ import { loginAction, loginDemoAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import InstallApp from '@/components/pwa/InstallApp';
+import TurnstileWidget from '@/components/booking/TurnstileWidget';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'pro' | 'manager'>('pro');
   const [demoLoading, setDemoLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const handleDemo = async () => {
     setDemoLoading(true);
@@ -123,7 +125,7 @@ export default function LoginPage() {
 
         {/* Card de Login */}
         <div className="card-elevated glow-wine p-7 md:p-9">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
                 Endereço de E-mail
@@ -144,17 +146,9 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider">
-                  Senha de Acesso
-                </label>
-                <Link
-                  href="/redefinir-senha"
-                  className="text-caption font-semibold text-wine-700 hover:text-wine-800 hover:underline transition-colors"
-                >
-                  Esqueci a senha
-                </Link>
-              </div>
+              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
+                Senha de Acesso
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <Lock className="h-4 w-4 text-n-600" />
@@ -174,7 +168,20 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+
+              {/* Link de Esqueci a Senha embaixo do campo de senha */}
+              <div className="flex justify-end mt-2">
+                <Link
+                  href="/redefinir-senha"
+                  className="text-caption font-semibold text-wine-700 hover:text-wine-800 hover:underline transition-colors"
+                >
+                  Esqueci a senha
+                </Link>
+              </div>
             </div>
+
+            {/* Widget Cloudflare Turnstile (Proteção Anti-Bot) */}
+            <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
 
             <button
               type="submit"
