@@ -295,3 +295,37 @@ export function subscriptionEndedEmail(p: { name?: string | null }): EmailConten
     }),
   };
 }
+
+/** Solicitação de redefinição de senha. */
+export function passwordResetEmail(p: {
+  name?: string | null;
+  resetUrl: string;
+}): EmailContent {
+  const oi = primeiroNome(p.name);
+
+  return {
+    subject: 'Redefinição de senha da sua conta Lume',
+    text: [
+      `Oi, ${oi}!`,
+      '',
+      'Recebemos uma solicitação para redefinir a senha de acesso à sua conta na Lume.',
+      '',
+      `Clique no link abaixo para criar uma nova senha (válido por 1 hora):`,
+      p.resetUrl,
+      '',
+      'Se não foi você quem pediu a troca, pode ignorar esta mensagem com segurança — sua senha atual continua a mesma.',
+      '',
+      'Equipe Lume',
+    ].join('\n'),
+    html: layout({
+      titulo: 'Redefinição de senha',
+      intro: `Oi, ${escape(oi)}! Recebemos um pedido para criar uma nova senha para a sua conta na Lume.`,
+      corpo: [
+        'Clique no botão abaixo para definir sua nova senha. Por segurança, este link é de <strong>uso único e expira em 1 hora</strong>.',
+        'Se não foi você quem solicitou, pode ignorar este e-mail tranquilamente — sua senha atual continua protegida.',
+      ],
+      botao: { texto: 'Criar nova senha', url: p.resetUrl },
+    }),
+  };
+}
+

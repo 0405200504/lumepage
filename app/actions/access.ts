@@ -1,10 +1,11 @@
 'use server';
 
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
-import { redeemAccessToken, logAccessEvent } from '@/lib/access-tokens';
+import { redeemAccessToken, createAccessToken, logAccessEvent, requestMeta } from '@/lib/access-tokens';
 import { authService } from '@/lib/auth/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { requestMeta } from '@/lib/access-tokens';
+import { sendMail } from '@/lib/mail';
+import { passwordResetEmail } from '@/lib/mail-templates';
 
 /**
  * AÇÕES DE ACESSO DA PRÓPRIA PROFISSIONAL (não são do admin)
@@ -104,3 +105,69 @@ export async function changeOwnPasswordAction(currentPassword: string, newPasswo
   await logAccessEvent({ professionalId: session.professional_id, email: session.email, method: 'password' });
   return { success: true };
 }
+
+/**
+ * Solicita redefinição de senha por e-mail (autoatendimento da tela de login).
+ * Envia o e-mail via Resend se o e-mail existir no banco, mas sempre devolve resposta
+ * neutra para impedir enumeração de contas (best-practice de segurança).
+ */
+export async function requestPasswordResetAction(email: string): Promise<{ success: boolean; error?: string; message?: string }> {
+  if (!isSupabaseConfigured) return { success: false, error: 'Serviço indisponível no momento.' };
+
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, error: 'Informe um endereço de e-mail válido.' };
+  }
+
+  // Rate-limit por IP para evitar spam de envio
+  const { ip } = await requestMeta();
+  const rl = await rateLimit(`forgot-pwd:${ip ?? 'anon'}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return { success: false, error: `Muitas solicitações. Aguarde ${rl.retryAfterSeconds}s para tentar novamente.` };
+  }
+
+  try {
+    // Busca perfil associado ao e-mail
+    const { data: profile } = await db().from('profiles')
+      .select('id, professional_id, name, email')
+      .ilike('email', cleanEmail)
+      .limit(1)
+      .maybeSingle();
+
+    if (profile && profile.professional_id) {
+      const tokenRes = await createAccessToken({
+        professionalId: profile.professional_id,
+        profileId: profile.id,
+        kind: 'reset',
+        createdBy: 'self_service',
+      });
+
+      if (tokenRes.success && tokenRes.data) {
+        const mailContent = passwordResetEmail({
+          name: profile.name,
+          resetUrl: tokenRes.data.url,
+        });
+
+        await sendMail({
+          to: profile.email,
+          subject: mailContent.subject,
+          text: mailContent.text,
+          html: mailContent.html,
+        });
+      }
+    }
+
+    // Retorna mensagem positiva genérica para segurança contra enumeração
+    return {
+      success: true,
+      message: 'Se este e-mail estiver cadastrado, enviamos um link seguro para você redefinir sua senha.',
+    };
+  } catch (err) {
+    console.error('[requestPasswordResetAction]', err);
+    return {
+      success: true,
+      message: 'Se este e-mail estiver cadastrado, enviamos um link seguro para você redefinir sua senha.',
+    };
+  }
+}
+
