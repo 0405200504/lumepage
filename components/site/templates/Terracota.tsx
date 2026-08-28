@@ -58,7 +58,7 @@ const CSS = `
 @media (min-width: 640px) { .t-terra .btn-block { display: inline-block; width: auto; } }
 
 /* ── Topo ── */
-.t-terra .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(8px); border-bottom: 1px solid var(--lume-line); }
+.t-terra .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-terra .nav-in { display: flex; align-items: center; justify-content: space-between; height: 66px; }
 .t-terra .brand { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 23px; font-weight: 600; letter-spacing: .06em; color: var(--lume-primary-text); display: flex; align-items: center; gap: 10px; }
 .t-terra .brand img { height: 34px; width: auto; object-fit: contain; }

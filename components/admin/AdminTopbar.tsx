@@ -79,7 +79,7 @@ export function AdminTopbar({
   const crumbs = buildCrumbs(pathname, title);
 
   return (
-    <header className="sticky top-0 z-30 glass hairline-b select-none">
+    <header className="sticky top-0 z-30 bg-surface border-b border-line select-none">
       <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-4">
         <nav aria-label="Trilha de navegação" className="min-w-0 flex-1 pl-12 lg:pl-0">
           <ol className="flex items-center gap-1 text-caption font-bold text-n-600">

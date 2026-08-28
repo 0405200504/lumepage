@@ -16,7 +16,7 @@ export default function DemoEsteticaPage() {
     <div className="bg-n-50 min-h-screen text-n-800 font-sans selection:bg-lima selection:text-wine-700 select-none">
       
       {/* Barra de Navegação */}
-      <header className="sticky top-0 z-40 bg-n-50/80 backdrop-blur-md border-b border-n-200/50 px-6 py-4">
+      <header className="sticky top-0 z-40 bg-n-50 border-b border-n-200 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 bg-wine-700 text-lima flex items-center justify-center font-black rounded-xl text-lg shadow-sm">

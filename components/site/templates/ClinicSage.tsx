@@ -58,7 +58,7 @@ const CSS = `
 @media (min-width: 640px) { .t-sage .btn-block { width: auto; } }
 
 /* ── Topo ── */
-.t-sage .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(12px); border-bottom: 1px solid var(--lume-line); }
+.t-sage .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-sage .nav-in { display: flex; align-items: center; justify-content: space-between; height: 70px; }
 .t-sage .brand { font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .t-sage .brand img { height: 36px; width: auto; object-fit: contain; }
