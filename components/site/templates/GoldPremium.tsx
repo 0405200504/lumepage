@@ -57,7 +57,7 @@ const CSS = `
 @media (min-width: 640px) { .t-gold .btn-block { width: auto; } }
 
 /* ── Topo ── */
-.t-gold .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(10px); border-bottom: 1px solid var(--lume-line); }
+.t-gold .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-gold .nav-in { display: flex; align-items: center; justify-content: space-between; height: 68px; }
 .t-gold .brand { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; letter-spacing: .16em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
 .t-gold .brand img { height: 34px; width: auto; object-fit: contain; }

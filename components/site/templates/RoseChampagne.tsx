@@ -58,7 +58,7 @@ const CSS = `
 @media (min-width: 640px) { .t-rose .btn-block { width: auto; } }
 
 /* ── Topo ── */
-.t-rose .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(12px); border-bottom: 1px solid var(--lume-line); }
+.t-rose .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-rose .nav-in { display: flex; align-items: center; justify-content: space-between; height: 74px; }
 .t-rose .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 600; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
 .t-rose .brand em { font-style: italic; color: var(--lume-primary-text); }

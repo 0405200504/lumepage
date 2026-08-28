@@ -121,9 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
   return (
     <header
       data-scrolled={scrolled || undefined}
-      className="sticky top-0 z-30 select-none pt-safe transition-ui
-        data-[scrolled]:border-b data-[scrolled]:border-line
-        data-[scrolled]:glass"
+      className="sticky top-0 z-30 select-none pt-safe transition-ui bg-surface border-b border-line shadow-xs"
     >
       <div
         className="flex items-center gap-3 px-4 lg:px-8 max-w-[1400px] mx-auto w-full

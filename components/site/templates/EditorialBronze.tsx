@@ -54,7 +54,7 @@ const CSS = `
 .t-bronze .btn-light { border-color: rgba(255,255,255,.7); color: #fff; }
 
 /* ── Topo ── */
-.t-bronze .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(10px); }
+.t-bronze .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-bronze .nav-in { display: flex; align-items: center; justify-content: space-between; height: 72px; border-bottom: 1px solid var(--lume-line); }
 .t-bronze .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 21px; letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
 .t-bronze .brand img { height: 34px; width: auto; object-fit: contain; }

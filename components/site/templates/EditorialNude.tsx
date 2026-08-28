@@ -61,7 +61,7 @@ const CSS = `
 @media (min-width: 640px) { .t-nude .btn-block { width: auto; } }
 
 /* ── Topo ── */
-.t-nude .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg-blur); backdrop-filter: blur(10px); border-bottom: 1px solid var(--lume-line); }
+.t-nude .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-nude .nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 .t-nude .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 19px; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
 .t-nude .brand em { font-style: italic; color: var(--lume-primary-text); }
