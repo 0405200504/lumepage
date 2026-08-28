@@ -144,9 +144,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
-                Senha de Acesso
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider">
+                  Senha de Acesso
+                </label>
+                <Link
+                  href="/redefinir-senha"
+                  className="text-caption font-semibold text-wine-700 hover:text-wine-800 hover:underline transition-colors"
+                >
+                  Esqueci a senha
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <Lock className="h-4 w-4 text-n-600" />
