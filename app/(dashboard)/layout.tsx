@@ -154,10 +154,7 @@ export default async function DashboardLayout({
       {!isTrialExpired && !forcePasswordChange && (
         <OnboardingTour
           firstName={session.name?.split(' ')[0]}
-          slug={slug}
           professionalId={session.professional_id ?? undefined}
-          plan={subscriptionPlan}
-          enforcePlan={enforcePlan}
         />
       )}
     </div>
