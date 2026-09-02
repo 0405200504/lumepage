@@ -37,6 +37,7 @@ export interface Professional {
   subscription_plan?: 'start' | 'pro' | 'premium' | null;
   subscription_ends_at?: string | null; // vencimento do acesso pago (admin) — requer migração v28
   onboarding_completed_at?: string | null; // null = ainda falta completar o cadastro (requer migração v38)
+  tour_completed_at?: string | null;       // null = ainda não fez o tutorial de boas-vindas (requer migração v40)
   created_at: string;
   updated_at: string;
 }

@@ -5,16 +5,22 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { Portal } from '../ui/Portal';
 import { isDemo } from '@/lib/demo';
+import { marcarTourConcluidoAction } from '@/app/actions/professional';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 
-/** Prefixo da chave de persistência. A chave final é escopada por profissional
- *  (`lume_onboarding_v1:{professionalId}`) para que cada conta nova seja tratada
- *  como primeiro contato, mesmo que outra conta já tenha visto o tour no mesmo
- *  navegador.
+/** Prefixo da chave de persistência DO APARELHO. A chave final é escopada por
+ *  profissional (`lume_onboarding_v1:{professionalId}`) para que duas contas no
+ *  mesmo navegador não herdem o tour uma da outra.
  *
  *  O valor é `'done'` (concluído ou pulado) ou o ÍNDICE do passo em que ela
  *  parou — o tour dá uma volta pelo menu inteiro e ninguém é obrigado a fazer
- *  tudo de uma sentada. Voltando depois, ele retoma de onde parou. */
+ *  tudo de uma sentada. Voltando depois, ele retoma de onde parou.
+ *
+ *  ⚠️ Isto NÃO é mais quem decide se o tour abre. Quem decide é
+ *  `professionals.tour_completed_at`, que chega pela prop `tourCompleted` — o
+ *  localStorage sozinho fazia a mesma profissional ser tratada como primeira
+ *  viagem toda vez que trocava de aparelho ou limpava o navegador. Aqui ficou
+ *  só o "em que passo eu parei", que é mesmo coisa de aparelho. */
 const STORAGE_PREFIX = 'lume_onboarding_v1';
 /** Evento global para reabrir o tour manualmente (ex.: botão "?" no Header). */
 export const OPEN_ONBOARDING_EVENT = 'lume:open-onboarding';
@@ -57,6 +63,11 @@ interface Rect { top: number; left: number; width: number; height: number; }
 interface OnboardingTourProps {
   firstName?: string;
   professionalId?: string;
+  /** Veio do banco (`professionals.tour_completed_at`):
+   *  · `true`      → já fez em algum aparelho, não abre sozinho;
+   *  · `false`     → conta nova, primeiro login: abre;
+   *  · `undefined` → banco ainda sem a migração v40, vale o localStorage. */
+  tourCompleted?: boolean;
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -163,7 +174,7 @@ function buildSteps(firstName?: string): Step[] {
   ];
 }
 
-export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, professionalId }) => {
+export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, professionalId, tourCompleted }) => {
   const router = useRouter();
   const pathname = usePathname();
   const storageKey = `${STORAGE_PREFIX}:${professionalId || 'anon'}`;
@@ -191,13 +202,27 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, profe
    *  índice — senão rever o tour pelo "?" faria ele abrir sozinho de novo no
    *  próximo login. */
   const doneRef = useRef(false);
+  /** O carimbo na conta é uma vez só por montagem — `persist('done')` é
+   *  chamado tanto pelo botão de fechar quanto pelo passo final. */
+  const marcadoNaContaRef = useRef(false);
+
+  /** Grava na conta que o tour acabou. É o que faz ele NÃO voltar quando ela
+   *  entra por outro aparelho. Falha em silêncio de propósito: o pior caso é
+   *  o tour reaparecer uma vez, não uma tela de erro. */
+  const marcarNaConta = useCallback(() => {
+    if (!professionalId || isDemo(professionalId) || marcadoNaContaRef.current) return;
+    marcadoNaContaRef.current = true;
+    void marcarTourConcluidoAction(professionalId);
+  }, [professionalId]);
 
   const persist = useCallback((value: string) => {
     // Na conta demo NÃO persiste: o tour precisa reaparecer para o próximo
     // visitante que entrar com a conta de exemplo.
     if (isDemo(professionalId)) return;
     try { localStorage.setItem(storageKey, value); } catch { /* modo privativo */ }
-  }, [storageKey, professionalId]);
+    // O índice do passo é do aparelho; "acabou" é da conta.
+    if (value === 'done') marcarNaConta();
+  }, [storageKey, professionalId, marcarNaConta]);
 
   const finish = useCallback(() => {
     doneRef.current = true;
@@ -210,16 +235,26 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, profe
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
+    // A CONTA tem a palavra final. Sem isto, entrar pelo celular depois de ter
+    // feito o tour no computador reabria tudo do zero.
+    if (tourCompleted === true) { doneRef.current = true; return; }
+
     let saved = 'done';
     try { saved = localStorage.getItem(storageKey) ?? ''; } catch { /* ignore */ }
-    if (saved === 'done') { doneRef.current = true; return; }
+    if (saved === 'done') {
+      doneRef.current = true;
+      // Fez o tour neste aparelho antes de o carimbo existir no banco (ou a
+      // gravação falhou naquele dia): registra agora, para os outros aparelhos.
+      if (tourCompleted === false) marcarNaConta();
+      return;
+    }
     const resumeAt = Number(saved);
     const t = setTimeout(() => {
       if (Number.isFinite(resumeAt) && resumeAt > 0 && resumeAt < total) setIndex(resumeAt);
       setVisible(true);
     }, 600);
     return () => clearTimeout(t);
-  }, [storageKey, professionalId, total]);
+  }, [storageKey, professionalId, total, tourCompleted, marcarNaConta]);
 
   // Reabrir manualmente (botão "?" da topbar): retoma de onde parou; quem já
   // fez o tour inteiro recomeça do começo, que é o que "rever" quer dizer.

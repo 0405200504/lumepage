@@ -21,6 +21,36 @@ import { validateSlug } from '@/lib/site/slug';
 /** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
 const authorizeAction = authorizeProfessional;
 
+/**
+ * Marca o tutorial de boas-vindas como visto — na CONTA, não no aparelho.
+ *
+ * Antes isso morava só no localStorage, então quem fazia o tour no computador
+ * e depois entrava pelo celular era tratada como primeira viagem de novo. A
+ * memória do navegador continua existindo (é ela que guarda em qual passo a
+ * pessoa parou), mas quem decide se o tour abre sozinho é este carimbo.
+ *
+ * Banco sem a migração v40: o upsert repete sem a coluna e devolve sucesso —
+ * volta a valer o comportamento antigo, por aparelho, em vez de dar erro.
+ */
+export async function marcarTourConcluidoAction(professionalId: string) {
+  try {
+    if (!professionalId) return { success: false };
+    if (isDemo(professionalId)) return { success: true };
+    if (!await authorizeAction(professionalId)) {
+      return { success: false, error: 'Não autorizado.' };
+    }
+    await dbService.upsertProfessional({
+      id: professionalId,
+      tour_completed_at: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch {
+    // Não vale quebrar a tela por causa do tutorial: se não gravou, ele
+    // reaparece no próximo aparelho e a pessoa fecha de novo.
+    return { success: false };
+  }
+}
+
 // 1. Atualizar Cadastro do Profissional
 export async function updateProfessionalAction(professionalId: string, data: Partial<Professional>) {
   try {

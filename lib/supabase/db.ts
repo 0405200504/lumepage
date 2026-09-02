@@ -38,6 +38,10 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
     || /column .* does not exist|could not find the '.*' column/i.test(error.message || '');
 }
 
+/** Colunas de professionals que dependem de migração manual. Se o banco ainda
+ *  não as tem, a escrita repete sem elas em vez de derrubar a operação. */
+const OPTIONAL_PRO_COLUMNS = ['onboarding_completed_at', 'tour_completed_at'] as const;
+
 function warnMigration(table: string) {
   console.warn(`[${table}] Tabela ausente — rode supabase/migration_v3.sql no Supabase para ativar o módulo.`);
 }
@@ -170,11 +174,14 @@ export const dbService = {
         .eq('id', id)
         .select()
         .single();
-      // Banco sem a migração v38: salva o resto da edição em vez de perder tudo.
-      if (error && isMissingColumn(error) && 'onboarding_completed_at' in patch) {
-        const { onboarding_completed_at, ...resto } = patch as typeof patch & { onboarding_completed_at?: string | null };
-        void onboarding_completed_at;
-        warnMigration('professionals.onboarding_completed_at');
+      // Banco sem a migração v38/v40: salva o resto da edição em vez de perder
+      // tudo. Cada coluna opcional entra em OPTIONAL_PRO_COLUMNS e some daqui
+      // sozinha enquanto a migração dela não tiver sido rodada.
+      if (error && isMissingColumn(error) && OPTIONAL_PRO_COLUMNS.some((c) => c in patch)) {
+        const resto = { ...patch } as Record<string, unknown>;
+        for (const col of OPTIONAL_PRO_COLUMNS) {
+          if (col in resto) { delete resto[col]; warnMigration(`professionals.${col}`); }
+        }
         ({ data: result, error } = await getDb()
           .from('professionals')
           .update({ ...resto, updated_at: new Date().toISOString() })
