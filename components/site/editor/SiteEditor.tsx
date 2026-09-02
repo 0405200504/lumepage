@@ -19,7 +19,7 @@ import {
   Palette, LayoutTemplate, UserRound, Type, Sparkles, Images, GitCompareArrows,
   MessageSquareQuote, HelpCircle, ListOrdered, Link2, Smartphone, Monitor,
   ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight, FlaskConical,
-  Wand2, RotateCcw,
+  Wand2, RotateCcw, Pencil, MousePointerClick,
 } from 'lucide-react';
 import type { SiteConfig, SiteStatus } from '@/types/site';
 import type { PublicService } from '../types';
@@ -33,8 +33,10 @@ import {
 import { SiteRenderer } from '../SiteRenderer';
 import { PreviewFrame, type PreviewDevice } from './PreviewFrame';
 import { TemplatePicker } from './TemplatePicker';
-import { QuickSetupModal } from './QuickSetupModal';
+import { StepByStepWizardModal } from './StepByStepWizardModal';
+import { QuickImageModal } from './QuickImageModal';
 import { ResetModal } from './ResetModal';
+import type { VisualElementPayload } from './VisualEditorContext';
 import { FieldGroup, TextField, TextArea, ImageField } from './fields';
 import {
   IdentityPanel, ThemePanel, ContentPanel, ServicesPanel, GalleryPanel,
@@ -89,6 +91,19 @@ export function SiteEditor({
   const [tab, setTab] = useState<TabId>('identity');
   const [device, setDevice] = useState<PreviewDevice>('mobile');
 
+  const [canvaMode, setCanvaMode] = useState(true);
+  const [quickImageState, setQuickImageState] = useState<{
+    isOpen: boolean;
+    fieldId: string;
+    label: string;
+    currentUrl?: string;
+    imageKind?: string;
+  }>({
+    isOpen: false,
+    fieldId: '',
+    label: '',
+  });
+
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
 
@@ -114,6 +129,34 @@ export function SiteEditor({
     });
     dirty.current = true;
   }, []);
+
+  /** Handler de clique em elemento no preview estilo Canva */
+  const handleVisualElementClick = useCallback((payload: VisualElementPayload) => {
+    setTab(payload.tab);
+    if (payload.kind === 'image') {
+      setQuickImageState({
+        isOpen: true,
+        fieldId: payload.fieldId,
+        label: payload.label,
+        currentUrl: payload.currentValue,
+        imageKind: payload.imageKind || 'geral',
+      });
+    } else {
+      success('Elemento selecionado ✏️', `Editando: ${payload.label}`);
+    }
+  }, [success]);
+
+  /** Atualiza imagem com 1 clique vinda do popover rápido */
+  const handleQuickUpdateImage = useCallback((fieldId: string, newUrl: string) => {
+    set(d => {
+      if (fieldId === 'identity.photoUrl') d.identity.photoUrl = newUrl;
+      else if (fieldId === 'identity.logoUrl') d.identity.logoUrl = newUrl;
+      else if (fieldId === 'content.hero.imageUrl') d.content.hero.imageUrl = newUrl;
+      else if (fieldId === 'content.about.imageUrl') d.content.about.imageUrl = newUrl;
+      else if (fieldId === 'seo.ogImageUrl') d.seo.ogImageUrl = newUrl;
+    });
+    success('Foto atualizada! 📸', 'A alteração foi aplicada na sua página.');
+  }, [set, success]);
 
   /** Salva o rascunho. Recebe o estado atual por parâmetro — nada de ref lido
    *  na renderização, e nada de gravar uma versão velha por closure defasada. */
@@ -321,9 +364,10 @@ export function SiteEditor({
         )}
 
         {/* Modal do Assistente durante Onboarding */}
-        <QuickSetupModal
+        <StepByStepWizardModal
           isOpen={isWizardOpen}
           onClose={() => setIsWizardOpen(false)}
+          professionalId={professionalId}
           onComplete={handleCompleteWizard}
           initialTemplateId={templateId}
           initialConfig={config}
@@ -529,10 +573,26 @@ export function SiteEditor({
             de marca DELA. A moldura existe justamente para dizer "isto aqui é
             outro contexto". */}
         <div className="rounded-hero border border-line bg-n-100 overflow-hidden">
-          <div className="flex items-center justify-between gap-2 border-b border-n-200 bg-white px-4 py-2.5">
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-n-600">
-              Prévia ao vivo · {meta.name}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-n-200 bg-white px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-n-600">
+                Prévia ao vivo · {meta.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCanvaMode(!canvaMode)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                  canvaMode
+                    ? 'bg-wine-700 text-white shadow-2xs'
+                    : 'bg-n-100 text-n-600 hover:bg-n-200'
+                }`}
+                title="Clique nos textos e fotos da prévia para editar diretamente"
+              >
+                <Pencil className="h-3 w-3" />
+                <span>{canvaMode ? 'Modo Canva: Ativo' : 'Ativar Modo Canva'}</span>
+              </button>
+            </div>
+
             <div className="flex items-center gap-1 rounded-xl bg-n-100 border border-n-200 p-0.5">
               {([
                 { id: 'mobile' as const, icon: Smartphone, label: 'Celular' },
@@ -557,24 +617,43 @@ export function SiteEditor({
           </div>
 
           <div className="p-4">
-            <PreviewFrame device={device} fontsHref={meta.fontsHref}>
+            <PreviewFrame
+              device={device}
+              fontsHref={meta.fontsHref}
+              canvaMode={canvaMode}
+              onElementClick={handleVisualElementClick}
+            >
               {preview}
             </PreviewFrame>
             <p className="text-[10px] text-n-400 text-center mt-3 leading-relaxed">
-              Na prévia os botões de agendar não abrem o formulário. Publique e abra sua página
-              para testar o agendamento de ponta a ponta.
+              {canvaMode
+                ? '💡 Dica: Clique em qualquer texto ou foto acima para editar diretamente.'
+                : 'Na prévia os botões de agendar não abrem o formulário. Publique e abra sua página para testar o agendamento de ponta a ponta.'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Modais de Facilitação e Reset */}
-      <QuickSetupModal
+      {/* Modais de Facilitação, Troca Rápida de Imagem e Reset */}
+      <StepByStepWizardModal
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
+        professionalId={professionalId}
         onComplete={handleCompleteWizard}
         initialTemplateId={templateId}
         initialConfig={config}
+      />
+
+      <QuickImageModal
+        isOpen={quickImageState.isOpen}
+        onClose={() => setQuickImageState(prev => ({ ...prev, isOpen: false }))}
+        label={quickImageState.label}
+        fieldId={quickImageState.fieldId}
+        currentUrl={quickImageState.currentUrl}
+        imageKind={quickImageState.imageKind}
+        professionalId={professionalId}
+        onUpdateImage={handleQuickUpdateImage}
+        onError={msg => toastError('Imagem', msg)}
       />
 
       <ResetModal
