@@ -908,6 +908,162 @@ select.field-input { padding-right: 34px; }
 .settle-in { animation: settle-in var(--dur-slow) var(--ease-out) both; }
 
 /* =========================================================
+   ABERTURA DO APP · a cortina de marca
+   ---------------------------------------------------------
+   Marcação em components/ui/AppSplash. É a primeira coisa que
+   a profissional vê ao tocar no ícone do app instalado, então
+   vale uma regra só: NADA que atrase o primeiro quadro. Sem
+   backdrop-filter, sem sombra, sem fonte externa, sem imagem
+   de rede — cor, máscara e gradiente, que o compositor resolve
+   sozinho.
+
+   A saída é `animation` com fill-mode `both`, não JS: se a
+   hidratação engasgar, a cortina some no tempo certo do mesmo
+   jeito. O atributo `data-splash` no <html> é o único
+   acoplamento com o script — 'off' remove, 'skip' abrevia
+   quando ela toca na tela.
+
+   Os tempos aqui e o SPLASH_MS de SplashRunner.tsx são o mesmo
+   relógio: mudou um, mude o outro.
+   ========================================================= */
+#lume-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  /* Mesma família do ícone do app e do background_color do manifesto: a
+     splash nativa do Android emenda nesta sem piscar de cor. */
+  background: radial-gradient(120% 90% at 50% 38%, #7C1B2C 0%, #4E101E 44%, #240610 100%);
+  animation: lume-splash-out 480ms var(--ease-in) 1180ms both;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+html[data-splash='off'] #lume-splash { display: none; }
+html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear both; }
+
+/* A visibilidade no último quadro é o que impede a cortina invisível de
+   continuar comendo os toques do painel enquanto o JS não a remove. */
+@keyframes lume-splash-out {
+  0%   { opacity: 1; visibility: visible; }
+  99%  { opacity: 0; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+.lume-splash__stage {
+  display: grid;
+  justify-items: center;
+  gap: clamp(14px, 3.5vw, 20px);
+  /* A saída "avança" um passo: a marca cresce meio ponto enquanto some, e a
+     sensação é de entrar no app, não de uma tela que apagou. */
+  animation: lume-splash-zoom 480ms var(--ease-in) 1180ms both;
+}
+@keyframes lume-splash-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.05); }
+}
+
+.lume-splash__wordmark {
+  position: relative;
+  width: min(58vw, 268px);
+  aspect-ratio: 1125 / 398;   /* proporção real do wordmark */
+}
+
+/* Halo — a luz acendendo por trás do traço. */
+.lume-splash__glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;   /* propriedade separada de propósito: o bloco
+                             global de reduced-motion zera `transform`, e a
+                             centralização não pode ir junto */
+  width: 300%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(255, 233, 205, 0.30) 0%,
+    rgba(255, 190, 150, 0.11) 46%,
+    rgba(255, 170, 130, 0) 72%);
+  animation: lume-splash-glow 1660ms var(--ease-out) both;
+}
+@keyframes lume-splash-glow {
+  0%   { opacity: 0; scale: 0.5; }
+  40%  { opacity: 1; scale: 1; }
+  100% { opacity: 0.55; scale: 1.16; }
+}
+
+/* O wordmark é MÁSCARA, não imagem: o preenchimento é um gradiente que
+   desliza, então a luz atravessa o traço por dentro em vez de passar um
+   brilho por cima da caixa retangular. A arte chega em --lume-mark. */
+.lume-splash__mark {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: var(--lume-mark);
+          mask-image: var(--lume-mark);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+  -webkit-mask-position: center;
+          mask-position: center;
+  background-image: linear-gradient(100deg,
+    rgba(253, 247, 236, 0.52) 0%,
+    rgba(253, 247, 236, 0.92) 33%,
+    #FFFCF4 46%,
+    rgba(253, 247, 236, 0.92) 59%,
+    rgba(253, 247, 236, 0.52) 100%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation:
+    lume-splash-mark 760ms var(--ease-out) 60ms both,
+    lume-splash-sweep 1150ms var(--ease-inout) 240ms both;
+}
+@keyframes lume-splash-mark {
+  from { opacity: 0; transform: translateY(10px) scale(0.965); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes lume-splash-sweep {
+  from { background-position: 128% 0; }
+  to   { background-position: -55% 0; }
+}
+
+/* A estrelinha que já existe no logo, entre o "m" e o "e", piscando quando
+   a luz passa por ela. As coordenadas são as da arte — mexeu no logo,
+   confira aqui. */
+.lume-splash__spark {
+  position: absolute;
+  left: 56%;
+  top: 72%;
+  translate: -50% -50%;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 236, 205, 0.34) 34%,
+    rgba(255, 220, 180, 0) 68%);
+  animation: lume-splash-spark 900ms var(--ease-out) 600ms both;
+}
+@keyframes lume-splash-spark {
+  0%   { opacity: 0; scale: 0.25; }
+  35%  { opacity: 1; scale: 1; }
+  100% { opacity: 0; scale: 1.7; }
+}
+
+/* Fio de luz que se abre sob a marca — o mesmo gesto da hairline da LP. */
+.lume-splash__line {
+  width: min(44vw, 200px);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(253, 247, 236, 0.62), transparent);
+  animation: lume-splash-line 820ms var(--ease-out) 420ms both;
+}
+@keyframes lume-splash-line {
+  from { opacity: 0; transform: scaleX(0); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+
+/* =========================================================
    GRÁFICOS · animações de entrada
    ---------------------------------------------------------
    Cada gráfico anima UMA vez, na montagem. O `prefers-reduced-motion`

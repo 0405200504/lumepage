@@ -13,6 +13,7 @@ import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
 import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
+import { AppSplash } from '@/components/ui/AppSplash';
 import { mustChangePassword } from '@/lib/auth/must-change-password';
 import { professionalPrecisaOnboarding } from '@/lib/auth/onboarding';
 import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
@@ -97,6 +98,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-bg">
+      {/* Cortina de abertura: só na primeira entrada de cada sessão, e some
+          sozinha por CSS. Fica ANTES de tudo porque precisa estar no HTML do
+          primeiro paint — inclusive por cima do paywall e da troca de senha,
+          que são o que a profissional vê logo depois dela. */}
+      <AppSplash />
+
       {isTrialExpired && <PlanosOverlay identity={checkoutIdentity} />}
       {forcePasswordChange && <ForcePasswordChange />}
 

@@ -15,6 +15,7 @@ import { LumeLogo } from '../ui/LumeLogo';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/StatusPill';
+import { SplashSoundToggle } from '../ui/SplashSoundToggle';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
 import { OPEN_AI_EVENT } from '../ai/AIAgentChat';
 
@@ -276,6 +277,10 @@ const NavFooter: React.FC<{
         <ExternalLink className="h-5 w-5 shrink-0" />
         <span className="flex-1 truncate">Ver página pública</span>
       </Link>
+
+      {/* Só na versão com rótulo: no rail fechado seria mais um ícone mudo
+          disputando espaço com os destinos. */}
+      <SplashSoundToggle />
 
       <div className="flex items-center gap-3 h-14 px-3 rounded-chip bg-surface-2">
         <Avatar name={displayName} size="sm" />
