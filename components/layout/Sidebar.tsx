@@ -54,8 +54,8 @@ const GROUPS: { title: string; links: NavLink[] }[] = [
     links: [
       { href: '/dashboard/clients', label: 'Contatos', icon: Contact },
       { href: '/dashboard/anamnese', label: 'Fichas de anamnese', icon: ClipboardList },
-      { href: '/dashboard/whatsapp/conversas', label: 'Conversas', icon: MessageCircle },
-      { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: Smartphone },
+      { href: '/dashboard/whatsapp/conversas', label: 'WhatsApp', icon: MessageCircle },
+      { href: '/dashboard/whatsapp', label: 'Mensagens automáticas', icon: Smartphone },
       ...(AI_ATTENDANCE_ENABLED ? [{ href: '/dashboard/pending', label: 'Atendimento IA', icon: Bot }] : []),
     ],
   },

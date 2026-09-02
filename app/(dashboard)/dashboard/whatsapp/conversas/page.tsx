@@ -6,7 +6,7 @@ import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 import { checkUazapiStatus } from '@/lib/uazapi';
 
 export const metadata = {
-  title: 'Conversas | Lume',
+  title: 'WhatsApp | Lume',
   description: 'Leia e responda o WhatsApp da sua cliente sem sair do Lume.',
 };
 

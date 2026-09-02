@@ -80,7 +80,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
       {/* Sem card dentro de card: a moldura cinza aninhada era o que fazia o
           bloco de notas parecer uma caixa dentro de outra. Uma hairline
           superior separa o formulário da lista, e basta. */}
-      <form onSubmit={add} className="space-y-3 border-t border-line pt-4">
+      <form onSubmit={add} data-tour="module-action" className="space-y-3 border-t border-line pt-4">
         {/* Passo 1: o que anotar */}
         <div>
           <label className="mono-micro text-n-500 block mb-1.5">

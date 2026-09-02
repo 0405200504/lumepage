@@ -201,14 +201,14 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
         <MessageCircle className="h-8 w-8 text-faint" />
         <div>
           <p className="text-body-sm font-semibold text-heading">WhatsApp desconectado</p>
-          <p className="mt-1 text-caption text-n-600">Conecte seu número na aba WhatsApp para ver as conversas aqui.</p>
+          <p className="mt-1 text-caption text-n-600">Conecte seu número na aba Mensagens automáticas para ver as conversas aqui.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card flex h-[calc(100vh-11rem)] min-h-[30rem] overflow-hidden p-0">
+    <div data-tour="module-action" className="card flex h-[calc(100vh-11rem)] min-h-[30rem] overflow-hidden p-0">
       {/* ── Coluna: conversas ─────────────────────────────────────────────── */}
       <aside className={`flex w-full flex-col border-line md:w-[22rem] md:border-r lg:w-[24rem] ${activeChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="border-b border-line p-3">

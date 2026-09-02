@@ -382,7 +382,7 @@ export function SiteEditor({
       {isDemo && <DemoBanner />}
 
       {/* Barra de status e ações */}
-      <div className="card p-4 space-y-3">
+      <div data-tour="module-action" className="card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <StatusPill status={status} />

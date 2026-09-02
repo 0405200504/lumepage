@@ -22,7 +22,7 @@ export const PageHeader: React.FC<{
   actions?: React.ReactNode;
   className?: string;
 }> = ({ trail, title, description, actions, className = '' }) => (
-  <header className={`flex flex-wrap items-end justify-between gap-x-4 gap-y-3 ${className}`}>
+  <header data-tour="module-header" className={`flex flex-wrap items-end justify-between gap-x-4 gap-y-3 ${className}`}>
     <div className="min-w-0">
       {trail && trail.length > 0 && <MonoTrail items={trail} className="mb-2" />}
       <h1 className="text-h2 text-heading truncate">{title}</h1>
@@ -30,7 +30,7 @@ export const PageHeader: React.FC<{
     </div>
     {/* As ações quebram em vez de esticar a página: num header com seletor de
         período + exportar + botão primário, 375px não comporta a linha. */}
-    {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    {actions && <div data-tour="module-action" className="flex flex-wrap items-center gap-2">{actions}</div>}
   </header>
 );
 

@@ -304,10 +304,10 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   return (
     <div className="space-y-5">
       {/* ═══ Conexão ═══════════════════════════════════════════════════════ */}
-      <section className="card p-5 md:p-6 space-y-5">
+      <section data-tour="module-action" className="card p-5 md:p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-h3 text-heading">WhatsApp</h2>
+            <h2 className="text-h3 text-heading">Seu número de WhatsApp</h2>
             <p className="text-caption text-n-500 mt-1">
               Conecte seu número para o Lume enviar as mensagens automáticas por você.
             </p>
