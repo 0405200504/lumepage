@@ -19,6 +19,7 @@ import {
   Palette, LayoutTemplate, UserRound, Type, Sparkles, Images, GitCompareArrows,
   MessageSquareQuote, HelpCircle, ListOrdered, Link2, Smartphone, Monitor,
   ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight, FlaskConical,
+  Wand2, RotateCcw,
 } from 'lucide-react';
 import type { SiteConfig, SiteStatus } from '@/types/site';
 import type { PublicService } from '../types';
@@ -32,6 +33,8 @@ import {
 import { SiteRenderer } from '../SiteRenderer';
 import { PreviewFrame, type PreviewDevice } from './PreviewFrame';
 import { TemplatePicker } from './TemplatePicker';
+import { QuickSetupModal } from './QuickSetupModal';
+import { ResetModal } from './ResetModal';
 import { FieldGroup, TextField, TextArea, ImageField } from './fields';
 import {
   IdentityPanel, ThemePanel, ContentPanel, ServicesPanel, GalleryPanel,
@@ -86,6 +89,9 @@ export function SiteEditor({
   const [tab, setTab] = useState<TabId>('identity');
   const [device, setDevice] = useState<PreviewDevice>('mobile');
 
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isResetOpen, setIsResetOpen] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -131,6 +137,29 @@ export function SiteEditor({
     if (!opts?.silent) toastError('Não deu para salvar', res.error);
     return false;
   }, [professionalId, saving, success, toastError]);
+
+  /** Aplica o resultado gerado pelo assistente rápido. */
+  const handleCompleteWizard = useCallback(async (newConfig: SiteConfig, newTemplateId: string) => {
+    setConfig(newConfig);
+    setTemplateId(newTemplateId);
+    dirty.current = true;
+    setOnboarding(false);
+    setTab('content');
+    const ok = await save(newConfig, newTemplateId, { silent: false });
+    if (ok) {
+      success('Página pronta com sucesso! ✨', 'Textos e estrutura do seu nicho foram aplicados.');
+    }
+  }, [save, success]);
+
+  /** Aplica a redefinição / reset do modelo. */
+  const handleConfirmReset = useCallback(async (newConfig: SiteConfig) => {
+    setConfig(newConfig);
+    dirty.current = true;
+    const ok = await save(newConfig, templateId, { silent: false });
+    if (ok) {
+      success('Modelo resetado com sucesso! 🔄', 'Sua página foi restaurada para o rascunho limpo.');
+    }
+  }, [save, templateId, success]);
 
   // Autosave do RASCUNHO: 2s parada de digitação. Nunca mexe no que está no ar.
   useEffect(() => {
@@ -204,7 +233,7 @@ export function SiteEditor({
     <SiteRenderer slug={slug} templateId={templateId} config={config} services={services} preview />
   ), [slug, templateId, config, services]);
 
-  // ── Onboarding: escolher o modelo antes de tudo ───────────────────────────
+  // ── Onboarding: escolher o modelo ou usar o assistente ───────────────────
   if (onboarding) {
     return (
       <div className="space-y-6 select-none">
@@ -213,15 +242,56 @@ export function SiteEditor({
             <Rocket className="h-3 w-3" /> Seu negócio inteiro em um único link
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-heading tracking-tight mt-4">
-            Escolha o visual da sua página
+            Como você prefere criar sua página?
           </h1>
           <p className="text-sm text-n-600 mt-2 leading-relaxed">
-            Você pode trocar de modelo quando quiser — seus textos, fotos e depoimentos
-            continuam onde estão. O conteúdo é seu; o modelo só muda o desenho.
+            Você pode montar sua página em menos de 2 minutos com textos prontos do seu nicho,
+            ou escolher um modelo para personalizar tudo manualmente.
           </p>
         </header>
 
         {isDemo && <DemoBanner />}
+
+        {/* Card em Destaque: Assistente Rápido */}
+        <div className="max-w-2xl mx-auto rounded-3xl border-2 border-wine-700/20 bg-gradient-to-b from-accent-soft/60 to-accent-soft/20 p-6 sm:p-7 shadow-sm text-center space-y-4">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-wine-700 text-white shadow-md mx-auto">
+            <Wand2 className="h-6 w-6" />
+          </div>
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-wine-800 bg-white/80 border border-wine-200 px-2.5 py-0.5 rounded-full">
+              ✨ Recomendado · Leva 2 minutos
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-heading">
+              Assistente de Criação Rápida por Nicho
+            </h3>
+            <p className="text-xs sm:text-sm text-n-600 max-w-md mx-auto leading-relaxed">
+              Diga sua profissão (Nails, Lash, Estética, Cabelo, Spa) e nós geramos a página
+              completinha com fotos, títulos magnéticos e perguntas frequentes prontas.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsWizardOpen(true)}
+              className="inline-flex items-center gap-2 px-7 h-12 bg-wine-700 hover:bg-wine-800 text-white text-sm font-bold rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4" />
+              Criar Minha Página Pronta Agora
+            </button>
+          </div>
+        </div>
+
+        <div className="relative max-w-2xl mx-auto my-8">
+          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+            <div className="w-full border-t border-n-200" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-n-50 px-3 text-n-400 font-medium uppercase tracking-wider text-[10px]">
+              Ou escolha um modelo visual manualmente
+            </span>
+          </div>
+        </div>
 
         <TemplatePicker
           selected={templateId}
@@ -236,7 +306,7 @@ export function SiteEditor({
               const ok = await save(config, templateId, { silent: true });
               if (ok) { setOnboarding(false); setTab('identity'); }
             }}
-            className="inline-flex items-center gap-2 px-6 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-6 h-11 bg-white hover:bg-n-50 border border-n-200 text-n-700 text-body-sm font-semibold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             Continuar com {meta.name}
@@ -249,6 +319,15 @@ export function SiteEditor({
             <p className="text-[12px] text-warning leading-relaxed">{blocker}</p>
           </div>
         )}
+
+        {/* Modal do Assistente durante Onboarding */}
+        <QuickSetupModal
+          isOpen={isWizardOpen}
+          onClose={() => setIsWizardOpen(false)}
+          onComplete={handleCompleteWizard}
+          initialTemplateId={templateId}
+          initialConfig={config}
+        />
       </div>
     );
   }
@@ -270,20 +349,37 @@ export function SiteEditor({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Ações de facilitação: Assistente Rápido e Reset */}
+            <button
+              type="button"
+              onClick={() => setIsWizardOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl border border-wine-200 bg-accent-soft text-wine-800 hover:bg-wine-100/70 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Wand2 className="h-3.5 w-3.5 text-wine-700" /> Assistente Rápido
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsResetOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Recomeçar do zero
+            </button>
+
             {status === 'published' && (
               <>
                 <Link
                   href={`/${slug}`}
                   target="_blank"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 transition-colors"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Ver página
                 </Link>
                 <button
                   type="button"
                   onClick={unpublish}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 cursor-pointer transition-colors"
                 >
                   <EyeOff className="h-3.5 w-3.5" /> Tirar do ar
                 </button>
@@ -294,7 +390,7 @@ export function SiteEditor({
               onClick={publish}
               disabled={publishing || isDemo}
               title={isDemo ? 'A conta teste não publica páginas.' : undefined}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-wine-700 hover:bg-wine-800 text-white text-[11px] font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-wine-700 hover:bg-wine-800 text-white text-[11px] font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
               {status === 'published' ? 'Publicar alterações' : 'Publicar página'}
@@ -471,6 +567,24 @@ export function SiteEditor({
           </div>
         </div>
       </div>
+
+      {/* Modais de Facilitação e Reset */}
+      <QuickSetupModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onComplete={handleCompleteWizard}
+        initialTemplateId={templateId}
+        initialConfig={config}
+      />
+
+      <ResetModal
+        isOpen={isResetOpen}
+        onClose={() => setIsResetOpen(false)}
+        onConfirmReset={handleConfirmReset}
+        onOpenWizard={() => setIsWizardOpen(true)}
+        templateId={templateId}
+        currentConfig={config}
+      />
     </div>
   );
 }

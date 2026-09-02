@@ -24,6 +24,9 @@ import {
   Repeater, newItemId,
 } from './fields';
 
+import { NicheCopyPicker } from './NicheCopyPicker';
+import { NICHE_LIST, type NichePreset } from '@/lib/site/presets';
+
 export interface PanelProps {
   config: SiteConfig;
   set: (mutate: (draft: SiteConfig) => void) => void;
@@ -151,8 +154,32 @@ export function ThemePanel({ config, set }: PanelProps) {
 
 export function ContentPanel({ config, set, professionalId, onError }: PanelProps) {
   const c = config.content;
+
+  const handleApplyNiche = (niche: NichePreset) => {
+    set(d => {
+      d.content.hero.headline = niche.content.hero.headline;
+      d.content.hero.highlight = niche.content.hero.highlight;
+      d.content.hero.subheadline = niche.content.hero.subheadline;
+      d.content.hero.ctaPrimary = niche.content.hero.ctaPrimary;
+      d.content.hero.ctaSecondary = niche.content.hero.ctaSecondary;
+
+      d.content.about.eyebrow = niche.content.about.eyebrow;
+      d.content.about.title = niche.content.about.title;
+      d.content.about.highlight = niche.content.about.highlight;
+      d.content.about.text = niche.content.about.text;
+      d.content.about.cta = niche.content.about.cta;
+
+      d.content.contact.eyebrow = niche.content.contact.eyebrow;
+      d.content.contact.title = niche.content.contact.title;
+      d.content.contact.highlight = niche.content.contact.highlight;
+      d.content.contact.cta = niche.content.contact.cta;
+    });
+  };
+
   return (
     <div className="space-y-7">
+      <NicheCopyPicker onApplyNicheTexts={handleApplyNiche} />
+
       <FieldGroup title="Capa" hint="A primeira coisa que a cliente lê ao abrir seu link. O destaque aparece em itálico/cor de acento.">
         <TextField label="Rótulo pequeno" value={c.hero.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.hero.eyebrow = v; })} placeholder="São Paulo - SP" />
@@ -470,7 +497,27 @@ export function ExtrasPanel({ config, set }: PanelProps) {
         />
       </FieldGroup>
 
-      <FieldGroup title="Perguntas frequentes" hint="Responder dúvidas comuns aqui reduz mensagem no WhatsApp.">
+      <FieldGroup
+        title="Perguntas frequentes"
+        hint="Responder dúvidas comuns aqui reduz mensagem no WhatsApp."
+        action={
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            <span className="text-[10px] text-n-500 font-medium">Sugerir do nicho:</span>
+            {NICHE_LIST.map(niche => (
+              <button
+                key={niche.id}
+                type="button"
+                onClick={() => set(d => {
+                  d.content.faq.items = niche.content.faq.items.map(it => ({ ...it, id: newItemId('faq') }));
+                })}
+                className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-white border border-n-200 text-n-700 hover:bg-wine-50 hover:border-wine-300 hover:text-wine-800 transition-colors cursor-pointer"
+              >
+                {niche.name.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        }
+      >
         <TextField label="Rótulo pequeno" value={f.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.faq.eyebrow = v; })} />
         <Row>
