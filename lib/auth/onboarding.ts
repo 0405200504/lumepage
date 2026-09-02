@@ -12,6 +12,7 @@
 
 import { Professional } from '@/types/database';
 import { dbService } from '@/lib/supabase/db';
+import { isDemo } from '@/lib/demo';
 
 /** Slug a partir de um nome: minúsculo, sem acento, separado por hífen. */
 export function slugify(nome: string): string {
@@ -47,13 +48,15 @@ export async function slugLivre(nome: string, professionalId: string): Promise<s
  * usamos o WhatsApp como sinal — assim nenhuma conta antiga completa é jogada
  * na tela de boas-vindas sem motivo.
  */
-export function professionalPrecisaOnboarding(prof: Pick<Professional, 'whatsapp'> & { onboarding_completed_at?: string | null }): boolean {
+export function professionalPrecisaOnboarding(prof: Pick<Professional, 'whatsapp'> & { id?: string; onboarding_completed_at?: string | null }): boolean {
+  if (isDemo(prof.id)) return false;
   if (prof.onboarding_completed_at === undefined) return !prof.whatsapp?.trim();
   return prof.onboarding_completed_at === null;
 }
 
 /** Igual à anterior, buscando a profissional pelo id. */
 export async function precisaOnboarding(professionalId: string): Promise<boolean> {
+  if (isDemo(professionalId)) return false;
   try {
     const prof = await dbService.getProfessionalById(professionalId);
     if (!prof) return false;

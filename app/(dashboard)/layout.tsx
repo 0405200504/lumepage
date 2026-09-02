@@ -11,7 +11,6 @@ import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 import { AdminNotices } from '@/components/dashboard/AdminNotices';
 import { AIAgentChat } from '@/components/ai/AIAgentChat';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
-import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 import { PlanosOverlay } from '@/components/subscription/PlanosOverlay';
 import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
 import { mustChangePassword } from '@/lib/auth/must-change-password';
@@ -146,14 +145,8 @@ export default async function DashboardLayout({
 
       <AIAgentChat />
 
-      {/* Modal inspirador de boas-vindas no primeiro acesso */}
-      <WelcomeModal
-        firstName={session.name?.split(' ')[0]}
-        slug={slug}
-        professionalId={session.professional_id ?? undefined}
-      />
-
-      {/* Tour de boas-vindas — pode ser reaberto pelo botão ? do cabeçalho */}
+      {/* Tour de boas-vindas — só aparece no primeiro contato da profissional
+          (controlado por localStorage no próprio componente). */}
       <OnboardingTour
         firstName={session.name?.split(' ')[0]}
         slug={slug}
