@@ -45,6 +45,9 @@ export default async function DashboardLayout({
   // Carimbo do checkout: faz o pagamento na Hubla voltar pra ESTA conta.
   let checkoutIdentity: CheckoutIdentity | null = null;
   let precisaBoasVindas = false;
+  // undefined = banco sem a migração v40; aí o tour cai no localStorage,
+  // como era antes. true/false vêm da conta e valem em qualquer aparelho.
+  let tourCompleted: boolean | undefined;
 
   if (session.professional_id) {
     try {
@@ -59,6 +62,7 @@ export default async function DashboardLayout({
         precisaBoasVindas = professionalPrecisaOnboarding(prof);
 
         brandName = prof.brand_name;
+        tourCompleted = prof.tour_completed_at === undefined ? undefined : prof.tour_completed_at !== null;
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
         subscriptionStatus = prof.subscription_status ?? null;
@@ -162,6 +166,7 @@ export default async function DashboardLayout({
         <OnboardingTour
           firstName={session.name?.split(' ')[0]}
           professionalId={session.professional_id ?? undefined}
+          tourCompleted={tourCompleted}
         />
       )}
     </div>
