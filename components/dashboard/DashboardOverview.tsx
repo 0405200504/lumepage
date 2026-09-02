@@ -16,7 +16,6 @@ import { AreaChart, type AreaPoint } from '@/components/ui/charts/AreaChart';
 import { MonoTrail } from '@/components/ui/Mono';
 import { IndexGrid } from '@/components/ui/IndexGrid';
 import { useRouter } from 'next/navigation';
-import { QuickStartChecklist } from '@/components/onboarding/QuickStartChecklist';
 
 interface DashboardOverviewProps {
   professionalName: string;
@@ -228,14 +227,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
         <PillGroup items={PERIODS} value={period} onChange={setPeriod} ariaLabel="Período" />
       </div>
-
-      {/* Guia de Início Rápido / Checklist de Ativação da Conta */}
-      <QuickStartChecklist
-        professionalName={professionalName}
-        slug={slug}
-        servicesCount={services.length}
-        hasAppointments={appointments.length > 0}
-      />
 
       {/* ===================== BENTO =====================
           Colunas de tamanhos diferentes de propósito: uma grade de cartões

@@ -56,6 +56,7 @@ await c.from('professionals').insert({
   description: 'Especialista em lash lifting, extensão de cílios e brow lamination.',
   public_bio: 'Realço o seu olhar com naturalidade, sofisticação e durabilidade. ✨',
   status: 'active',
+  onboarding_completed_at: new Date().toISOString(),
 });
 
 // 2. Configurações da Agenda
