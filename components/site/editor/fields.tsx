@@ -19,14 +19,17 @@ import { uploadSiteImage } from './uploadImage';
 
 // ── Blocos de agrupamento ───────────────────────────────────────────────────
 
-export function FieldGroup({ title, hint, children }: {
-  title: string; hint?: string; children: React.ReactNode;
+export function FieldGroup({ title, hint, action, children }: {
+  title: string; hint?: string; action?: React.ReactNode; children: React.ReactNode;
 }) {
   return (
     <section className="space-y-3">
-      <div>
-        <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-n-600">{title}</h4>
-        {hint && <p className="text-[11px] text-n-400 mt-1 leading-relaxed">{hint}</p>}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+        <div>
+          <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-n-600">{title}</h4>
+          {hint && <p className="text-[11px] text-n-400 mt-1 leading-relaxed">{hint}</p>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       <div className="space-y-3">{children}</div>
     </section>
