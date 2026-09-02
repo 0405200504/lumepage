@@ -316,6 +316,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
         <div className="flex items-center gap-2">
           <Button
             size="sm"
+            data-tour="module-action"
             onClick={() => setShowForm(true)}
             className="rounded-full bg-wine-700 hover:bg-wine-800 text-white font-bold"
             leadingIcon={<Plus className="h-4 w-4" />}

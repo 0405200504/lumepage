@@ -81,8 +81,16 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
     subtitle: 'Contato, regras comerciais para novos agendamentos e cores de marca.',
     crumb: 'Seu negócio',
   },
-  '/dashboard/whatsapp': { title: 'WhatsApp', crumb: 'Clientes' },
-  '/dashboard/whatsapp/conversas': { title: 'Conversas', crumb: 'Clientes' },
+  '/dashboard/whatsapp': {
+    title: 'Mensagens automáticas',
+    subtitle: 'Conecte seu número e escolha o que o Lume envia sozinho: confirmação, lembrete e retorno.',
+    crumb: 'Clientes',
+  },
+  '/dashboard/whatsapp/conversas': {
+    title: 'WhatsApp',
+    subtitle: 'Leia e responda as conversas do seu número sem sair do Lume.',
+    crumb: 'Clientes',
+  },
 };
 
 /**

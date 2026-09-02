@@ -6,7 +6,8 @@ import { uazapiAdminConfigured } from '@/lib/uazapi';
 import { UpgradeRequired } from '@/components/subscription/UpgradeRequired';
 
 export const metadata = {
-  title: 'WhatsApp | Lume',
+  title: 'Mensagens automáticas | Lume',
+  description: 'Conecte seu número e escolha as mensagens que o Lume envia sozinho.',
 };
 
 export default async function WhatsAppPage() {

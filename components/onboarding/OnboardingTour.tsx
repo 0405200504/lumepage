@@ -1,31 +1,57 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Sparkles, X, ArrowLeft, ArrowRight, Check,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Lock, X } from 'lucide-react';
 import { Portal } from '../ui/Portal';
 import { isDemo } from '@/lib/demo';
+import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
+import { can, requiredPlan, CAPABILITY_LABEL, PLAN_LABEL, type Capability } from '@/lib/subscription/entitlements';
 
 /** Prefixo da chave de persistência. A chave final é escopada por profissional
  *  (`lume_onboarding_v1:{professionalId}`) para que cada conta nova seja tratada
  *  como primeiro contato, mesmo que outra conta já tenha visto o tour no mesmo
- *  navegador. Versionada para permitir reexibir num futuro redesenho (subir _v2). */
+ *  navegador.
+ *
+ *  O valor guardado é `'done'` (concluído/pulado) ou o ÍNDICE do passo em que
+ *  ela parou — o tour tem uma volta inteira pelo menu e ninguém é obrigado a
+ *  fazer tudo de uma sentada. Voltando depois, ele retoma de onde parou. */
 const STORAGE_PREFIX = 'lume_onboarding_v1';
 /** Evento global para reabrir o tour manualmente (ex.: botão "?" no Header). */
 export const OPEN_ONBOARDING_EVENT = 'lume:open-onboarding';
 
+/** Os capítulos são os MESMOS grupos da barra de navegação, na mesma ordem.
+ *  É o que torna o tour coerente: quando ele acaba, o menu já é um mapa
+ *  conhecido — "aquilo do dinheiro estava na terceira parte". */
+const CHAPTERS = ['Atendimento', 'Clientes', 'Dinheiro', 'Seu negócio'] as const;
+
 interface Step {
+  /** Índice do capítulo; `null` na abertura e no encerramento. */
+  chapter: number | null;
   /** Rota do módulo — o tour navega até ela antes de destacar. */
   route: string;
-  /** Seletor do elemento a destacar. Ausente = card centralizado, sem seta. */
-  selector?: string;
-  eyebrow: string;
+  /** Alvos a destacar, em ordem de preferência. Sem nenhum → cadeia padrão. */
+  targets?: string[];
+  /** `true` = card centralizado, sem destacar nada (abertura e fecho). */
+  center?: boolean;
+  /** Nome da aba, como está escrito no menu. */
+  tab?: string;
   title: string;
   body: string;
   tip?: string;
+  /** Recurso de plano exigido pela aba — vira um aviso quando ela não tem. */
+  capability?: Capability;
 }
+
+/** Cadeia padrão de alvos: a ação principal do módulo, senão o cabeçalho do
+ *  módulo, senão o título da aba na topbar (esse SEMPRE existe). É o que
+ *  garante que nenhum passo caia numa tela sem nada aceso — inclusive nas
+ *  abas que aparecem bloqueadas por plano. */
+const DEFAULT_TARGETS = [
+  '[data-tour="module-action"]',
+  '[data-tour="module-header"]',
+  '[data-tour="page-header"]',
+];
 
 interface Rect { top: number; left: number; width: number; height: number; }
 
@@ -33,188 +59,382 @@ interface OnboardingTourProps {
   firstName?: string;
   slug?: string;
   professionalId?: string;
+  /** Plano da conta e se ele é aplicado — só para avisar o que está travado. */
+  plan?: string | null;
+  enforcePlan?: boolean;
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
-export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug, professionalId }) => {
+function buildSteps(firstName?: string, slug?: string): Step[] {
+  const publicUrl = `lume.app/agendar/${slug || 'sua-marca'}`;
+
+  return [
+    // ── Abertura ────────────────────────────────────────────────────────────
+    {
+      chapter: null,
+      route: '/dashboard',
+      center: true,
+      title: firstName ? `Oi, ${firstName}! Vamos dar uma volta?` : 'Vamos dar uma volta?',
+      body: 'Em uns 2 minutos eu te mostro cada área do Lume, na ordem do menu. Pode sair quando quiser — o “?” lá em cima traz o tour de volta de onde você parou.',
+    },
+
+    // ── 1 · Atendimento ─────────────────────────────────────────────────────
+    {
+      chapter: 0,
+      route: '/dashboard',
+      tab: 'Início',
+      targets: ['[data-tour="home-hero"]'],
+      title: 'Seu dia inteiro numa tela',
+      body: 'Faturamento do período, atendimentos de hoje e o que precisa de atenção. É a tela que abre quando você entra.',
+    },
+    {
+      chapter: 0,
+      route: '/dashboard/agenda',
+      tab: 'Agenda',
+      targets: ['[data-tour="quick-add"]'],
+      title: 'A agenda por dia, semana e mês',
+      body: 'Use o “+” para encaixar um horário na hora. Para remarcar, arraste o card para o novo horário — a cliente é avisada.',
+    },
+    {
+      chapter: 0,
+      route: '/dashboard/appointments',
+      tab: 'Agendamentos',
+      title: 'A lista de tudo que foi marcado',
+      body: 'Confirme, finalize, registre falta ou cancele. Cada linha tem também o atalho para chamar a cliente no WhatsApp.',
+    },
+    {
+      chapter: 0,
+      route: '/dashboard/waitlist',
+      tab: 'Lista de espera',
+      capability: 'waitlist',
+      title: 'Ninguém fica sem resposta',
+      body: 'Quando não tem horário, a cliente entra na fila. Abriu um buraco na agenda, você já sabe quem chamar primeiro.',
+    },
+    {
+      chapter: 0,
+      route: '/dashboard/tasks',
+      tab: 'Tarefas e notas',
+      title: 'O que você não pode esquecer',
+      body: 'Recados, pendências, compras. Se a tarefa tiver data e hora, ela aparece junto dos atendimentos na sua Agenda.',
+    },
+
+    // ── 2 · Clientes ────────────────────────────────────────────────────────
+    {
+      chapter: 1,
+      route: '/dashboard/clients',
+      tab: 'Contatos',
+      title: 'Sua base de clientes',
+      body: 'Histórico de cada pessoa, quanto já gastou e há quanto tempo não aparece. É desta tela que sai a reativação.',
+    },
+    {
+      chapter: 1,
+      route: '/dashboard/anamnese',
+      tab: 'Fichas de anamnese',
+      title: 'Ficha preenchida antes de chegar',
+      body: 'Monte a ficha uma vez, mande o link para a cliente responder pelo celular e receba tudo organizado em PDF.',
+    },
+    {
+      chapter: 1,
+      route: '/dashboard/whatsapp/conversas',
+      tab: 'WhatsApp',
+      capability: 'conversations',
+      title: 'Suas conversas, dentro do Lume',
+      body: 'Leia e responda o WhatsApp sem trocar de aplicativo — com a agenda e o histórico da cliente do lado.',
+    },
+    {
+      chapter: 1,
+      route: '/dashboard/whatsapp',
+      tab: 'Mensagens automáticas',
+      capability: 'whatsappBot',
+      title: 'O Lume avisa suas clientes por você',
+      body: 'Conecte seu número aqui e o sistema manda sozinho a confirmação, o lembrete da véspera e o convite de retorno.',
+      tip: 'É o ajuste que mais reduz falta — e o que mais economiza o seu tempo digitando.',
+    },
+    ...(AI_ATTENDANCE_ENABLED
+      ? [{
+        chapter: 1,
+        route: '/dashboard/pending',
+        tab: 'Atendimento IA',
+        capability: 'conversations' as Capability,
+        title: 'Quando a IA chama você',
+        body: 'A assistente responde as clientes sozinha e passa para você as conversas que precisam de gente. Elas ficam nesta fila.',
+      } satisfies Step]
+      : []),
+
+    // ── 3 · Dinheiro ────────────────────────────────────────────────────────
+    {
+      chapter: 2,
+      route: '/dashboard/finance',
+      tab: 'Financeiro',
+      title: 'Quanto entrou, quanto saiu, quanto sobrou',
+      body: 'Atendimento finalizado vira entrada sozinho. Você só lança as despesas e as vendas avulsas — sem planilha.',
+    },
+    {
+      chapter: 2,
+      route: '/dashboard/sales',
+      tab: 'Vendas',
+      capability: 'sales',
+      title: 'Quais serviços realmente pagam',
+      body: 'Ranking de serviços, ticket médio e as clientes que mais gastam. É o raio-x de onde o seu faturamento nasce.',
+    },
+
+    // ── 4 · Seu negócio ─────────────────────────────────────────────────────
+    {
+      chapter: 3,
+      route: '/dashboard/site',
+      tab: 'Minha Página',
+      title: 'Seu site e seu link na bio',
+      body: 'Escolha um modelo, ajuste as cores e publique. A página já vem com o agendamento embutido — é o link que você põe no Instagram.',
+      tip: `Seu endereço: ${publicUrl}`,
+    },
+    {
+      chapter: 3,
+      route: '/dashboard/services',
+      tab: 'Serviços',
+      title: 'Comece por aqui: seus serviços',
+      body: 'Cadastre cada procedimento com preço e duração. É exatamente esta lista que a cliente vê na hora de escolher um horário.',
+      tip: 'Sem nenhum serviço cadastrado, ninguém consegue agendar com você.',
+    },
+    {
+      chapter: 3,
+      route: '/dashboard/availability',
+      tab: 'Disponibilidade',
+      title: 'Os dias e horas em que você atende',
+      body: 'Marque o expediente de cada dia e o intervalo de almoço. O Lume só oferece à cliente horário dentro dessa janela.',
+    },
+    {
+      chapter: 3,
+      route: '/dashboard/blocks',
+      tab: 'Bloqueios',
+      capability: 'blocks',
+      title: 'Folga, viagem, imprevisto',
+      body: 'Feche um dia inteiro ou só algumas horas. A agenda para de aceitar agendamento nesse período, sem você mexer no expediente.',
+    },
+    {
+      chapter: 3,
+      route: '/dashboard/settings',
+      tab: 'Configurações',
+      title: 'As regras do seu atendimento',
+      body: 'Seus dados, antecedência mínima, aprovação manual, sinal de pagamento e as cores da marca que a cliente enxerga.',
+    },
+
+    // ── Encerramento ────────────────────────────────────────────────────────
+    {
+      chapter: null,
+      route: '/dashboard',
+      targets: ['[data-tour="ai-chat"]'],
+      title: 'Ficou com dúvida? É só perguntar',
+      body: 'A assistente abre em qualquer tela — no computador, pelo botão “Assistente”; no celular, pelo menu. Peça um resumo do mês, tire dúvida ou peça para ela fazer por você.',
+    },
+    {
+      chapter: null,
+      route: '/dashboard',
+      center: true,
+      title: 'Pronto! Agora é com você 🎉',
+      body: 'Para receber o primeiro agendamento faltam três coisas: cadastrar seus serviços, definir seus horários e compartilhar seu link.',
+      tip: 'Vamos pelo começo — eu te levo aos Serviços.',
+    },
+  ];
+}
+
+export const OnboardingTour: React.FC<OnboardingTourProps> = ({
+  firstName, slug, professionalId, plan, enforcePlan,
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   const storageKey = `${STORAGE_PREFIX}:${professionalId || 'anon'}`;
+
+  const steps = useMemo(() => buildSteps(firstName, slug), [firstName, slug]);
+  const total = steps.length;
 
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [ready, setReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; arrow: 'top' | 'bottom' | null; arrowLeft: number } | null>(null);
+  const [card, setCard] = useState({ w: 360, h: 280 });
+  const [compact, setCompact] = useState(false);
 
-  const publicUrl = `agendar/${slug || 'sua-marca'}`;
-
-  const steps: Step[] = [
-    {
-      route: '/dashboard',
-      selector: '[data-tour="home-hero"]',
-      eyebrow: 'Passo 1 · Início',
-      title: firstName ? `Oi, ${firstName}! Bora conhecer o sistema?` : 'Bora conhecer o sistema?',
-      body: 'Esta é sua central: faturamento do mês, atendimentos de hoje e atalhos rápidos. Vou te levar módulo a módulo — pode pular quando quiser.',
-    },
-    {
-      route: '/dashboard/services',
-      selector: '[data-tour="quick-add"]',
-      eyebrow: 'Passo 2 · Serviços',
-      title: 'Comece cadastrando o que você faz',
-      body: 'Toque neste botão “+” pra criar cada procedimento com nome, preço e duração. É exatamente isso que a cliente vê ao escolher um horário.',
-      tip: 'Sem nenhum serviço cadastrado, ninguém consegue agendar. Comece por aqui.',
-    },
-    {
-      route: '/dashboard/availability',
-      selector: '[data-tour="page-header"]',
-      eyebrow: 'Passo 3 · Disponibilidade',
-      title: 'Defina seus horários de atendimento',
-      body: 'Marque os dias e as horas em que você atende e o intervalo de almoço. O sistema só oferece à cliente horários dentro dessa janela.',
-    },
-    {
-      route: '/dashboard/agenda',
-      selector: '[data-tour="quick-add"]',
-      eyebrow: 'Passo 4 · Agenda',
-      title: 'Tudo que está marcado, num lugar só',
-      body: 'Veja por dia, semana ou mês. Use o “+” pra encaixar um horário na hora e arraste um card pra remarcar sem retrabalho.',
-    },
-    {
-      route: '/dashboard/clients',
-      selector: '[data-tour="quick-add"]',
-      eyebrow: 'Passo 5 · Contatos',
-      title: 'Conheça e fidelize suas clientes',
-      body: 'Aqui fica o histórico de cada pessoa: quantas vezes veio, quanto gastou e há quanto tempo sumiu — pra você reativar quem parou de aparecer.',
-    },
-    {
-      route: '/dashboard/finance',
-      selector: '[data-tour="page-header"]',
-      eyebrow: 'Passo 6 · Financeiro',
-      title: 'Saiba quanto realmente sobra',
-      body: 'Entradas, saídas, lucro e saldo do mês — sem planilha. Registre uma venda ou uma despesa pelo “+” e acompanhe seu faturamento.',
-    },
-    {
-      route: '/dashboard/whatsapp',
-      selector: '[data-tour="page-header"]',
-      eyebrow: 'Passo 7 · Bot do WhatsApp',
-      title: 'A Júlia atende por você',
-      body: 'A assistente responde suas clientes no WhatsApp, tira dúvidas e agenda sozinha. Aqui você liga o bot e personaliza o jeitinho dela falar.',
-    },
-    {
-      route: '/dashboard/settings',
-      selector: '[data-tour="page-header"]',
-      eyebrow: 'Passo 8 · Configurações',
-      title: 'Deixe com a sua cara',
-      body: 'Ajuste seus dados, regras de agendamento, sinal/pagamento e as cores da sua marca — tudo isso aparece pras suas clientes.',
-      tip: `Seu link público de agendamento: lume.app/${publicUrl}`,
-    },
-    {
-      route: '/dashboard/settings',
-      selector: '[data-tour="ai-chat"]',
-      eyebrow: 'Passo 9 · Assistente',
-      title: 'Precisou de ajuda? É só perguntar',
-      body: 'Este botão abre a assistente de qualquer tela. Peça relatórios, tire dúvidas do sistema ou peça pra ela fazer algo por você.',
-    },
-    {
-      route: '/dashboard',
-      eyebrow: 'Tudo pronto',
-      title: 'É isso! Bora começar 🎉',
-      body: 'O melhor primeiro passo é cadastrar seus serviços. Depois configure seus horários e compartilhe seu link. Você pode rever este tour a qualquer momento no “?” do topo.',
-    },
-  ];
-
-  const total = steps.length;
-  const isLast = index === total - 1;
   const step = steps[index];
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
 
-  const finish = useCallback(() => {
-    // Na conta demo, NÃO persiste — assim o tour reaparece toda vez que alguém entra.
-    if (!isDemo(professionalId)) {
-      try { localStorage.setItem(storageKey, 'done'); } catch { /* ignore */ }
-    }
-    setVisible(false);
+  // Aba travada pelo plano: o passo continua existindo (ela precisa saber que
+  // a área existe), mas o card diz que está no plano de cima em vez de deixar
+  // a tela de upgrade aparecer sem explicação.
+  const lockedBy = step.capability && enforcePlan && !can(plan, step.capability)
+    ? step.capability
+    : null;
+
+  const chapterSteps = useMemo(
+    () => CHAPTERS.map((_, c) => steps.filter((s) => s.chapter === c).length),
+    [steps],
+  );
+  const posInChapter = step.chapter === null
+    ? 0
+    : steps.slice(0, index + 1).filter((s) => s.chapter === step.chapter).length;
+  /** Abertura e encerramento não têm capítulo: na abertura a barra está
+   *  vazia, no encerramento ela está cheia. */
+  const afterAllChapters = step.chapter === null && steps.slice(0, index).some((s) => s.chapter !== null);
+
+  // ── Abertura / persistência ───────────────────────────────────────────────
+  /** Já concluiu (ou pulou) alguma vez? Então nada mais volta a chave para um
+   *  índice — senão rever o tour pelo "?" faria ele abrir sozinho de novo no
+   *  próximo login. */
+  const doneRef = useRef(false);
+
+  const persist = useCallback((value: string) => {
+    // Na conta demo NÃO persiste: o tour precisa reaparecer para o próximo
+    // visitante que entrar com a conta de exemplo.
+    if (isDemo(professionalId)) return;
+    try { localStorage.setItem(storageKey, value); } catch { /* modo privativo */ }
   }, [storageKey, professionalId]);
 
-  // Primeiro contato: só abre automaticamente se a chave ainda não existe.
-  // Conta demo: SEMPRE abre (ignora localStorage).
+  const finish = useCallback(() => {
+    doneRef.current = true;
+    persist('done');
+    setVisible(false);
+  }, [persist]);
+
   useEffect(() => {
     if (isDemo(professionalId)) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
-    let seen = 'done';
-    try { seen = localStorage.getItem(storageKey) || ''; } catch { /* ignore */ }
-    if (seen !== 'done') {
-      const t = setTimeout(() => setVisible(true), 600);
-      return () => clearTimeout(t);
-    }
-  }, [storageKey, professionalId]);
+    let saved = 'done';
+    try { saved = localStorage.getItem(storageKey) ?? ''; } catch { /* ignore */ }
+    if (saved === 'done') { doneRef.current = true; return; }
+    const resumeAt = Number(saved);
+    const t = setTimeout(() => {
+      if (Number.isFinite(resumeAt) && resumeAt > 0 && resumeAt < total) setIndex(resumeAt);
+      setVisible(true);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [storageKey, professionalId, total]);
 
-  // Permite reabrir o tour manualmente a qualquer momento.
+  // Reabrir manualmente (botão "?" da topbar): retoma de onde parou; quem já
+  // fez o tour inteiro recomeça do começo, que é o que "rever" quer dizer.
   useEffect(() => {
-    const open = () => { setIndex(0); setVisible(true); };
+    const open = () => {
+      if (doneRef.current) setIndex(0);
+      setVisible(true);
+    };
     window.addEventListener(OPEN_ONBOARDING_EVENT, open);
     return () => window.removeEventListener(OPEN_ONBOARDING_EVENT, open);
   }, []);
 
-  // A cada passo: navega até a rota do módulo e procura o alvo a destacar.
   useEffect(() => {
     if (!visible) return;
+    if (isLast) { doneRef.current = true; persist('done'); return; }
+    if (doneRef.current) return;
+    persist(String(index));
+  }, [visible, index, isLast, persist]);
+
+  // Telas estreitas: o card ancora no rodapé em vez de perseguir o alvo.
+  useEffect(() => {
+    const check = () => setCompact(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // ── Navegação até a rota do passo ─────────────────────────────────────────
+  useEffect(() => {
+    if (!visible) return;
+    if (step.route && pathname !== step.route) router.push(step.route);
+  }, [visible, index, step.route, pathname, router]);
+
+  // Deixa as próximas telas prontas antes de a pessoa clicar em "Próximo":
+  // é o que faz a troca de passo parecer instantânea em vez de carregar.
+  useEffect(() => {
+    if (!visible) return;
+    for (const next of steps.slice(index + 1, index + 3)) {
+      try { router.prefetch(next.route); } catch { /* rota já em cache */ }
+    }
+  }, [visible, index, steps, router]);
+
+  // ── Localiza e mede o alvo ────────────────────────────────────────────────
+  // Só começa DEPOIS que a rota do passo já é a rota atual: o alvo padrão
+  // (`page-header`) mora na casca, que não remonta, e sem essa espera o
+  // holofote acendia no título da tela anterior.
+  useEffect(() => {
+    if (!visible) return;
+    if (step.route && pathname !== step.route) return;
+
     let cancelled = false;
-    // Reset síncrono ao trocar de passo: esconde o card anterior enquanto o novo
-    // alvo é localizado. Intencional (sincroniza com rota/DOM externos).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReady(false);
-    setRect(null);
-
-    if (step.route && pathname !== step.route) {
-      router.push(step.route);
-    }
-
-    // Sem seletor → card centralizado (sem spotlight).
-    if (!step.selector) {
-      const t = setTimeout(() => { if (!cancelled) setReady(true); }, 250);
-      return () => { cancelled = true; clearTimeout(t); };
-    }
-
+    const selectors = step.center ? [] : (step.targets ?? DEFAULT_TARGETS);
     const started = Date.now();
-    const measure = (el: Element) => {
-      el.scrollIntoView({ block: 'center', inline: 'nearest' });
-      window.setTimeout(() => {
+
+    const find = (): Element | null => {
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && (el as HTMLElement).offsetParent !== null) return el;
+      }
+      return null;
+    };
+
+    // Mede em rajada por ~600ms: a troca de rota anima (fade + 6px de subida)
+    // e a primeira medida sairia deslocada.
+    const track = (el: Element) => {
+      const from = Date.now();
+      const tick = () => {
         if (cancelled) return;
         const r = el.getBoundingClientRect();
         setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
         setReady(true);
-      }, 180);
+        if (Date.now() - from < 600) requestAnimationFrame(tick);
+      };
+      tick();
     };
+
+    if (!selectors.length) {
+      const t = setTimeout(() => {
+        if (cancelled) return;
+        setRect(null);
+        setReady(true);
+      }, 120);
+      return () => { cancelled = true; clearTimeout(t); };
+    }
 
     const poll = window.setInterval(() => {
       if (cancelled) return;
-      const el = document.querySelector(step.selector!);
+      const el = find();
       if (el) {
         window.clearInterval(poll);
-        measure(el);
-      } else if (Date.now() - started > 4500) {
-        // Alvo não apareceu (ex.: módulo lento) → cai pro card centralizado.
+        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        track(el);
+      } else if (Date.now() - started > 1400) {
+        // Módulo lento ou tela de upgrade: card centralizado, sem holofote.
         window.clearInterval(poll);
+        setRect(null);
         setReady(true);
       }
-    }, 90);
+    }, 80);
 
     return () => { cancelled = true; window.clearInterval(poll); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, index]);
+  }, [visible, index, pathname]);
 
-  // Reposiciona o alvo/spotlight quando a tela rola ou muda de tamanho.
+  // Passo novo: esconde o conteúdo do card enquanto o alvo é localizado, mas
+  // o holofote e o card CONTINUAM na tela, indo do alvo antigo para o novo.
   useEffect(() => {
-    if (!visible || !ready || !step.selector) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReady(false);
+  }, [index]);
+
+  // Acompanha rolagem e redimensionamento.
+  useEffect(() => {
+    if (!visible || !ready || step.center) return;
+    const selectors = step.targets ?? DEFAULT_TARGETS;
     const update = () => {
-      const el = document.querySelector(step.selector!);
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+        return;
+      }
     };
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
@@ -225,168 +445,222 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ firstName, slug,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, ready, index]);
 
-  // Calcula a posição do card (e da seta) a partir do alvo.
+  // Tamanho do card — entra no cálculo da posição.
   useEffect(() => {
-    if (!ready) return;
-    const card = cardRef.current;
-    if (!card) return;
-    const cw = card.offsetWidth;
-    const ch = card.offsetHeight;
+    if (!visible) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const measure = () => setCard({ w: el.offsetWidth, h: el.offsetHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [visible]);
+
+  // ── Posição do card ───────────────────────────────────────────────────────
+  const pos = useMemo(() => {
+    if (typeof window === 'undefined') return { top: 0, left: 0, arrow: null as 'top' | 'bottom' | null, arrowLeft: 0 };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const { w, h } = card;
 
-    if (!rect) {
-      setPos({ top: Math.max(16, (vh - ch) / 2), left: Math.max(16, (vw - cw) / 2), arrow: null, arrowLeft: 0 });
-      return;
+    // Celular: o card mora no rodapé. Perseguir o alvo numa tela de 375px
+    // empurra o cartão para fora da área do polegar a cada passo.
+    if (compact) {
+      return { top: Math.max(16, vh - h - 20), left: Math.max(12, (vw - w) / 2), arrow: null, arrowLeft: 0 };
+    }
+    if (!rect || step.center) {
+      return { top: Math.max(16, (vh - h) / 2), left: Math.max(16, (vw - w) / 2), arrow: null, arrowLeft: 0 };
     }
 
-    const margin = 14;
+    const margin = 16;
     const centerX = rect.left + rect.width / 2;
-    const left = clamp(centerX - cw / 2, 16, vw - cw - 16);
+    const left = clamp(centerX - w / 2, 16, Math.max(16, vw - w - 16));
     let top: number;
     let arrow: 'top' | 'bottom';
-    if (rect.top + rect.height + margin + ch <= vh - 16) {
+    if (rect.top + rect.height + margin + h <= vh - 16) {
       top = rect.top + rect.height + margin; arrow = 'top';
-    } else if (rect.top - margin - ch >= 16) {
-      top = rect.top - margin - ch; arrow = 'bottom';
+    } else if (rect.top - margin - h >= 16) {
+      top = rect.top - margin - h; arrow = 'bottom';
     } else {
-      top = clamp(rect.top + rect.height + margin, 16, vh - ch - 16); arrow = 'top';
+      top = clamp(rect.top + rect.height + margin, 16, Math.max(16, vh - h - 16)); arrow = 'top';
     }
-    setPos({ top, left, arrow, arrowLeft: clamp(centerX - left, 24, cw - 24) });
-  }, [rect, ready, index]);
+    return { top, left, arrow, arrowLeft: clamp(centerX - left, 24, Math.max(24, w - 24)) };
+  }, [rect, card, compact, step.center]);
 
-  // Teclado: ESC pula o tour; setas navegam.
+  // ── Teclado ───────────────────────────────────────────────────────────────
+  const go = useCallback((i: number) => setIndex(clamp(i, 0, total - 1)), [total]);
+
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
-      if (e.key === 'ArrowRight' && !isLast) setIndex((i) => Math.min(i + 1, total - 1));
-      if (e.key === 'ArrowLeft' && index > 0) setIndex((i) => Math.max(i - 1, 0));
+      if (e.key === 'ArrowRight' && !isLast) go(index + 1);
+      if (e.key === 'ArrowLeft' && index > 0) go(index - 1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [visible, isLast, index, total, finish]);
+  }, [visible, isLast, index, go, finish]);
 
   if (!visible) return null;
 
   const goServices = () => { finish(); router.push('/dashboard/services'); };
-  const hasSpotlight = ready && !!rect;
+  const jumpToChapter = (c: number) => {
+    const i = steps.findIndex((s) => s.chapter === c);
+    if (i >= 0) go(i);
+  };
+
+  // O holofote existe SEMPRE — o escurecimento da tela é o próprio box-shadow
+  // dele. Sem alvo, ele encolhe para um ponto no centro (a tela fica toda
+  // escura) em vez de o overlay aparecer e sumir a cada passo.
+  const hole: Rect = rect && !step.center
+    ? rect
+    : { top: typeof window !== 'undefined' ? window.innerHeight / 2 : 0, left: typeof window !== 'undefined' ? window.innerWidth / 2 : 0, width: 0, height: 0 };
+  const spotlit = !!rect && !step.center;
+
+  const chapterLabel = step.chapter !== null ? CHAPTERS[step.chapter] : null;
 
   return (
     <Portal>
-      {/* Bloqueia interação com o app. Sem alvo, ele mesmo escurece a tela;
-          com spotlight, o escurecimento vem do box-shadow do buraco. */}
+      {/* Captura os cliques do app sem pintar nada: quem escurece é o holofote. */}
+      <div className="fixed inset-0 z-[85]" onClick={(e) => e.stopPropagation()} aria-hidden />
+
       <div
-        className={`fixed inset-0 z-[85] ${hasSpotlight ? '' : 'bg-wine-950/45 backdrop-blur-[2px]'}`}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed z-[86] rounded-2xl pointer-events-none"
+        style={{
+          top: hole.top - 6,
+          left: hole.left - 6,
+          width: hole.width + 12,
+          height: hole.height + 12,
+          boxShadow: `0 0 0 9999px rgba(26,14,18,${spotlit ? 0.6 : 0.55})`,
+          outline: spotlit ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
+          outlineOffset: -2,
+          transition: 'top .42s cubic-bezier(.22,.61,.36,1), left .42s cubic-bezier(.22,.61,.36,1), width .42s cubic-bezier(.22,.61,.36,1), height .42s cubic-bezier(.22,.61,.36,1), outline-color .3s linear',
+        }}
+        aria-hidden
       />
-
-      {/* Spotlight — buraco iluminado sobre o alvo. */}
-      {hasSpotlight && rect && (
-        <div
-          className="fixed z-[86] rounded-2xl ring-2 ring-white/80 pointer-events-none transition-ui duration-300"
-          style={{
-            top: rect.top - 6,
-            left: rect.left - 6,
-            width: rect.width + 12,
-            height: rect.height + 12,
-            boxShadow: '0 0 0 9999px rgba(26,14,18,0.62)',
-          }}
-        />
-      )}
-
-      {/* Enquanto navega/procura o alvo, uma pílula discreta evita tela vazia. */}
-      {!ready && (
-        <div className="fixed left-1/2 top-1/2 z-[87] -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-surface px-4 py-2 shadow-2xl">
-          <span className="h-4 w-4 rounded-full border-2 border-wine-700 border-t-transparent animate-spin" />
-          <span className="text-caption font-bold text-ink">Abrindo módulo…</span>
-        </div>
-      )}
 
       {/* Card do passo */}
       <div
         ref={cardRef}
-        className="fixed z-[88] w-[min(360px,calc(100vw-32px))] bg-surface rounded-3xl shadow-2xl border border-n-200 animate-fade-up"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Tutorial — passo ${index + 1} de ${total}`}
+        className="fixed z-[88] w-[min(380px,calc(100vw-24px))] bg-surface rounded-hero shadow-[var(--shadow-lg)] overflow-hidden"
         style={{
-          top: pos?.top ?? -9999,
-          left: pos?.left ?? -9999,
-          visibility: ready && pos ? 'visible' : 'hidden',
+          top: pos.top,
+          left: pos.left,
+          transition: 'top .42s cubic-bezier(.22,.61,.36,1), left .42s cubic-bezier(.22,.61,.36,1)',
         }}
       >
-        {/* Seta apontando para o alvo */}
-        {pos?.arrow && (
+        {pos.arrow && spotlit && (
           <span
-            className={`absolute h-3.5 w-3.5 rotate-45 bg-surface border-n-200 ${
-              pos.arrow === 'top' ? '-top-[7px] border-l border-t' : '-bottom-[7px] border-r border-b'
-            }`}
+            className={`absolute h-3.5 w-3.5 rotate-45 bg-surface ${pos.arrow === 'top' ? '-top-[7px]' : '-bottom-[7px]'}`}
             style={{ left: pos.arrowLeft - 7 }}
+            aria-hidden
           />
         )}
 
         <div className="p-5">
+          {/* Linha de contexto: onde estamos na volta pelo menu. */}
           <div className="flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-1.5 text-caption font-semibold uppercase tracking-[0.16em] text-wine-700">
-              <Sparkles className="h-3 w-3" /> {step.eyebrow}
-            </span>
+            <p className="min-w-0 truncate text-caption font-semibold text-n-500">
+              {chapterLabel ? (
+                <>
+                  <span className="text-wine-700">{chapterLabel}</span>
+                  <span className="text-n-300"> · </span>
+                  {step.tab}
+                  <span className="text-n-400"> {posInChapter}/{chapterSteps[step.chapter!]}</span>
+                </>
+              ) : (
+                <span className="text-wine-700">Tutorial do Lume</span>
+              )}
+            </p>
             <button
               type="button"
               onClick={finish}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-caption font-bold text-n-600 hover:text-ink hover:bg-n-150 transition-ui"
+              aria-label="Sair do tutorial"
+              className="icon-chip h-9 w-9 shrink-0 text-n-500 hover:text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             >
-              Pular <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
 
-          <h2 className="mt-3 text-h3 font-semibold leading-tight tracking-tight text-ink">{step.title}</h2>
-          <p className="mt-2 text-label leading-relaxed text-ink/75">{step.body}</p>
+          {/* Progresso por capítulo — clicável para pular direto para uma parte. */}
+          <div className="mt-3 flex items-center gap-1.5">
+            {CHAPTERS.map((label, c) => {
+              const done = step.chapter === null
+                ? (afterAllChapters ? 1 : 0)
+                : step.chapter > c ? 1 : step.chapter < c ? 0 : posInChapter / chapterSteps[c];
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => jumpToChapter(c)}
+                  title={label}
+                  aria-label={`Ir para a parte ${label}`}
+                  className="group flex-1 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 rounded-full"
+                >
+                  <span className="block h-1 rounded-full bg-n-200 overflow-hidden group-hover:bg-n-300 transition-ui">
+                    <span
+                      className="block h-full rounded-full bg-wine-700"
+                      style={{ width: `${Math.round(done * 100)}%`, transition: 'width .42s cubic-bezier(.22,.61,.36,1)' }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          {step.tip && (
-            <div className="mt-3 rounded-2xl bg-accent-soft border border-accent-soft-border px-3.5 py-2.5">
-              <p className="text-caption font-semibold text-wine-700 break-words">{step.tip}</p>
-            </div>
-          )}
+          {/* Conteúdo. A `key` faz o texto entrar com fade a cada passo — sem
+              ela o card troca de assunto de um frame para o outro. */}
+          <div key={index} className="animate-fade-up">
+            <h2 className="mt-2 text-h3 font-semibold leading-tight tracking-tight text-heading">{step.title}</h2>
+            <p className="mt-2 text-label leading-relaxed text-n-600">{step.body}</p>
 
-          {/* Progresso — clicável pra pular direto pra um passo */}
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            {steps.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={`Ir para o passo ${i + 1}`}
-                onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-ui ${
-                  i === index ? 'w-5 bg-wine-700' : 'w-1.5 bg-n-300 hover:bg-n-600'
-                }`}
-              />
-            ))}
+            {lockedBy && (
+              <div className="mt-3 flex items-start gap-2 rounded-chip bg-surface-2 px-3 py-2">
+                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-n-500" aria-hidden />
+                <p className="text-caption text-n-600">
+                  <b className="text-heading">{CAPABILITY_LABEL[lockedBy]}</b> entra a partir do plano{' '}
+                  {PLAN_LABEL[requiredPlan(lockedBy)]}.
+                </p>
+              </div>
+            )}
+
+            {step.tip && !lockedBy && (
+              <div className="mt-3 rounded-chip bg-accent-soft border border-accent-soft-border px-3.5 py-2.5">
+                <p className="text-caption font-semibold text-wine-700 break-words">{step.tip}</p>
+              </div>
+            )}
           </div>
 
           {/* Navegação */}
           <div className="mt-4 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIndex((i) => Math.max(i - 1, 0))}
-              disabled={index === 0}
-              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-label font-bold text-ink/70 hover:bg-n-150 disabled:opacity-0 disabled:pointer-events-none transition-ui"
+              onClick={() => go(index - 1)}
+              disabled={isFirst}
+              className="inline-flex items-center gap-1.5 h-11 px-3 rounded-full text-body-sm font-semibold text-n-600 hover:bg-n-100 hover:text-heading disabled:opacity-0 disabled:pointer-events-none transition-ui"
             >
-              <ArrowLeft className="h-4 w-4" /> Voltar
+              <ArrowLeft className="h-4 w-4" aria-hidden /> Voltar
             </button>
             <div className="flex-1" />
-            {!isLast ? (
+            {isLast ? (
               <button
                 type="button"
-                onClick={() => setIndex((i) => Math.min(i + 1, total - 1))}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-wine-700 text-white text-label font-bold shadow-soft hover:bg-wine-800 transition-ui"
+                onClick={goServices}
+                className="inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-wine-700 text-white text-body-sm font-semibold shadow-[var(--shadow-wine)] hover:bg-wine-800 transition-ui"
               >
-                Próximo <ArrowRight className="h-4 w-4" />
+                <Check className="h-4 w-4" aria-hidden /> Cadastrar meus serviços
               </button>
             ) : (
               <button
                 type="button"
-                onClick={goServices}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-wine-700 text-white text-label font-bold shadow-soft hover:bg-wine-800 transition-ui"
+                onClick={() => go(index + 1)}
+                className="inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-wine-700 text-white text-body-sm font-semibold shadow-[var(--shadow-wine)] hover:bg-wine-800 transition-ui"
               >
-                <Check className="h-4 w-4" /> Cadastrar serviços
+                {isFirst ? 'Começar' : 'Próximo'} <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
             )}
           </div>

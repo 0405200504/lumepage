@@ -52,8 +52,8 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   waitlist: 'Lista de espera',
   blocks: 'Bloqueios de horário',
   sales: 'Módulo de Vendas',
-  conversations: 'Central de Conversas',
-  whatsappBot: 'WhatsApp com mensagens automáticas',
+  conversations: 'Caixa de entrada do WhatsApp',
+  whatsappBot: 'Mensagens automáticas no WhatsApp',
   advancedReports: 'Relatórios avançados',
   commissions: 'Comissões automáticas',
 };

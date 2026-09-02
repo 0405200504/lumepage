@@ -145,13 +145,21 @@ export default async function DashboardLayout({
 
       <AIAgentChat />
 
-      {/* Tour de boas-vindas — só aparece no primeiro contato da profissional
-          (controlado por localStorage no próprio componente). */}
-      <OnboardingTour
-        firstName={session.name?.split(' ')[0]}
-        slug={slug}
-        professionalId={session.professional_id ?? undefined}
-      />
+      {/* Tour de boas-vindas — só no primeiro contato da profissional (o
+          controle é por localStorage, dentro do componente).
+
+          NÃO monta enquanto houver um bloqueio na frente: com o paywall ou a
+          troca de senha obrigatória abertos, o tour navegaria por baixo de uma
+          tela que ela não consegue fechar. */}
+      {!isTrialExpired && !forcePasswordChange && (
+        <OnboardingTour
+          firstName={session.name?.split(' ')[0]}
+          slug={slug}
+          professionalId={session.professional_id ?? undefined}
+          plan={subscriptionPlan}
+          enforcePlan={enforcePlan}
+        />
+      )}
     </div>
   );
 }

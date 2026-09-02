@@ -137,7 +137,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           de vinho sólido e halo — seis retângulos vinho competindo com o botão
           "Salvar" da tela. Virou uma lista com hairline: o ativo ganha fundo
           wine-50 e um traço de 2px na aresta, do jeito que um seletor marca. */}
-      <div className="w-full lg:w-60 shrink-0 card overflow-hidden self-start flex flex-row lg:flex-col overflow-x-auto scrollbar-none">
+      <div data-tour="module-action" className="w-full lg:w-60 shrink-0 card overflow-hidden self-start flex flex-row lg:flex-col overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}

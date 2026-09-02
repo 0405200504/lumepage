@@ -123,7 +123,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* 1. SELETOR DE PERÍODO / CABEÇALHO BANCÁRIO */}
       <div className="flex items-center justify-between no-print pt-1">
-        <div className="flex items-center gap-1 bg-surface px-2.5 py-1 rounded-full border border-line shadow-xs">
+        <div data-tour="module-action" className="flex items-center gap-1 bg-surface px-2.5 py-1 rounded-full border border-line shadow-xs">
           {periods.map(p => (
             <button
               key={p.key}
