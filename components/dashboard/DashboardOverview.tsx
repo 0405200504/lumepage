@@ -178,6 +178,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     [ativos, todayIso],
   );
   const pendentes = useMemo(() => ativos.filter((a) => a.status === 'pending'), [ativos]);
+  /** A linha do tempo é uma PRÉVIA do dia, não a agenda inteira: o resto está
+   *  a um clique em "Ver agenda". */
+  const hojeVisiveis = useMemo(() => deHoje.slice(0, 8), [deHoje]);
+  const hojeRestantes = deHoje.length - hojeVisiveis.length;
   const clientes = useMemo(() => new Set(ativos.map((a) => a.client_whatsapp)).size, [ativos]);
   const ticketMedio = useMemo(() => {
     const mes = billable.filter((a) => a.date.startsWith(todayIso.slice(0, 7)));
@@ -286,7 +290,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <ol className="relative">
                 {/* conector vertical da linha do tempo */}
                 <span className="absolute left-[38px] top-2 bottom-2 w-px bg-n-200" aria-hidden />
-                {deHoje.map((app, i) => {
+                {hojeVisiveis.map((app, i) => {
                   const m = statusMeta(app.status);
                   return (
                     <li key={app.id} className="stagger-item relative" style={{ ['--i' as string]: i }}>
@@ -315,6 +319,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     </li>
                   );
                 })}
+                {hojeRestantes > 0 && (
+                  <li className="relative">
+                    <Link
+                      href="/dashboard/agenda"
+                      className="tap flex items-center gap-4 py-2 pl-[52px] text-caption font-semibold text-wine-600 hover:text-wine-700 transition-ui rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                    >
+                      <span className="pl-4">
+                        + {hojeRestantes} {hojeRestantes === 1 ? 'horário' : 'horários'} depois disso · ver na agenda
+                      </span>
+                    </Link>
+                  </li>
+                )}
               </ol>
             ) : (
               <EmptyState
