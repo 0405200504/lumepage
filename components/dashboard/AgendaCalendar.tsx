@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, ChevronDown, CalendarDays, CalendarRange, LayoutGrid,
   X, MessageCircle, Clock, PartyPopper, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
-  SlidersHorizontal, Lock, UtensilsCrossed,
+  SlidersHorizontal, Lock, UtensilsCrossed, Layers,
 } from 'lucide-react';
 import { Appointment, Service, TimeBlock, Task, Client, AvailabilityRule } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
 import { statusMeta } from '@/lib/appointments/status';
-import { buildReminderLink } from '@/lib/whatsapp';
+import { buildReminderLink, formatPriceBRL } from '@/lib/whatsapp';
 import { createTaskAction, toggleTaskAction, deleteTaskAction, updateTaskAction } from '@/app/actions/crm';
 import { deleteAppointmentAction, updateAppointmentAction } from '@/app/actions/professional';
-import { resolveAppointmentServices, formatServiceNames } from '@/lib/appointments/services';
+import { resolveAppointmentServices, formatServiceNames, serviceIdsOf, sumDurationMinutes, sumPriceCents } from '@/lib/appointments/services';
 import { AppointmentStatus } from '@/types/database';
 import { QuickAppointmentModal } from './QuickAppointmentModal';
 import { QuickAddFab } from '../ui/QuickAddFab';
@@ -204,9 +204,17 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 
   const editAppt = async (apptId: string, patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => {
     const res = await updateAppointmentAction(apptId, professionalId, patch);
-    if (res.success) router.refresh();
-    else alert('Erro ao atualizar agendamento.');
-    return res.success;
+    if (res.success) {
+      if (res.appointment) {
+        setAppts(list => list.map(x => x.id === apptId ? { ...x, ...res.appointment } : x));
+      }
+      success('Agendamento atualizado!', 'As alterações foram salvas com sucesso.');
+      router.refresh();
+      return true;
+    } else {
+      error('Erro ao atualizar', res.error || 'Não foi possível salvar as alterações.');
+      return false;
+    }
   };
 
   // Move um agendamento (arrastado na grade) para nova data/horário, mantendo a
@@ -1480,68 +1488,203 @@ const EditApptForm: React.FC<{
   onSave: (patch: { date?: string; startTime?: string; endTime?: string; serviceId?: string; serviceIds?: string[]; notes?: string; status?: AppointmentStatus }) => void;
   onCancel: () => void;
 }> = ({ appt, services, saving, onSave, onCancel }) => {
+  const { error: toastError } = useToast();
   const [date, setDate] = useState(appt.date);
   const [startTime, setStartTime] = useState(appt.start_time.substring(0, 5));
-  const [serviceId, setServiceId] = useState(appt.service_id || '');
+
+  // IDs iniciais dos serviços (suporte a multi-serviço)
+  const initialServiceIds = useMemo(() => {
+    const ids = serviceIdsOf(appt);
+    return ids.length > 0 ? ids : (appt.service_id ? [appt.service_id] : []);
+  }, [appt]);
+
+  const [serviceIds, setServiceIds] = useState<string[]>(initialServiceIds);
   const [status, setStatus] = useState<AppointmentStatus>(appt.status);
   const [notes, setNotes] = useState(appt.notes || '');
 
-  const selectedService = services.find(s => s.id === serviceId);
-  const computedEndTime = (st: string, svc: Service | undefined) => {
-    if (!st || !svc) return appt.end_time.substring(0, 5);
+  // Lista de serviços disponíveis (ativos + serviços já selecionados no agendamento mesmo se inativos)
+  const availableServices = useMemo(() => {
+    return services.filter(s => s.is_active || initialServiceIds.includes(s.id));
+  }, [services, initialServiceIds]);
+
+  const selectedServices = useMemo(() => {
+    const byId = new Map(services.map(s => [s.id, s]));
+    return serviceIds.map(id => byId.get(id)).filter(Boolean) as Service[];
+  }, [services, serviceIds]);
+
+  const totalDurationMinutes = useMemo(() => {
+    return sumDurationMinutes(selectedServices);
+  }, [selectedServices]);
+
+  const totalPriceCents = useMemo(() => {
+    return sumPriceCents(selectedServices);
+  }, [selectedServices]);
+
+  const computedEndTime = (st: string, durMin: number) => {
+    if (!st) return appt.end_time.substring(0, 5);
     const [h, m] = st.split(':').map(Number);
-    const total = h * 60 + m + svc.duration_minutes;
+    const total = h * 60 + m + (durMin > 0 ? durMin : 30);
     return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
   };
 
+  const toggleService = (id: string) => {
+    setServiceIds(prev => {
+      return prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+    });
+  };
+
   const handleSave = () => {
-    const endTime = computedEndTime(startTime, selectedService);
-    // serviceIds:[serviceId] mantém o multi-serviço consistente ao editar pela agenda
-    onSave({ date, startTime: startTime + ':00', endTime: endTime + ':00', serviceId, serviceIds: [serviceId], notes, status });
+    if (serviceIds.length === 0) {
+      toastError('Atenção', 'Selecione ao menos um serviço.');
+      return;
+    }
+    const endTime = computedEndTime(startTime, totalDurationMinutes);
+    onSave({
+      date,
+      startTime: startTime + ':00',
+      endTime: endTime + ':00',
+      serviceId: serviceIds[0],
+      serviceIds,
+      notes,
+      status,
+    });
   };
 
   return (
     <div className="border-t border-line bg-n-25 px-4 py-4 space-y-3">
-      <p className="overline text-n-500">Reagendar ou editar</p>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-caption text-n-600 mb-1 block">Data</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
-        </div>
-        <div>
-          <label className="text-caption text-n-600 mb-1 block">Horário</label>
-          <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
-        </div>
-      </div>
-      <div>
-        <label className="text-caption text-n-600 mb-1 block">Serviço</label>
-        <select value={serviceId} onChange={e => setServiceId(e.target.value)}
-          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
-          {services.filter(s => s.is_active).map(s => (
-            <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes}min)</option>
-          ))}
-        </select>
-        {selectedService && (
-          <p className="num text-caption text-n-500 mt-1">Término previsto: {computedEndTime(startTime, selectedService)}</p>
+      <div className="flex items-center justify-between">
+        <p className="overline text-n-500">Reagendar ou editar</p>
+        {serviceIds.length > 0 && (
+          <span className="text-micro font-semibold text-wine-700 bg-wine-50 px-2 py-0.5 rounded-full border border-wine-100">
+            {serviceIds.length} serviço{serviceIds.length > 1 ? 's' : ''}
+          </span>
         )}
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-caption text-n-600 mb-1 block font-medium">Data</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          />
+        </div>
+        <div>
+          <label className="text-caption text-n-600 mb-1 block font-medium">Horário</label>
+          <input
+            type="time"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+            className="num w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          />
+        </div>
+      </div>
+
+      {/* Seleção de Múltiplos Serviços */}
       <div>
-        <label className="text-caption text-n-600 mb-1 block">Status</label>
-        <select value={status} onChange={e => setStatus(e.target.value as AppointmentStatus)}
-          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
-          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <label className="text-caption text-n-600 mb-1.5 flex items-center justify-between font-medium">
+          <span className="flex items-center gap-1.5">
+            <Layers className="h-3.5 w-3.5 text-wine-700" />
+            Serviços <span className="text-n-400 font-normal">(escolha um ou mais)</span>
+          </span>
+        </label>
+
+        {availableServices.length === 0 ? (
+          <p className="text-caption text-n-400 italic py-2">Nenhum serviço ativo cadastrado.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+            {availableServices.map(s => {
+              const isSelected = serviceIds.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleService(s.id)}
+                  className={`flex items-center justify-between p-2.5 rounded-control text-left transition-ui border ${
+                    isSelected
+                      ? 'bg-wine-700 text-white border-wine-700 shadow-xs'
+                      : 'bg-surface text-ink border-line hover:border-wine-700/40 hover:bg-n-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <div
+                      className={`h-4 w-4 rounded-chip border flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-white border-white text-wine-700'
+                          : 'border-n-300 bg-surface'
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                    <span className="text-caption font-semibold truncate leading-tight">
+                      {s.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-right">
+                    <span className={`num text-micro ${isSelected ? 'text-white/80' : 'text-n-500'}`}>
+                      {s.duration_minutes}min
+                    </span>
+                    <span className={`num text-caption font-semibold ${isSelected ? 'text-white' : 'text-ink'}`}>
+                      {formatPriceBRL(s.price_cents)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Resumo de Duração, Término e Valor */}
+        {serviceIds.length > 0 ? (
+          <div className="mt-2 p-2.5 rounded-control bg-wine-50/70 border border-wine-100 flex items-center justify-between text-caption">
+            <span className="num font-semibold text-wine-900 flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 text-wine-700" />
+              {totalDurationMinutes} min · Término: {computedEndTime(startTime, totalDurationMinutes)}
+            </span>
+            <span className="num font-bold text-wine-800">
+              Total: {formatPriceBRL(totalPriceCents)}
+            </span>
+          </div>
+        ) : (
+          <p className="text-micro text-danger mt-1.5 font-medium">
+            Selecione pelo menos um serviço.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="text-caption text-n-600 mb-1 block font-medium">Status</label>
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value as AppointmentStatus)}
+          className="w-full h-11 px-2.5 text-label text-ink border border-line rounded-control bg-surface transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+        >
+          {STATUS_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </select>
       </div>
+
       <div>
-        <label className="text-caption text-n-600 mb-1 block">Observações</label>
-        <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre o agendamento..."
-          className="w-full px-2.5 py-2 text-label text-ink border border-line rounded-control bg-surface resize-none transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
+        <label className="text-caption text-n-600 mb-1 block font-medium">Observações</label>
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Observações sobre o agendamento..."
+          className="w-full px-2.5 py-2 text-label text-ink border border-line rounded-control bg-surface resize-none transition-ui hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+        />
       </div>
+
       <div className="flex gap-2 pt-1">
-        <Button onClick={handleSave} loading={saving} className="flex-1">Salvar</Button>
-        <Button variant="secondary" onClick={onCancel} disabled={saving} className="flex-1">Cancelar</Button>
+        <Button onClick={handleSave} loading={saving} disabled={serviceIds.length === 0} className="flex-1">
+          Salvar
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={saving} className="flex-1">
+          Cancelar
+        </Button>
       </div>
     </div>
   );
