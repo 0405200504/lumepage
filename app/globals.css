@@ -943,6 +943,41 @@ select.field-input { padding-right: 34px; }
 html[data-splash='off'] #lume-splash { display: none; }
 html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear both; }
 
+/* CELULAR · o filme da marca (public/splash-mobile-v1.mp4).
+   Entra POR CIMA da animação de CSS, opaco e cobrindo a tela inteira: quando
+   começa a tocar, é ele que se vê. A animação de baixo não é desperdício — é
+   o piso garantido. Na primeira abertura (arquivo ainda fora do cache do
+   navegador) ou com o autoplay barrado, o filme não entra e a marca acende do
+   mesmo jeito, na hora.
+
+   `object-fit: cover`: o filme é 9:16 e a tela nunca é exatamente isso. O
+   wordmark está no centro, então o corte cai na margem. */
+.lume-splash__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* A marca de "o filme está no ar" fica no PRÓPRIO overlay, não no <html>:
+   os estados do <html> valem também para a abertura sem filme, e ali o
+   <video> não tem um único quadro pintado — apareceria como um retângulo
+   preto por cima do vinho. */
+#lume-splash[data-video] .lume-splash__video { opacity: 1; }
+
+/* Com o filme no ar, a cortina de CSS deixa de se apagar sozinha: quem manda
+   no relógio passa a ser o vídeo, que dura mais que os 1,7 s dela. Sem isto,
+   a marca sumiria no meio do filme e a tela piscaria.
+   `saindo` é o fim natural do filme; `skip` (acima) é o toque para pular. */
+html[data-splash='video'] #lume-splash,
+html[data-splash='video'] .lume-splash__stage { animation: none; opacity: 1; }
+html[data-splash='saindo'] #lume-splash { animation: lume-splash-out 450ms var(--ease-in) both; }
+html[data-splash='saindo'] .lume-splash__stage { animation: none; }
+
 /* A visibilidade no último quadro é o que impede a cortina invisível de
    continuar comendo os toques do painel enquanto o JS não a remove. */
 @keyframes lume-splash-out {
@@ -1013,8 +1048,13 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear 
     #FFFCF4 46%,
     rgba(253, 247, 236, 0.92) 59%,
     rgba(253, 247, 236, 0.52) 100%);
-  background-size: 260% 100%;
-  background-repeat: no-repeat;
+  /* repeat-x + as duas pontas do gradiente na MESMA cor = ladrilho sem
+     emenda. Com `no-repeat` (como estava) o gradiente media 260% do
+     elemento e a posição animada o empurrava para fora da caixa: sobrava
+     letra sem fundo nenhum, e o wordmark aparecia comido nas pontas —
+     pior no fim, quando o brilho já tinha passado. Era o "bugzinho". */
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
   animation:
     lume-splash-mark 760ms var(--ease-out) 60ms both,
     lume-splash-sweep 1150ms var(--ease-inout) 240ms both;
@@ -1023,9 +1063,11 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear 
   from { opacity: 0; transform: translateY(10px) scale(0.965); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* Uma volta EXATA do ladrilho (200% de largura) — o brilho atravessa uma vez
+   só e o último quadro é idêntico ao primeiro, sem salto de cor. */
 @keyframes lume-splash-sweep {
-  from { background-position: 128% 0; }
-  to   { background-position: -55% 0; }
+  from { background-position: 150% 0; }
+  to   { background-position: -50% 0; }
 }
 
 /* A estrelinha que já existe no logo, entre o "m" e o "e", piscando quando

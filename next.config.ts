@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Filme de abertura do app no celular. O nome carrega a versão
+        // (…-v1.mp4), então o arquivo é imutável: cachear para sempre é o que
+        // faz a abertura ser instantânea da segunda vez em diante. Trocou a
+        // animação? Suba -v2 e mude a referência em components/ui/AppSplash.
+        source: "/splash-mobile-v1.mp4",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
         // Script de embed acessível de qualquer domínio
         source: "/embed.js",
         headers: [
