@@ -943,41 +943,6 @@ select.field-input { padding-right: 34px; }
 html[data-splash='off'] #lume-splash { display: none; }
 html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear both; }
 
-/* CELULAR · o filme da marca (public/splash-mobile-v1.mp4).
-   Entra POR CIMA da animação de CSS, opaco e cobrindo a tela inteira: quando
-   começa a tocar, é ele que se vê. A animação de baixo não é desperdício — é
-   o piso garantido. Na primeira abertura (arquivo ainda fora do cache do
-   navegador) ou com o autoplay barrado, o filme não entra e a marca acende do
-   mesmo jeito, na hora.
-
-   `object-fit: cover`: o filme é 9:16 e a tela nunca é exatamente isso. O
-   wordmark está no centro, então o corte cai na margem. */
-.lume-splash__video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 200ms var(--ease-out);
-  pointer-events: none;
-}
-
-/* A marca de "o filme está no ar" fica no PRÓPRIO overlay, não no <html>:
-   os estados do <html> valem também para a abertura sem filme, e ali o
-   <video> não tem um único quadro pintado — apareceria como um retângulo
-   preto por cima do vinho. */
-#lume-splash[data-video] .lume-splash__video { opacity: 1; }
-
-/* Com o filme no ar, a cortina de CSS deixa de se apagar sozinha: quem manda
-   no relógio passa a ser o vídeo, que dura mais que os 1,7 s dela. Sem isto,
-   a marca sumiria no meio do filme e a tela piscaria.
-   `saindo` é o fim natural do filme; `skip` (acima) é o toque para pular. */
-html[data-splash='video'] #lume-splash,
-html[data-splash='video'] .lume-splash__stage { animation: none; opacity: 1; }
-html[data-splash='saindo'] #lume-splash { animation: lume-splash-out 450ms var(--ease-in) both; }
-html[data-splash='saindo'] .lume-splash__stage { animation: none; }
-
 /* A visibilidade no último quadro é o que impede a cortina invisível de
    continuar comendo os toques do painel enquanto o JS não a remove. */
 @keyframes lume-splash-out {
