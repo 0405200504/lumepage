@@ -3,14 +3,20 @@
 import React, { useState } from 'react';
 import {
   Sparkles, ArrowRight, ArrowLeft, Check, Wand2,
-  Phone, MapPin, Building2, User, Camera, Instagram,
-  Upload, Layers, CheckCircle2, ChevronRight,
+  Phone, MapPin, Building2, User, Camera, Instagram, Upload,
 } from 'lucide-react';
 import { NICHE_LIST, type NicheId, type NichePreset, buildNicheConfig } from '@/lib/site/presets';
-import { SITE_TEMPLATES, type SiteTemplateMeta } from '@/lib/site/templates';
-import type { SiteConfig } from '@/types/site';
+import { getLook, resolveLook, SITE_LOOKS } from '@/lib/site/looks';
+import type { SiteConfig, SiteTheme } from '@/types/site';
 import { Modal } from '@/components/ui/Modal';
+import { LookPicker } from './LookPicker';
 import { uploadSiteImage } from './uploadImage';
+
+/** Tema neutro só para o seletor ter o que comparar antes da primeira escolha. */
+const FALLBACK_THEME: SiteTheme = {
+  primary: '#6e2233', secondary: '#c9a88a', background: '#faf7f2',
+  foreground: '#2b2724', radius: 'round', fontPair: 'playfair-inter',
+};
 
 interface StepByStepWizardModalProps {
   isOpen: boolean;
@@ -45,6 +51,12 @@ export function StepByStepWizardModal({
   const [headline, setHeadline] = useState('');
   const [highlight, setHighlight] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>(initialTemplateId);
+  /**
+   * O visual escolhido no último passo. É um MODELO PRONTO (layout + paleta +
+   * fontes + cantos), não só um layout — foi o que sobrou de decisão para a
+   * profissional depois que os textos vieram prontos do nicho.
+   */
+  const [selectedTheme, setSelectedTheme] = useState<SiteTheme | null>(null);
 
   const [uploading, setUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,7 +65,17 @@ export function StepByStepWizardModal({
 
   const handleNicheSelect = (niche: NichePreset) => {
     setSelectedNiche(niche.id);
-    setSelectedTemplate(niche.recommendedTemplateId);
+    // Trocar de nicho reposiciona o visual sugerido — quem chegou aqui não
+    // quer escolher template, quer que a gente escolha bem por ela.
+    const suggested = getLook(niche.recommendedLookId);
+    if (suggested) {
+      const resolved = resolveLook(suggested);
+      setSelectedTemplate(resolved.template.id);
+      setSelectedTheme(resolved.theme);
+    } else {
+      setSelectedTemplate(niche.recommendedTemplateId);
+      setSelectedTheme(null);
+    }
     if (!role || NICHE_LIST.some(n => n.sampleRoles.includes(role))) {
       setRole(niche.sampleRoles[0]);
     }
@@ -89,6 +111,8 @@ export function StepByStepWizardModal({
         logo_url: initialConfig?.identity.logoUrl,
         profile_image_url: photoUrl || initialConfig?.identity.photoUrl,
       });
+
+      if (selectedTheme) generated.theme = { ...generated.theme, ...selectedTheme };
 
       if (role) {
         generated.identity.role = role;
@@ -304,7 +328,7 @@ export function StepByStepWizardModal({
                 Qual é a sua especialidade ou título?
               </h3>
               <p className="text-[12px] text-n-600 mt-0.5">
-                Aparece no cabeçalho ao lado do seu nome (ex: "Nail Designer", "Lash Artist").
+                Aparece no cabeçalho ao lado do seu nome (ex: &ldquo;Nail Designer&rdquo;, &ldquo;Lash Artist&rdquo;).
               </p>
             </div>
 
@@ -534,62 +558,32 @@ export function StepByStepWizardModal({
           </div>
         )}
 
-        {/* ETAPA 8: Modelo Visual */}
+        {/* ETAPA 8: Modelo pronto */}
         {step === 8 && (
           <div className="space-y-3">
             <div className="text-left">
               <h3 className="text-base font-bold text-heading">
-                Escolha o modelo visual que mais te agrada
+                Por último: escolha a cara da sua página
               </h3>
               <p className="text-[12px] text-n-600 mt-0.5">
-                Destacamos o modelo mais indicado para {currentPreset.name}.
+                Cada modelo já vem com layout, cores e fontes combinados. Marcamos os que
+                costumam funcionar melhor para {currentPreset.name}.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
-              {SITE_TEMPLATES.map((tmpl) => {
-                const active = selectedTemplate === tmpl.id;
-                const isRec = tmpl.id === currentPreset.recommendedTemplateId;
-                return (
-                  <button
-                    key={tmpl.id}
-                    type="button"
-                    onClick={() => setSelectedTemplate(tmpl.id)}
-                    className={`text-left rounded-2xl border bg-white overflow-hidden transition-all cursor-pointer relative ${
-                      active
-                        ? 'border-wine-700 ring-2 ring-wine-700/20 shadow-md'
-                        : 'border-n-200 hover:border-n-300'
-                    }`}
-                  >
-                    {isRec && (
-                      <div className="bg-wine-700 text-white text-[8px] font-bold text-center py-0.5 uppercase tracking-wider">
-                        ✨ Mais indicado
-                      </div>
-                    )}
-                    <div
-                      className="h-16 w-full p-2 flex flex-col justify-between"
-                      style={{ background: tmpl.preview.background }}
-                    >
-                      <span style={{ fontFamily: tmpl.preview.titleFont, color: tmpl.preview.text, fontSize: 10 }}>
-                        {tmpl.name}
-                      </span>
-                      <div className="h-1.5 w-12 rounded" style={{ background: tmpl.preview.accent }} />
-                    </div>
-                    <div className="p-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12px] font-bold text-heading">{tmpl.name}</span>
-                        <span className="text-[9px] text-n-500 bg-n-100 px-1 py-0.5 rounded">{tmpl.category}</span>
-                      </div>
-                      <p className="text-[10px] text-n-500 mt-0.5 line-clamp-1">{tmpl.bestFor}</p>
-                    </div>
-                    {active && (
-                      <span className="absolute top-2 right-2 h-4 w-4 rounded-full bg-wine-700 text-white flex items-center justify-center">
-                        <Check className="h-2.5 w-2.5" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="max-h-[380px] overflow-y-auto pr-1">
+              <LookPicker
+                templateId={selectedTemplate}
+                theme={selectedTheme || FALLBACK_THEME}
+                priorityIds={SITE_LOOKS
+                  .filter(l => l.niches.includes(selectedNiche))
+                  .map(l => l.id)}
+                onSelect={resolved => {
+                  setSelectedTemplate(resolved.template.id);
+                  setSelectedTheme(resolved.theme);
+                }}
+                compact
+              />
             </div>
           </div>
         )}

@@ -25,6 +25,7 @@ import {
 } from './fields';
 
 import { NicheCopyPicker } from './NicheCopyPicker';
+import { PalettePicker, FontPicker } from './StylePickers';
 import { NICHE_LIST, type NichePreset } from '@/lib/site/presets';
 
 export interface PanelProps {
@@ -49,7 +50,7 @@ export function IdentityPanel({ config, set, professionalId, onError }: PanelPro
         <Row>
           <TextField label="Seu nome" value={i.professionalName} max={LIMITS.name}
             onChange={v => set(d => { d.identity.professionalName = v; })} placeholder="Marina Alves" />
-          <TextField label="Nome do estúdio / marca" value={i.studioName} max={LIMITS.name}
+          <TextField fieldId="identity.studioName" label="Nome do estúdio / marca" value={i.studioName} max={LIMITS.name}
             onChange={v => set(d => { d.identity.studioName = v; })} placeholder="Marina Alves Nails" />
         </Row>
         <TextField label="Sua profissão" value={i.role} max={LIMITS.short}
@@ -82,7 +83,7 @@ export function IdentityPanel({ config, set, professionalId, onError }: PanelPro
       </FieldGroup>
 
       <FieldGroup title="Onde você atende">
-        <TextField label="Endereço" value={i.address} max={LIMITS.short}
+        <TextField fieldId="identity.address" label="Endereço" value={i.address} max={LIMITS.short}
           onChange={v => set(d => { d.identity.address = v; })} placeholder="Rua das Hortênsias, 248 — Jardins" />
         <Row>
           <TextField label="Cidade" value={i.city} max={LIMITS.short}
@@ -101,27 +102,57 @@ export function IdentityPanel({ config, set, professionalId, onError }: PanelPro
 
 export function ThemePanel({ config, set }: PanelProps) {
   const t = config.theme;
+  const [showFine, setShowFine] = React.useState(false);
+  const [tab, setTab] = React.useState<'palette' | 'font'>('palette');
+
   return (
-    <div className="space-y-7">
-      <FieldGroup
-        title="Cores da sua página"
-        hint="Escolha duas cores; o resto (botões, hover, fundos suaves) é derivado automaticamente. Se um texto ficaria ilegível sobre a cor escolhida, ajustamos o tom só daquele texto."
-      >
-        <Row>
-          <ColorField label="Cor principal" value={t.primary}
-            onChange={v => set(d => { d.theme.primary = v; })}
-            hint="Botões e destaques." />
-          <ColorField label="Cor secundária" value={t.secondary}
-            onChange={v => set(d => { d.theme.secondary = v; })}
-            hint="Detalhes e etiquetas." />
-        </Row>
-        <Row>
-          <ColorField label="Fundo" value={t.background}
-            onChange={v => set(d => { d.theme.background = v; })} />
-          <ColorField label="Cor do texto" value={t.foreground}
-            onChange={v => set(d => { d.theme.foreground = v; })} />
-        </Row>
-      </FieldGroup>
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-n-200 bg-n-50/60 px-3.5 py-3 flex gap-2.5">
+        <Info className="h-4 w-4 text-wine-700 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-n-600 leading-relaxed">
+          Escolha uma <b>combinação pronta</b> e a página inteira se repinta na hora.
+          Nada aqui apaga textos ou fotos — cor e fonte são só a roupa da sua página.
+        </p>
+      </div>
+
+      {/* Duas decisões, duas abas: quem quer só trocar a cor não precisa passar
+          pela tipografia (e vice-versa). */}
+      <div className="flex items-center gap-1 rounded-xl bg-n-100 border border-n-200 p-0.5">
+        {([
+          { id: 'palette' as const, label: 'Paleta de cores' },
+          { id: 'font' as const, label: 'Fontes' },
+        ]).map(o => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => setTab(o.id)}
+            className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+              tab === o.id ? 'bg-white text-wine-700 shadow-2xs' : 'text-n-600 hover:text-n-800'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'palette' && (
+        <PalettePicker
+          theme={t}
+          onSelect={colors => set(d => {
+            d.theme.primary = colors.primary;
+            d.theme.secondary = colors.secondary;
+            d.theme.background = colors.background;
+            d.theme.foreground = colors.foreground;
+          })}
+        />
+      )}
+
+      {tab === 'font' && (
+        <FontPicker
+          value={t.fontPair}
+          onSelect={id => set(d => { d.theme.fontPair = id; })}
+        />
+      )}
 
       <FieldGroup title="Cantos" hint="Define o arredondamento de botões, cartões e fotos.">
         <div className="grid grid-cols-3 gap-2">
@@ -144,6 +175,50 @@ export function ThemePanel({ config, set }: PanelProps) {
           ))}
         </div>
       </FieldGroup>
+
+      {/* Ajuste fino: existe para quem tem cor de marca fechada, e fica fechado
+          para quem não tem — o seletor hexadecimal é o campo que mais trava
+          quem não é designer. */}
+      <div className="rounded-2xl border border-n-200 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowFine(v => !v)}
+          className="w-full flex items-center justify-between px-3.5 py-3 text-left hover:bg-n-50 transition-colors cursor-pointer"
+        >
+          <span>
+            <span className="text-[12px] font-bold text-heading block">Ajuste fino das cores</span>
+            <span className="text-[10px] text-n-500 block mt-0.5">
+              Já tem a cor exata da sua marca? Coloque o código aqui.
+            </span>
+          </span>
+          {showFine
+            ? <ChevronUp className="h-4 w-4 text-n-400 shrink-0" />
+            : <ChevronDown className="h-4 w-4 text-n-400 shrink-0" />}
+        </button>
+
+        {showFine && (
+          <div className="px-3.5 pb-4 pt-1 space-y-3 border-t border-n-100">
+            <p className="text-[10px] text-n-400 leading-relaxed">
+              Se um texto ficaria ilegível sobre a cor escolhida, ajustamos o tom só daquele
+              texto — a página nunca sai com texto que não dá para ler.
+            </p>
+            <Row>
+              <ColorField label="Cor principal" value={t.primary}
+                onChange={v => set(d => { d.theme.primary = v; })}
+                hint="Botões e destaques." />
+              <ColorField label="Cor secundária" value={t.secondary}
+                onChange={v => set(d => { d.theme.secondary = v; })}
+                hint="Detalhes e etiquetas." />
+            </Row>
+            <Row>
+              <ColorField label="Fundo" value={t.background}
+                onChange={v => set(d => { d.theme.background = v; })} />
+              <ColorField label="Cor do texto" value={t.foreground}
+                onChange={v => set(d => { d.theme.foreground = v; })} />
+            </Row>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -181,18 +256,18 @@ export function ContentPanel({ config, set, professionalId, onError }: PanelProp
       <NicheCopyPicker onApplyNicheTexts={handleApplyNiche} />
 
       <FieldGroup title="Capa" hint="A primeira coisa que a cliente lê ao abrir seu link. O destaque aparece em itálico/cor de acento.">
-        <TextField label="Rótulo pequeno" value={c.hero.eyebrow} max={LIMITS.eyebrow}
+        <TextField fieldId="content.hero.eyebrow" label="Rótulo pequeno" value={c.hero.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.hero.eyebrow = v; })} placeholder="São Paulo - SP" />
         <Row>
-          <TextField label="Título" value={c.hero.headline} max={LIMITS.headline}
+          <TextField fieldId="content.hero.headline" label="Título" value={c.hero.headline} max={LIMITS.headline}
             onChange={v => set(d => { d.content.hero.headline = v; })} placeholder="Suas mãos merecem ser" />
           <TextField label="Destaque do título" value={c.hero.highlight} max={LIMITS.highlight}
             onChange={v => set(d => { d.content.hero.highlight = v; })} placeholder="uma obra de arte." />
         </Row>
-        <TextArea label="Subtítulo" value={c.hero.subheadline} max={LIMITS.subheadline} rows={3}
+        <TextArea fieldId="content.hero.subheadline" label="Subtítulo" value={c.hero.subheadline} max={LIMITS.subheadline} rows={3}
           onChange={v => set(d => { d.content.hero.subheadline = v; })} />
         <Row>
-          <TextField label="Botão principal" value={c.hero.ctaPrimary} max={LIMITS.cta}
+          <TextField fieldId="content.hero.ctaPrimary" label="Botão principal" value={c.hero.ctaPrimary} max={LIMITS.cta}
             onChange={v => set(d => { d.content.hero.ctaPrimary = v; })} placeholder="Agendar meu horário" />
           <TextField label="Botão secundário" value={c.hero.ctaSecondary} max={LIMITS.cta}
             onChange={v => set(d => { d.content.hero.ctaSecondary = v; })} placeholder="Ver trabalhos" />
@@ -207,12 +282,12 @@ export function ContentPanel({ config, set, professionalId, onError }: PanelProp
         <TextField label="Rótulo pequeno" value={c.about.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.about.eyebrow = v; })} />
         <Row>
-          <TextField label="Título" value={c.about.title} max={LIMITS.title}
+          <TextField fieldId="content.about.title" label="Título" value={c.about.title} max={LIMITS.title}
             onChange={v => set(d => { d.content.about.title = v; })} />
           <TextField label="Destaque" value={c.about.highlight} max={LIMITS.highlight}
             onChange={v => set(d => { d.content.about.highlight = v; })} />
         </Row>
-        <TextArea label="Sua história" value={c.about.text} max={LIMITS.text} rows={7}
+        <TextArea fieldId="content.about.text" label="Sua história" value={c.about.text} max={LIMITS.text} rows={7}
           onChange={v => set(d => { d.content.about.text = v; })}
           hint="Deixe uma linha em branco para separar parágrafos." />
         <Row>
@@ -326,7 +401,7 @@ export function ServicesPanel({ config, set, services }: PanelProps & { services
 export function GalleryPanel({ config, set, professionalId, onError }: PanelProps) {
   const g = config.content.gallery;
   return (
-    <div className="space-y-7">
+    <div className="space-y-7" data-field="content.gallery.items">
       <FieldGroup title="Textos da seção">
         <TextField label="Rótulo pequeno" value={g.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.gallery.eyebrow = v; })} />
@@ -368,7 +443,7 @@ export function GalleryPanel({ config, set, professionalId, onError }: PanelProp
 export function BeforeAfterPanel({ config, set, professionalId, onError }: PanelProps) {
   const b = config.content.beforeAfter;
   return (
-    <div className="space-y-7">
+    <div className="space-y-7" data-field="content.beforeAfter.items">
       <FieldGroup title="Textos da seção">
         <TextField label="Rótulo pequeno" value={b.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.beforeAfter.eyebrow = v; })} />
@@ -417,7 +492,7 @@ export function BeforeAfterPanel({ config, set, professionalId, onError }: Panel
 export function TestimonialsPanel({ config, set, professionalId, onError }: PanelProps) {
   const t = config.content.testimonials;
   return (
-    <div className="space-y-7">
+    <div className="space-y-7" data-field="content.testimonials.items">
       <FieldGroup title="Textos da seção">
         <TextField label="Rótulo pequeno" value={t.eyebrow} max={LIMITS.eyebrow}
           onChange={v => set(d => { d.content.testimonials.eyebrow = v; })} />
@@ -479,7 +554,7 @@ export function ExtrasPanel({ config, set }: PanelProps) {
   const st = config.content.stats;
   return (
     <div className="space-y-7">
-      <FieldGroup title="Números da capa" hint="Aparecem numa faixa logo abaixo do topo. Use no máximo 4.">
+      <FieldGroup fieldId="content.stats.items" title="Números da capa" hint="Aparecem numa faixa logo abaixo do topo. Use no máximo 4.">
         <Repeater
           items={st.items}
           max={LIMITS.maxStats}
@@ -498,6 +573,7 @@ export function ExtrasPanel({ config, set }: PanelProps) {
       </FieldGroup>
 
       <FieldGroup
+        fieldId="content.faq.items"
         title="Perguntas frequentes"
         hint="Responder dúvidas comuns aqui reduz mensagem no WhatsApp."
         action={

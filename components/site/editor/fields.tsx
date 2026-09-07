@@ -19,11 +19,13 @@ import { uploadSiteImage } from './uploadImage';
 
 // ── Blocos de agrupamento ───────────────────────────────────────────────────
 
-export function FieldGroup({ title, hint, action, children }: {
+export function FieldGroup({ title, hint, action, fieldId, children }: {
   title: string; hint?: string; action?: React.ReactNode; children: React.ReactNode;
+  /** Caminho do bloco no SiteConfig — ver a nota em `TextProps.fieldId`. */
+  fieldId?: string;
 }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-field={fieldId}>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
         <div>
           <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-n-600">{title}</h4>
@@ -50,6 +52,13 @@ interface TextProps {
   placeholder?: string;
   hint?: string;
   type?: 'text' | 'email' | 'tel';
+  /**
+   * Caminho do campo no SiteConfig (ex.: 'content.hero.headline'). É o que
+   * liga o clique no texto DENTRO da prévia a este input aqui: o editor
+   * procura por `[data-field="..."]`, rola até ele e põe o cursor dentro.
+   * Sem isso, "clique no texto para editar" só trocaria de aba.
+   */
+  fieldId?: string;
 }
 
 const inputCls =
@@ -65,10 +74,10 @@ function Counter({ value, max }: { value: string; max: number }) {
   );
 }
 
-export function TextField({ label, value, onChange, max, placeholder, hint, type = 'text' }: TextProps) {
+export function TextField({ label, value, onChange, max, placeholder, hint, type = 'text', fieldId }: TextProps) {
   const id = useId();
   return (
-    <div>
+    <div data-field={fieldId}>
       <div className="flex items-baseline justify-between gap-2 mb-1.5">
         <label htmlFor={id} className="text-[11px] font-bold text-n-600">{label}</label>
         <Counter value={value} max={max} />
@@ -87,10 +96,10 @@ export function TextField({ label, value, onChange, max, placeholder, hint, type
   );
 }
 
-export function TextArea({ label, value, onChange, max, placeholder, hint, rows = 4 }: TextProps & { rows?: number }) {
+export function TextArea({ label, value, onChange, max, placeholder, hint, rows = 4, fieldId }: TextProps & { rows?: number }) {
   const id = useId();
   return (
-    <div>
+    <div data-field={fieldId}>
       <div className="flex items-baseline justify-between gap-2 mb-1.5">
         <label htmlFor={id} className="text-[11px] font-bold text-n-600">{label}</label>
         <Counter value={value} max={max} />

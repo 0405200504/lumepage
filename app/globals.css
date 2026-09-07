@@ -1714,3 +1714,19 @@ body:has(.lp-page) {
   .lp-nav-link { color: var(--color-grafite); }
   .lp-page .btn-ghost { border-color: var(--color-grafite); }
 }
+
+/* ---- Editor "Minha Página": campo alcançado pelo clique na prévia ------- */
+/* Sem o pulso, o cursor pousa em um campo fora do campo de visão de quem
+   estava olhando a prévia — e a edição parece não ter acontecido. */
+@keyframes lume-field-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(110, 34, 51, 0.35); }
+  35%  { box-shadow: 0 0 0 5px rgba(110, 34, 51, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(110, 34, 51, 0); }
+}
+[data-field-flash='true'] {
+  border-radius: 14px;
+  animation: lume-field-flash 1.6s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-field-flash='true'] { animation: none; box-shadow: 0 0 0 3px rgba(110, 34, 51, 0.2); }
+}

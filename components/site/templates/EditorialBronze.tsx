@@ -25,11 +25,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-bronze { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.7; font-weight: 300; }
+.t-bronze { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.7; font-weight: 300; }
 .t-bronze *, .t-bronze *::before, .t-bronze *::after { box-sizing: border-box; }
 .t-bronze img { display: block; max-width: 100%; }
 .t-bronze a { color: inherit; text-decoration: none; }
-.t-bronze h1, .t-bronze h2, .t-bronze h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 400; margin: 0; }
+.t-bronze h1, .t-bronze h2, .t-bronze h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); margin: 0; letter-spacing: var(--lume-font-title-tracking); }
 .t-bronze p { margin: 0; }
 .t-bronze section[id] { scroll-margin-top: 72px; }
 .t-bronze [data-lume-placeholder] { background: var(--lume-surface-alt); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
@@ -56,7 +56,7 @@ const CSS = `
 /* ── Topo ── */
 .t-bronze .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-bronze .nav-in { display: flex; align-items: center; justify-content: space-between; height: 72px; border-bottom: 1px solid var(--lume-line); }
-.t-bronze .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 21px; letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.t-bronze .brand { font-family: var(--lume-font-title); font-size: 21px; letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
 .t-bronze .brand img { height: 34px; width: auto; object-fit: contain; }
 .t-bronze .nav-links { display: none; gap: 36px; }
 @media (min-width: 1024px) { .t-bronze .nav-links { display: flex; } }
@@ -69,7 +69,7 @@ const CSS = `
 .t-bronze .drawer { position: fixed; inset: 0 0 0 auto; width: 86%; max-width: 340px; background: var(--lume-bg); z-index: 61; padding: 20px 26px 34px; display: flex; flex-direction: column; }
 .t-bronze .drawer-top { display: flex; align-items: center; justify-content: space-between; }
 .t-bronze .drawer nav { margin-top: 44px; display: flex; flex-direction: column; gap: 2px; }
-.t-bronze .drawer nav a { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; padding: 10px 0; }
+.t-bronze .drawer nav a { font-family: var(--lume-font-title); font-size: 28px; padding: 10px 0; }
 .t-bronze .drawer .btn { margin-top: auto; align-self: flex-start; }
 
 /* ── Capa assimétrica ── */
@@ -79,13 +79,13 @@ const CSS = `
 .t-bronze .hero-photo { position: relative; aspect-ratio: 3/4; overflow: hidden; }
 .t-bronze .hero-photo img, .t-bronze .hero-photo > div { width: 100%; height: 100%; object-fit: cover; }
 .t-bronze .hero-actions { margin-top: 34px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; }
-.t-bronze .hero-num { position: absolute; right: 0; bottom: -14px; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(56px, 10vw, 128px); line-height: 1; color: var(--lume-primary); opacity: .16; pointer-events: none; }
+.t-bronze .hero-num { position: absolute; right: 0; bottom: -14px; font-family: var(--lume-font-title); font-size: clamp(56px, 10vw, 128px); line-height: 1; color: var(--lume-primary); opacity: .16; pointer-events: none; }
 
 /* ── Números ── */
 .t-bronze .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--lume-line-strong); }
 .t-bronze .stats > div { padding: clamp(30px, 5vw, 56px) 0; }
 .t-bronze .stats > div + div { border-left: 1px solid var(--lume-line); padding-left: 6%; }
-.t-bronze .stats b { display: block; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px, 6vw, 66px); font-weight: 400; line-height: 1; }
+.t-bronze .stats b { display: block; font-family: var(--lume-font-title); font-size: clamp(34px, 6vw, 66px); font-weight: 400; line-height: 1; }
 .t-bronze .stats span { display: block; margin-top: 10px; font-size: 10px; letter-spacing: .26em; text-transform: uppercase; color: var(--lume-fg-faint); }
 
 /* ── Sobre assimétrico ── */
@@ -99,12 +99,12 @@ const CSS = `
 .t-bronze .num-list { margin-top: clamp(40px, 6vw, 80px); border-top: 1px solid var(--lume-line-strong); }
 .t-bronze .num-row { display: grid; gap: 10px; padding: clamp(26px, 4vw, 44px) 0; border-bottom: 1px solid var(--lume-line); }
 @media (min-width: 900px) { .t-bronze .num-row { grid-template-columns: 72px 1fr auto; gap: 32px; align-items: baseline; } }
-.t-bronze .num { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; letter-spacing: .1em; color: var(--lume-primary-text); }
+.t-bronze .num { font-family: var(--lume-font-title); font-size: 15px; letter-spacing: .1em; color: var(--lume-primary-text); }
 .t-bronze .num-row h3 { font-size: clamp(26px, 3.4vw, 42px); line-height: 1.05; }
 .t-bronze .num-row .desc { margin-top: 10px; font-size: 15px; color: var(--lume-fg-soft); max-width: 58ch; }
 .t-bronze .num-side { text-align: left; }
 @media (min-width: 900px) { .t-bronze .num-side { text-align: right; } }
-.t-bronze .num-price { display: block; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(22px, 2.6vw, 32px); }
+.t-bronze .num-price { display: block; font-family: var(--lume-font-title); font-size: clamp(22px, 2.6vw, 32px); }
 .t-bronze .num-dur { display: block; margin-top: 4px; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--lume-fg-faint); }
 .t-bronze .num-row .btn { margin-top: 12px; }
 
@@ -128,7 +128,7 @@ const CSS = `
 /* ── Depoimentos ── */
 .t-bronze .quotes { margin-top: clamp(40px, 6vw, 72px); display: grid; gap: clamp(36px, 5vw, 60px); }
 @media (min-width: 900px) { .t-bronze .quotes { grid-template-columns: repeat(2, 1fr); } }
-.t-bronze .quote blockquote { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(20px, 2.6vw, 30px); font-style: italic; line-height: 1.45; }
+.t-bronze .quote blockquote { margin: 0; font-family: var(--lume-font-title); font-size: clamp(20px, 2.6vw, 30px); font-style: italic; line-height: 1.45; }
 .t-bronze .quote .stars { display: inline-flex; gap: 3px; color: var(--lume-primary-text); margin-bottom: 16px; }
 .t-bronze .quote .stars svg { height: 14px; width: 14px; }
 .t-bronze .quote-who { margin-top: 22px; display: flex; align-items: center; gap: 14px; }
@@ -139,7 +139,7 @@ const CSS = `
 /* ── FAQ ── */
 .t-bronze .faq { margin-top: clamp(36px, 5vw, 60px); border-top: 1px solid var(--lume-line-strong); }
 .t-bronze .faq details { border-bottom: 1px solid var(--lume-line); }
-.t-bronze .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 26px 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(19px, 2.2vw, 26px); }
+.t-bronze .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 26px 0; font-family: var(--lume-font-title); font-size: clamp(19px, 2.2vw, 26px); }
 .t-bronze .faq summary::-webkit-details-marker { display: none; }
 .t-bronze .faq summary svg { height: 20px; width: 20px; flex-shrink: 0; color: var(--lume-primary-text); transition: transform .3s; }
 .t-bronze .faq details[open] summary svg { transform: rotate(180deg); }

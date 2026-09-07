@@ -25,11 +25,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-rose { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.75; font-weight: 300; }
+.t-rose { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.75; font-weight: 300; }
 .t-rose *, .t-rose *::before, .t-rose *::after { box-sizing: border-box; }
 .t-rose img { display: block; max-width: 100%; }
 .t-rose a { color: inherit; text-decoration: none; }
-.t-rose h1, .t-rose h2, .t-rose h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 500; line-height: 1.2; margin: 0; color: var(--lume-fg); }
+.t-rose h1, .t-rose h2, .t-rose h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); line-height: 1.2; margin: 0; color: var(--lume-fg); letter-spacing: var(--lume-font-title-tracking); }
 .t-rose p { margin: 0; }
 .t-rose section[id] { scroll-margin-top: 84px; }
 .t-rose [data-lume-placeholder] { background: var(--lume-secondary-soft); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 12px; }
@@ -60,7 +60,7 @@ const CSS = `
 /* ── Topo ── */
 .t-rose .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-rose .nav-in { display: flex; align-items: center; justify-content: space-between; height: 74px; }
-.t-rose .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 600; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
+.t-rose .brand { font-family: var(--lume-font-title); font-size: 22px; font-weight: 600; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
 .t-rose .brand em { font-style: italic; color: var(--lume-primary-text); }
 .t-rose .brand img { height: 38px; width: auto; object-fit: contain; }
 .t-rose .nav-links { display: none; gap: 30px; }
@@ -100,7 +100,7 @@ const CSS = `
 /* ── Números ── */
 .t-rose .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 34px 0; }
 .t-rose .stats > div { text-align: center; }
-.t-rose .stats b { display: block; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(26px, 5.5vw, 42px); font-weight: 600; color: var(--lume-primary-text); }
+.t-rose .stats b { display: block; font-family: var(--lume-font-title); font-size: clamp(26px, 5.5vw, 42px); font-weight: 600; color: var(--lume-primary-text); }
 .t-rose .stats span { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--lume-fg-faint); }
 
 /* ── Serviços (tiles) ── */
@@ -114,7 +114,7 @@ const CSS = `
 .t-rose .tile-desc { margin-top: 8px; font-size: 14px; color: var(--lume-fg-soft); flex: 1; }
 .t-rose .tile-img { margin-top: 16px; width: 100%; aspect-ratio: 4/3; border-radius: var(--lume-r-md); overflow: hidden; }
 .t-rose .tile-img img { width: 100%; height: 100%; object-fit: cover; }
-.t-rose .tile-price { margin-top: 14px; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 600; color: var(--lume-primary-text); }
+.t-rose .tile-price { margin-top: 14px; font-family: var(--lume-font-title); font-size: 22px; font-weight: 600; color: var(--lume-primary-text); }
 .t-rose .tile-dur { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--lume-fg-faint); }
 .t-rose .tile .btn { margin-top: 16px; width: 100%; min-height: 44px; padding: 11px 18px; font-size: 12px; }
 
@@ -154,12 +154,12 @@ const CSS = `
 .t-rose .testi-who { margin-top: 20px; display: flex; align-items: center; gap: 12px; }
 .t-rose .testi-who img, .t-rose .testi-avatar { height: 44px; width: 44px; border-radius: 999px; object-fit: cover; }
 .t-rose .testi-avatar { display: grid; place-items: center; background: var(--lume-secondary-soft); color: var(--lume-primary-text); font-size: 14px; font-weight: 600; }
-.t-rose .testi-who b { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 600; }
+.t-rose .testi-who b { font-family: var(--lume-font-title); font-size: 17px; font-weight: 600; }
 
 /* ── FAQ ── */
 .t-rose .faq { margin-top: 38px; max-width: 820px; margin-left: auto; margin-right: auto; display: grid; gap: 12px; }
 .t-rose .faq details { background: var(--lume-surface); border: 1px solid var(--lume-line); border-radius: var(--lume-r-md); }
-.t-rose .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 500; }
+.t-rose .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; font-family: var(--lume-font-title); font-size: 17px; font-weight: 500; }
 .t-rose .faq summary::-webkit-details-marker { display: none; }
 .t-rose .faq summary svg { height: 19px; width: 19px; flex-shrink: 0; color: var(--lume-primary-text); transition: transform .25s; }
 .t-rose .faq details[open] summary svg { transform: rotate(180deg); }

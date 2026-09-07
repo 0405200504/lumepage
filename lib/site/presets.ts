@@ -27,6 +27,8 @@ export interface NichePreset {
   badge: string;
   description: string;
   recommendedTemplateId: string;
+  /** Modelo pronto (layout + cores + fontes) sugerido para o nicho. */
+  recommendedLookId: string;
   keywords: string[];
   sampleRoles: string[];
   content: {
@@ -73,6 +75,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '💅 Alongamento & Blindagem',
     description: 'Alongamento em fibra/gel, blindagem diamante, nail art autoral e cuidados com unhas naturais.',
     recommendedTemplateId: 'editorial-nude',
+    recommendedLookId: 'nude-editorial',
     keywords: ['alongamento em gel', 'fibra de vidro', 'blindagem', 'nail art', 'manicure'],
     sampleRoles: ['Nail Designer Especialista', 'Manicure & Nail Artist', 'Especialista em Alongamento'],
     content: {
@@ -143,6 +146,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '👁️ Olhar Marcante',
     description: 'Extensão de cílios (fio a fio, volume brasileiro/russo), lash lifting, design personalizado e brow lamination.',
     recommendedTemplateId: 'gold-premium',
+    recommendedLookId: 'ouro-discreto',
     keywords: ['extensão de cílios', 'lash lifting', 'volume brasileiro', 'brow lamination', 'design de sobrancelhas'],
     sampleRoles: ['Lash & Brow Designer', 'Especialista em Olhar', 'Master em Extensão de Cílios'],
     content: {
@@ -208,6 +212,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '✨ Pele Radiante & Corpo',
     description: 'Limpeza de pele profunda, peelings químicos, hidratação avançada, drenagem linfática e protocolos faciais/corporais.',
     recommendedTemplateId: 'clinic-sage',
+    recommendedLookId: 'clinica-sage',
     keywords: ['limpeza de pele', 'peeling', 'drenagem linfática', 'estética facial', 'rejuvenescimento'],
     sampleRoles: ['Esteticista & Cosmetóloga', 'Especialista em Saúde da Pele', 'Terapeuta Estética'],
     content: {
@@ -273,6 +278,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '💇‍♀️ Cor, Corte & Tratamento',
     description: 'Cortes autorais, mechas, coloração, cronograma capilar, terapia capilar e penteados para eventos.',
     recommendedTemplateId: 'editorial-bronze',
+    recommendedLookId: 'bronze-editorial',
     keywords: ['mechas', 'loiro saudável', 'corte feminino', 'terapia capilar', 'cronograma'],
     sampleRoles: ['Hair Stylist & Colorista', 'Especialista em Mechas', 'Terapeuta Capilar'],
     content: {
@@ -333,6 +339,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '💆‍♀️ Relaxamento & Bem-Estar',
     description: 'Massagem relaxante, liberação miofascial, drenagem linfática método Renata França, ventosaterapia e spa dos pés.',
     recommendedTemplateId: 'terracota',
+    recommendedLookId: 'spa-terracota',
     keywords: ['massagem relaxante', 'liberação miofascial', 'drenagem', 'spa', 'alívio de dores'],
     sampleRoles: ['Massoterapeuta & Terapeuta Corporal', 'Especialista em Bem-Estar', 'Terapeuta Spa'],
     content: {
@@ -393,6 +400,7 @@ export const NICHE_PRESETS: Record<NicheId, NichePreset> = {
     badge: '🌸 Atendimento Exclusivo',
     description: 'Para maquiadoras, micropigmentadoras, depiladoras, podólogas e profissionais multidisciplinares.',
     recommendedTemplateId: 'rose-champagne',
+    recommendedLookId: 'rose-classico',
     keywords: ['beleza', 'estética', 'atendimento personalizado', 'autocuidado'],
     sampleRoles: ['Profissional da Beleza', 'Especialista em Autocuidado', 'Atendimento Personalizado'],
     content: {

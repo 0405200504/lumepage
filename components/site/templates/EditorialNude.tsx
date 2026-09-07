@@ -29,11 +29,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-nude { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.6; }
+.t-nude { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.6; }
 .t-nude *, .t-nude *::before, .t-nude *::after { box-sizing: border-box; }
 .t-nude img { display: block; max-width: 100%; }
 .t-nude a { color: inherit; text-decoration: none; }
-.t-nude h1, .t-nude h2, .t-nude h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 400; line-height: 1.12; margin: 0; }
+.t-nude h1, .t-nude h2, .t-nude h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); line-height: 1.12; margin: 0; letter-spacing: var(--lume-font-title-tracking); }
 .t-nude p { margin: 0; }
 .t-nude section[id] { scroll-margin-top: 80px; }
 .t-nude [data-lume-placeholder] { background: var(--lume-secondary-soft); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
@@ -63,7 +63,7 @@ const CSS = `
 /* ── Topo ── */
 .t-nude .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-nude .nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.t-nude .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 19px; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
+.t-nude .brand { font-family: var(--lume-font-title); font-size: 19px; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
 .t-nude .brand em { font-style: italic; color: var(--lume-primary-text); }
 .t-nude .brand img { height: 34px; width: auto; object-fit: contain; }
 .t-nude .nav-links { display: none; align-items: center; gap: 28px; }
@@ -81,7 +81,7 @@ const CSS = `
 @keyframes t-nude-slide { from { transform: translateX(100%); } to { transform: none; } }
 .t-nude .drawer-top { display: flex; align-items: center; justify-content: space-between; }
 .t-nude .drawer nav { margin-top: 32px; display: flex; flex-direction: column; }
-.t-nude .drawer nav a { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; padding: 14px 0; border-bottom: 1px solid var(--lume-line); }
+.t-nude .drawer nav a { font-family: var(--lume-font-title); font-size: 22px; padding: 14px 0; border-bottom: 1px solid var(--lume-line); }
 .t-nude .drawer .btn { margin-top: auto; }
 
 /* ── Hero ── */
@@ -101,14 +101,14 @@ const CSS = `
 .t-nude .hero-photo img, .t-nude .hero-photo > div { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .t-nude .hero-badge { position: absolute; left: -10px; bottom: -16px; background: var(--lume-primary); color: var(--lume-on-primary); border-radius: var(--lume-r-md); padding: 12px 20px; box-shadow: 0 16px 32px -18px var(--lume-shadow); display: none; }
 @media (min-width: 640px) { .t-nude .hero-badge { display: block; } }
-.t-nude .hero-badge b { font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 400; display: block; line-height: 1; }
+.t-nude .hero-badge b { font-family: var(--lume-font-title); font-size: 24px; font-weight: 400; display: block; line-height: 1; }
 .t-nude .hero-badge span { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; opacity: .8; }
 .t-nude .hero-blob { position: absolute; right: -90px; top: 60px; height: 340px; width: 340px; border-radius: 999px; background: var(--lume-secondary-soft); filter: blur(70px); pointer-events: none; }
 
 /* ── Números ── */
 .t-nude .stats { border-top: 1px solid var(--lume-line); border-bottom: 1px solid var(--lume-line); padding: 36px 0; }
 .t-nude .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; }
-.t-nude .stats dt { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(26px, 6vw, 42px); color: var(--lume-primary-text); }
+.t-nude .stats dt { font-family: var(--lume-font-title); font-size: clamp(26px, 6vw, 42px); color: var(--lume-primary-text); }
 .t-nude .stats dd { margin: 6px 0 0; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--lume-fg-faint); }
 @media (min-width: 640px) { .t-nude .stats dd { font-size: 11px; } }
 
@@ -124,7 +124,7 @@ const CSS = `
 .t-nude .svc h3 { margin-top: 18px; font-size: 23px; }
 .t-nude .svc-desc { margin-top: 8px; font-size: 15px; line-height: 1.65; color: var(--lume-fg-soft); }
 .t-nude .svc-meta { margin-top: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.t-nude .svc-price { font-family: 'Playfair Display', Georgia, serif; font-size: 24px; color: var(--lume-primary-text); }
+.t-nude .svc-price { font-family: var(--lume-font-title); font-size: 24px; color: var(--lume-primary-text); }
 .t-nude .svc-dur { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--lume-fg-faint); }
 .t-nude .svc-img { margin-top: 18px; aspect-ratio: 1/1; border-radius: var(--lume-r-md); overflow: hidden; }
 .t-nude .svc-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
@@ -162,7 +162,7 @@ const CSS = `
 .t-nude .testi-who { margin-top: 18px; display: flex; align-items: center; gap: 12px; }
 .t-nude .testi-who img, .t-nude .testi-avatar { height: 40px; width: 40px; border-radius: 999px; object-fit: cover; }
 .t-nude .testi-avatar { display: grid; place-items: center; background: var(--lume-primary-soft); color: var(--lume-primary-text); font-size: 13px; font-weight: 600; }
-.t-nude .testi-who b { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 400; }
+.t-nude .testi-who b { font-family: var(--lume-font-title); font-size: 17px; font-weight: 400; }
 
 /* ── Sobre ── */
 .t-nude .about-grid { display: grid; gap: 32px; align-items: center; }
@@ -173,7 +173,7 @@ const CSS = `
 /* ── FAQ ── */
 .t-nude .faq-list { margin-top: 32px; max-width: 780px; }
 .t-nude .faq-list details { border-bottom: 1px solid var(--lume-line); }
-.t-nude .faq-list summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; font-size: 17px; font-family: 'Playfair Display', Georgia, serif; }
+.t-nude .faq-list summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; font-size: 17px; font-family: var(--lume-font-title); }
 .t-nude .faq-list summary::-webkit-details-marker { display: none; }
 .t-nude .faq-list summary svg { height: 20px; width: 20px; flex-shrink: 0; color: var(--lume-primary-text); transition: transform .25s; }
 .t-nude .faq-list details[open] summary svg { transform: rotate(180deg); }

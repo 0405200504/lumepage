@@ -56,7 +56,11 @@ export function ResetModal({
       if (selectedType === 'default') {
         resetConfig = defaultSiteConfig(templateId, seed);
       } else {
+        // "Página em branco" limpa TEXTO, não o visual: a profissional acabou de
+        // escolher a paleta e a dupla de fontes: devolvê-la ao tema de fábrica
+        // seria desfazer uma escolha que ela não pediu para desfazer.
         resetConfig = buildBlankConfig(templateId, seed);
+        resetConfig.theme = { ...currentConfig.theme };
       }
 
       await onConfirmReset(resetConfig);
@@ -138,7 +142,7 @@ export function ResetModal({
                   Restaurar modelo original
                 </h4>
                 <p className="text-[11px] text-n-600 mt-0.5 leading-relaxed">
-                  Restaura todos os textos elegantes, cores e estrutura de fábrica deste modelo.
+                  Volta tudo ao estado de fábrica deste modelo: textos, cores, fontes e estrutura.
                 </p>
               </div>
               {selectedType === 'default' && (
@@ -203,7 +207,8 @@ export function ResetModal({
                   Começar com página 100% em branco
                 </h4>
                 <p className="text-[11px] text-n-600 mt-0.5 leading-relaxed">
-                  Limpa todos os textos, galeria e depoimentos de exemplo para você escrever tudo manualmente.
+                  Limpa todos os textos, galeria e depoimentos de exemplo para você escrever tudo
+                  manualmente. As cores e as fontes que você escolheu continuam.
                 </p>
               </div>
               {selectedType === 'blank' && (

@@ -60,6 +60,10 @@ const slugMod = await jiti.import<typeof import('../lib/site/slug.ts')>('./lib/s
 const themeMod = await jiti.import<typeof import('../lib/site/theme.ts')>('./lib/site/theme.ts');
 const tplMod = await jiti.import<typeof import('../lib/site/templates.ts')>('./lib/site/templates.ts');
 const pubMod = await jiti.import<typeof import('../lib/site/publicService.ts')>('./lib/site/publicService.ts');
+const fontMod = await jiti.import<typeof import('../lib/site/fonts.ts')>('./lib/site/fonts.ts');
+const palMod = await jiti.import<typeof import('../lib/site/palettes.ts')>('./lib/site/palettes.ts');
+const lookMod = await jiti.import<typeof import('../lib/site/looks.ts')>('./lib/site/looks.ts');
+const listMod = await jiti.import<typeof import('../lib/site/checklist.ts')>('./lib/site/checklist.ts');
 
 const {
   cleanText, cleanUrl, cleanHandle, cleanDigits, cleanEmail,
@@ -69,6 +73,10 @@ const { normalizeSlug, validateSlug, RESERVED_SLUGS } = slugMod;
 const { themeToCssVars, contrast, readableOn, safeHex } = themeMod;
 const { SITE_TEMPLATES, getTemplateMeta, isValidTemplateId } = tplMod;
 const { toPublicService, toPublicServices } = pubMod;
+const { SITE_FONT_PAIRS, getFontPair, isValidFontPairId, FONT_SAMPLE_HREF } = fontMod;
+const { SITE_PALETTES, matchPalette, palettesByGroup } = palMod;
+const { SITE_LOOKS, resolveLook, matchLook, getLook } = lookMod;
+const { buildChecklist } = listMod;
 
 // ============================================================================
 // 1. Saneamento de entrada (XSS, HTML, URLs, limites)
@@ -259,8 +267,8 @@ check('ids de template são únicos',
   new Set(SITE_TEMPLATES.map(t => t.id)).size === SITE_TEMPLATES.length);
 check('todo template tem nome, categoria, descrição e público-alvo',
   SITE_TEMPLATES.every(t => t.name && t.category && t.description && t.bestFor));
-check('todo template carrega fonte por https',
-  SITE_TEMPLATES.every(t => t.fontsHref.startsWith('https://fonts.googleapis.com/')));
+check('todo template aponta para uma dupla de fontes existente',
+  SITE_TEMPLATES.every(t => isValidFontPairId(t.defaultFontPair)));
 check('todo template tem miniatura com cores válidas',
   SITE_TEMPLATES.every(t => /^#[0-9a-f]{6}$/i.test(t.preview.background) && /^#[0-9a-f]{6}$/i.test(t.preview.accent)));
 check('getTemplateMeta com id inexistente devolve um template válido (nunca quebra)',
@@ -285,6 +293,103 @@ for (const file of fs.readdirSync(tplDir)) {
 }
 check('nenhum template tem telefone, nome de cliente ou URL fixa no código',
   comHardcode.length === 0, comHardcode.join(', '));
+
+// ============================================================================
+// 4b. Modelos prontos, paletas e duplas de fontes
+// ============================================================================
+
+group('4b. Modelos prontos, paletas e fontes');
+
+check('ids de dupla de fontes são únicos',
+  new Set(SITE_FONT_PAIRS.map(f => f.id)).size === SITE_FONT_PAIRS.length);
+check('toda dupla carrega a folha por https do Google Fonts',
+  SITE_FONT_PAIRS.every(f => f.href.startsWith('https://fonts.googleapis.com/css2?')));
+check('toda dupla declara título e corpo com fallback local',
+  SITE_FONT_PAIRS.every(f => f.titleStack.includes(',') && f.bodyStack.includes(',')));
+check('folha de amostra do editor é https do Google Fonts',
+  FONT_SAMPLE_HREF.startsWith('https://fonts.googleapis.com/css2?'));
+check('getFontPair com id inexistente devolve o par padrão (nunca quebra)',
+  getFontPair('fonte-que-nao-existe').id === 'playfair-inter');
+
+check('ids de paleta são únicos',
+  new Set(SITE_PALETTES.map(p => p.id)).size === SITE_PALETTES.length);
+check('há pelo menos 15 paletas prontas', SITE_PALETTES.length >= 15, String(SITE_PALETTES.length));
+check('toda paleta usa hex de 6 dígitos',
+  SITE_PALETTES.every(p => Object.values(p.colors).every(c => /^#[0-9a-f]{6}$/i.test(c))));
+check('todo agrupamento de paletas cobre a lista inteira',
+  palettesByGroup().reduce((n, g) => n + g.items.length, 0) === SITE_PALETTES.length);
+
+// A promessa do módulo é que a página nunca sai ilegível. Uma paleta pronta que
+// quebrasse isso seria pior que deixar a profissional escolher a cor na mão.
+for (const p of SITE_PALETTES) {
+  const v = themeToCssVars({ ...p.colors, radius: 'soft', fontPair: 'playfair-inter' }) as unknown as Record<string, string>;
+  check(`paleta "${p.name}": texto legível sobre o fundo`,
+    contrast(p.colors.foreground, p.colors.background) >= 4.5,
+    `contraste ${contrast(p.colors.foreground, p.colors.background).toFixed(2)}`);
+  check(`paleta "${p.name}": texto legível dentro do botão`,
+    contrast(v['--lume-on-primary'], v['--lume-primary']) >= 4.5,
+    `contraste ${contrast(v['--lume-on-primary'], v['--lume-primary']).toFixed(2)}`);
+}
+
+check('ids de modelo pronto são únicos',
+  new Set(SITE_LOOKS.map(l => l.id)).size === SITE_LOOKS.length);
+check('há pelo menos 18 modelos prontos', SITE_LOOKS.length >= 18, String(SITE_LOOKS.length));
+check('todo modelo aponta para layout, paleta e fontes existentes',
+  SITE_LOOKS.every(l =>
+    isValidTemplateId(l.templateId)
+    && SITE_PALETTES.some(p => p.id === l.paletteId)
+    && isValidFontPairId(l.fontPairId)));
+
+// Se `matchLook` não reconhecesse o próprio modelo que acabou de aplicar,
+// nenhum card ficaria marcado como selecionado no editor.
+const naoReconhecidos = SITE_LOOKS.filter(l => matchLook(l.templateId, resolveLook(l).theme)?.id !== l.id);
+check('todo modelo aplicado é reconhecido de volta pelo editor',
+  naoReconhecidos.length === 0, naoReconhecidos.map(l => l.id).join(', '));
+
+check('trocar uma cor faz o editor deixar de marcar o modelo (vira personalizado)',
+  matchLook(SITE_LOOKS[0].templateId, { ...resolveLook(SITE_LOOKS[0]).theme, primary: '#123456' }) === undefined);
+check('themeToCssVars publica as variáveis de fonte',
+  !!(themeToCssVars(resolveLook(SITE_LOOKS[0]).theme) as unknown as Record<string, string>)['--lume-font-title']);
+check('config gravada sem dupla de fontes cai no par do template (retrocompatível)',
+  normalizeConfig({ theme: { primary: '#111111' } }, 'clinic-sage').theme.fontPair
+    === getTemplateMeta('clinic-sage').defaultFontPair);
+check('config com fontPair inventado é recusada e cai no padrão',
+  normalizeConfig({ theme: { fontPair: '../../etc/passwd' } }, 'editorial-nude').theme.fontPair
+    === 'playfair-inter');
+check('getLook com id inexistente devolve undefined', getLook('nao-existe') === undefined);
+check('matchPalette reconhece a paleta que acabou de ser aplicada',
+  matchPalette({ ...SITE_PALETTES[3].colors })?.id === SITE_PALETTES[3].id);
+
+// ── "Falta o quê?" ──────────────────────────────────────────────────────────
+const listaConfigVazia = defaultSiteConfig('editorial-nude');
+const resVazia = buildChecklist(listaConfigVazia, 0);
+check('página em branco tem pendências essenciais', resVazia.missingEssential.length > 0);
+check('página em branco não marca 100%', resVazia.percent < 100, `${resVazia.percent}%`);
+check('todo item da lista aponta para uma aba do editor',
+  resVazia.items.every(i => typeof i.tab === 'string' && i.tab.length > 0));
+
+const listaConfigCheia = defaultSiteConfig('editorial-nude', {
+  name: 'Marina Alves', brand_name: 'Marina Alves Nails', city: 'São Paulo - SP',
+  address: 'Rua das Hortênsias, 248', whatsapp: '5511999990000', instagram: 'marinanails',
+  profile_image_url: 'https://exemplo.com/foto.jpg',
+});
+listaConfigCheia.identity.role = 'Nail Designer';
+listaConfigCheia.content.about.text = 'a'.repeat(120);
+listaConfigCheia.content.gallery.items = [1, 2, 3].map(n => ({ id: `g${n}`, url: `https://exemplo.com/${n}.jpg`, caption: '' }));
+listaConfigCheia.content.testimonials.items = [{ id: 't1', name: 'Ana', photoUrl: '', text: 'Ótimo', rating: 5 }];
+listaConfigCheia.content.faq.items = [
+  { id: 'f1', question: 'a', answer: 'b' },
+  { id: 'f2', question: 'c', answer: 'd' },
+];
+listaConfigCheia.seo.title = 'Marina Alves Nails';
+listaConfigCheia.seo.description = 'Alongamento em gel e blindagem.';
+const resCheia = buildChecklist(listaConfigCheia, 3);
+check('página completa não tem pendência essencial',
+  resCheia.missingEssential.length === 0,
+  resCheia.missingEssential.map(i => i.label).join(', '));
+check('página completa marca 100%', resCheia.percent === 100, `${resCheia.percent}%`);
+check('sem serviço cadastrado a lista cobra o serviço',
+  buildChecklist(listaConfigCheia, 0).missingEssential.some(i => i.id === 'services'));
 
 // ============================================================================
 // 5. Trocar de template não pode perder conteúdo
@@ -485,15 +590,17 @@ const servicosDemo = toPublicServices([
   },
 ] as never);
 
+const MOD_PATH: Record<string, string> = {
+  'editorial-nude': './components/site/templates/EditorialNude.tsx',
+  'gold-premium': './components/site/templates/GoldPremium.tsx',
+  'terracota': './components/site/templates/Terracota.tsx',
+  'clinic-sage': './components/site/templates/ClinicSage.tsx',
+  'editorial-bronze': './components/site/templates/EditorialBronze.tsx',
+  'rose-champagne': './components/site/templates/RoseChampagne.tsx',
+};
+
 for (const meta of SITE_TEMPLATES) {
-  const modPath = {
-    'editorial-nude': './components/site/templates/EditorialNude.tsx',
-    'gold-premium': './components/site/templates/GoldPremium.tsx',
-    'terracota': './components/site/templates/Terracota.tsx',
-    'clinic-sage': './components/site/templates/ClinicSage.tsx',
-    'editorial-bronze': './components/site/templates/EditorialBronze.tsx',
-    'rose-champagne': './components/site/templates/RoseChampagne.tsx',
-  }[meta.id];
+  const modPath = MOD_PATH[meta.id];
 
   let html = '';
   let erro = '';
@@ -531,6 +638,37 @@ for (const meta of SITE_TEMPLATES) {
   check(`${meta.name}: o link do WhatsApp usa o número da profissional`, html.includes('wa.me/5511999990000'));
   check(`${meta.name}: links externos usam rel="noopener noreferrer"`,
     !html.includes('target="_blank"') || (html.match(/target="_blank"/g) || []).length <= (html.match(/noopener noreferrer/g) || []).length);
+}
+
+// ── Todos os modelos prontos renderizam de verdade ──────────────────────────
+// Um look é layout + paleta + fontes: se qualquer combinação quebrasse, a
+// profissional descobriria clicando no card — em cima da página dela.
+group('9b. Modelos prontos renderizados');
+
+for (const look of SITE_LOOKS) {
+  const resolved = resolveLook(look);
+  let html = '';
+  let erro = '';
+  try {
+    const mod = await jiti.import<{ default: (p: unknown) => React.ReactElement }>(MOD_PATH[look.templateId]!);
+    const cfg = normalizeConfig({ ...cheio, theme: resolved.theme }, look.templateId);
+    const secoes = resolveVisibleSections(cfg, resolved.template.supportedSections, { hasServices: true });
+    html = renderToStaticMarkup(
+      React.createElement(mod.default, {
+        config: cfg, services: servicosDemo, sections: secoes, onBook: () => {}, preview: false,
+      }),
+    );
+  } catch (e) {
+    erro = e instanceof Error ? e.message : String(e);
+  }
+
+  check(`modelo "${look.name}": renderiza sem erro`, !!html && !erro, erro);
+  if (!html) continue;
+  check(`modelo "${look.name}": aplica a dupla de fontes escolhida`,
+    html.includes(resolved.font.titleStack.split(',')[0].replace(/'/g, '&#x27;')),
+    'fonte do título não chegou ao HTML');
+  check(`modelo "${look.name}": aplica a cor da paleta escolhida`,
+    html.includes(resolved.palette.colors.primary));
 }
 
 // ============================================================================

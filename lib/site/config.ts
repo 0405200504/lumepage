@@ -24,6 +24,7 @@ import type {
 import { SITE_SECTION_IDS, SITE_REQUIRED_SECTIONS } from '@/types/site';
 import { getTemplateMeta } from './templates';
 import { safeHex } from './theme';
+import { isValidFontPairId } from './fonts';
 
 // ============================================================================
 // Limites de tamanho (também usados pelo editor para mostrar o contador)
@@ -391,6 +392,9 @@ function normalizeTheme(raw: unknown, fallback: SiteTheme): SiteTheme {
     background: safeHex(t.background, fallback.background),
     foreground: safeHex(t.foreground, fallback.foreground),
     radius: radius === 'sharp' || radius === 'soft' || radius === 'round' ? radius : fallback.radius,
+    // Config gravada antes das duplas de fontes existirem não tem este campo:
+    // ela cai no par padrão do template e a página continua idêntica.
+    fontPair: isValidFontPairId(t.fontPair) ? t.fontPair : fallback.fontPair,
   };
 }
 
