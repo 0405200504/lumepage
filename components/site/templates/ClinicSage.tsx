@@ -25,11 +25,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-sage { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.65; }
+.t-sage { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.65; }
 .t-sage *, .t-sage *::before, .t-sage *::after { box-sizing: border-box; }
 .t-sage img { display: block; max-width: 100%; }
 .t-sage a { color: inherit; text-decoration: none; }
-.t-sage h1, .t-sage h2, .t-sage h3 { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; font-weight: 500; line-height: 1.2; margin: 0; letter-spacing: -.01em; }
+.t-sage h1, .t-sage h2, .t-sage h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); line-height: 1.2; margin: 0; letter-spacing: var(--lume-font-title-tracking); }
 .t-sage p { margin: 0; }
 .t-sage section[id] { scroll-margin-top: 80px; }
 .t-sage [data-lume-placeholder] { background: var(--lume-secondary-soft); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 12px; }
@@ -60,7 +60,7 @@ const CSS = `
 /* ── Topo ── */
 .t-sage .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-sage .nav-in { display: flex; align-items: center; justify-content: space-between; height: 70px; }
-.t-sage .brand { font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.t-sage .brand { font-family: var(--lume-font-title); font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .t-sage .brand img { height: 36px; width: auto; object-fit: contain; }
 .t-sage .nav-links { display: none; gap: 30px; }
 @media (min-width: 1024px) { .t-sage .nav-links { display: flex; } }
@@ -75,7 +75,7 @@ const CSS = `
 .t-sage .drawer { position: fixed; inset: 0 0 0 auto; width: 84%; max-width: 320px; background: var(--lume-bg); z-index: 61; padding: 18px 22px 30px; display: flex; flex-direction: column; }
 .t-sage .drawer-top { display: flex; align-items: center; justify-content: space-between; }
 .t-sage .drawer nav { margin-top: 30px; display: flex; flex-direction: column; }
-.t-sage .drawer nav a { font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 500; padding: 14px 0; border-bottom: 1px solid var(--lume-line); }
+.t-sage .drawer nav a { font-family: var(--lume-font-title); font-size: 19px; font-weight: 500; padding: 14px 0; border-bottom: 1px solid var(--lume-line); }
 .t-sage .drawer .btn { margin-top: auto; }
 
 /* ── Capa ── */
@@ -95,7 +95,7 @@ const CSS = `
 /* ── Números ── */
 .t-sage .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .t-sage .stats > div { background: var(--lume-surface); border: 1px solid var(--lume-line); border-radius: var(--lume-r-md); padding: 24px 12px; text-align: center; }
-.t-sage .stats b { display: block; font-family: 'Outfit', sans-serif; font-size: clamp(24px, 5vw, 38px); font-weight: 600; color: var(--lume-primary-text); }
+.t-sage .stats b { display: block; font-family: var(--lume-font-title); font-size: clamp(24px, 5vw, 38px); font-weight: 600; color: var(--lume-primary-text); }
 .t-sage .stats span { display: block; margin-top: 5px; font-size: 12px; color: var(--lume-fg-faint); }
 
 /* ── Serviços ── */
@@ -111,7 +111,7 @@ const CSS = `
 .t-sage .card-img { margin-top: 18px; aspect-ratio: 16/10; border-radius: var(--lume-r-md); overflow: hidden; }
 .t-sage .card-img img { width: 100%; height: 100%; object-fit: cover; }
 .t-sage .card-meta { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--lume-line); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.t-sage .card-price { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 600; color: var(--lume-primary-text); }
+.t-sage .card-price { font-family: var(--lume-font-title); font-size: 22px; font-weight: 600; color: var(--lume-primary-text); }
 .t-sage .card-dur { font-size: 13px; color: var(--lume-fg-faint); }
 .t-sage .card .btn { margin-top: 16px; }
 
@@ -143,7 +143,7 @@ const CSS = `
 .t-sage .testi-who { margin-top: 20px; display: flex; align-items: center; gap: 12px; }
 .t-sage .testi-who img, .t-sage .testi-avatar { height: 42px; width: 42px; border-radius: 999px; object-fit: cover; }
 .t-sage .testi-avatar { display: grid; place-items: center; background: var(--lume-primary-soft); color: var(--lume-primary-text); font-size: 13px; font-weight: 700; }
-.t-sage .testi-who b { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600; }
+.t-sage .testi-who b { font-family: var(--lume-font-title); font-size: 15px; font-weight: 600; }
 
 /* ── Sobre ── */
 .t-sage .split { display: grid; gap: 34px; align-items: center; }
@@ -154,7 +154,7 @@ const CSS = `
 /* ── FAQ ── */
 .t-sage .faq { margin-top: 36px; max-width: 820px; margin-left: auto; margin-right: auto; display: grid; gap: 12px; }
 .t-sage .faq details { background: var(--lume-surface); border: 1px solid var(--lume-line); border-radius: var(--lume-r-md); }
-.t-sage .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 500; }
+.t-sage .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; font-family: var(--lume-font-title); font-size: 16px; font-weight: 500; }
 .t-sage .faq summary::-webkit-details-marker { display: none; }
 .t-sage .faq summary svg { height: 19px; width: 19px; flex-shrink: 0; color: var(--lume-primary-text); transition: transform .25s; }
 .t-sage .faq details[open] summary svg { transform: rotate(180deg); }

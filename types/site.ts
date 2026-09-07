@@ -87,6 +87,12 @@ export interface SiteTheme {
   foreground: string;
   /** Cantos: reto, suave ou bem arredondado. */
   radius: 'sharp' | 'soft' | 'round';
+  /**
+   * Dupla de fontes (título + corpo), id de `lib/site/fonts.ts`.
+   * Fica no tema, e não no template, justamente para a profissional poder
+   * trocar a tipografia sem trocar de modelo — e vice-versa.
+   */
+  fontPair: string;
 }
 
 // ============================================================================

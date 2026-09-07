@@ -7,6 +7,7 @@ import { SiteRenderer } from '@/components/site/SiteRenderer';
 import type { PublicService } from '@/components/site/types';
 import { normalizeConfig } from '@/lib/site/config';
 import { getTemplateMeta } from '@/lib/site/templates';
+import { getFontPair } from '@/lib/site/fonts';
 import { normalizeSlug, RESERVED_SLUGS } from '@/lib/site/slug';
 import { toPublicServices } from '@/lib/site/publicService';
 import type { Professional } from '@/types/database';
@@ -128,15 +129,15 @@ export default async function PublicSitePage({ params }: PageProps) {
   if (!loaded) notFound();
 
   const { professional, config, templateId, services } = loaded;
-  const meta = getTemplateMeta(templateId);
 
   return (
     <>
-      {/* Fontes do template. O React 19 iça estas tags para o <head>; carregar
-          só aqui evita empurrar as fontes da página pública para dentro do app. */}
+      {/* Fontes da DUPLA escolhida no editor (o template só define o par
+          padrão). O React 19 iça estas tags para o <head>; carregar só aqui
+          evita empurrar as fontes da página pública para dentro do app. */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="stylesheet" href={meta.fontsHref} />
+      <link rel="stylesheet" href={getFontPair(config.theme.fontPair).href} />
 
       <SiteRenderer
         slug={professional.slug}

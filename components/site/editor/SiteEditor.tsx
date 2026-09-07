@@ -19,11 +19,14 @@ import {
   Palette, LayoutTemplate, UserRound, Type, Sparkles, Images, GitCompareArrows,
   MessageSquareQuote, HelpCircle, ListOrdered, Link2, Smartphone, Monitor,
   ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight, FlaskConical,
-  Wand2, RotateCcw, Pencil, MousePointerClick,
+  Wand2, RotateCcw, Pencil, Info, ChevronDown,
 } from 'lucide-react';
 import type { SiteConfig, SiteStatus } from '@/types/site';
 import type { PublicService } from '../types';
 import { getTemplateMeta } from '@/lib/site/templates';
+import { getFontPair } from '@/lib/site/fonts';
+import { matchLook, SITE_LOOKS, type ResolvedLook } from '@/lib/site/looks';
+import { buildChecklist } from '@/lib/site/checklist';
 import { normalizeSlug, validateSlug, SLUG_MAX } from '@/lib/site/slug';
 import { LIMITS } from '@/lib/site/config';
 import { useToast } from '@/components/ui/Toast';
@@ -33,6 +36,8 @@ import {
 import { SiteRenderer } from '../SiteRenderer';
 import { PreviewFrame, type PreviewDevice } from './PreviewFrame';
 import { TemplatePicker } from './TemplatePicker';
+import { LookPicker } from './LookPicker';
+import { ProgressChecklist } from './ProgressChecklist';
 import { StepByStepWizardModal } from './StepByStepWizardModal';
 import { QuickImageModal } from './QuickImageModal';
 import { ResetModal } from './ResetModal';
@@ -47,18 +52,39 @@ type TabId =
   | 'template' | 'identity' | 'theme' | 'content' | 'services'
   | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address';
 
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'template', label: 'Modelo', icon: LayoutTemplate },
-  { id: 'identity', label: 'Identidade', icon: UserRound },
-  { id: 'theme', label: 'Cores', icon: Palette },
-  { id: 'content', label: 'Textos', icon: Type },
-  { id: 'services', label: 'Serviços', icon: Sparkles },
-  { id: 'gallery', label: 'Galeria', icon: Images },
-  { id: 'beforeAfter', label: 'Antes e depois', icon: GitCompareArrows },
-  { id: 'testimonials', label: 'Depoimentos', icon: MessageSquareQuote },
-  { id: 'extras', label: 'Números e dúvidas', icon: HelpCircle },
-  { id: 'sections', label: 'Seções', icon: ListOrdered },
-  { id: 'address', label: 'Endereço e SEO', icon: Link2 },
+/**
+ * A ordem aqui é o roteiro que a profissional segue: primeiro o visual (que é
+ * a parte divertida e engaja), depois o conteúdo (o trabalho de verdade) e só
+ * então os ajustes. Os grupos aparecem na navegação como separadores — sem
+ * eles, onze abas em fila viram uma lista sem começo nem fim.
+ */
+const TAB_GROUPS: { label: string; tabs: { id: TabId; label: string; icon: React.ElementType }[] }[] = [
+  {
+    label: '1 · Visual',
+    tabs: [
+      { id: 'template', label: 'Modelos', icon: LayoutTemplate },
+      { id: 'theme', label: 'Cores e fontes', icon: Palette },
+    ],
+  },
+  {
+    label: '2 · Conteúdo',
+    tabs: [
+      { id: 'identity', label: 'Identidade', icon: UserRound },
+      { id: 'content', label: 'Textos', icon: Type },
+      { id: 'services', label: 'Serviços', icon: Sparkles },
+      { id: 'gallery', label: 'Galeria', icon: Images },
+      { id: 'beforeAfter', label: 'Antes e depois', icon: GitCompareArrows },
+      { id: 'testimonials', label: 'Depoimentos', icon: MessageSquareQuote },
+      { id: 'extras', label: 'Números e dúvidas', icon: HelpCircle },
+    ],
+  },
+  {
+    label: '3 · Ajustes',
+    tabs: [
+      { id: 'sections', label: 'Seções', icon: ListOrdered },
+      { id: 'address', label: 'Endereço e SEO', icon: Link2 },
+    ],
+  },
 ];
 
 interface SiteEditorProps {
@@ -115,9 +141,13 @@ export function SiteEditor({
   const [slugBusy, setSlugBusy] = useState(false);
 
   const dirty = useRef(false);
+  /** Painel de configurações — usado para achar o campo clicado na prévia. */
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const meta = getTemplateMeta(templateId);
+  /** Modelo pronto correspondente ao estado atual — some assim que ela ajusta algo. */
+  const currentLook = matchLook(templateId, config.theme);
   const publicUrl = `${(appUrl || '').replace(/\/+$/, '')}/${slug}`;
 
   /** Muta uma cópia do config — mesma ergonomia do editor, imutabilidade preservada. */
@@ -130,7 +160,38 @@ export function SiteEditor({
     dirty.current = true;
   }, []);
 
-  /** Handler de clique em elemento no preview estilo Canva */
+  /**
+   * Aplica um MODELO PRONTO: layout, paleta, dupla de fontes e cantos de uma
+   * vez. Só mexe na apresentação — textos, fotos, serviços e seções ficam
+   * exatamente como estavam, que é o que permite experimentar sem medo.
+   */
+  const applyLook = useCallback((resolved: ResolvedLook) => {
+    setTemplateId(resolved.template.id);
+    setConfig(prev => {
+      const next = structuredClone(prev);
+      next.theme = { ...next.theme, ...resolved.theme };
+      return next;
+    });
+    dirty.current = true;
+    success(`Modelo "${resolved.look.name}" aplicado`, 'Seus textos e fotos continuam onde estavam.');
+  }, [success]);
+
+  /** O que ainda falta na página — alimenta a barra de progresso e a navegação. */
+  const checklist = useMemo(
+    () => buildChecklist(config, services.length),
+    [config, services.length],
+  );
+  const pendingTabs = useMemo(
+    () => new Set(checklist.items.filter(i => !i.done).map(i => i.tab)),
+    [checklist],
+  );
+
+  /**
+   * Clique em um elemento da prévia (modo Canva). Para imagem, abre a troca
+   * rápida. Para texto, faz o que a dica promete: abre a aba certa, ROLA até o
+   * campo e põe o cursor dentro dele. Antes disso a promessa era meia — a aba
+   * abria e a profissional tinha que caçar o campo na lista.
+   */
   const handleVisualElementClick = useCallback((payload: VisualElementPayload) => {
     setTab(payload.tab);
     if (payload.kind === 'image') {
@@ -141,9 +202,24 @@ export function SiteEditor({
         currentUrl: payload.currentValue,
         imageKind: payload.imageKind || 'geral',
       });
-    } else {
-      success('Elemento selecionado ✏️', `Editando: ${payload.label}`);
+      return;
     }
+
+    // O painel só troca de conteúdo no próximo render — daí o rAF duplo:
+    // procurar o campo antes disso encontraria o painel antigo.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const holder = panelRef.current?.querySelector<HTMLElement>(`[data-field="${payload.fieldId}"]`);
+      if (!holder) {
+        success('Aba aberta ✏️', `Edite aqui: ${payload.label}`);
+        return;
+      }
+      holder.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      holder.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea')?.focus();
+      // Um pulso de destaque: sem ele, em uma aba com dez campos, o cursor
+      // aparece em um lugar que a profissional não estava olhando.
+      holder.setAttribute('data-field-flash', 'true');
+      setTimeout(() => holder.removeAttribute('data-field-flash'), 1600);
+    }));
   }, [success]);
 
   /** Atualiza imagem com 1 clique vinda do popover rápido */
@@ -228,7 +304,16 @@ export function SiteEditor({
       setStatus('published');
       setSavedAt(Date.now());
       setBlocker(null);
-      success('Sua página está no ar! 🎉', 'Copie o link e coloque na bio do Instagram.');
+      // Publicar com pendência essencial é permitido — a página é dela. Mas
+      // dizer só "está no ar" esconderia que ela subiu sem foto ou sem serviço.
+      if (checklist.missingEssential.length > 0) {
+        success(
+          'Sua página está no ar! 🎉',
+          `Ainda falta${checklist.missingEssential.length > 1 ? 'm' : ''}: ${checklist.missingEssential.map(i => i.label.toLowerCase()).join(', ')}.`,
+        );
+      } else {
+        success('Sua página está no ar! 🎉', 'Copie o link e coloque na bio do Instagram.');
+      }
     } else {
       setBlocker(res.error);
       toastError('Não foi possível publicar', res.error);
@@ -288,8 +373,9 @@ export function SiteEditor({
             Como você prefere criar sua página?
           </h1>
           <p className="text-sm text-n-600 mt-2 leading-relaxed">
-            Você pode montar sua página em menos de 2 minutos com textos prontos do seu nicho,
-            ou escolher um modelo para personalizar tudo manualmente.
+            Os dois caminhos terminam no mesmo editor, com tudo ainda editável. A diferença é
+            só por onde você começa: <b>com os textos já escritos</b> para a sua profissão, ou
+            <b> escolhendo o visual</b> primeiro.
           </p>
         </header>
 
@@ -308,8 +394,9 @@ export function SiteEditor({
               Assistente de Criação Rápida por Nicho
             </h3>
             <p className="text-xs sm:text-sm text-n-600 max-w-md mx-auto leading-relaxed">
-              Diga sua profissão (Nails, Lash, Estética, Cabelo, Spa) e nós geramos a página
-              completinha com fotos, títulos magnéticos e perguntas frequentes prontas.
+              Oito perguntas curtas (nome, cidade, WhatsApp, foto) e a página sai pronta:
+              títulos, texto de &ldquo;sobre mim&rdquo;, perguntas frequentes e o visual mais
+              indicado para a sua profissão. Você ajusta o que quiser depois.
             </p>
           </div>
 
@@ -331,29 +418,45 @@ export function SiteEditor({
           </div>
           <div className="relative flex justify-center text-xs">
             <span className="bg-n-50 px-3 text-n-400 font-medium uppercase tracking-wider text-[10px]">
-              Ou escolha um modelo visual manualmente
+Ou comece escolhendo o visual
             </span>
           </div>
         </div>
 
-        <TemplatePicker
-          selected={templateId}
-          onSelect={id => { setTemplateId(id); dirty.current = true; }}
-        />
+        <div className="max-w-4xl mx-auto space-y-3">
+          <p className="text-[12px] text-n-600 text-center leading-relaxed max-w-xl mx-auto">
+            São {SITE_LOOKS.length} modelos prontos: cada um já vem com <b>layout, paleta de
+            cores, fontes e cantos</b> combinados. Clique para ver como fica — trocar de modelo
+            nunca apaga o que você escreveu.
+          </p>
+          <LookPicker
+            templateId={templateId}
+            theme={config.theme}
+            onSelect={applyLook}
+          />
+        </div>
 
-        <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={async () => {
-              const ok = await save(config, templateId, { silent: true });
-              if (ok) { setOnboarding(false); setTab('identity'); }
-            }}
-            className="inline-flex items-center gap-2 px-6 h-11 bg-white hover:bg-n-50 border border-n-200 text-n-700 text-body-sm font-semibold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-            Continuar com {meta.name}
-          </button>
+        {/* A lista tem 22 cards: sem esta barra colada no rodapé, o botão de
+            continuar ficaria a uma rolagem inteira de distância do modelo que
+            ela acabou de escolher. */}
+        <div className="sticky bottom-3 z-10 max-w-2xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-n-200 bg-white/95 backdrop-blur px-4 py-3 shadow-lg">
+            <span className="text-[12px] text-n-600 min-w-0">
+              Escolhido: <b className="text-heading">{currentLook?.name || meta.name}</b>
+            </span>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                const ok = await save(config, templateId, { silent: true });
+                if (ok) { setOnboarding(false); setTab('identity'); }
+              }}
+              className="inline-flex items-center gap-2 px-5 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-bold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              Continuar e preencher
+            </button>
+          </div>
         </div>
 
         {blocker && (
@@ -463,39 +566,89 @@ export function SiteEditor({
         )}
       </div>
 
+      {/* Roteiro: "falta o quê?" respondido antes de a profissional abrir aba
+          por aba procurando. */}
+      <ProgressChecklist result={checklist} onGo={t => setTab(t as TabId)} />
+
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] gap-4 items-start">
         {/* Configurações */}
         <div className="card overflow-hidden">
-          <nav className="flex gap-1 overflow-x-auto scrollbar-none border-b border-n-200 px-2 py-2">
-            {TABS.map(t => {
-              const Icon = t.icon;
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id)}
-                  className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-[11px] font-bold rounded-xl transition-colors cursor-pointer ${
-                    active ? 'bg-accent-soft text-wine-700' : 'text-n-600 hover:bg-n-50'
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" /> {t.label}
-                </button>
-              );
-            })}
+          {/* Navegação agrupada: o ponto laranja marca a aba que ainda tem
+              pendência na lista de "falta o quê" — assim a profissional sabe
+              onde ir sem abrir aba por aba. */}
+          <nav className="border-b border-n-200 px-2.5 py-2.5 space-y-2">
+            {TAB_GROUPS.map(group => (
+              <div key={group.label} className="flex flex-wrap items-center gap-1">
+                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-n-400 pr-1 shrink-0">
+                  {group.label}
+                </span>
+                {group.tabs.map(t => {
+                  const Icon = t.icon;
+                  const active = tab === t.id;
+                  const pending = pendingTabs.has(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTab(t.id)}
+                      className={`relative inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 text-[11px] font-bold rounded-xl transition-colors cursor-pointer ${
+                        active ? 'bg-accent-soft text-wine-700' : 'text-n-600 hover:bg-n-50'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" /> {t.label}
+                      {pending && (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-warning"
+                          title="Ainda falta algo aqui"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
-          <div className="p-4 sm:p-5 max-h-[calc(100vh-16rem)] overflow-y-auto scroll-touch">
+          <div ref={panelRef} className="p-4 sm:p-5 max-h-[calc(100vh-16rem)] overflow-y-auto scroll-touch">
             {tab === 'template' && (
-              <div className="space-y-4">
-                <p className="text-[11px] text-n-600 leading-relaxed">
-                  Troque de modelo à vontade: <b>nada do que você escreveu ou enviou é perdido</b>.
-                  O conteúdo pertence a você, o modelo só o desenha de outro jeito.
-                </p>
-                <TemplatePicker
-                  selected={templateId}
-                  onSelect={id => { setTemplateId(id); dirty.current = true; }}
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-n-200 bg-n-50/60 px-3.5 py-3 flex gap-2.5">
+                  <Info className="h-4 w-4 text-wine-700 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-n-600 leading-relaxed">
+                    Cada modelo já vem com <b>layout, cores, fontes e cantos combinados</b>.
+                    Experimente à vontade: <b>nada do que você escreveu ou enviou é perdido</b> —
+                    o conteúdo é seu, o modelo só o desenha de outro jeito.
+                  </p>
+                </div>
+
+                <LookPicker
+                  templateId={templateId}
+                  theme={config.theme}
+                  onSelect={applyLook}
                 />
+
+                {/* Trocar só o layout continua possível, mas fora do caminho
+                    principal: quem chega aqui quer ver a página pronta, não
+                    montar a combinação peça por peça. */}
+                <details className="rounded-2xl border border-n-200 overflow-hidden group">
+                  <summary className="px-3.5 py-3 cursor-pointer list-none flex items-center justify-between hover:bg-n-50 transition-colors">
+                    <span>
+                      <span className="text-[12px] font-bold text-heading block">
+                        Trocar só o layout, mantendo minhas cores
+                      </span>
+                      <span className="text-[10px] text-n-500 block mt-0.5">
+                        Para quem já acertou a paleta e quer outra estrutura de página.
+                      </span>
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-n-400 shrink-0 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="p-3.5 border-t border-n-100">
+                    <TemplatePicker
+                      selected={templateId}
+                      onSelect={id => { setTemplateId(id); dirty.current = true; }}
+                    />
+                  </div>
+                </details>
               </div>
             )}
             {tab === 'identity' && <IdentityPanel {...panelProps} />}
@@ -576,7 +729,7 @@ export function SiteEditor({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-n-200 bg-white px-4 py-2.5">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-n-600">
-                Prévia ao vivo · {meta.name}
+                Prévia ao vivo · {currentLook?.name || `${meta.name} (personalizado)`}
               </span>
               <button
                 type="button"
@@ -619,7 +772,7 @@ export function SiteEditor({
           <div className="p-4">
             <PreviewFrame
               device={device}
-              fontsHref={meta.fontsHref}
+              fontsHref={getFontPair(config.theme.fontPair).href}
               canvaMode={canvaMode}
               onElementClick={handleVisualElementClick}
             >
@@ -627,7 +780,7 @@ export function SiteEditor({
             </PreviewFrame>
             <p className="text-[10px] text-n-400 text-center mt-3 leading-relaxed">
               {canvaMode
-                ? '💡 Dica: Clique em qualquer texto ou foto acima para editar diretamente.'
+                ? '💡 Clique em qualquer texto ou foto da prévia: levamos você direto ao campo que muda aquilo.'
                 : 'Na prévia os botões de agendar não abrem o formulário. Publique e abra sua página para testar o agendamento de ponta a ponta.'}
             </p>
           </div>

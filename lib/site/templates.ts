@@ -24,8 +24,12 @@ export interface SiteTemplateMeta {
   /** Para quem esse visual foi desenhado. */
   bestFor: string;
   description: string;
-  /** Folha do Google Fonts usada pelo template (carregada só na página pública). */
-  fontsHref: string;
+  /**
+   * Dupla de fontes que o template nasce usando. Não é uma trava: a
+   * profissional troca a tipografia em "Cores e fontes" sem trocar de modelo,
+   * porque quem carrega a folha do Google Fonts é o TEMA, não o template.
+   */
+  defaultFontPair: string;
   /** Cores iniciais ao escolher o template (a profissional pode trocar depois). */
   defaultTheme: SiteTheme;
   /** Seções que este template sabe desenhar. As demais são ignoradas. */
@@ -57,14 +61,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Nail designer, manicure, estúdio de unhas',
     description:
       'Creme quente, nude e vinho, com títulos em serifa e itálico. Galeria em mosaico estilo Pinterest e cartões de serviço com foto.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap',
+    defaultFontPair: 'playfair-inter',
     defaultTheme: {
       primary: '#6e2233',
       secondary: '#c9a88a',
       background: '#faf7f2',
       foreground: '#2b2724',
       radius: 'round',
+      fontPair: 'playfair-inter',
     },
     supportedSections: ALL,
     preview: {
@@ -79,14 +83,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Lash designer, sobrancelhas, estúdio do olhar',
     description:
       'Marfim, dourado e carvão. Tipografia serifada leve, muito respiro entre as seções e um ar de revista de luxo.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap',
+    defaultFontPair: 'cormorant-inter',
     defaultTheme: {
       primary: '#b8956a',
       secondary: '#8e6d47',
       background: '#fdfcfa',
       foreground: '#1c1917',
       radius: 'sharp',
+      fontPair: 'cormorant-inter',
     },
     supportedSections: ALL,
     preview: {
@@ -101,14 +105,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Esteticista, massagista, terapias e bem-estar',
     description:
       'Marrom profundo, terracota e bege areia. Layout clássico e caloroso, com blocos de texto que explicam bem o método de trabalho.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap',
+    defaultFontPair: 'cormorant-montserrat',
     defaultTheme: {
       primary: '#3b2e2a',
       secondary: '#8c4a3e',
       background: '#f9f8f6',
       foreground: '#1c1a19',
       radius: 'sharp',
+      fontPair: 'cormorant-montserrat',
     },
     supportedSections: ALL,
     preview: {
@@ -123,14 +127,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Clínica de estética, dermato, procedimentos',
     description:
       'Branco, verde-sálvia e bege claro. Visual clínico, calmo e confiável, com blocos bem separados e leitura fácil.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap',
+    defaultFontPair: 'outfit-inter',
     defaultTheme: {
       primary: '#718a7a',
       secondary: '#819888',
       background: '#faf9f6',
       foreground: '#2d312f',
       radius: 'round',
+      fontPair: 'outfit-inter',
     },
     supportedSections: ALL,
     preview: {
@@ -145,14 +149,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Quem quer impacto visual e um site diferente de todos',
     description:
       'Títulos gigantes, layout assimétrico e bronze sobre areia. O visual mais ousado do catálogo — ótimo para portfólio forte.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap',
+    defaultFontPair: 'playfair-montserrat',
     defaultTheme: {
       primary: '#8c7853',
       secondary: '#2a2826',
       background: '#f8f7f5',
       foreground: '#2a2826',
       radius: 'sharp',
+      fontPair: 'playfair-montserrat',
     },
     supportedSections: ALL,
     preview: {
@@ -167,14 +171,14 @@ export const SITE_TEMPLATES: SiteTemplateMeta[] = [
     bestFor: 'Lash, brow, cílios, design de olhar e salões',
     description:
       'Rosé, champagne e off-white com cartões suaves. O mais "beleza" do catálogo: muitos blocos de prova social e antes/depois.',
-    fontsHref:
-      'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Poppins:wght@300;400;500;600;700&display=swap',
+    defaultFontPair: 'playfair-poppins',
     defaultTheme: {
       primary: '#875f46',
       secondary: '#d3ba9c',
       background: '#f7f2e9',
       foreground: '#2c2a29',
       radius: 'soft',
+      fontPair: 'playfair-poppins',
     },
     supportedSections: ALL,
     preview: {

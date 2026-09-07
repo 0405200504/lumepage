@@ -25,11 +25,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-gold { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.75; }
+.t-gold { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.75; }
 .t-gold *, .t-gold *::before, .t-gold *::after { box-sizing: border-box; }
 .t-gold img { display: block; max-width: 100%; }
 .t-gold a { color: inherit; text-decoration: none; }
-.t-gold h1, .t-gold h2, .t-gold h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; line-height: 1.15; margin: 0; letter-spacing: .01em; }
+.t-gold h1, .t-gold h2, .t-gold h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); line-height: 1.15; margin: 0; letter-spacing: var(--lume-font-title-tracking); }
 .t-gold p { margin: 0; }
 .t-gold section[id] { scroll-margin-top: 76px; }
 .t-gold [data-lume-placeholder] { background: var(--lume-surface-alt); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
@@ -59,7 +59,7 @@ const CSS = `
 /* ── Topo ── */
 .t-gold .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-gold .nav-in { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-.t-gold .brand { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; letter-spacing: .16em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.t-gold .brand { font-family: var(--lume-font-title); font-size: 22px; letter-spacing: .16em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
 .t-gold .brand img { height: 34px; width: auto; object-fit: contain; }
 .t-gold .nav-links { display: none; gap: 34px; }
 @media (min-width: 1024px) { .t-gold .nav-links { display: flex; } }
@@ -72,7 +72,7 @@ const CSS = `
 .t-gold .drawer { position: fixed; inset: 0 0 0 auto; width: 84%; max-width: 330px; background: var(--lume-bg); z-index: 61; padding: 20px 26px 34px; display: flex; flex-direction: column; }
 .t-gold .drawer-top { display: flex; align-items: center; justify-content: space-between; }
 .t-gold .drawer nav { margin-top: 40px; display: flex; flex-direction: column; gap: 4px; }
-.t-gold .drawer nav a { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; padding: 12px 0; border-bottom: 1px solid var(--lume-line); }
+.t-gold .drawer nav a { font-family: var(--lume-font-title); font-size: 24px; padding: 12px 0; border-bottom: 1px solid var(--lume-line); }
 .t-gold .drawer .btn { margin-top: auto; }
 
 /* ── Capa ── */
@@ -84,7 +84,7 @@ const CSS = `
 .t-gold .hero.has-img, .t-gold .hero.has-img .kicker, .t-gold .hero.has-img .lead { color: #fff; }
 .t-gold .hero.has-img .kicker { color: rgba(255,255,255,.85); }
 .t-gold .hero.has-img .lead { color: rgba(255,255,255,.88); }
-.t-gold .hero h1 { font-size: clamp(40px, 10vw, 82px); font-weight: 300; }
+.t-gold .hero h1 { font-size: clamp(40px, 10vw, 82px); }
 .t-gold .hero h1 em { font-style: italic; }
 .t-gold .hero .lead { max-width: 56ch; margin-left: auto; margin-right: auto; }
 .t-gold .hero-actions { margin-top: 38px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
@@ -94,18 +94,18 @@ const CSS = `
 .t-gold .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--lume-line); border-bottom: 1px solid var(--lume-line); }
 .t-gold .stats > div { padding: 34px 12px; text-align: center; }
 .t-gold .stats > div + div { border-left: 1px solid var(--lume-line); }
-.t-gold .stats b { display: block; font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(30px, 6vw, 48px); font-weight: 300; color: var(--lume-primary-text); }
+.t-gold .stats b { display: block; font-family: var(--lume-font-title); font-size: clamp(30px, 6vw, 48px); font-weight: 300; color: var(--lume-primary-text); }
 .t-gold .stats span { display: block; margin-top: 6px; font-size: 9px; letter-spacing: .28em; text-transform: uppercase; color: var(--lume-fg-faint); }
 
 /* ── Serviços (lista de preços com fio pontilhado) ── */
 .t-gold .price-list { margin-top: 48px; }
 .t-gold .price-row { display: grid; gap: 6px; padding: 26px 0; border-bottom: 1px solid var(--lume-line); }
 @media (min-width: 768px) { .t-gold .price-row { grid-template-columns: 1fr auto auto; align-items: baseline; gap: 20px; } }
-.t-gold .price-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26px; position: relative; }
+.t-gold .price-name { font-family: var(--lume-font-title); font-size: 26px; position: relative; }
 @media (min-width: 768px) { .t-gold .price-name::after { content: ''; position: absolute; left: 0; right: 0; bottom: 7px; border-bottom: 1px dotted var(--lume-line-strong); z-index: 0; } .t-gold .price-name span { position: relative; z-index: 1; background: var(--lume-bg); padding-right: 12px; } }
 .t-gold .band .price-name span { background: var(--lume-surface); }
 .t-gold .price-desc { grid-column: 1 / -1; font-size: 15px; color: var(--lume-fg-soft); font-weight: 300; max-width: 62ch; }
-.t-gold .price-val { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26px; color: var(--lume-primary-text); white-space: nowrap; }
+.t-gold .price-val { font-family: var(--lume-font-title); font-size: 26px; color: var(--lume-primary-text); white-space: nowrap; }
 .t-gold .price-dur { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--lume-fg-faint); white-space: nowrap; }
 .t-gold .price-row .btn { margin-top: 8px; min-height: 42px; padding: 10px 22px; }
 @media (min-width: 768px) { .t-gold .price-row .btn { margin-top: 0; grid-column: 1 / -1; justify-self: start; } }
@@ -134,7 +134,7 @@ const CSS = `
 .t-gold .quote { text-align: center; padding: 0 8px; }
 .t-gold .quote .stars { display: inline-flex; gap: 3px; color: var(--lume-primary-text); }
 .t-gold .quote .stars svg { height: 14px; width: 14px; }
-.t-gold .quote blockquote { margin: 18px 0 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(19px, 2.4vw, 24px); font-style: italic; font-weight: 300; line-height: 1.6; }
+.t-gold .quote blockquote { margin: 18px 0 0; font-family: var(--lume-font-title); font-size: clamp(19px, 2.4vw, 24px); font-style: italic; font-weight: 300; line-height: 1.6; }
 .t-gold .quote-who { margin-top: 20px; display: inline-flex; align-items: center; gap: 12px; }
 .t-gold .quote-who img, .t-gold .quote-avatar { height: 42px; width: 42px; border-radius: 999px; object-fit: cover; }
 .t-gold .quote-avatar { display: grid; place-items: center; background: var(--lume-primary-soft); color: var(--lume-primary-text); font-size: 13px; font-weight: 600; }
@@ -149,7 +149,7 @@ const CSS = `
 /* ── FAQ ── */
 .t-gold .faq { margin-top: 44px; }
 .t-gold .faq details { border-bottom: 1px solid var(--lume-line); }
-.t-gold .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 24px 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 21px; }
+.t-gold .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 24px 0; font-family: var(--lume-font-title); font-size: 21px; }
 .t-gold .faq summary::-webkit-details-marker { display: none; }
 .t-gold .faq summary svg { height: 18px; width: 18px; flex-shrink: 0; color: var(--lume-primary-text); transition: transform .25s; }
 .t-gold .faq details[open] summary svg { transform: rotate(180deg); }

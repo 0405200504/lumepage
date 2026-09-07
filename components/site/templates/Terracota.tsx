@@ -25,11 +25,11 @@ import {
 } from '../shared';
 
 const CSS = `
-.t-terra { background: var(--lume-bg); color: var(--lume-fg); font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.7; font-weight: 300; }
+.t-terra { background: var(--lume-bg); color: var(--lume-fg); font-family: var(--lume-font-body); font-size: 16px; line-height: 1.7; font-weight: 300; }
 .t-terra *, .t-terra *::before, .t-terra *::after { box-sizing: border-box; }
 .t-terra img { display: block; max-width: 100%; }
 .t-terra a { color: inherit; text-decoration: none; }
-.t-terra h1, .t-terra h2, .t-terra h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; line-height: 1.18; margin: 0; color: var(--lume-primary-text); }
+.t-terra h1, .t-terra h2, .t-terra h3 { font-family: var(--lume-font-title); font-weight: var(--lume-font-title-weight); line-height: 1.18; margin: 0; color: var(--lume-primary-text); letter-spacing: var(--lume-font-title-tracking); }
 .t-terra p { margin: 0; }
 .t-terra section[id] { scroll-margin-top: 74px; }
 .t-terra [data-lume-placeholder] { background: var(--lume-secondary-soft); display: grid; place-items: center; color: var(--lume-fg-faint); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
@@ -60,7 +60,7 @@ const CSS = `
 /* ── Topo ── */
 .t-terra .nav { position: sticky; top: 0; z-index: 40; background: var(--lume-bg); border-bottom: 1px solid var(--lume-line); }
 .t-terra .nav-in { display: flex; align-items: center; justify-content: space-between; height: 66px; }
-.t-terra .brand { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 23px; font-weight: 600; letter-spacing: .06em; color: var(--lume-primary-text); display: flex; align-items: center; gap: 10px; }
+.t-terra .brand { font-family: var(--lume-font-title); font-size: 23px; font-weight: 600; letter-spacing: .06em; color: var(--lume-primary-text); display: flex; align-items: center; gap: 10px; }
 .t-terra .brand img { height: 34px; width: auto; object-fit: contain; }
 .t-terra .nav-links { display: none; gap: 30px; }
 @media (min-width: 1024px) { .t-terra .nav-links { display: flex; } }
@@ -75,7 +75,7 @@ const CSS = `
 .t-terra .drawer { position: fixed; inset: 0 0 0 auto; width: 84%; max-width: 320px; background: var(--lume-bg); z-index: 61; padding: 18px 24px 32px; display: flex; flex-direction: column; }
 .t-terra .drawer-top { display: flex; align-items: center; justify-content: space-between; }
 .t-terra .drawer nav { margin-top: 34px; display: flex; flex-direction: column; }
-.t-terra .drawer nav a { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 23px; padding: 13px 0; border-bottom: 1px solid var(--lume-line); color: var(--lume-primary-text); }
+.t-terra .drawer nav a { font-family: var(--lume-font-title); font-size: 23px; padding: 13px 0; border-bottom: 1px solid var(--lume-line); color: var(--lume-primary-text); }
 .t-terra .drawer .btn { margin-top: auto; }
 
 /* ── Capa ── */
@@ -93,7 +93,7 @@ const CSS = `
 
 /* ── Números ── */
 .t-terra .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center; padding: 44px 0; }
-.t-terra .stats b { display: block; font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(30px, 6vw, 46px); font-weight: 500; color: var(--lume-secondary); }
+.t-terra .stats b { display: block; font-family: var(--lume-font-title); font-size: clamp(30px, 6vw, 46px); font-weight: 500; color: var(--lume-secondary); }
 .t-terra .stats span { display: block; margin-top: 4px; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--lume-fg-faint); }
 
 /* ── Serviços (linhas com preço) ── */
@@ -102,8 +102,8 @@ const CSS = `
 @media (min-width: 768px) { .t-terra .svc-row { grid-template-columns: 1fr auto auto; gap: 28px; } }
 .t-terra .svc-row h3 { font-size: 26px; }
 .t-terra .svc-row .svc-desc { margin-top: 6px; font-size: 15px; color: var(--lume-fg-soft); max-width: 60ch; }
-.t-terra .svc-price { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 27px; color: var(--lume-secondary); white-space: nowrap; }
-.t-terra .svc-dur { display: block; font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--lume-fg-faint); }
+.t-terra .svc-price { font-family: var(--lume-font-title); font-size: 27px; color: var(--lume-secondary); white-space: nowrap; }
+.t-terra .svc-dur { display: block; font-family: var(--lume-font-body); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--lume-fg-faint); }
 .t-terra .svc-row .btn { padding: 11px 24px; }
 
 /* ── Sobre / split ── */
@@ -145,7 +145,7 @@ const CSS = `
 /* ── FAQ ── */
 .t-terra .faq { margin-top: 40px; }
 .t-terra .faq details { border-bottom: 1px solid var(--lume-line-strong); }
-.t-terra .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; color: var(--lume-primary-text); }
+.t-terra .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 0; font-family: var(--lume-font-title); font-size: 22px; color: var(--lume-primary-text); }
 .t-terra .faq summary::-webkit-details-marker { display: none; }
 .t-terra .faq summary svg { height: 19px; width: 19px; flex-shrink: 0; color: var(--lume-secondary); transition: transform .25s; }
 .t-terra .faq details[open] summary svg { transform: rotate(180deg); }

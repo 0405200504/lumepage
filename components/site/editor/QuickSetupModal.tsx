@@ -415,7 +415,7 @@ export function QuickSetupModal({
               <div className="p-3 bg-accent-soft border border-accent-soft-border rounded-xl flex items-start gap-2.5">
                 <Wand2 className="h-4 w-4 text-wine-700 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-n-700 leading-relaxed">
-                  Ao clicar em gerar, vamos criar títulos, textos de "sobre mim", perguntas
+                  Ao clicar em gerar, vamos criar títulos, textos de &ldquo;sobre mim&rdquo;, perguntas
                   frequentes e seções de alta conversão. Você poderá ajustar tudo depois!
                 </p>
               </div>

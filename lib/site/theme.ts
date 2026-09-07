@@ -11,6 +11,7 @@
  */
 
 import type { SiteTheme } from '@/types/site';
+import { getFontPair } from './fonts';
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -135,7 +136,16 @@ export function themeToCssVars(theme: SiteTheme): React.CSSProperties {
 
   const radius = RADIUS_SCALE[theme.radius] || RADIUS_SCALE.soft;
 
+  // Tipografia: o template não cita mais nome de fonte: ele lê estas duas
+  // variáveis. Trocar a dupla no editor repinta a página inteira sem que
+  // nenhum template precise saber que a troca existiu.
+  const font = getFontPair(theme.fontPair);
+
   return {
+    '--lume-font-title': font.titleStack,
+    '--lume-font-body': font.bodyStack,
+    '--lume-font-title-weight': String(font.titleWeight),
+    '--lume-font-title-tracking': font.titleTracking,
     '--lume-bg': background,
     // Variantes com transparência já calculadas aqui, em rgba(). Poderiam ser
     // color-mix() no CSS, mas essa função só existe em Safari 16.2+/Chrome 111+
