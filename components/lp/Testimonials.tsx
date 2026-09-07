@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   AnimatePresence,
@@ -250,7 +250,12 @@ function Trilho({ aoAbrir }: { aoAbrir: (s: Story) => void }) {
  * caminho de entrada ao contrário.
  *
  * Fechar por arrasto usa o SINAL DA VELOCIDADE, não a posição: um empurrão
- * curto e rápido fecha, um arrasto longo que voltou no fim não fecha.
+ * curto e rápido fecha, um arrasto longo que voltou no fim não fecha. E o
+ * retorno herda o CARÁTER do gesto — quem fechou com um arremesso recebe a
+ * mola com repique; quem clicou no X recebe a mola calma. Movimento com
+ * inércia na origem pode repicar; movimento sem inércia, não.
+ *
+ * Saídas (nenhum beco sem saída): o X, o fundo, o arrasto e a tecla Esc.
  */
 function Lightbox({
   story,
@@ -262,14 +267,41 @@ function Lightbox({
   calmo: boolean;
 }) {
   const y = useMotionValue(0);
-  // Escurecimento contínuo DURANTE o gesto: o fundo clareia conforme a mão
-  // afasta o story, então dá pra ver o que vai acontecer antes de soltar.
+  const [arremessou, setArremessou] = useState(false);
+
+  // Escurecimento e escala contínuos DURANTE o gesto: o fundo clareia e o
+  // story recua conforme a mão o afasta, então dá pra ver pra onde aquilo vai
+  // antes de soltar — os quadros do meio apontam pro resultado.
   const scrim = useTransform(y, [-320, 0, 320], [0, 1, 0]);
+  const escala = useTransform(y, [-320, 0, 320], [0.86, 1, 0.86]);
+
+  const aberto = story !== null;
+
+  // Esc fecha, e a rolagem do fundo trava: nada atrás deve se mexer enquanto
+  // a atenção está aqui.
+  useEffect(() => {
+    if (!aberto) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") aoFechar();
+    };
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = anterior;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [aberto, aoFechar]);
 
   return (
-    <AnimatePresence onExitComplete={() => y.set(0)}>
+    <AnimatePresence
+      onExitComplete={() => {
+        y.set(0);
+        setArremessou(false);
+      }}
+    >
       {story && (
-        <motion.div className="fixed inset-0 z-50">
+        <motion.div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
           <motion.div
             className="absolute inset-0 bg-black/90 backdrop-blur-md"
             style={calmo ? undefined : { opacity: scrim }}
@@ -282,7 +314,7 @@ function Lightbox({
 
           <button
             onClick={aoFechar}
-            className="lp-icon-btn absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full text-white sm:right-8 sm:top-8"
+            className="lp-icon-btn absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white sm:right-8 sm:top-8"
             aria-label="Fechar"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -292,14 +324,17 @@ function Lightbox({
 
           <motion.div
             className="pointer-events-none absolute inset-0 flex items-center justify-center p-4 sm:p-8"
-            style={calmo ? undefined : { y }}
+            style={calmo ? undefined : { y, scale: escala }}
             drag={calmo ? false : "y"}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={0.55}
             onDragEnd={(_, info) => {
               const rapido = Math.abs(info.velocity.y) > 450;
               const longe = Math.abs(info.offset.y) > 140;
-              if (rapido || longe) aoFechar();
+              if (rapido || longe) {
+                setArremessou(rapido);
+                aoFechar();
+              }
             }}
           >
             <motion.div
@@ -307,7 +342,7 @@ function Lightbox({
               initial={calmo ? { opacity: 0 } : undefined}
               animate={calmo ? { opacity: 1 } : undefined}
               exit={calmo ? { opacity: 0 } : undefined}
-              transition={calmo ? crossFade : spring.ui}
+              transition={calmo ? crossFade : arremessou ? spring.momentum : spring.ui}
               className="pointer-events-auto relative h-[85vh] w-full max-w-[500px] cursor-grab overflow-hidden rounded-2xl bg-black active:cursor-grabbing"
             >
               <Image

@@ -77,7 +77,7 @@ export default function CostSection() {
           <div className="grain relative mx-auto mt-6 max-w-3xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-bordo to-bordo-deep px-7 py-10 text-center text-offwhite shadow-lp-glow sm:px-12">
             <Sparkle
               size={20}
-              className="absolute right-8 top-8 text-rose/60 animate-sparkle-pulse"
+              className="absolute right-8 top-8 text-rose/60"
             />
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-rose">
               O que o direct te cobra todo mês

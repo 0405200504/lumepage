@@ -78,7 +78,7 @@ export default function ClientJourney() {
           <Reveal delay={0.15}>
             <div className="relative flex justify-center">
               <div className="absolute -right-8 -top-8 h-56 w-56 rounded-full bg-rose/30 blur-3xl" />
-              <div className="relative animate-float-slow">
+              <div className="relative">
                 <MockupLanding />
               </div>
             </div>

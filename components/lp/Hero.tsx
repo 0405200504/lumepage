@@ -46,7 +46,7 @@ export default function Hero() {
             transition={entra(0)}
             className="eyebrow"
           >
-            <Sparkle size={13} className="animate-sparkle-pulse" />
+            <Sparkle size={13} />
             Para profissionais da estética
           </motion.span>
 
