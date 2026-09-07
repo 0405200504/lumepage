@@ -27,14 +27,14 @@ export default function MockupLanding({ className = "" }: { className?: string }
           <p className="mt-3 text-center font-sora text-base font-semibold">
             Studio Marília Costa
           </p>
-          <p className="text-center text-[11px] text-rose">
+          <p className="text-center text-[0.6875rem] text-rose">
             Nail Designer • São Paulo
           </p>
           <div className="mt-4 flex justify-center gap-1.5">
             {["Gel", "Fibra", "Spa dos pés"].map((t) => (
               <span
                 key={t}
-                className="rounded-full border border-rose/30 px-2.5 py-1 text-[9px] text-rose"
+                className="rounded-full border border-rose/30 px-2.5 py-1 text-[0.5625rem] text-rose"
               >
                 {t}
               </span>
@@ -44,7 +44,7 @@ export default function MockupLanding({ className = "" }: { className?: string }
 
         {/* serviços */}
         <div className="px-4 py-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-areia">
+          <p className="mb-2 text-[0.625rem] font-semibold uppercase tracking-wider text-areia">
             Serviços
           </p>
           <div className="space-y-2">
@@ -53,10 +53,10 @@ export default function MockupLanding({ className = "" }: { className?: string }
                 key={s.nome}
                 className="flex items-center justify-between rounded-xl border border-rose/50 bg-lp-cream px-3 py-2.5"
               >
-                <span className="text-[11px] font-medium text-grafite">
+                <span className="text-[0.6875rem] font-medium text-grafite">
                   {s.nome}
                 </span>
-                <span className="text-[11px] font-semibold text-bordo">
+                <span className="text-[0.6875rem] font-semibold text-bordo">
                   {s.preco}
                 </span>
               </div>
@@ -64,14 +64,14 @@ export default function MockupLanding({ className = "" }: { className?: string }
           </div>
 
           {/* horários */}
-          <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-areia">
+          <p className="mb-2 mt-4 text-[0.625rem] font-semibold uppercase tracking-wider text-areia">
             Horários de hoje
           </p>
           <div className="flex gap-1.5">
             {["09:00", "11:30", "14:00", "16:30"].map((h, i) => (
               <span
                 key={h}
-                className={`rounded-lg px-2 py-1.5 text-[10px] font-medium ${
+                className={`rounded-lg px-2 py-1.5 text-[0.625rem] font-medium ${
                   i === 1
                     ? "bg-bordo text-offwhite"
                     : "border border-rose/60 text-grafite"
@@ -82,7 +82,7 @@ export default function MockupLanding({ className = "" }: { className?: string }
             ))}
           </div>
 
-          <button className="mt-4 w-full rounded-full bg-bordo py-2.5 text-[11px] font-semibold text-offwhite">
+          <button className="mt-4 w-full rounded-full bg-bordo py-2.5 text-[0.6875rem] font-semibold text-offwhite">
             Agendar agora
           </button>
         </div>

@@ -41,7 +41,7 @@ export default function PainSection() {
         <Reveal>
           <div className="max-w-3xl">
             <SectionLabel>O problema do direct</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Você já perdeu essa cliente hoje.{" "}
               <span className="accent text-bordo">Só não sabe ainda.</span>
             </h2>
@@ -78,7 +78,7 @@ export default function PainSection() {
                   <p className="font-sora text-base font-semibold leading-snug text-grafite">
                     {d.titulo}
                   </p>
-                  <p className="mt-1.5 text-[15px] leading-relaxed text-grafite/65">
+                  <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-grafite/65">
                     {d.text}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export default function PainSection() {
 
         <Reveal delay={0.1}>
           <div className="mt-12 rounded-lp-3xl bg-grafite px-7 py-10 text-center sm:px-12 sm:py-12">
-            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-snug text-offwhite sm:text-2xl">
+            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-[1.28] text-offwhite sm:text-2xl">
               Nada disso é falta de esforço seu. É que você está usando um link{" "}
               <span className="accent text-rose">
                 que não foi feito pra vender.

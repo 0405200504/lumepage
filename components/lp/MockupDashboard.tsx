@@ -25,14 +25,14 @@ export default function MockupDashboard({
       {/* header do painel */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bordo text-[11px] font-semibold text-offwhite">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bordo text-[0.6875rem] font-semibold text-offwhite">
             MC
           </span>
           <div>
-            <p className="font-sora text-[13px] font-semibold leading-tight text-grafite">
+            <p className="font-sora text-[0.8125rem] font-semibold leading-tight text-grafite">
               Painel Lume
             </p>
-            <p className="text-[10px] text-areia">Segunda, 8 de junho</p>
+            <p className="text-[0.625rem] text-areia">Segunda, 8 de junho</p>
           </div>
         </div>
         <Sparkle size={14} className="text-bordo/40" />
@@ -49,13 +49,13 @@ export default function MockupDashboard({
             key={c.label}
             className="rounded-2xl border border-rose/50 bg-lp-cream px-2.5 py-2.5"
           >
-            <p className="text-[9px] uppercase tracking-wide text-areia">
+            <p className="text-[0.5625rem] uppercase tracking-wide text-areia">
               {c.label}
             </p>
             <p className="font-sora text-base font-semibold text-bordo">
               {c.value}
             </p>
-            <p className="text-[9px] text-grafite/60">{c.sub}</p>
+            <p className="text-[0.5625rem] text-grafite/60">{c.sub}</p>
           </div>
         ))}
       </div>
@@ -63,7 +63,7 @@ export default function MockupDashboard({
       <div className="mt-3 grid grid-cols-5 gap-2">
         {/* gráfico */}
         <div className="col-span-3 rounded-2xl border border-rose/50 bg-lp-cream p-3">
-          <p className="text-[10px] font-semibold text-grafite">
+          <p className="text-[0.625rem] font-semibold text-grafite">
             Agendamentos na semana
           </p>
           <div className="mt-3 flex h-16 items-end gap-1.5">
@@ -81,13 +81,13 @@ export default function MockupDashboard({
 
         {/* próximos */}
         <div className="col-span-2 rounded-2xl border border-rose/50 bg-lp-cream p-3">
-          <p className="text-[10px] font-semibold text-grafite">Tarefas</p>
+          <p className="text-[0.625rem] font-semibold text-grafite">Tarefas</p>
           <ul className="mt-2 space-y-1.5">
             {["Confirmar Ana", "Repor estoque", "Postar antes/depois"].map(
               (t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full border border-bordo/50" />
-                  <span className="text-[9px] text-grafite/80">{t}</span>
+                  <span className="text-[0.5625rem] text-grafite/80">{t}</span>
                 </li>
               )
             )}
@@ -98,22 +98,22 @@ export default function MockupDashboard({
       {/* lista de agendamentos */}
       <div className="mt-3 rounded-2xl border border-rose/50 bg-lp-cream p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold text-grafite">
+          <p className="text-[0.625rem] font-semibold text-grafite">
             Próximos agendamentos
           </p>
-          <span className="text-[9px] text-bordo">ver todos</span>
+          <span className="text-[0.5625rem] text-bordo">ver todos</span>
         </div>
         <div className="mt-2 space-y-2">
           {agendamentos.map((a) => (
             <div key={a.hora} className="flex items-center gap-2.5">
-              <span className="rounded-lg bg-bordo/10 px-2 py-1 text-[10px] font-semibold text-bordo">
+              <span className="rounded-lg bg-bordo/10 px-2 py-1 text-[0.625rem] font-semibold text-bordo">
                 {a.hora}
               </span>
               <div className="flex-1">
-                <p className="text-[11px] font-medium leading-tight text-grafite">
+                <p className="text-[0.6875rem] font-medium leading-tight text-grafite">
                   {a.cliente}
                 </p>
-                <p className="text-[9px] text-areia">{a.servico}</p>
+                <p className="text-[0.5625rem] text-areia">{a.servico}</p>
               </div>
               <span className="h-2 w-2 rounded-full bg-bordo" />
             </div>

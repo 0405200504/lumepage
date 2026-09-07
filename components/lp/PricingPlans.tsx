@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { spring } from "@/lib/lp/motion";
 import Reveal from "./Reveal";
 import Sparkle from "./Sparkle";
 import Button from "./Button";
@@ -124,6 +126,48 @@ function Entra({
   return <Reveal delay={delay}>{children}</Reveal>;
 }
 
+/**
+ * Um botão do seletor de periodicidade.
+ *
+ * O fundo bordô é UM elemento que desliza de um lado pro outro com mola — o
+ * mesmo recurso da pílula do menu. Dois fundos acendendo e apagando leem como
+ * duas coisas; um fundo que se move lê como o mesmo objeto mudando de lugar,
+ * que é o que de fato está acontecendo com a escolha.
+ */
+function Periodo({
+  ativo,
+  onClick,
+  pilula,
+  calmo,
+  children,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  pilula: string;
+  calmo: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={`btn-press relative rounded-full px-5 py-2.5 text-sm font-semibold transition-colors duration-300 ${
+        ativo ? "text-offwhite" : "text-grafite/60 hover:text-bordo"
+      }`}
+    >
+      {ativo && (
+        <motion.span
+          layoutId={calmo ? undefined : pilula}
+          className="absolute inset-0 rounded-full bg-bordo shadow-lp-soft"
+          transition={spring.ui}
+        />
+      )}
+      <span className="relative">{children}</span>
+    </button>
+  );
+}
+
 export default function PricingPlans({
   animate = true,
   identity,
@@ -132,6 +176,10 @@ export default function PricingPlans({
   identity?: CheckoutIdentity | null;
 }) {
   const [anual, setAnual] = useState(true);
+  const calmo = useReducedMotion();
+  // A grade aparece na venda E no paywall; id próprio evita que duas pílulas
+  // com o mesmo nome tentem virar a mesma.
+  const pilula = `lp-periodo-${useId()}`;
 
   return (
     <>
@@ -143,34 +191,26 @@ export default function PricingPlans({
             aria-label="Escolha a periodicidade do plano"
             className="inline-flex items-center gap-1 rounded-full border border-rose/60 bg-lp-cream p-1"
           >
-            <button
-              type="button"
+            <Periodo
+              ativo={!anual}
               onClick={() => setAnual(false)}
-              aria-pressed={!anual}
-              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-ui duration-300 ${
-                !anual
-                  ? "bg-bordo text-offwhite shadow-lp-soft"
-                  : "text-grafite/60 hover:text-bordo"
-              }`}
+              pilula={pilula}
+              calmo={!!calmo}
             >
               Mensal
-            </button>
-            <button
-              type="button"
+            </Periodo>
+            <Periodo
+              ativo={anual}
               onClick={() => setAnual(true)}
-              aria-pressed={anual}
-              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-ui duration-300 ${
-                anual
-                  ? "bg-bordo text-offwhite shadow-lp-soft"
-                  : "text-grafite/60 hover:text-bordo"
-              }`}
+              pilula={pilula}
+              calmo={!!calmo}
             >
               Anual
               <span className={anual ? "text-rose" : "text-bordo"}>
                 {" "}
                 — economize até 2 meses
               </span>
-            </button>
+            </Periodo>
           </div>
         </div>
       </Entra>
@@ -191,7 +231,7 @@ export default function PricingPlans({
                 }`}
               >
                 {dark && (
-                  <span className="absolute right-6 top-7 inline-flex items-center gap-1.5 rounded-full bg-offwhite/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-rose">
+                  <span className="absolute right-6 top-7 inline-flex items-center gap-1.5 rounded-full bg-offwhite/15 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-rose">
                     <Sparkle size={11} />
                     Mais escolhido
                   </span>
@@ -241,7 +281,7 @@ export default function PricingPlans({
                 </p>
 
                 <p
-                  className={`mt-5 border-t pt-5 font-sora text-[15px] font-medium leading-snug ${
+                  className={`mt-5 border-t pt-5 font-sora text-[0.9375rem] font-medium leading-snug ${
                     dark
                       ? "border-offwhite/15 text-offwhite"
                       : "border-rose/50 text-grafite"
@@ -253,7 +293,7 @@ export default function PricingPlans({
                 <ul className="mt-6 flex-1 space-y-3">
                   {p.heranca && (
                     <li
-                      className={`text-[13px] font-semibold uppercase tracking-[0.12em] ${
+                      className={`text-[0.8125rem] font-semibold uppercase tracking-[0.12em] ${
                         dark ? "text-rose" : "text-bordo"
                       }`}
                     >
@@ -264,7 +304,7 @@ export default function PricingPlans({
                     <li key={r} className="flex items-start gap-2.5">
                       <Check light={dark} />
                       <span
-                        className={`text-[15px] leading-relaxed ${
+                        className={`text-[0.9375rem] leading-relaxed ${
                           dark ? "text-offwhite/90" : "text-grafite/75"
                         }`}
                       >

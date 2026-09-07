@@ -36,7 +36,7 @@ export default function ForWho() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para quem é</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               A Lume é{" "}
               <span className="accent text-bordo">pra você se…</span>
             </h2>
@@ -55,7 +55,7 @@ export default function ForWho() {
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bordo text-offwhite">
                       <Check />
                     </span>
-                    <span className="text-[15px] text-grafite/80">{p}</span>
+                    <span className="text-[0.9375rem] text-grafite/80">{p}</span>
                   </li>
                 ))}
               </ul>
@@ -73,7 +73,7 @@ export default function ForWho() {
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-grafite/10 text-grafite/50">
                       <Cross />
                     </span>
-                    <span className="text-[15px] text-grafite/65">{p}</span>
+                    <span className="text-[0.9375rem] text-grafite/65">{p}</span>
                   </li>
                 ))}
               </ul>

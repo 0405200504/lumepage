@@ -49,7 +49,7 @@ export default function ClientJourney() {
         <Reveal>
           <div className="max-w-3xl">
             <SectionLabel>A experiência da cliente</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               É por isso que ela agenda em{" "}
               <span className="accent text-bordo">40 segundos.</span>
             </h2>
@@ -65,7 +65,7 @@ export default function ClientJourney() {
                   <p className="font-sora text-base font-semibold text-grafite sm:text-lg">
                     {p.ve}
                   </p>
-                  <p className="mt-2 flex items-start gap-2 text-[15px] leading-relaxed text-bordo">
+                  <p className="mt-2 flex items-start gap-2 text-[0.9375rem] leading-relaxed text-bordo">
                     <Arrow />
                     <span className="font-medium">{p.logo}</span>
                   </p>
@@ -87,7 +87,7 @@ export default function ClientJourney() {
 
         <Reveal delay={0.1}>
           <div className="mt-14 rounded-lp-3xl border border-bordo/15 bg-offwhite px-7 py-8 text-center sm:px-12">
-            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-snug text-grafite sm:text-2xl">
+            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-[1.28] text-grafite sm:text-2xl">
               Toda pergunta que ela faria no direct já está respondida na
               página. É por isso que ela não te manda mensagem —{" "}
               <span className="accent text-bordo">ela marca.</span>

@@ -1325,9 +1325,13 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
 html:has(.lp-page) {
   scroll-behavior: smooth;
 }
+/* `clip` e não `hidden`: os dois cortam o transbordo lateral, mas `hidden`
+   transforma o elemento em contêiner de rolagem — e aí todo `position: sticky`
+   de dentro passa a se referir a ele, o que na prática desliga a barra
+   grudenta do cabeçalho. `clip` recorta sem criar rolagem. */
 html:has(.lp-page),
 body:has(.lp-page) {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 /* O body do painel é neutro (#fafafa); na LP a área de overscroll precisa
    acompanhar o off-white quente, senão aparece uma faixa clara no topo/rodapé. */
@@ -1349,8 +1353,21 @@ body:has(.lp-page) {
 .lp-page h3,
 .lp-page h4 {
   font-family: var(--font-lp-sora), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  /* Título quebrado em linhas equilibradas — órfã de uma palavra é o tipo de
+     desleixo que o olho registra antes de a pessoa saber por quê. */
+  text-wrap: balance;
 }
+
+/* Tracking é ESPECÍFICO DO TAMANHO. Um único letter-spacing pra toda a escala
+   está errado em algum lugar: as letras parecem se afastar conforme o corpo
+   cresce (daí o valor negativo maior no display) e se fechar demais no corpo
+   pequeno. Vale o mesmo pro entrelinhamento, que anda ao contrário do corpo:
+   apertado no título grande, folgado no texto de leitura. */
+.lp-page h1 { letter-spacing: -0.036em; }
+.lp-page h2 { letter-spacing: -0.026em; }
+.lp-page h3 { letter-spacing: -0.015em; }
+.lp-page h4 { letter-spacing: -0.008em; }
 
 @layer components {
   /* Casca da LP: troca fundo, cor e fonte-base herdados do painel. */
@@ -1363,8 +1380,13 @@ body:has(.lp-page) {
   }
 
   /* Âncoras da navegação: sem isso o título da seção para debaixo da faixa fixa. */
+  /* Só a faixa fixa fica sobre o conteúdo no celular; no desktop a barra
+     também gruda, e a âncora precisa desviar das duas. */
   .lp-page section[id] {
     scroll-margin-top: 3.5rem;
+  }
+  @media (min-width: 40rem) {
+    .lp-page section[id] { scroll-margin-top: 6.5rem; }
   }
 
   .container-lume {
@@ -1395,6 +1417,16 @@ body:has(.lp-page) {
     font-weight: 500;
   }
 
+  /* O feedback nasce no toque, não na soltura: a escala responde em 100ms,
+     enquanto cor e sombra levam os 300ms de sempre. Esperar o `click` pra dar
+     sinal de vida é o que faz um botão parecer morto. */
+  .btn-primary,
+  .btn-ghost,
+  .btn-press {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
   .btn-primary,
   .btn-ghost {
     display: inline-flex;
@@ -1406,9 +1438,11 @@ body:has(.lp-page) {
     font-size: 0.875rem;
     line-height: 1.25rem;
     font-weight: 600;
-    transition-property: background-color, border-color, color, box-shadow, transform;
-    transition-duration: 300ms;
-    transition-timing-function: var(--ease-out);
+    transition: background-color 300ms var(--ease-out),
+                border-color 300ms var(--ease-out),
+                color 300ms var(--ease-out),
+                box-shadow 300ms var(--ease-out),
+                transform 100ms var(--ease-out);
   }
 
   .btn-primary {
@@ -1416,11 +1450,18 @@ body:has(.lp-page) {
     color: var(--color-offwhite);
     box-shadow: var(--shadow-lp-glow);
   }
+  /* O hover levanta pela SOMBRA (profundidade), não por deslocamento: assim o
+     transform fica livre pra ser só o pressionar, e os dois não brigam. */
   .btn-primary:hover {
     background-color: var(--color-bordo-soft);
-    transform: translateY(-0.125rem);
+    box-shadow: 0 34px 90px -28px rgba(123, 16, 43, 0.55);
   }
-  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:active,
+  .btn-ghost:active,
+  .btn-press:active {
+    transform: scale(0.97);
+    transition-duration: 100ms;
+  }
 
   .btn-ghost {
     border: 1px solid color-mix(in oklab, var(--color-grafite) 15%, transparent);
@@ -1462,4 +1503,188 @@ body:has(.lp-page) {
     background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 4px 4px;
   }
+}
+
+/* =========================================================
+   LP — MATERIAIS, GESTO E PREFERÊNCIAS
+   ---------------------------------------------------------
+   Camadas translúcidas em vez de tarjas opacas, resposta no pressionar e
+   os três sinais de acessibilidade que mudam o desenho (menos movimento,
+   menos transparência, mais contraste).
+   ========================================================= */
+
+@layer components {
+  /* ---- Cabeçalho como material -------------------------------------- */
+  /* Barra translúcida por onde o conteúdo passa POR BAIXO. Superfície grande
+     pede desfoque mais forte que um chip pequeno: é o que faz ela ler como
+     material espesso e não como um véu. A borda clara no topo é a luz batendo
+     na quina do vidro. */
+  .lp-chrome {
+    /* No celular a barra rola junto (ver Navbar.tsx); grudar só onde sobra
+       altura pra isso. */
+    position: relative;
+    background-color: color-mix(in oklab, var(--color-offwhite) 92%, transparent);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  /* Separação por BORDA DE ROLAGEM, não por linha de 1px: o degradê só existe
+     quando existe conteúdo passando atrás da barra. No topo da página não há
+     nada pra separar — e nada aparece. */
+  .lp-chrome::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 1.5rem;
+    pointer-events: none;
+    opacity: 0;
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-grafite) 8%, transparent),
+      transparent
+    );
+    transition: opacity 250ms var(--ease-out);
+  }
+  .lp-chrome[data-scrolled="true"]::after { opacity: 1; }
+
+  /* Material só onde ele tem função. No celular a barra rola junto e não fica
+     sobre coisa nenhuma — desfoque ali é custo de composição e um leve desvio
+     de tom (o saturate age sobre o fundo) em troca de nada. */
+  @media (max-width: 39.999rem) {
+    .lp-chrome {
+      background-color: var(--color-offwhite);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-top: 0;
+    }
+  }
+
+  @media (min-width: 40rem) {
+    .lp-chrome {
+      position: sticky;
+      top: 2.25rem; /* a faixa fixa do teste grátis */
+    }
+  }
+
+  /* Vibrância: sobre superfície translúcida, cinza chapado some. O texto ganha
+     contraste, um fio de peso e um respiro de tracking. */
+  .lp-nav-link {
+    color: color-mix(in oklab, var(--color-grafite) 82%, transparent);
+    letter-spacing: 0.006em;
+    transition: color 150ms var(--ease-out);
+  }
+  .lp-nav-link:hover { color: var(--color-bordo); }
+  .lp-nav-link[aria-current="location"] {
+    color: var(--color-bordo);
+    font-weight: 600;
+  }
+  .lp-nav-pill {
+    background-color: color-mix(in oklab, var(--color-bordo) 10%, transparent);
+  }
+
+  /* ---- CTA fixo do celular ------------------------------------------ */
+  .lp-sticky-cta {
+    background-color: color-mix(in oklab, var(--color-offwhite) 92%, transparent);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 -18px 50px -30px rgba(44, 37, 39, 0.55);
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Botão de ícone sobre imagem: material escuro, porque o fundo é conteúdo
+     agitado e claro-sobre-claro colapsaria a legibilidade. */
+  .lp-icon-btn {
+    background-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: background-color 200ms var(--ease-out), transform 100ms var(--ease-out);
+  }
+  .lp-icon-btn:hover { background-color: rgba(255, 255, 255, 0.26); }
+  .lp-icon-btn:active { transform: scale(0.94); }
+
+  /* ---- Trilho de depoimentos ---------------------------------------- */
+  /* O encaixe mora aqui (e não em utilitário) porque precisa ser DESLIGADO
+     durante o gesto e durante a inércia — senão o navegador disputa a posição
+     com a mola e o trilho treme. */
+  .lp-rail {
+    cursor: grab;
+    touch-action: pan-x;
+    scroll-snap-type: x mandatory;
+  }
+  .lp-rail[data-arrastando] {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
+  }
+  .lp-story {
+    scroll-snap-align: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: box-shadow 300ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .lp-story:hover { box-shadow: 0 22px 60px -24px rgba(44, 37, 39, 0.4); }
+  .lp-story:active { transform: scale(0.985); }
+  .lp-rail[data-arrastando] .lp-story:active { transform: none; }
+
+  /* ---- FAQ ----------------------------------------------------------- */
+  .lp-faq-row {
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 120ms var(--ease-out);
+  }
+  .lp-faq-row:active {
+    background-color: color-mix(in oklab, var(--color-bordo) 5%, transparent);
+  }
+
+  /* ---- Texto corrido -------------------------------------------------- */
+  .lp-page p { text-wrap: pretty; }
+  /* Corpo pequeno pede tracking POSITIVO — o oposto do título. */
+  .lp-fine { letter-spacing: 0.012em; }
+}
+
+/* ---- Menos movimento ------------------------------------------------- */
+/* O bloco global já corta transições e transform. Aqui morrem também os laços
+   contínuos: oscilação lenta em tela cheia é justamente o que causa enjoo. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-page .animate-marquee,
+  .lp-page .animate-float-slow,
+  .lp-page .animate-sparkle-pulse {
+    animation: none !important;
+  }
+}
+
+/* ---- Menos transparência --------------------------------------------- */
+/* Não é "tirar o desfoque": é engrossar o material até ficar sólido, mantendo
+   a mesma hierarquia de camadas. */
+@media (prefers-reduced-transparency: reduce) {
+  .lp-chrome,
+  .lp-sticky-cta {
+    background-color: var(--color-offwhite);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .lp-chrome { border-bottom: 1px solid color-mix(in oklab, var(--color-rose) 60%, transparent); }
+  .lp-page .card-soft {
+    background-color: var(--color-lp-cream);
+    backdrop-filter: none;
+  }
+  .lp-icon-btn {
+    background-color: rgba(20, 16, 17, 0.85);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ---- Mais contraste --------------------------------------------------- */
+@media (prefers-contrast: more) {
+  .lp-chrome,
+  .lp-sticky-cta {
+    background-color: var(--color-offwhite);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid var(--color-grafite);
+  }
+  .lp-nav-link { color: var(--color-grafite); }
+  .lp-page .btn-ghost { border-color: var(--color-grafite); }
 }

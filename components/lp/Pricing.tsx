@@ -16,7 +16,7 @@ export default function Pricing() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Planos e preços</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Assine e comece hoje.{" "}
               <span className="accent text-bordo">Sem fidelidade.</span>
             </h2>
@@ -51,7 +51,7 @@ export default function Pricing() {
 
             <div className="mt-7 flex items-center justify-center gap-3 border-t border-rose/50 pt-7">
               <Sparkle size={16} className="shrink-0 text-bordo" />
-              <p className="font-sora text-lg font-medium leading-snug text-grafite sm:text-xl">
+              <p className="font-sora text-lg font-medium leading-[1.3] text-grafite sm:text-xl">
                 Uma cliente por mês paga a Lume.{" "}
                 <span className="accent text-bordo">
                   A segunda em diante é sua.

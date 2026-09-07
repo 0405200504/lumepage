@@ -28,7 +28,7 @@ export default function HowItWorks() {
         <Reveal>
           <div className="max-w-3xl">
             <SectionLabel>Simples de começar</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Do zero ao primeiro agendamento em{" "}
               <span className="accent text-bordo">10 minutos.</span>
             </h2>
