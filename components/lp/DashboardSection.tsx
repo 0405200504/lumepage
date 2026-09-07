@@ -80,7 +80,7 @@ export default function DashboardSection() {
           <Reveal delay={0.1}>
             <div className="relative flex justify-center">
               <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-rose/30 blur-3xl" />
-              <div className="relative animate-float-slow">
+              <div className="relative">
                 <MockupDashboard />
               </div>
             </div>

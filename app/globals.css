@@ -1285,8 +1285,10 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
 
   --radius-lp-3xl: 1.5rem;
 
-  --animate-sparkle-pulse: sparkle-pulse 4s ease-in-out infinite;
-  --animate-float-slow: float-slow 6s ease-in-out infinite;
+  /* Sem laços de oscilação lenta (~0,2 Hz): o flutuar de 6s e o pulsar de 4s
+     ficavam justamente na frequência que incomoda, e não informavam nada.
+     O marquee fica: 32s é ~0,03 Hz, é deslocamento linear e o movimento É o
+     conteúdo (frases passando), não decoração piscando. */
   --animate-marquee: marquee 32s linear infinite;
 }
 
@@ -1307,14 +1309,6 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
   font-family: var(--font-lp-cormorant), ui-serif, Georgia, serif;
 }
 
-@keyframes sparkle-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -1548,6 +1542,9 @@ body:has(.lp-page) {
     transition: opacity 250ms var(--ease-out);
   }
   .lp-chrome[data-scrolled="true"]::after { opacity: 1; }
+  .lp-chrome[data-oculto="true"]::after { opacity: 0; }
+  /* Entrar e sair é iminente o tempo todo numa barra que segue a rolagem. */
+  .lp-chrome { will-change: transform; }
 
   /* Material só onde ele tem função. No celular a barra rola junto e não fica
      sobre coisa nenhuma — desfoque ali é custo de composição e um leve desvio
@@ -1611,8 +1608,12 @@ body:has(.lp-page) {
      com a mola e o trilho treme. */
   .lp-rail {
     cursor: grab;
-    touch-action: pan-x;
+    /* Sem `touch-action` restrito: o dedo que começa sobre o trilho precisa
+       continuar podendo rolar a página na vertical. Declarar `pan-x` aqui
+       entrega ao trilho um eixo que não é dele e prende a leitura. O arrasto
+       por JS é só do mouse, então não há gesto concorrente pra desambiguar. */
     scroll-snap-type: x mandatory;
+    will-change: scroll-position;
   }
   .lp-rail[data-arrastando] {
     cursor: grabbing;
@@ -1628,10 +1629,26 @@ body:has(.lp-page) {
   .lp-story:active { transform: scale(0.985); }
   .lp-rail[data-arrastando] .lp-story:active { transform: none; }
 
+  /* ---- Foco de teclado ------------------------------------------------ */
+  /* Quem navega por Tab precisa das mesmas respostas de quem aponta. Anel
+     em bordô, deslocado, pra não colar na borda do controle. */
+  .lp-page a:focus-visible,
+  .lp-page button:focus-visible {
+    outline: 2px solid var(--color-bordo);
+    outline-offset: 3px;
+    border-radius: 9999px;
+  }
+  .lp-story:focus-visible {
+    outline-offset: 4px;
+    border-radius: 1rem;
+  }
+
   /* ---- FAQ ----------------------------------------------------------- */
   .lp-faq-row {
     -webkit-tap-highlight-color: transparent;
     transition: background-color 120ms var(--ease-out);
+    /* A linha inteira é o alvo (bem acima dos 44px), não só o sinal de +. */
+    min-height: 3.5rem;
   }
   .lp-faq-row:active {
     background-color: color-mix(in oklab, var(--color-bordo) 5%, transparent);
@@ -1639,19 +1656,28 @@ body:has(.lp-page) {
 
   /* ---- Texto corrido -------------------------------------------------- */
   .lp-page p { text-wrap: pretty; }
-  /* Corpo pequeno pede tracking POSITIVO — o oposto do título. */
-  .lp-fine { letter-spacing: 0.012em; }
+
+  /* Tracking do corpo pequeno é POSITIVO — o oposto do título. Aplicado pela
+     própria escala tipográfica (não elemento a elemento) pra não existir um
+     rótulo de 11px esquecido com o espaçamento de um texto de 16px. */
+  .lp-page .text-xs,
+  .lp-page .text-sm,
+  .lp-page .lp-fine,
+  .lp-page [class*="text-[0.5"],
+  .lp-page [class*="text-[0.6"],
+  .lp-page [class*="text-[0.7"] {
+    letter-spacing: 0.014em;
+  }
+  /* Quem já declara `tracking-*` no JSX não é afetado: as utilities do
+     Tailwind moram numa camada posterior e vencem esta regra por ordenação
+     de camada, sem precisar de !important nem de especificidade extra. */
 }
 
 /* ---- Menos movimento ------------------------------------------------- */
 /* O bloco global já corta transições e transform. Aqui morrem também os laços
    contínuos: oscilação lenta em tela cheia é justamente o que causa enjoo. */
 @media (prefers-reduced-motion: reduce) {
-  .lp-page .animate-marquee,
-  .lp-page .animate-float-slow,
-  .lp-page .animate-sparkle-pulse {
-    animation: none !important;
-  }
+  .lp-page .animate-marquee { animation: none !important; }
 }
 
 /* ---- Menos transparência --------------------------------------------- */

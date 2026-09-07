@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import Logo from "./Logo";
 import Button from "./Button";
@@ -8,39 +8,69 @@ import { SITE } from "@/lib/lp/site";
 import { spring } from "@/lib/lp/motion";
 
 /**
- * Cabeçalho como MATERIAL, não como faixa opaca.
+ * Cabeçalho como MATERIAL, e com direção.
  *
- * Três decisões vindas do jeito Apple de tratar chrome flutuante:
- *
- * 1. É uma camada translúcida com desfoque e o conteúdo passa POR BAIXO —
- *    não uma tarja opaca que come uma tira fixa da tela. Por isso a barra
- *    encolhe ao rolar em vez de sumir: continua acessível sem pesar.
+ * 1. É uma camada translúcida com desfoque e o conteúdo passa POR BAIXO — não
+ *    uma tarja opaca que come uma tira fixa da tela.
  * 2. Sem borda de 1px. A separação aparece só quando existe conteúdo atrás
  *    dela, como um degradê curto (scroll edge), e some no topo da página.
- * 3. No celular ela NÃO gruda: 2,25rem de faixa + 4rem de barra comem 13%
- *    de uma tela pequena, e ali quem carrega a conversão é o CTA de baixo,
- *    no alcance do polegar. Material onde cabe, conteúdo onde não cabe.
- * 4. Orientação ("onde eu estou?"): a pílula do item ativo é UM elemento que
+ * 3. Ele acompanha a DIREÇÃO da rolagem: descendo, sai do caminho; subindo,
+ *    volta na hora. O gesto de subir já significa "quero voltar", e a barra
+ *    responde a essa intenção antes de o usuário pedir.
+ *    Isso também é o que mantém a animação no compositor: sai e entra por
+ *    `transform`, sem animar altura (que é layout, recalculado todo quadro).
+ * 4. No celular ela NÃO gruda: 2,25rem de faixa + 4rem de barra comem 13% de
+ *    uma tela pequena, e ali quem carrega a conversão é o CTA de baixo, no
+ *    alcance do polegar. Material onde cabe, conteúdo onde não cabe.
+ * 5. Orientação ("onde eu estou?"): a pílula do item ativo é UM elemento que
  *    se desloca entre os links com mola — não quatro fundos acendendo e
  *    apagando. Movimento contínuo lê como o mesmo objeto se movendo.
  */
 
 const links = [
-  { label: "A conta", href: "#a-conta", id: "a-conta" },
+  // Rótulo diz o que TEM na seção. "A conta" não diz nada a quem chegou agora;
+  // "Quanto custa" nomeia o conteúdo e cria expectativa correta.
+  { label: "Quanto custa", href: "#a-conta", id: "a-conta" },
   { label: "Como funciona", href: "#como-funciona", id: "como-funciona" },
   { label: "Painel", href: "#painel", id: "painel" },
   { label: "Planos", href: "#planos", id: "planos" },
   { label: "Perguntas", href: "#faq", id: "faq" },
 ];
 
+/** Abaixo disto a barra nunca se esconde — ainda estamos perto do topo. */
+const ZONA_LIVRE = 160;
+/** Ruído de rolagem menor que isto não conta como mudança de direção. */
+const LIMIAR_DIRECAO = 6;
+
 export default function Navbar() {
   const calmo = useReducedMotion();
   const [rolou, setRolou] = useState(false);
+  const [oculto, setOculto] = useState(false);
+  const [gruda, setGruda] = useState(false);
   const [ativa, setAtiva] = useState<string | null>(null);
+  const ultimoY = useRef(0);
 
-  // Encolher a barra: 24px de rolagem já indica intenção de ler o conteúdo.
+  // A barra só se esconde onde ela realmente gruda (desktop). No celular ela
+  // rola junto com a página e tirá-la do fluxo deixaria um buraco.
   useEffect(() => {
-    const onScroll = () => setRolou(window.scrollY > 24);
+    const mq = window.matchMedia("(min-width: 40rem)");
+    const sync = () => setGruda(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    ultimoY.current = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const d = y - ultimoY.current;
+      setRolou(y > 24);
+      if (Math.abs(d) > LIMIAR_DIRECAO) {
+        setOculto(y > ZONA_LIVRE && d > 0);
+        ultimoY.current = y;
+      }
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -66,26 +96,24 @@ export default function Navbar() {
     return () => obs.disconnect();
   }, []);
 
+  const some = gruda && !calmo && oculto;
+
   return (
     <motion.header
       className="lp-chrome z-30 h-16"
       data-scrolled={rolou ? "true" : "false"}
-      animate={calmo ? undefined : { height: rolou ? 54 : 64 }}
+      data-oculto={some ? "true" : "false"}
       initial={false}
+      animate={{ y: some ? "-100%" : "0%" }}
       transition={spring.ui}
-      style={calmo ? { height: 64 } : undefined}
     >
       <nav className="container-lume flex h-full items-center justify-center sm:justify-between">
-        <a href="#topo" aria-label="Lume — início" className="flex items-center">
-          <motion.span
-            className="block"
-            animate={calmo ? undefined : { scale: rolou ? 0.88 : 1 }}
-            initial={false}
-            transition={spring.ui}
-            style={{ transformOrigin: "left center" }}
-          >
-            <Logo className="w-24 h-auto sm:w-28 sm:-ml-3" />
-          </motion.span>
+        <a
+          href="#topo"
+          aria-label="Lume — início"
+          className="lp-nav-link flex items-center rounded-xl"
+        >
+          <Logo className="w-24 h-auto sm:w-28 sm:-ml-3" />
         </a>
 
         <div className="hidden items-center gap-1 md:flex">
@@ -112,7 +140,10 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-5 sm:flex">
-          <a href={SITE.login} className="lp-nav-link text-sm font-medium">
+          <a
+            href={SITE.login}
+            className="lp-nav-link rounded-full px-2 py-1 text-sm font-medium"
+          >
             Entrar
           </a>
           <Button className="px-5 py-2.5 text-[0.8125rem]">

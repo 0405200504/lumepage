@@ -15,7 +15,7 @@ export default function SectionLabel({
     <span
       className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] ${color}`}
     >
-      <Sparkle size={13} className="animate-sparkle-pulse" />
+      <Sparkle size={13} />
       {children}
     </span>
   );
