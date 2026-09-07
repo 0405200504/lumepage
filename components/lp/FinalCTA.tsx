@@ -16,7 +16,7 @@ export default function FinalCTA() {
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-rose">
               Pronta para começar
             </p>
-            <h2 className="mx-auto mt-5 max-w-3xl font-sora text-3xl font-semibold leading-tight sm:text-[2.6rem]">
+            <h2 className="mx-auto mt-5 max-w-3xl font-sora text-3xl font-semibold leading-[1.06] sm:text-[2.6rem]">
               Amanhã de manhã, uma cliente vai clicar{" "}
               <span className="accent text-rose">no link da sua bio.</span>
             </h2>

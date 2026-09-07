@@ -66,7 +66,7 @@ export default function TurningPoint() {
         <Reveal>
           <div className="max-w-4xl">
             <SectionLabel>A solução</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Um link. A cliente escolhe o serviço, escolhe o horário e recebe a
               confirmação no WhatsApp.{" "}
               <span className="accent text-bordo">Você não digita nada.</span>
@@ -89,7 +89,7 @@ export default function TurningPoint() {
                 <h3 className="mt-5 font-sora text-lg font-semibold text-grafite">
                   {p.titulo}
                 </h3>
-                <p className="mt-2.5 text-[15px] leading-relaxed text-grafite/65">
+                <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-grafite/65">
                   {p.desc}
                 </p>
               </div>

@@ -72,7 +72,7 @@ export default function Guarantee() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Reversão de risco</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Você não está arriscando nada.{" "}
               <span className="accent text-bordo">Literalmente nada.</span>
             </h2>
@@ -89,7 +89,7 @@ export default function Guarantee() {
                 <h3 className="mt-4 font-sora text-base font-semibold text-grafite">
                   {s.titulo}
                 </h3>
-                <p className="mt-2.5 text-[15px] leading-relaxed text-grafite/65">
+                <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-grafite/65">
                   {s.desc}
                 </p>
               </div>

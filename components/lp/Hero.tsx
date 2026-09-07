@@ -1,11 +1,31 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Button from "./Button";
 import Sparkle from "./Sparkle";
 import Script from "next/script";
+import { crossFade, spring } from "@/lib/lp/motion";
+
+/**
+ * Entrada em cascata do topo.
+ *
+ * Molas criticamente amortecidas (sem repique): ninguém arremessou nada aqui,
+ * o conteúdo só está chegando. Repique numa manchete que apenas apareceu lê
+ * como defeito, não como física. O atraso entre os blocos é pequeno de
+ * propósito — a cascata orienta a leitura, não vira espetáculo.
+ */
+const ENTRA = 0.06;
 
 export default function Hero() {
+  const calmo = useReducedMotion();
+  /** Uma mola pra tudo; muda só a espera. */
+  const entra = (ordem: number) =>
+    calmo
+      ? { ...crossFade, delay: ordem * ENTRA }
+      : { ...spring.ui, delay: ordem * ENTRA };
+  const de = (y: number) => (calmo ? { opacity: 0 } : { opacity: 0, y });
+  const para = calmo ? { opacity: 1 } : { opacity: 1, y: 0 };
+
   return (
     <section
       id="topo"
@@ -21,20 +41,23 @@ export default function Hero() {
         {/* coluna texto */}
         <div className="order-2 lg:order-1">
           <motion.span
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            initial={de(12)}
+            animate={para}
+            transition={entra(0)}
             className="eyebrow"
           >
             <Sparkle size={13} className="animate-sparkle-pulse" />
             Para profissionais da estética
           </motion.span>
 
+          {/* Corpo em clamp e entrelinhamento apertado: título grande precisa
+              de linhas mais próximas, e o tracking negativo vem da escala
+              tipográfica da LP (h1 = -0.036em). */}
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.05 }}
-            className="mt-5 font-sora text-4xl font-semibold leading-[1.08] text-grafite sm:text-5xl lg:text-[3.5rem]"
+            initial={de(20)}
+            animate={para}
+            transition={entra(1)}
+            className="mt-5 font-sora text-[clamp(2.25rem,6vw,3.5rem)] font-semibold leading-[1.02] text-grafite"
           >
             Sua cliente não quer conversar.
             <br />
@@ -42,10 +65,10 @@ export default function Hero() {
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-6 max-w-xl text-base leading-relaxed text-grafite/70 sm:text-lg"
+            initial={de(20)}
+            animate={para}
+            transition={entra(2)}
+            className="mt-6 max-w-xl text-base leading-[1.65] text-grafite/70 sm:text-lg"
           >
             A Lume transforma o link da sua bio numa página que mostra seus
             serviços, seus preços e seus horários — e deixa a cliente agendar
@@ -56,9 +79,9 @@ export default function Hero() {
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.25 }}
+            initial={de(20)}
+            animate={para}
+            transition={entra(3)}
             className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
           >
             <Button>Testar 7 dias grátis</Button>
@@ -70,8 +93,8 @@ export default function Hero() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-            className="mt-4 max-w-md text-sm text-grafite/55"
+            transition={entra(4)}
+            className="lp-fine mt-4 max-w-md text-sm text-grafite/55"
           >
             Sem cartão de crédito. Sem fidelidade. Sua página no ar em 10
             minutos.
@@ -80,11 +103,13 @@ export default function Hero() {
 
         {/* coluna visual - Vturb Video */}
         <div className="order-1 lg:order-2 relative mx-auto flex w-full max-w-lg items-center justify-center lg:max-w-none">
+          {/* Superfície grande lê como mais espessa: sombra mais funda que a
+              dos cartões pequenos da página. */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full relative mx-auto max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border-4 border-offwhite bg-lp-cream"
+            initial={calmo ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 24 }}
+            animate={calmo ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            transition={entra(2)}
+            className="w-full relative mx-auto max-w-[400px] rounded-[1.75rem] overflow-hidden border-4 border-offwhite bg-lp-cream shadow-[0_50px_120px_-40px_rgba(44,37,39,0.55)]"
           >
             {/* VSL vertical (9:16). O placeholder segura a proporção antes de o
                 player carregar — sem ele a página pula quando o vídeo entra. */}

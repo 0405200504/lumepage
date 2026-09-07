@@ -36,7 +36,7 @@ export default function Comparison() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>A diferença na prática</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               A mesma semana,{" "}
               <span className="accent text-bordo">com e sem Lume.</span>
             </h2>
@@ -67,7 +67,7 @@ export default function Comparison() {
                   className="px-6 py-5 sm:grid sm:grid-cols-[0.8fr_1fr_1fr] sm:items-stretch sm:gap-px sm:bg-rose/40 sm:px-0 sm:py-0"
                 >
                   <div className="sm:flex sm:items-center sm:bg-offwhite sm:px-6 sm:py-4">
-                    <p className="font-sora text-xs font-semibold uppercase tracking-[0.18em] text-bordo sm:text-[13px] sm:normal-case sm:tracking-normal sm:text-grafite">
+                    <p className="font-sora text-xs font-semibold uppercase tracking-[0.18em] text-bordo sm:text-[0.8125rem] sm:normal-case sm:tracking-normal sm:text-grafite">
                       {l.label}
                     </p>
                   </div>
@@ -76,14 +76,14 @@ export default function Comparison() {
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-grafite/10 text-grafite/50 sm:mt-0">
                       <Cross />
                     </span>
-                    <span className="text-[15px] text-grafite/60">{l.hoje}</span>
+                    <span className="text-[0.9375rem] text-grafite/60">{l.hoje}</span>
                   </div>
 
                   <div className="mt-2 flex items-start gap-2.5 sm:mt-0 sm:items-center sm:bg-bordo sm:px-6 sm:py-4">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-bordo text-offwhite sm:mt-0 sm:bg-offwhite/15">
                       <Check />
                     </span>
-                    <span className="text-[15px] font-medium text-grafite sm:font-normal sm:text-offwhite/90">
+                    <span className="text-[0.9375rem] font-medium text-grafite sm:font-normal sm:text-offwhite/90">
                       {l.lume}
                     </span>
                   </div>

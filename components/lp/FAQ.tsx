@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
+import { crossFade, spring } from "@/lib/lp/motion";
 
 const faqs = [
   {
@@ -65,27 +66,32 @@ function Item({
   open: boolean;
   onClick: () => void;
 }) {
+  const calmo = useReducedMotion();
+
   return (
-    <div className="border-b border-rose/50">
+    <div className="border-b border-rose/50 last:border-b-0">
       <button
         onClick={onClick}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+        className="lp-faq-row flex w-full items-center justify-between gap-4 rounded-2xl py-5 text-left"
         aria-expanded={open}
       >
         <span className="font-sora text-base font-medium text-grafite sm:text-lg">
           {q}
         </span>
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-ui duration-300 ${
-            open
-              ? "rotate-45 border-bordo bg-bordo text-offwhite"
-              : "border-grafite/20 text-grafite"
+        {/* O sinal gira com a MESMA mola que abre a resposta: um gesto, um
+            movimento. Duas curvas diferentes leem como duas coisas soltas. */}
+        <motion.span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+            open ? "border-bordo bg-bordo text-offwhite" : "border-grafite/20 text-grafite"
           }`}
+          animate={calmo ? undefined : { rotate: open ? 45 : 0 }}
+          initial={false}
+          transition={spring.snappy}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-        </span>
+        </motion.span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -93,10 +99,13 @@ function Item({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            /* Mola, não duração: quem clica em duas perguntas seguidas vê a
+               primeira mudar de rumo a partir da altura em que ela estava —
+               sem esperar a animação anterior "terminar". */
+            transition={calmo ? crossFade : spring.ui}
             className="overflow-hidden"
           >
-            <p className="pb-5 pr-12 text-[15px] leading-relaxed text-grafite/70">
+            <p className="pb-5 pr-12 text-[0.9375rem] leading-relaxed text-grafite/70">
               {a}
             </p>
           </motion.div>
@@ -115,7 +124,7 @@ export default function FAQ() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Perguntas frequentes</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Ainda com um{" "}
               <span className="accent text-bordo">“sim, mas…”?</span>
             </h2>

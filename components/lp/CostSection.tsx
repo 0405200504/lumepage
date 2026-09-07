@@ -37,7 +37,7 @@ export default function CostSection() {
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>A conta que ninguém faz</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Quanto custa{" "}
               <span className="accent text-bordo">responder no direct?</span>
             </h2>
@@ -55,7 +55,7 @@ export default function CostSection() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-bordo">
                     {l.label}
                   </p>
-                  <p className="mt-2 text-[15px] leading-relaxed text-grafite/70">
+                  <p className="mt-2 text-[0.9375rem] leading-relaxed text-grafite/70">
                     {l.conta}
                   </p>
                 </div>
@@ -97,7 +97,7 @@ export default function CostSection() {
               <p className="mt-1 text-xs text-offwhite/65">no plano anual</p>
             </div>
 
-            <p className="mx-auto mt-8 max-w-lg font-sora text-lg font-medium leading-snug sm:text-xl">
+            <p className="mx-auto mt-8 max-w-lg font-sora text-lg font-medium leading-[1.3] sm:text-xl">
               Um único agendamento recuperado paga o mês inteiro.{" "}
               <span className="accent text-rose">O resto é lucro.</span>
             </p>

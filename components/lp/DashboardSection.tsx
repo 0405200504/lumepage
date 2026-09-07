@@ -48,7 +48,7 @@ export default function DashboardSection() {
         <Reveal>
           <div className="max-w-3xl">
             <SectionLabel>Não para aí</SectionLabel>
-            <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight text-grafite sm:text-4xl">
+            <h2 className="mt-4 font-sora text-3xl font-semibold leading-[1.08] text-grafite sm:text-4xl">
               Enquanto ela agenda, você ganha um{" "}
               <span className="accent text-bordo">
                 sistema de gestão inteiro.
@@ -89,7 +89,7 @@ export default function DashboardSection() {
 
         <Reveal delay={0.1}>
           <div className="mt-14 rounded-lp-3xl bg-grafite px-7 py-10 text-center sm:px-12">
-            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-snug text-offwhite sm:text-2xl">
+            <p className="mx-auto max-w-3xl font-sora text-xl font-medium leading-[1.28] text-offwhite sm:text-2xl">
               Você abriu esse negócio pra fazer o que ama. Não pra ser{" "}
               <span className="accent text-rose">
                 secretária, contadora e recepcionista de si mesma.

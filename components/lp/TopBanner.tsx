@@ -11,7 +11,7 @@ export default function TopBanner() {
   return (
     <a
       href={CTA_LINK}
-      className="fixed inset-x-0 top-0 z-50 flex h-9 items-center justify-center gap-2 bg-bordo px-4 text-center text-[13px] font-semibold text-offwhite transition-colors hover:bg-bordo-soft"
+      className="fixed inset-x-0 top-0 z-50 flex h-9 items-center justify-center gap-2 bg-bordo px-4 text-center text-[0.8125rem] font-semibold text-offwhite transition-colors hover:bg-bordo-soft"
     >
       <Sparkle size={11} className="shrink-0 text-rose" />
       {TRIAL_BANNER}
