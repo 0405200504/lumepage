@@ -125,6 +125,7 @@
   --color-line:        var(--color-n-200);   /* divisória discreta */
   --color-line-strong: var(--color-n-300);   /* contorno de controle, hover */
   --color-grid:        var(--color-n-150);
+  --color-offhours:    #E6E3E4;              /* agenda: fora do expediente */
   --color-tick:        var(--color-n-300);
   --color-heading:     var(--color-n-900);
   --color-ink:         var(--color-n-800);
@@ -376,6 +377,7 @@
   --color-line:        #2E2A2B;
   --color-line-strong: #413C3E;
   --color-grid:        #211E1F;
+  --color-offhours:    #121011;
   --color-tick:        #413C3E;
   --color-heading:     #F5F3F3;
   --color-ink:         #E4E1E2;
@@ -462,6 +464,7 @@
     --color-line:        #2E2A2B;
     --color-line-strong: #413C3E;
     --color-grid:        #211E1F;
+    --color-offhours:    #121011;
     --color-tick:        #413C3E;
     --color-heading:     #F5F3F3;
     --color-ink:         #E4E1E2;

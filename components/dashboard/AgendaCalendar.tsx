@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, ChevronDown, CalendarDays, CalendarRange, LayoutGrid,
   X, MessageCircle, Clock, PartyPopper, NotebookPen, Plus, Check, Trash2, GripVertical, Pencil,
-  SlidersHorizontal, Lock, UtensilsCrossed, Layers,
+  SlidersHorizontal, Lock, UtensilsCrossed, Layers, Moon,
 } from 'lucide-react';
 import { Appointment, Service, TimeBlock, Task, Client, AvailabilityRule } from '@/types/database';
 import { getHolidayMap, Holiday } from '@/lib/holidays/brazil';
@@ -138,6 +138,19 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
       if (r.is_active && r.break_start && r.break_end) {
         map[r.weekday] = { start: r.break_start, end: r.break_end };
       }
+    }
+    return map;
+  }, [availabilityRules]);
+
+  // Expediente por dia da semana: { start, end } se o dia atende, null se está
+  // fechado. Sem nenhuma regra cadastrada o mapa fica vazio e a agenda não
+  // sombreia nada — melhor não marcar do que marcar tudo como "fora".
+  const workByWeekday = useMemo(() => {
+    const map: WorkMap = {};
+    if (!availabilityRules.length) return map;
+    for (let wd = 0; wd < 7; wd++) {
+      const r = availabilityRules.find(x => x.weekday === wd);
+      map[wd] = r && r.is_active && r.start_time && r.end_time ? { start: tmin(r.start_time), end: tmin(r.end_time) } : null;
     }
     return map;
   }, [availabilityRules]);
@@ -422,13 +435,13 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
           </div>
 
           {view === 'day' && (
-            <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} />
+            <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} workByWeekday={workByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} />
           )}
           {view === 'month' && (
             <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
           )}
           {view === 'week' && (
-            <WeekView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} showWeekends={showWeekends} />
+            <WeekView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} workByWeekday={workByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} showWeekends={showWeekends} />
           )}
           {view === 'year' && (
             <YearView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} activeOf={activeOf} onPickMonth={(m: number) => { setCursor(new Date(cursor.getFullYear(), m, 1)); setView('month'); }} />
@@ -730,7 +743,41 @@ const tmin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number)
 const HOUR_H = 56;          // altura de 1 hora em px
 const PXM = HOUR_H / 60;    // px por minuto
 
-const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt }) => {
+/* ---------------- EXPEDIENTE ---------------- */
+// undefined = sem regras (não sombreia); null = dia fechado; senão minutos do dia.
+type WorkHours = { start: number; end: number } | null;
+type WorkMap = Record<number, WorkHours>;
+
+// Faixas fora do expediente dentro da janela visível da timeline.
+const offHourRanges = (work: WorkHours | undefined, from: number, to: number): [number, number][] => {
+  if (work === undefined) return [];
+  if (work === null) return [[from, to]];
+  const out: [number, number][] = [];
+  if (work.start > from) out.push([from, Math.min(work.start, to)]);
+  if (work.end < to) out.push([Math.max(work.end, from), to]);
+  return out.filter(([a, b]) => b > a);
+};
+
+const isOffHours = (work: WorkHours | undefined, s: number, e: number) =>
+  work !== undefined && (work === null || s < work.start || e > work.end);
+
+// Tom mais escuro atrás da grade: a profissional bate o olho e sabe onde o
+// salão está fechado. Fica atrás de tudo e não bloqueia o clique — encaixar
+// fora do horário continua permitido, só fica evidente.
+const OffHoursBands: React.FC<{ ranges: [number, number][]; yOf: (m: number) => number }> = ({ ranges, yOf }) => (
+  <>
+    {ranges.map(([a, b]) => (
+      <div
+        key={a}
+        className="absolute left-0 right-0 pointer-events-none"
+        style={{ top: yOf(a), height: (b - a) * PXM, background: 'var(--color-offhours)' }}
+        aria-hidden
+      />
+    ))}
+  </>
+);
+
+const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, workByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt }) => {
   const iso = isoOf(cursor);
   const isToday = sameDay(cursor, today);
   const holiday = holidayMap[iso];
@@ -742,6 +789,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
   // Horário de almoço deste dia da semana (se configurado na aba Disponibilidade).
   const lunch: { start: string; end: string } | undefined = (lunchByWeekday || {})[cursor.getDay()];
+  const work: WorkHours | undefined = (workByWeekday || {})[cursor.getDay()];
 
   // Separa tarefas com e sem horário
   const untimedTasks = dayTasks.filter(t => !t.due_time);
@@ -753,6 +801,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
     ...timedBlocks.flatMap(b => [tmin(b.start_time!), tmin(b.end_time!)]),
     ...timedTasks.map(t => tmin(t.due_time!)),
     ...(lunch ? [tmin(lunch.start), tmin(lunch.end)] : []),
+    ...(work ? [work.start, work.end] : []),
   ];
   let startHour = 7, endHour = 21;
   if (startsEnds.length) {
@@ -877,6 +926,8 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 onMoveAppt?.(id, iso, minFromY(e.clientY - offY, e.currentTarget.getBoundingClientRect().top));
               }}
             >
+              <OffHoursBands ranges={offHourRanges(work, rangeStartMin, endHour * 60)} yOf={yOf} />
+
               {/* Camada de clique (encaixa no horário tocado) */}
               <button
                 type="button"
@@ -954,13 +1005,14 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                 const m = statusMeta(a.status);
                 const widthPct = 100 / laneCount;
                 const height = Math.max((e - s) * PXM, 22);
+                const off = isOffHours(work, s, e);
                 return (
                   <button
                     key={a.id}
                     draggable
                     onDragStart={(e) => apptDragStart(e, a.id)}
                     onClick={() => onSelectDay(iso)}
-                    title="Arraste para reagendar · clique para ver"
+                    title={off ? 'Fora do expediente · arraste para reagendar · clique para ver' : 'Arraste para reagendar · clique para ver'}
                     className={`group absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
                     style={{
                       top: yOf(s) + 1,
@@ -980,12 +1032,16 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                     {height < 40 ? (
                       <span className="min-w-0 flex-1 px-2 flex items-center gap-2">
                         <span className="text-micro font-semibold truncate leading-tight">{a.client_name}</span>
+                        {off && <Moon className="h-3.5 w-3.5 shrink-0 text-warning" aria-label="Fora do expediente" />}
                         <span className="mono-micro text-n-500 ml-auto shrink-0">{a.start_time.substring(0, 5)}</span>
                       </span>
                     ) : (
                       <span className="min-w-0 flex-1 px-2 py-1">
                         <GripVertical className="absolute right-0.5 top-0.5 h-4 w-4 opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden />
-                        <span className="mono-micro text-n-500 block leading-tight">{a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}</span>
+                        <span className="mono-micro text-n-500 flex items-center gap-1.5 leading-tight">
+                          {a.start_time.substring(0, 5)}–{a.end_time.substring(0, 5)}
+                          {off && <span className="inline-flex items-center gap-0.5 font-sans font-semibold text-warning"><Moon className="h-3.5 w-3.5" aria-hidden /> Fora do expediente</span>}
+                        </span>
                         <span className="text-caption font-semibold truncate leading-tight block">{a.client_name}</span>
                         {height > 60 && <span className="mono-micro text-n-500 truncate block">{a.service?.name}{a.service_ids && a.service_ids.length > 1 ? ` +${a.service_ids.length - 1}` : ''}</span>}
                       </span>
@@ -1031,7 +1087,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 };
 
 /* ---------------- SEMANA (grade de horários, colunas por dia) ---------------- */
-const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt, showWeekends }) => {
+const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holidayMap, blockByDate, lunchByWeekday, workByWeekday, activeOf, onSelectDay, onQuickBook, onMoveAppt, showWeekends }) => {
   const ws = startOfWeek(cursor);
   const allDays = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
   const days = showWeekends ? allDays : allDays.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
@@ -1043,6 +1099,8 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
     activeOf(apptByDate[iso]).forEach((a: Appointment) => collected.push(tmin(a.start_time), tmin(a.end_time)));
     (blockByDate[iso] || []).filter((b: TimeBlock) => b.start_time && b.end_time).forEach((b: TimeBlock) => collected.push(tmin(b.start_time!), tmin(b.end_time!)));
     (taskByDate[iso] || []).filter((t: Task) => t.due_time).forEach((t: Task) => collected.push(tmin(t.due_time!)));
+    const w: WorkHours | undefined = (workByWeekday || {})[d.getDay()];
+    if (w) collected.push(w.start, w.end);
   });
   let startHour = 7, endHour = 21;
   if (collected.length) {
@@ -1117,6 +1175,7 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
             const appts: Appointment[] = activeOf(apptByDate[iso]).slice().sort((a: Appointment, b: Appointment) => a.start_time.localeCompare(b.start_time));
             const blocks: TimeBlock[] = (blockByDate[iso] || []).filter((b: TimeBlock) => b.block_type === 'custom_time' && b.start_time && b.end_time);
             const lunch = (lunchByWeekday || {})[d.getDay()];
+            const work: WorkHours | undefined = (workByWeekday || {})[d.getDay()];
             const tTasks: Task[] = (taskByDate[iso] || []).filter((t: Task) => t.due_time);
 
             const laneEnds: number[] = [];
@@ -1140,6 +1199,8 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   onMoveAppt?.(id, iso, minFromY(e.clientY - offY, e.currentTarget.getBoundingClientRect().top));
                 }}
               >
+                <OffHoursBands ranges={offHourRanges(work, rangeStartMin, endHour * 60)} yOf={yOf} />
+
                 {/* Camada de clique (encaixa cliente no horário tocado) */}
                 <button type="button" aria-label="Encaixar cliente neste horário"
                   onClick={(e) => {
@@ -1193,8 +1254,9 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                   const m = statusMeta(a.status);
                   const w = 100 / laneCount;
                   const height = Math.max((e - s) * PXM, 20);
+                  const off = isOffHours(work, s, e);
                   return (
-                    <button key={a.id} draggable onDragStart={(ev) => apptDragStart(ev, a.id)} onClick={() => onSelectDay(iso)} title="Arraste para reagendar · clique para ver"
+                    <button key={a.id} draggable onDragStart={(ev) => apptDragStart(ev, a.id)} onClick={() => onSelectDay(iso)} title={off ? 'Fora do expediente · arraste para reagendar · clique para ver' : 'Arraste para reagendar · clique para ver'}
                       className={`absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
                       style={{ top: yOf(s) + 1, height: height - 2, left: `calc(${lane * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
                       <span className={`w-[3px] shrink-0 ${m.bar}`} aria-hidden />
@@ -1202,7 +1264,10 @@ const WeekView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holida
                         {height >= 34 && (
                           <span className="mono-micro text-n-500 block leading-tight">{a.start_time.substring(0, 5)}</span>
                         )}
-                        <span className="text-micro font-semibold truncate leading-tight block">{a.client_name.split(' ')[0]}</span>
+                        <span className="flex items-center gap-0.5 min-w-0">
+                          {off && <Moon className="h-3 w-3 shrink-0 text-warning" aria-label="Fora do expediente" />}
+                          <span className="text-micro font-semibold truncate leading-tight">{a.client_name.split(' ')[0]}</span>
+                        </span>
                       </span>
                     </button>
                   );
