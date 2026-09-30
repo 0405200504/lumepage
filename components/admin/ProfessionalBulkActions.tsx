@@ -17,6 +17,7 @@ export function ProfessionalBulkActions() {
       actions={[
         { label: 'Pausar', icon: <PauseCircle className="h-3.5 w-3.5" />, confirm: 'Pausar as contas selecionadas? Elas somem da busca pública e não recebem novos agendamentos.', onRun: ids => bulkSetStatusAction(ids, 'paused').then(after) },
         { label: 'Reativar', icon: <PlayCircle className="h-3.5 w-3.5" />, onRun: ids => bulkSetStatusAction(ids, 'active').then(after) },
+        { label: '+7 dias', icon: <CalendarPlus className="h-3.5 w-3.5" />, onRun: ids => bulkExtendTrialAction(ids, 7).then(after) },
         { label: '+30 dias', icon: <CalendarPlus className="h-3.5 w-3.5" />, confirm: 'Estender o acesso das contas selecionadas em 30 dias?', onRun: ids => bulkExtendTrialAction(ids, 30).then(after) },
         { label: 'Lixeira', icon: <Trash2 className="h-3.5 w-3.5" />, destructive: true, onRun: ids => bulkTrashAction(ids).then(after) },
       ]}

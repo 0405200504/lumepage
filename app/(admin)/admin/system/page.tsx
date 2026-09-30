@@ -10,6 +10,8 @@ import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { NetworkTrashButton, TestDataButton } from '@/components/admin/SystemTools';
 import { Badge } from '@/components/admin/badges';
 import { formatDateTimeBR } from '@/lib/format';
+import { checkMigrations, checkIntegrations } from '@/lib/admin/crm';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 export const metadata = { title: 'Saúde do sistema | Lume Admin' };
 
@@ -20,7 +22,7 @@ export default async function AdminSystemPage() {
   const session = await requireAdmin();
   const db = () => getSupabaseAdmin() || supabase;
 
-  const [storage, trash, settingsRes, apptsRes] = await Promise.all([
+  const [storage, trash, settingsRes, apptsRes, migrations] = await Promise.all([
     dbService.getDatabaseStats().catch(() => null),
     dbService.getNetworkTrashStats().catch(() => ({ appointments: 0, clients: 0 })),
     isSupabaseConfigured
@@ -32,7 +34,10 @@ export default async function AdminSystemPage() {
         // eslint-disable-next-line react-hooks/purity -- Server Component: relógio por request.
         .gte('date', new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10)).limit(20000)
       : Promise.resolve({ data: [] }),
+    checkMigrations(),
   ]);
+  const integrations = checkIntegrations();
+  const missingMigrations = migrations.filter(m => !m.ok);
 
   type S = { professional_id: string; uazapi_url: string; uazapi_token: string; bot_enabled: boolean; webhook_secret: string | null };
   const settings = (settingsRes.data || []) as S[];
@@ -64,11 +69,44 @@ export default async function AdminSystemPage() {
         <SubNav items={SISTEMA_NAV} />
 
         <StatStrip items={[
+          { label: 'Migrations pendentes', value: String(missingMigrations.length), note: missingMigrations.length ? 'ver abaixo' : 'banco em dia', tone: missingMigrations.length ? 'warn' : 'default' },
           { label: 'Banco de dados', value: storage ? mb(storage.dbSizeBytes) : '—', note: storage ? `${usedPct.toFixed(1)}% do plano Free` : 'função get_db_stats ausente (migration v21)', tone: usedPct > 80 ? 'bad' : 'default' },
           { label: 'Contas com bot', value: `${configured.length}/${settings.length || 0}`, note: `${configured.filter(s => s.bot_enabled).length} com o bot ligado` },
           { label: 'Automações no mês', value: String(automationsMonth), note: lastAutomation ? `última em ${formatDateTimeBR(new Date(lastAutomation))}` : 'nenhuma disparada' },
           { label: 'Na lixeira da rede', value: String(trash.appointments + trash.clients), note: `${trash.appointments} agendamentos · ${trash.clients} clientes` },
-        ]} />
+        ]} cols={5} />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Panel flush title="Migrations do banco" note="Cada linha é uma consulta vazia à tabela ou função que a migration cria">
+            <ul className="divide-y divide-line border-t border-line">
+              {migrations.map(m => (
+                <li key={m.file} className="px-5 py-2.5 flex items-center gap-3 text-body-sm">
+                  {m.ok ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden /> : <XCircle className="h-4 w-4 text-danger shrink-0" aria-hidden />}
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate ${m.ok ? 'text-heading' : 'text-danger font-semibold'}`}>{m.label}</span>
+                    <span className="block text-caption text-n-500 font-mono truncate">supabase/{m.file}</span>
+                  </span>
+                  {!m.ok && <Badge tone="bad" dot={false}>rodar</Badge>}
+                </li>
+              ))}
+            </ul>
+          </Panel>
+
+          <Panel flush title="Integrações" note="Só presença da chave no ambiente — o valor nunca aparece">
+            <ul className="divide-y divide-line border-t border-line">
+              {integrations.map(i => (
+                <li key={i.name} className="px-5 py-2.5 flex items-center gap-3 text-body-sm">
+                  {i.configured ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden /> : <XCircle className="h-4 w-4 text-n-400 shrink-0" aria-hidden />}
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate ${i.configured ? 'text-heading' : 'text-n-500'}`}>{i.name}</span>
+                    <span className="block text-caption text-n-500 truncate">{i.enables}</span>
+                  </span>
+                  <span className="text-micro font-mono text-n-400 hidden xl:block">{i.vars.join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
           {storage && (

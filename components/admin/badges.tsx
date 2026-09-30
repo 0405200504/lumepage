@@ -1,5 +1,6 @@
 import React from 'react';
 import { accountState, AccountStateInput } from '@/lib/admin/account-state';
+import { Health, STAGE_LABEL, STAGE_TONE } from '@/lib/admin/crm';
 
 /**
  * Selos do admin. Pílula de fundo suave com ponto colorido — o mesmo desenho do
@@ -86,4 +87,18 @@ export const PLAN_LABEL: Record<string, string> = { start: 'Start', pro: 'Pro', 
 /** Só o plano, sempre neutro. "Legada" = conta anterior ao marco de assinatura. */
 export function PlanBadge({ plan }: { plan: string | null }) {
   return <Badge tone="neutral">{plan ? PLAN_LABEL[plan] ?? plan : 'Legada'}</Badge>;
+}
+
+/** Saúde da conta (lib/admin/crm.ts): nota + rótulo, com o que falta no title. */
+export function HealthBadge({ health }: { health: Health }) {
+  return (
+    <Badge tone={health.tone} title={health.gaps.length ? `Puxa para baixo: ${health.gaps.join(', ')}` : 'Nada puxando para baixo'}>
+      <span className="num">{health.score}</span> · {health.label}
+    </Badge>
+  );
+}
+
+/** Etapa do ciclo de vida. */
+export function StageBadge({ stage }: { stage: Health['stage'] }) {
+  return <Badge tone={STAGE_TONE[stage]} dot={false}>{STAGE_LABEL[stage]}</Badge>;
 }

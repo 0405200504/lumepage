@@ -3,6 +3,7 @@ import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { TableParams, toISODate } from '@/lib/query-params';
 import { Appointment, Client, Professional, WhatsAppSettings } from '@/types/database';
 import { accountState, AccountStateResult } from './account-state';
+import { healthOf, Health, listAccountMeta, AccountMeta } from './crm';
 
 /**
  * CONSULTAS DO PAINEL ADMIN
@@ -56,6 +57,13 @@ export interface ProfessionalRow {
   lastSignInAt: string | null;
   /** Conta de teste evidente (page 1..5, "teste", e-mail example.com). */
   looksLikeTest: boolean;
+  /** Já recebeu algum agendamento, em qualquer data. */
+  everHadAppointment: boolean;
+  hasServices: boolean;
+  /** Saúde e etapa derivadas (lib/admin/crm.ts). */
+  health: Health;
+  /** CRM do admin (migration v41) — null se não houver registro. */
+  meta: AccountMeta | null;
 }
 
 /** Estado derivado de uma linha da lista. Um lugar só, memoizado por request. */
@@ -103,23 +111,28 @@ export interface ProfessionalListResult {
   rows: ProfessionalRow[];
   total: number;
   /** Totais do filtro inteiro (não só da página) — alimentam os KPIs da tela. */
-  totals: { active: number; paused: number; withBot: number; revenue30dCents: number };
+  totals: { active: number; paused: number; withBot: number; revenue30dCents: number; atRisk: number };
 }
 
 export async function listProfessionals(params: TableParams): Promise<ProfessionalListResult> {
-  const empty: ProfessionalListResult = { rows: [], total: 0, totals: { active: 0, paused: 0, withBot: 0, revenue30dCents: 0 } };
+  const empty: ProfessionalListResult = { rows: [], total: 0, totals: { active: 0, paused: 0, withBot: 0, revenue30dCents: 0, atRisk: 0 } };
   if (!isSupabaseConfigured) return empty;
 
   const since = daysAgoISO(30);
 
-  const [profsRes, apptsRes, clientsRes, settingsRes, signIns] = await Promise.all([
+  const [profsRes, apptsRes, clientsRes, settingsRes, signIns, everRes, servicesRes, metaRes] = await Promise.all([
     db().from('professionals').select('*').is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID),
     db().from('appointments').select('professional_id, status, date, service:services(price_cents)')
       .is('deleted_at', null).gte('date', since),
     db().from('clients').select('professional_id').is('deleted_at', null),
     db().from('whatsapp_settings').select('professional_id, uazapi_url, uazapi_token, bot_enabled'),
     lastSignInMap(),
+    db().from('appointments').select('professional_id').is('deleted_at', null).limit(50000),
+    db().from('services').select('professional_id').limit(20000),
+    listAccountMeta(),
   ]);
+  const everHad = new Set(((everRes.data || []) as { professional_id: string }[]).map(a => a.professional_id));
+  const withServices = new Set(((servicesRes.data || []) as { professional_id: string }[]).map(a => a.professional_id));
 
   const professionals = (profsRes.data || []) as Professional[];
 
@@ -153,6 +166,13 @@ export async function listProfessionals(params: TableParams): Promise<Profession
   let rows: ProfessionalRow[] = professionals.map(p => {
     const m = appts30d.get(p.id) || { count: 0, revenue: 0 };
     const s = settings.get(p.id);
+    const lastSignInAt = (p.owner_user_id && signIns.get(p.owner_user_id)) || null;
+    const health = healthOf({
+      status: p.status, subscription_status: p.subscription_status, subscription_plan: p.subscription_plan,
+      subscription_ends_at: p.subscription_ends_at, trial_ends_at: p.trial_ends_at, created_at: p.created_at,
+      appts30d: m.count, lastSignInAt, hasServices: withServices.has(p.id), clients: clientCount.get(p.id) || 0,
+      botConfigured: !!s?.uazapi_url && !!s?.uazapi_token, botEnabled: !!s?.bot_enabled, everHadAppointment: everHad.has(p.id),
+    });
     return {
       id: p.id,
       name: p.name,
@@ -172,8 +192,12 @@ export async function listProfessionals(params: TableParams): Promise<Profession
       botConfigured: !!s?.uazapi_url && !!s?.uazapi_token,
       botEnabled: !!s?.bot_enabled,
       lastAppointmentDate: lastAppt.get(p.id) ?? null,
-      lastSignInAt: (p.owner_user_id && signIns.get(p.owner_user_id)) || null,
+      lastSignInAt,
       looksLikeTest: isTestAccount(p),
+      everHadAppointment: everHad.has(p.id),
+      hasServices: withServices.has(p.id),
+      health,
+      meta: metaRes.byId.get(p.id) ?? null,
     };
   });
 
@@ -196,6 +220,16 @@ export async function listProfessionals(params: TableParams): Promise<Profession
   }
   if (f.risk === 'expired') rows = rows.filter(r => stateOf(r).state === 'expired');
   if (f.risk === 'never') rows = rows.filter(r => !r.lastSignInAt);
+  if (f.stage) rows = rows.filter(r => r.health.stage === f.stage);
+  if (f.health === 'risk') rows = rows.filter(r => r.health.score < 40);
+  if (f.health === 'warn') rows = rows.filter(r => r.health.score >= 40 && r.health.score < 70);
+  if (f.health === 'ok') rows = rows.filter(r => r.health.score >= 70);
+  if (f.follow === 'due') {
+    const today = toISODate(new Date());
+    rows = rows.filter(r => !!r.meta?.next_follow_up && r.meta.next_follow_up <= today);
+  }
+  if (f.tag) rows = rows.filter(r => r.meta?.tags.includes(f.tag));
+  if (f.owner) rows = rows.filter(r => (r.meta?.owner_email ?? '') === f.owner);
   if (params.q) {
     const q = params.q.toLowerCase();
     rows = rows.filter(r =>
@@ -210,6 +244,7 @@ export async function listProfessionals(params: TableParams): Promise<Profession
     paused: rows.filter(r => stateOf(r).state === 'paused').length,
     withBot: rows.filter(r => r.botConfigured).length,
     revenue30dCents: rows.reduce((s, r) => s + r.revenue30dCents, 0),
+    atRisk: rows.filter(r => r.health.score < 40).length,
   };
 
   // ————— ordenação —————
@@ -223,6 +258,8 @@ export async function listProfessionals(params: TableParams): Promise<Profession
     clients: (a, b) => a.clients - b.clients,
     access: (a, b) => (a.lastSignInAt ?? '').localeCompare(b.lastSignInAt ?? ''),
     created: (a, b) => a.createdAt.localeCompare(b.createdAt),
+    health: (a, b) => a.health.score - b.health.score,
+    follow: (a, b) => (a.meta?.next_follow_up ?? '9999').localeCompare(b.meta?.next_follow_up ?? '9999'),
   };
   const sorter = sorters[params.sort ?? 'revenue'] ?? sorters.revenue;
   rows.sort((a, b) => sorter(a, b) * dir);

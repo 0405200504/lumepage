@@ -17,6 +17,10 @@ import { parseTableParams } from '@/lib/query-params';
 import { getAccessOverview, METHOD_LABEL } from '@/lib/admin/access';
 import { AccessPanel, AccessPanelData } from '@/components/admin/AccessPanel';
 import { readAuditLog } from '@/lib/audit';
+import { getAccountMeta, listNotes, getTimeline, listHublaEvents, MIGRATION_CRM, TimelineItem } from '@/lib/admin/crm';
+import { NotesList, AccountMetaForm } from '@/components/admin/NotesPanel';
+import { ExtendAccessButton } from '@/components/admin/ExtendAccessButton';
+import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { brl, formatDateBR, formatDateTimeBR, formatTimeBR, formatDurationBR, pct } from '@/lib/format';
 
 export const metadata = { title: 'Conta | Lume Admin' };
@@ -30,22 +34,30 @@ export const metadata = { title: 'Conta | Lume Admin' };
  * enxerga: números consolidados, assinatura, acesso, atividade recente, dados
  * cadastrais e a trilha do que o suporte fez aqui.
  */
-type Tab = 'overview' | 'subscription' | 'access' | 'activity' | 'data' | 'history';
+type Tab = 'overview' | 'subscription' | 'access' | 'activity' | 'notes' | 'data' | 'timeline';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Visão geral' },
   { key: 'subscription', label: 'Assinatura' },
   { key: 'access', label: 'Acesso' },
   { key: 'activity', label: 'Atividade' },
+  { key: 'notes', label: 'Notas' },
   { key: 'data', label: 'Dados' },
-  { key: 'history', label: 'Histórico' },
+  { key: 'timeline', label: 'Linha do tempo' },
 ];
 
 /** Links antigos (`?tab=bot`, `?tab=agenda`…) caem na aba que herdou o conteúdo. */
 const LEGACY_TAB: Record<string, Tab> = {
   bot: 'overview', services: 'overview', finance: 'overview', page: 'overview',
   agenda: 'activity', appointments: 'activity', clients: 'activity', conversations: 'activity',
-  settings: 'data', logs: 'history',
+  settings: 'data', logs: 'timeline', history: 'timeline',
+};
+
+const KIND_LABEL: Record<TimelineItem['kind'], string> = {
+  conta: 'conta', assinatura: 'assinatura', acesso: 'acesso', suporte: 'suporte', nota: 'nota', pagamento: 'pagamento', agenda: 'agenda', tarefa: 'tarefa',
+};
+const KIND_TONE: Record<TimelineItem['kind'], 'ok' | 'warn' | 'bad' | 'neutral' | 'accent' | 'info'> = {
+  conta: 'info', assinatura: 'accent', acesso: 'neutral', suporte: 'warn', nota: 'accent', pagamento: 'ok', agenda: 'ok', tarefa: 'neutral',
 };
 
 export default async function ProfessionalDetailPage({
@@ -61,9 +73,10 @@ export default async function ProfessionalDetailPage({
   if (!data) notFound();
 
   const { professional: p, kpis, monthly, onboarding, alerts, bot, services, topServices, recentAppointments, recentClients } = data;
-  const [history, audit, accessData, conversations] = await Promise.all([
+  const db = () => getSupabaseAdmin() || supabase;
+  const [history, audit, accessData, conversations, metaRes, notesRes, timeline, hublaRes, adminsRes] = await Promise.all([
     active === 'subscription' ? getSubscriptionHistory(id) : Promise.resolve([]),
-    active === 'history' || active === 'access'
+    active === 'access'
       ? readAuditLog({ entityType: 'professional', entityId: id, limit: 100 })
       : Promise.resolve({ rows: [], total: 0 }),
     active === 'access' ? getAccessOverview(id) : Promise.resolve(null),
@@ -73,7 +86,16 @@ export default async function ProfessionalDetailPage({
           new Map([[id, p.brand_name || p.name]]),
         )
       : Promise.resolve(null),
+    getAccountMeta(id),
+    active === 'notes' ? listNotes(id) : Promise.resolve({ notes: [], available: true }),
+    active === 'timeline' ? getTimeline(id, p.created_at, p.onboarding_completed_at) : Promise.resolve([] as TimelineItem[]),
+    active === 'subscription' ? listHublaEvents({ professionalId: id, limit: 30 }) : Promise.resolve({ events: [], available: true }),
+    active === 'notes' && isSupabaseConfigured
+      ? db().from('profiles').select('email').eq('role', 'super_admin')
+      : Promise.resolve({ data: [] as { email: string }[] }),
   ]);
+  const meta = metaRes.meta;
+  const admins = ((adminsRes.data || []) as { email: string }[]).map(a => a.email).filter(Boolean);
 
   const accessPanel: AccessPanelData | null = accessData && {
     professionalId: id,
@@ -122,14 +144,17 @@ export default async function ProfessionalDetailPage({
       backHref="/admin/professionals"
       backLabel="Contas"
       actions={
-        <ProfessionalActions
-          id={p.id}
-          brandName={p.brand_name || p.name}
-          status={p.status}
-          plan={p.subscription_plan ?? null}
-          subscriptionStatus={p.subscription_status ?? null}
-          endsAt={p.subscription_ends_at ?? p.trial_ends_at ?? null}
-        />
+        <>
+          <ProfessionalActions
+            id={p.id}
+            brandName={p.brand_name || p.name}
+            status={p.status}
+            plan={p.subscription_plan ?? null}
+            subscriptionStatus={p.subscription_status ?? null}
+            endsAt={p.subscription_ends_at ?? p.trial_ends_at ?? null}
+          />
+          <ExtendAccessButton id={p.id} brandName={p.brand_name || p.name} />
+        </>
       }
     >
       <div className="space-y-4">
@@ -141,6 +166,13 @@ export default async function ProfessionalDetailPage({
             <Link href={`/agendar/${p.slug}`} target="_blank" className={`inline-flex items-center gap-1 ${textLink}`}>
               /agendar/{p.slug} <ExternalLink className="h-3 w-3" />
             </Link>
+            {meta.owner_email && <Badge tone="neutral" dot={false} title="Responsável na Lume">{meta.owner_email}</Badge>}
+            {meta.tags.map(t => <Badge key={t} tone="accent" dot={false}>{t}</Badge>)}
+            {meta.next_follow_up && (
+              <Badge tone={meta.next_follow_up <= new Date().toISOString().slice(0, 10) ? 'warn' : 'info'} dot={false}>
+                contato {formatDateBR(meta.next_follow_up)}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -258,6 +290,7 @@ export default async function ProfessionalDetailPage({
               { label: 'Acesso vence', value: formatDateBR(p.subscription_ends_at, '—') },
             ]} />
 
+            <div className="grid gap-4 lg:grid-cols-2">
             <Panel flush title="Histórico de mudanças" note="Cada troca de plano ou situação, com quem fez e quando">
               {history.length === 0 ? (
                 <EmptyState title="Nenhuma mudança registrada" description="O histórico começa a ser gravado a partir da migration v33." />
@@ -276,7 +309,63 @@ export default async function ProfessionalDetailPage({
                 </ul>
               )}
             </Panel>
+
+            <Panel flush title="Pagamentos (Hubla)" note={hublaRes.available ? 'Eventos do webhook ligados a esta conta' : 'Requer a migration v37'}>
+              {hublaRes.events.length === 0 ? (
+                <EmptyState title="Nenhum evento da Hubla" description={p.hubla_subscription_id ? `Assinatura ${p.hubla_subscription_id}` : 'Esta conta nunca passou pelo checkout, ou o plano foi definido à mão.'} />
+              ) : (
+                <ul className="divide-y divide-line border-t border-line">
+                  {hublaRes.events.map(e => (
+                    <li key={e.idempotency_key} className="px-5 py-3 flex flex-wrap items-center gap-2 text-body-sm">
+                      <span className="num text-caption text-n-500 w-36">{formatDateTimeBR(e.received_at)}</span>
+                      <span className="font-medium text-heading flex-1">{e.event_type ?? '—'}</span>
+                      <Badge tone={e.result?.startsWith('activated') ? 'ok' : e.result === 'revoked' ? 'bad' : e.result === 'past_due' ? 'warn' : 'neutral'} dot={false}>{e.result ?? 'pendente'}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+            </div>
           </div>
+        )}
+
+        {/* ————— Notas ————— */}
+        {active === 'notes' && (
+          !metaRes.available || !notesRes.available ? (
+            <Notice tone="warn" icon={<AlertTriangle />}>Rode <code className="font-mono">{MIGRATION_CRM}</code> no Supabase para ativar notas e o CRM da conta.</Notice>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-12">
+              <Panel title="Relacionamento" note="Quem cuida, como está etiquetada e quando é o próximo contato" className="lg:col-span-5">
+                <AccountMetaForm meta={meta} admins={admins} whatsapp={p.whatsapp} brandName={p.brand_name || p.name} />
+              </Panel>
+              <Panel title="Notas de suporte" note="Ligações, pedidos, promessas, problemas. Fixe as que importam." className="lg:col-span-7">
+                <NotesList professionalId={id} notes={notesRes.notes} />
+              </Panel>
+            </div>
+          )
+        )}
+
+        {/* ————— Linha do tempo ————— */}
+        {active === 'timeline' && (
+          <Panel flush title="Linha do tempo" note="Tudo o que aconteceu com esta conta, de todas as fontes">
+            {timeline.length === 0 ? (
+              <EmptyState title="Nada registrado ainda" />
+            ) : (
+              <ol className="divide-y divide-line border-t border-line">
+                {timeline.map((t, i) => (
+                  <li key={i} className="px-5 py-3 flex flex-wrap items-start gap-3 text-body-sm">
+                    <span className="num text-caption text-n-500 w-36 shrink-0 pt-0.5">{formatDateTimeBR(t.at)}</span>
+                    <Badge tone={KIND_TONE[t.kind]} dot={false} className="shrink-0">{KIND_LABEL[t.kind]}</Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium text-heading">{t.title}</span>
+                      {t.detail && <span className="block text-caption text-n-500 whitespace-pre-wrap break-words">{t.detail}</span>}
+                    </span>
+                    {t.by && <span className="text-caption text-n-500 shrink-0">{t.by}</span>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Panel>
         )}
 
         {/* ————— Acesso ————— */}
@@ -342,25 +431,6 @@ export default async function ProfessionalDetailPage({
         {/* ————— Dados ————— */}
         {active === 'data' && <EditProfessionalPanel professional={p} />}
 
-        {/* ————— Histórico ————— */}
-        {active === 'history' && (
-          <Panel flush title="O que o admin fez nesta conta" note="Trilha de auditoria desta conta">
-            {audit.rows.length === 0 ? (
-              <EmptyState title="Nada registrado ainda" />
-            ) : (
-              <ul className="divide-y divide-line border-t border-line">
-                {audit.rows.map(r => (
-                  <li key={r.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-body-sm">
-                    <span className="num text-caption text-n-500 w-36">{formatDateTimeBR(r.created_at)}</span>
-                    <Badge tone="accent">{r.action}</Badge>
-                    <span className="text-caption text-n-500 flex-1 truncate">{JSON.stringify(r.after ?? {})}</span>
-                    <span className="text-caption text-n-500">{r.admin_email}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        )}
       </div>
     </LayoutAdmin>
   );

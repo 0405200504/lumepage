@@ -6,6 +6,7 @@ import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { SubNav, SISTEMA_NAV } from '@/components/admin/SubNav';
 import { Panel, Notice, EmptyState } from '@/components/admin/primitives';
 import { ThemeToggle } from '@/components/admin/ThemeToggle';
+import { CreateAdminForm } from '@/components/admin/CreateAdminForm';
 import { getAppSettingsAction } from '@/app/actions/admin-system';
 import { AppSettingsForm } from '@/components/admin/AppSettingsForm';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -36,7 +37,7 @@ export default async function AdminSettingsPage() {
             <ThemeToggle initial={theme} />
           </Panel>
 
-          <Panel flush title="Administradores" note="Novo administrador é criado no Supabase (profiles.role). Todo admin tem acesso total.">
+          <Panel flush title="Administradores" note="Todo admin tem acesso total ao painel." action={<CreateAdminForm />}>
             <ul className="divide-y divide-line border-t border-line">
               {((admins || []) as { id: string; name: string; email: string; created_at: string }[]).map(a => (
                 <li key={a.id} className="px-5 py-3 flex items-center gap-3 text-body-sm">

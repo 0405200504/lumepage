@@ -7,6 +7,11 @@ import { SubNav, FINANCEIRO_NAV } from '@/components/admin/SubNav';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { BarChart } from '@/components/admin/BarChart';
 import { getReports } from '@/lib/admin/reports';
+import { featureAdoption } from '@/lib/admin/crm';
+import { RankedBars } from '@/components/admin/RankedBars';
+import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
+import { ENTITLEMENTS_CUTOFF } from '@/lib/subscription/entitlements';
 import { parseTableParams, RawSearchParams } from '@/lib/query-params';
 import { brl, formatDateBR, pct } from '@/lib/format';
 
@@ -18,7 +23,44 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   const session = await requireAdmin();
   const raw = await searchParams;
   const params = parseTableParams(raw, { defaultRange: '90d' });
-  const r = await getReports(params.from, params.to);
+  const db = () => getSupabaseAdmin() || supabase;
+  const [r, adoption, profsRes, firstRes] = await Promise.all([
+    getReports(params.from, params.to),
+    featureAdoption(),
+    isSupabaseConfigured
+      ? db().from('professionals').select('id, created_at, subscription_status, subscription_plan').is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID)
+      : Promise.resolve({ data: [] }),
+    isSupabaseConfigured
+      ? db().from('appointments').select('professional_id, created_at').is('deleted_at', null).neq('professional_id', DEMO_PROFESSIONAL_ID).order('created_at', { ascending: true }).limit(50000)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  // Conversão: só contas nascidas depois do marco de planos (as legadas não passam por teste).
+  type PP = { id: string; created_at: string; subscription_status: string | null; subscription_plan: string | null };
+  const profs = (profsRes.data || []) as PP[];
+  const newAccounts = profs.filter(p => new Date(p.created_at) >= ENTITLEMENTS_CUTOFF);
+  const paying = newAccounts.filter(p => p.subscription_status === 'active');
+  const trialing = newAccounts.filter(p => p.subscription_status === 'trialing');
+  const conversionPct = newAccounts.length ? (paying.length / newAccounts.length) * 100 : 0;
+
+  const firstAppt = new Map<string, string>();
+  for (const a of (firstRes.data || []) as { professional_id: string; created_at: string }[]) {
+    if (!firstAppt.has(a.professional_id)) firstAppt.set(a.professional_id, a.created_at);
+  }
+  const createdOf = new Map(profs.map(p => [p.id, p.created_at]));
+  const daysToFirst = [...firstAppt.entries()]
+    .map(([id, at]) => (createdOf.has(id) ? (new Date(at).getTime() - new Date(createdOf.get(id)!).getTime()) / 86_400_000 : null))
+    .filter((d): d is number => d !== null && d >= 0)
+    .sort((a, b) => a - b);
+  const medianDays = daysToFirst.length ? daysToFirst[Math.floor(daysToFirst.length / 2)] : null;
+
+  // Cadastros por semana, últimas 8 semanas.
+  const weeks: { label: string; value: number }[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const start = new Date(); start.setDate(start.getDate() - start.getDay() - i * 7); start.setHours(0, 0, 0, 0);
+    const end = new Date(start); end.setDate(end.getDate() + 7);
+    weeks.push({ label: `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')}`, value: profs.filter(p => { const t = new Date(p.created_at); return t >= start && t < end; }).length });
+  }
 
   return (
     <LayoutAdmin
@@ -36,6 +78,30 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
           { label: 'Comparecimento', value: r.totals.appointments ? pct((r.totals.completed / r.totals.appointments) * 100, 0) : '—', note: `${r.totals.completed} finalizados` },
           { label: 'Faltas', value: r.totals.appointments ? pct((r.totals.noShow / r.totals.appointments) * 100, 0) : '—', note: `${r.totals.noShow} no período`, tone: r.totals.noShow ? 'warn' : 'default' },
         ]} />
+
+        <StatStrip items={[
+          { label: 'Contas novas (pós-planos)', value: String(newAccounts.length), note: `${trialing.length} em teste agora` },
+          { label: 'Viraram pagantes', value: String(paying.length), note: `conversão ${pct(conversionPct, 0)}`, tone: 'accent' },
+          { label: 'Dias até o 1º agendamento', value: medianDays === null ? '—' : String(Math.round(medianDays)), note: 'mediana de quem já teve' },
+          { label: 'Cadastros nesta semana', value: String(weeks[weeks.length - 1]?.value ?? 0), note: `${weeks.reduce((s, w) => s + w.value, 0)} em 8 semanas` },
+        ]} />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Panel title="Cadastros por semana" note="Últimas 8 semanas, começando no domingo">
+            <BarChart points={weeks} format={v => String(Math.round(v))} trimLeadingZeros={false} height={140} />
+          </Panel>
+
+          <Panel title="Adoção de recursos" note={`De ${r.totals.professionals} contas, quantas usam cada coisa`}>
+            <RankedBars
+              items={adoption.filter(a => a.available).map(a => ({ id: a.key, label: a.label, value: a.count, sharePct: r.totals.professionals ? (a.count / r.totals.professionals) * 100 : 0 }))}
+              format={v => String(v)}
+              emptyText="Nenhum recurso com dados disponíveis."
+            />
+            {adoption.some(a => !a.available) && (
+              <p className="mt-3 text-caption text-n-500">Sem migration: {adoption.filter(a => !a.available).map(a => a.label).join(', ')}.</p>
+            )}
+          </Panel>
+        </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Panel title="Funil de ativação" note="Quantas contas chegam a cada passo. O degrau mais fundo é onde o produto perde gente.">

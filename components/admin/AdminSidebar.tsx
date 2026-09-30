@@ -38,17 +38,17 @@ interface NavItem {
 }
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: '/admin', label: 'Início', icon: LayoutDashboard },
+  { href: '/admin', label: 'Início', icon: LayoutDashboard, also: ['/admin/tasks'] },
   { href: '/admin/professionals', label: 'Contas', icon: Users, also: ['/admin/salons'] },
   { href: '/admin/conversations', label: 'Conversas', icon: MessageCircle },
   { href: '/admin/appointments', label: 'Agendamentos', icon: CalendarDays },
   { href: '/admin/clients', label: 'Clientes', icon: Contact },
-  { href: '/admin/finance', label: 'Financeiro', icon: Wallet, also: ['/admin/reports', '/admin/plans'] },
+  { href: '/admin/finance', label: 'Financeiro', icon: Wallet, also: ['/admin/reports', '/admin/plans', '/admin/subscriptions'] },
   { href: '/admin/system', label: 'Sistema', icon: Settings2, also: ['/admin/logs', '/admin/broadcast', '/admin/settings'] },
 ];
 
 function isActive(pathname: string, item: NavItem): boolean {
-  if (item.href === '/admin') return pathname === '/admin';
+  if (item.href === '/admin') return pathname === '/admin' || (item.also ?? []).some(h => pathname === h || pathname.startsWith(`${h}/`));
   return [item.href, ...(item.also ?? [])].some(h => pathname === h || pathname.startsWith(`${h}/`));
 }
 

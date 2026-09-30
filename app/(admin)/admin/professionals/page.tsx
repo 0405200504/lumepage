@@ -10,7 +10,8 @@ import { TableSelectionProvider, RowCheckbox, SelectAllCheckbox } from '@/compon
 import { ProfessionalBulkActions } from '@/components/admin/ProfessionalBulkActions';
 import { StatStrip } from '@/components/admin/primitives';
 import { SubNav, CONTAS_NAV } from '@/components/admin/SubNav';
-import { AccountStateBadge, PlanBadge, DeadlineText } from '@/components/admin/badges';
+import { AccountStateBadge, PlanBadge, DeadlineText, HealthBadge, StageBadge } from '@/components/admin/badges';
+import { STAGE_LABEL } from '@/lib/admin/crm';
 import { ImpersonateRowButton } from '@/components/admin/ImpersonateRowButton';
 import { button } from '@/components/admin/ui';
 import { listProfessionals, ProfessionalRow } from '@/lib/admin/queries';
@@ -25,7 +26,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
   const session = await requireAdmin();
   const raw = await searchParams;
   const params = parseTableParams(raw, {
-    filterKeys: ['status', 'plan', 'bot', 'hide', 'risk'],
+    filterKeys: ['status', 'plan', 'bot', 'hide', 'risk', 'stage', 'health', 'follow', 'tag', 'owner'],
     defaultSort: 'revenue',
   });
 
@@ -60,6 +61,8 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
         </span>
       ),
     },
+    { key: 'health', header: 'Saúde', sortable: true, className: 'min-w-[8rem]', cell: r => <HealthBadge health={r.health} /> },
+    { key: 'stage', header: 'Etapa', menuLabel: 'Etapa', className: 'min-w-[6rem]', cell: r => <StageBadge stage={r.health.stage} /> },
     { key: 'plan', header: 'Plano', menuLabel: 'Plano', sortable: true, className: 'min-w-[6.5rem]', cell: r => <PlanBadge plan={r.plan} /> },
     { key: 'appts', header: 'Agend. 30d', menuLabel: 'Agendamentos 30d', sortable: true, numeric: true, cell: r => r.appts30d },
     { key: 'revenue', header: 'Faturamento 30d', sortable: true, numeric: true, cell: r => <span className="font-semibold text-heading">{brl(r.revenue30dCents)}</span> },
@@ -75,6 +78,12 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
       cell: r => <span className="text-caption text-n-500">{r.lastSignInAt ? formatRelativeBR(r.lastSignInAt) : '—'}</span>,
     },
     {
+      key: 'follow', header: 'Próximo contato', menuLabel: 'Próximo contato', sortable: true, hideOnMobile: true,
+      cell: r => r.meta?.next_follow_up
+        ? <span className={`text-caption num ${r.meta.next_follow_up <= new Date().toISOString().slice(0, 10) ? 'text-warning font-semibold' : 'text-n-500'}`}>{formatDateBR(r.meta.next_follow_up)}</span>
+        : <span className="text-n-400 text-caption">—</span>,
+    },
+    {
       key: 'created', header: 'Cadastro', menuLabel: 'Cadastro', sortable: true, hideOnMobile: true,
       cell: r => <span className="text-caption text-n-500 num">{formatDateBR(r.createdAt)}</span>,
     },
@@ -85,7 +94,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
     <LayoutAdmin
       session={session}
       title="Contas"
-      subtitle="As profissionais da rede e o que cada uma produziu nos últimos 30 dias."
+      subtitle="Cada conta com saúde, etapa e o que produziu nos últimos 30 dias."
       actions={
         <Link href="/admin/professionals/new" className={button('primary', 'md')}>
           <Plus className="h-4 w-4" /> Nova conta
@@ -98,7 +107,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
         <StatStrip items={[
           { label: 'Contas no recorte', value: String(total) },
           { label: 'Com acesso hoje', value: String(totals.active), note: total - totals.active > 0 ? `${total - totals.active} sem acesso` : 'todas com acesso' },
-          { label: 'Com bot ligado', value: String(totals.withBot), note: `de ${total} contas` },
+          { label: 'Em risco', value: String(totals.atRisk), note: 'saúde abaixo de 40', tone: totals.atRisk ? 'bad' : 'default', href: `${BASE}?health=risk` },
           { label: 'Faturamento 30d', value: brl(totals.revenue30dCents), note: 'movimento da rede', tone: 'accent' },
         ]} />
 
@@ -127,6 +136,12 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
                   ]} />
                 <FilterSelect basePath={BASE} name="plan" label="Plano" allLabel="Plano"
                   options={[{ value: 'start', label: 'Start' }, { value: 'pro', label: 'Pro' }, { value: 'premium', label: 'Premium' }, { value: 'none', label: 'Sem plano (legada)' }]} />
+                <FilterSelect basePath={BASE} name="stage" label="Etapa" allLabel="Etapa"
+                  options={Object.entries(STAGE_LABEL).map(([value, label]) => ({ value, label }))} />
+                <FilterSelect basePath={BASE} name="health" label="Saúde" allLabel="Saúde"
+                  options={[{ value: 'ok', label: 'Saudáveis (70+)' }, { value: 'warn', label: 'Atenção (40–69)' }, { value: 'risk', label: 'Em risco (<40)' }]} />
+                <FilterSelect basePath={BASE} name="follow" label="Contato" allLabel="Contato"
+                  options={[{ value: 'due', label: 'Contato para hoje ou atrasado' }]} />
                 <FilterSelect basePath={BASE} name="risk" label="Risco" allLabel="Risco"
                   options={[
                     { value: 'idle30', label: 'Sem agendamento há 30d' },
@@ -136,7 +151,7 @@ export default async function AdminProfessionalsPage({ searchParams }: { searchP
                   ]} />
                 <FilterSelect basePath={BASE} name="hide" label="Contas de teste" allLabel="Com contas de teste"
                   options={[{ value: 'test', label: 'Sem contas de teste' }]} />
-                <ClearFilters basePath={BASE} keys={['q', 'status', 'plan', 'bot', 'risk', 'hide', 'range', 'from', 'to']} />
+                <ClearFilters basePath={BASE} keys={['q', 'status', 'plan', 'bot', 'risk', 'hide', 'stage', 'health', 'follow', 'tag', 'owner', 'range', 'from', 'to']} />
                 <div className="ml-auto"><ExportCsvButton dataset="professionals" label="CSV" /></div>
               </div>
             }

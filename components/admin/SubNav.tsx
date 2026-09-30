@@ -17,7 +17,7 @@ export interface SubNavItem { href: string; label: string; count?: number }
 export function SubNav({ items, className = '' }: { items: SubNavItem[]; className?: string }) {
   const pathname = usePathname();
   const active = items
-    .filter(i => pathname === i.href || pathname.startsWith(`${i.href}/`))
+    .filter(i => pathname === i.href || (i.href !== '/admin' && pathname.startsWith(`${i.href}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
@@ -73,8 +73,14 @@ export const CONTAS_NAV: SubNavItem[] = [
   { href: '/admin/salons', label: 'Grupos' },
 ];
 
+export const INICIO_NAV: SubNavItem[] = [
+  { href: '/admin', label: 'Hoje' },
+  { href: '/admin/tasks', label: 'Tarefas' },
+];
+
 export const FINANCEIRO_NAV: SubNavItem[] = [
   { href: '/admin/finance', label: 'Receita' },
+  { href: '/admin/subscriptions', label: 'Assinaturas' },
   { href: '/admin/reports', label: 'Relatórios' },
   { href: '/admin/plans', label: 'Planos' },
 ];
