@@ -39,14 +39,14 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
-  const label = 'block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1';
+  const field = 'field-input h-10 text-body-sm';
+  const label = 'block text-caption font-semibold text-n-600 mb-1.5';
   const tone = { info: 'accent', warn: 'warn', success: 'ok' } as const;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <section className="card p-4 space-y-3">
-        <h2 className="text-label font-bold text-ink">Novo aviso</h2>
+      <section className="card p-5 space-y-4">
+        <h2 className="text-label text-heading">Novo aviso</h2>
 
         <label className="block">
           <span className={label}>Título</span>
@@ -57,7 +57,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
         <label className="block">
           <span className={label}>Mensagem</span>
           <textarea rows={4} maxLength={600} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            className="w-full px-3 py-2 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+            className="w-full px-3 py-2 rounded-chip bg-surface-2 text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
             placeholder="O que a profissional precisa saber." />
         </label>
 
@@ -97,7 +97,7 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
         </div>
 
         <button type="button" disabled={busy || !form.title.trim() || !form.body.trim()} onClick={publish}
-          className="w-full h-9 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
+          className="w-full h-9 rounded-full bg-wine-700 hover:bg-wine-800 text-white shadow-[var(--shadow-wine)] transition-ui text-caption font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Publicar aviso
         </button>
 
@@ -109,29 +109,29 @@ export function BroadcastComposer({ notices, available }: { notices: NoticeRow[]
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Avisos publicados</h2>
+        <h2 className="px-5 py-4 text-h3 text-heading border-b border-line">Avisos publicados</h2>
         <ul className="divide-y divide-line max-h-[32rem] overflow-y-auto">
           {notices.map(n => (
             <li key={n.id} className="px-4 py-3 flex items-start gap-3">
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="text-caption font-bold text-ink truncate">{n.title}</span>
+                  <span className="text-caption font-semibold text-heading truncate">{n.title}</span>
                   <Badge tone={tone[n.level]}>{n.audience}</Badge>
                   {!n.active && <Badge tone="neutral">oculto</Badge>}
                 </span>
-                <span className="block text-caption text-muted mt-0.5 line-clamp-2">{n.body}</span>
+                <span className="block text-caption text-n-500 mt-0.5 line-clamp-2">{n.body}</span>
                 <span className="block text-caption text-faint mt-1 num">
                   {formatDateTimeBR(n.created_at)} · {n.created_by}
                 </span>
               </span>
               <button type="button" onClick={() => toggle(n.id, !n.active)}
                 aria-label={n.active ? 'Ocultar aviso' : 'Reexibir aviso'}
-                className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-surface-2 shrink-0">
+                className="icon-chip h-8 w-8 shrink-0">
                 {n.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </li>
           ))}
-          {notices.length === 0 && <li className="px-4 py-10 text-center text-caption text-muted">Nenhum aviso publicado ainda.</li>}
+          {notices.length === 0 && <li className="px-4 py-10 text-center text-caption text-n-500">Nenhum aviso publicado ainda.</li>}
         </ul>
       </section>
     </div>

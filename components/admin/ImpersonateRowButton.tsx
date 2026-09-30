@@ -51,7 +51,7 @@ export function ImpersonateRowButton({ id, brandName }: { id: string; brandName:
         }}
         aria-haspopup="menu" aria-expanded={open}
         title={`Abrir o painel de ${brandName} numa aba nova`}
-        className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 h-8 px-3 text-caption font-semibold rounded-full bg-surface text-heading ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:bg-n-25 hover:ring-line-strong transition-ui disabled:opacity-50"
       >
         {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <LogIn className="h-3.5 w-3.5" aria-hidden />}
         Entrar
@@ -64,15 +64,15 @@ export function ImpersonateRowButton({ id, brandName }: { id: string; brandName:
           className="fixed z-[60] w-56 card p-1 shadow-md"
         >
           <button type="button" role="menuitem" onClick={() => enter('read')}
-            className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-2 transition-colors">
-            <span className="flex items-center gap-2 text-caption font-bold text-ink"><Eye className="h-3.5 w-3.5 text-muted" aria-hidden /> Só olhar</span>
-            <span className="block text-caption text-muted mt-0.5">Nenhuma alteração passa.</span>
+            className="w-full text-left px-2.5 py-2 rounded-chip hover:bg-surface-2 transition-ui">
+            <span className="flex items-center gap-2 text-caption font-semibold text-heading"><Eye className="h-3.5 w-3.5 text-n-500" aria-hidden /> Só olhar</span>
+            <span className="block text-caption text-n-500 mt-0.5">Nenhuma alteração passa.</span>
           </button>
           <button type="button" role="menuitem"
             onClick={() => { if (confirm(`Entrar na conta de ${brandName} PODENDO EDITAR? Toda alteração fica registrada no seu nome.`)) enter('edit'); }}
-            className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-2 transition-colors">
-            <span className="flex items-center gap-2 text-caption font-bold text-ink"><Pencil className="h-3.5 w-3.5 text-muted" aria-hidden /> Pode editar</span>
-            <span className="block text-caption text-muted mt-0.5">Cada mutação vai para a auditoria.</span>
+            className="w-full text-left px-2.5 py-2 rounded-chip hover:bg-surface-2 transition-ui">
+            <span className="flex items-center gap-2 text-caption font-semibold text-heading"><Pencil className="h-3.5 w-3.5 text-n-500" aria-hidden /> Pode editar</span>
+            <span className="block text-caption text-n-500 mt-0.5">Cada mutação vai para a auditoria.</span>
           </button>
         </div>
       )}

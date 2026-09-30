@@ -1,6 +1,7 @@
 import React from 'react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
+import { SubNav, CONTAS_NAV } from '@/components/admin/SubNav';
 import { SalonManager, SalonView } from '@/components/admin/SalonManager';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
@@ -43,9 +44,7 @@ export default async function AdminSalonsPage() {
       id: s.id,
       name: s.name,
       members: profs.filter(p => p.salon_id === s.id).map(p => ({
-        id: p.id,
-        name: p.brand_name || p.name,
-        ...(metrics.get(p.id) || { gmvCents: 0, appointments: 0 }),
+        id: p.id, name: p.brand_name || p.name, ...(metrics.get(p.id) || { gmvCents: 0, appointments: 0 }),
       })),
       managers: managers.filter(m => m.salon_id === s.id).map(m => ({ id: m.id, name: m.name, email: m.email })),
     }));
@@ -57,9 +56,12 @@ export default async function AdminSalonsPage() {
     <LayoutAdmin
       session={session}
       title="Grupos"
-      subtitle="Salões com mais de uma profissional: vincule as contas e crie o login de gerente com visão consolidada."
+      subtitle="Salões com mais de uma profissional: vincule as contas e crie o login de gerente."
     >
-      <SalonManager salons={salons} unassigned={unassigned} />
+      <div className="space-y-4">
+        <SubNav items={CONTAS_NAV} />
+        <SalonManager salons={salons} unassigned={unassigned} />
+      </div>
     </LayoutAdmin>
   );
 }

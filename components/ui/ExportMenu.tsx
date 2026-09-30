@@ -34,7 +34,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ onCSV, label = 'Exportar
         <ChevronDown className={`h-4 w-4 text-n-600 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1.5 w-48 rounded-xl border border-line bg-surface shadow-md p-1 z-20 animate-fade-up">
+        <div className="absolute right-0 mt-1.5 w-48 rounded-chip bg-surface-2 shadow-md p-1 z-20 animate-fade-up">
           {onCSV && (
             <button
               onClick={() => { onCSV(); setOpen(false); }}

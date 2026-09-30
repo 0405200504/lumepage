@@ -1,13 +1,14 @@
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { ResolveConversationButton } from '@/components/admin/ConversationActions';
 import { Badge } from '@/components/admin/badges';
+import { EmptyState } from '@/components/admin/primitives';
+import { button } from '@/components/admin/ui';
 import { getConversation } from '@/lib/admin/queries';
-import { formatDateTimeBR } from '@/lib/format';
+import { formatDateTimeBR, formatDurationBR } from '@/lib/format';
 import { buildWhatsappLink } from '@/lib/whatsapp';
 
 export const metadata = { title: 'Conversa | Lume Admin' };
@@ -23,39 +24,36 @@ export default async function ConversationThreadPage({ params }: { params: Promi
     <LayoutAdmin
       session={session}
       title={row.clientPhone}
-      subtitle={`Conversa com ${row.professionalName} · ${messages.length} mensagem(ns)`}
+      subtitle={`Conversa com ${row.professionalName} · ${messages.length} mensagem(ns) · última em ${formatDateTimeBR(row.lastMessageAt)}`}
+      backHref="/admin/conversations"
+      backLabel="Conversas"
       actions={
         <>
-          <ResolveConversationButton id={row.id} paused={row.botPaused} />
-          <a href={buildWhatsappLink(row.clientPhone, '')} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-success hover:bg-surface-2">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+          <a href={buildWhatsappLink(row.clientPhone, '')} target="_blank" rel="noopener noreferrer" className={button('secondary', 'md')}>
+            <MessageCircle className="h-4 w-4" /> Abrir no WhatsApp
           </a>
-          <Link href="/admin/conversations" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2">
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
-          </Link>
+          <ResolveConversationButton id={row.id} paused={row.botPaused} />
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5 text-caption">
-          {row.botPaused ? <Badge tone="warn">esperando humano há {row.waitingHours}h</Badge> : <Badge tone="ok">bot respondendo</Badge>}
-          <span className="text-muted">Última mensagem em {formatDateTimeBR(row.lastMessageAt)}</span>
+      <div className="space-y-4 max-w-3xl">
+        <div>
+          {row.botPaused
+            ? <Badge tone="warn">esperando humano há {formatDurationBR(row.waitingHours * 3_600_000)}</Badge>
+            : <Badge tone="ok">bot respondendo</Badge>}
         </div>
 
         {/* Leitura apenas: responder pela cliente é papel da profissional, no painel dela. */}
-        <ul className="space-y-2 max-w-3xl">
+        <ul className="space-y-2">
           {messages.map((m, i) => (
             <li key={i} className={`flex ${m.role === 'assistant' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-caption ${
-                m.role === 'assistant' ? 'bg-accent-soft text-ink' : 'card'
-              }`}>
+              <div className={`max-w-[80%] rounded-surface px-4 py-3 text-body-sm ${m.role === 'assistant' ? 'bg-accent-soft text-heading' : 'card'}`}>
                 <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className="mt-1 text-caption text-muted">{m.role === 'assistant' ? 'bot' : 'cliente'} · {formatDateTimeBR(new Date(m.at))}</p>
+                <p className="mt-1.5 text-caption text-n-500">{m.role === 'assistant' ? 'bot' : 'cliente'} · {formatDateTimeBR(new Date(m.at))}</p>
               </div>
             </li>
           ))}
-          {messages.length === 0 && <li className="card py-10 text-center text-caption text-muted">Sem mensagens registradas.</li>}
+          {messages.length === 0 && <li className="card"><EmptyState title="Sem mensagens registradas" /></li>}
         </ul>
       </div>
     </LayoutAdmin>

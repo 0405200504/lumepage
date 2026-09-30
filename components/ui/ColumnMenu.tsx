@@ -47,26 +47,26 @@ export function ColumnMenu({ columns, hidden }: {
     <div className="relative" ref={box}>
       <button
         type="button" onClick={() => setOpen(v => !v)} aria-haspopup="menu" aria-expanded={open}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors"
+        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-surface-2 text-caption font-semibold text-n-600 hover:bg-n-150 hover:text-heading transition-ui"
       >
         <Columns3 className="h-4 w-4" aria-hidden />
         Colunas{hiddenCount > 0 && <span className="text-muted num">({hiddenCount} oculta{hiddenCount > 1 ? 's' : ''})</span>}
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 top-full mt-1 z-40 w-56 card p-1 shadow-md max-h-80 overflow-y-auto">
+        <div role="menu" className="absolute right-0 top-full mt-1.5 z-40 w-56 card p-1.5 shadow-[var(--shadow-md)] max-h-80 overflow-y-auto">
           {columns.map(c => {
             const on = !hidden.includes(c.key);
             return (
               <button
                 key={c.key} type="button" role="menuitemcheckbox" aria-checked={on}
                 disabled={c.locked} onClick={() => toggle(c.key)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-caption text-left hover:bg-surface-2 transition-colors disabled:opacity-40"
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-chip text-caption text-left hover:bg-surface-2 transition-ui disabled:opacity-40"
               >
-                <span className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${on ? 'bg-wine-700 border-wine-700 text-white' : 'border-line'}`}>
+                <span className={`h-4 w-4 rounded-badge flex items-center justify-center shrink-0 ${on ? 'bg-wine-700 text-white' : 'bg-surface-2 ring-1 ring-inset ring-line-strong'}`}>
                   {on && <Check className="h-2.5 w-2.5" aria-hidden />}
                 </span>
-                <span className={on ? 'text-ink font-semibold' : 'text-muted'}>{c.label}</span>
+                <span className={on ? 'text-heading font-semibold' : 'text-n-500'}>{c.label}</span>
               </button>
             );
           })}

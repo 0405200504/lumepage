@@ -18,7 +18,7 @@ export function AppointmentDetailButton({ row }: { row: AppointmentRow }) {
     <>
       <button
         type="button" onClick={() => setOpen(true)} aria-label={`Abrir ${row.clientName}`}
-        className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+        className="icon-chip h-8 w-8"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -47,37 +47,37 @@ function AppointmentDrawer({ row, onClose }: { row: AppointmentRow; onClose: () 
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const btn = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold border border-line bg-surface text-ink hover:bg-surface-2 transition-colors disabled:opacity-50';
+  const btn = 'inline-flex items-center gap-1.5 h-9 px-3.5 text-caption font-semibold rounded-full bg-surface text-heading ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:bg-n-25 hover:ring-line-strong transition-ui disabled:opacity-50';
   const row2 = 'flex items-center justify-between gap-3 py-2 border-b border-line text-caption';
 
   return (
     <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Detalhe do agendamento">
-      <div className="absolute inset-0 bg-wine-950/45" onClick={onClose} />
-      <aside className="relative w-full max-w-md h-full bg-surface border-l border-line shadow-lg overflow-y-auto animate-slide-right">
-        <header className="sticky top-0 bg-surface border-b border-line px-4 py-3 flex items-start justify-between gap-3">
+      <div className="absolute inset-0 sheet-backdrop" onClick={onClose} />
+      <aside className="relative w-full max-w-md h-full bg-surface shadow-[var(--shadow-lg)] overflow-y-auto animate-slide-right">
+        <header className="sticky top-0 bg-surface border-b border-line px-5 py-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-label font-bold text-ink truncate">{row.clientName}</h2>
-            <p className="text-caption text-muted">{formatDateBR(row.date)} às {formatTimeBR(row.startTime)}</p>
+            <h2 className="text-label text-heading truncate">{row.clientName}</h2>
+            <p className="text-caption text-n-500">{formatDateBR(row.date)} às {formatTimeBR(row.startTime)}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1.5 rounded-lg text-muted hover:bg-surface-2"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="icon-chip h-8 w-8"><X className="h-4 w-4" /></button>
         </header>
 
         <div className="p-4 space-y-4">
           <dl className="text-caption">
-            <div className={row2}><dt className="text-muted">Status</dt><dd><AppointmentStatusBadge status={row.status} /></dd></div>
-            <div className={row2}><dt className="text-muted">Profissional</dt><dd className="font-semibold text-ink">{row.professionalName}</dd></div>
-            <div className={row2}><dt className="text-muted">Serviço</dt><dd className="font-semibold text-ink">{row.serviceName}</dd></div>
-            <div className={row2}><dt className="text-muted">Valor</dt><dd className="font-semibold text-ink num">{brl(row.priceCents)}</dd></div>
-            <div className={row2}><dt className="text-muted">Horário</dt><dd className="num text-ink">{formatTimeBR(row.startTime)}–{formatTimeBR(row.endTime)}</dd></div>
-            <div className={row2}><dt className="text-muted">WhatsApp</dt><dd className="num text-ink">{row.clientWhatsapp}</dd></div>
-            <div className={row2}><dt className="text-muted">Origem</dt><dd className="text-ink">{row.origin}</dd></div>
-            <div className={row2}><dt className="text-muted">Criado em</dt><dd className="num text-ink">{formatDateTimeBR(row.createdAt)}</dd></div>
-            {row.notes && <div className="py-2 text-caption"><dt className="text-muted mb-1">Observações</dt><dd className="text-ink">{row.notes}</dd></div>}
-            {row.cancellationReason && <div className="py-2 text-caption"><dt className="text-muted mb-1">Motivo do cancelamento</dt><dd className="text-ink">{row.cancellationReason}</dd></div>}
+            <div className={row2}><dt className="text-n-500">Status</dt><dd><AppointmentStatusBadge status={row.status} /></dd></div>
+            <div className={row2}><dt className="text-n-500">Profissional</dt><dd className="font-semibold text-ink">{row.professionalName}</dd></div>
+            <div className={row2}><dt className="text-n-500">Serviço</dt><dd className="font-semibold text-ink">{row.serviceName}</dd></div>
+            <div className={row2}><dt className="text-n-500">Valor</dt><dd className="font-semibold text-ink num">{brl(row.priceCents)}</dd></div>
+            <div className={row2}><dt className="text-n-500">Horário</dt><dd className="num text-ink">{formatTimeBR(row.startTime)}–{formatTimeBR(row.endTime)}</dd></div>
+            <div className={row2}><dt className="text-n-500">WhatsApp</dt><dd className="num text-ink">{row.clientWhatsapp}</dd></div>
+            <div className={row2}><dt className="text-n-500">Origem</dt><dd className="text-ink">{row.origin}</dd></div>
+            <div className={row2}><dt className="text-n-500">Criado em</dt><dd className="num text-ink">{formatDateTimeBR(row.createdAt)}</dd></div>
+            {row.notes && <div className="py-2 text-caption"><dt className="text-n-500 mb-1">Observações</dt><dd className="text-ink">{row.notes}</dd></div>}
+            {row.cancellationReason && <div className="py-2 text-caption"><dt className="text-n-500 mb-1">Motivo do cancelamento</dt><dd className="text-ink">{row.cancellationReason}</dd></div>}
           </dl>
 
           <section>
-            <h3 className="text-caption font-bold uppercase tracking-[0.08em] text-muted mb-2">Mudar status</h3>
+            <h3 className="text-caption font-semibold text-n-600 mb-2">Mudar status</h3>
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={busy} className={btn} onClick={() => act(() => setAppointmentStatusAction([row.id], 'confirmed'), 'Confirmado.')}>
                 <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar
@@ -92,12 +92,12 @@ function AppointmentDrawer({ row, onClose }: { row: AppointmentRow; onClose: () 
           </section>
 
           <section>
-            <h3 className="text-caption font-bold uppercase tracking-[0.08em] text-muted mb-2">Remarcar</h3>
+            <h3 className="text-caption font-semibold text-n-600 mb-2">Remarcar</h3>
             <div className="flex items-center gap-2">
               <input type="date" value={date} onChange={e => setDate(e.target.value)} aria-label="Nova data"
-                className="h-9 px-2 rounded-xl border border-line bg-surface text-caption text-ink" />
+                className="h-9 px-2 rounded-chip bg-surface-2 text-caption text-ink" />
               <input type="time" value={time} onChange={e => setTime(e.target.value)} aria-label="Novo horário"
-                className="h-9 px-2 rounded-xl border border-line bg-surface text-caption text-ink" />
+                className="h-9 px-2 rounded-chip bg-surface-2 text-caption text-ink" />
               <button type="button" disabled={busy} className={btn} onClick={() => act(() => rescheduleAppointmentAction(row.id, date, time), 'Remarcado.')}>
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarClock className="h-3.5 w-3.5" />} Aplicar
               </button>
@@ -105,18 +105,18 @@ function AppointmentDrawer({ row, onClose }: { row: AppointmentRow; onClose: () 
           </section>
 
           <section>
-            <h3 className="text-caption font-bold uppercase tracking-[0.08em] text-muted mb-2">Cancelar</h3>
+            <h3 className="text-caption font-semibold text-n-600 mb-2">Cancelar</h3>
             <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Motivo (fica registrado)"
-              className="w-full h-9 px-3 rounded-xl border border-line bg-surface text-caption text-ink mb-2" />
+              className="w-full h-9 px-3 rounded-chip bg-surface-2 text-caption text-ink mb-2" />
             <button type="button" disabled={busy}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold text-danger hover:bg-danger-bg disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-caption font-semibold text-danger hover:bg-danger-bg transition-ui disabled:opacity-50"
               onClick={() => act(() => setAppointmentStatusAction([row.id], 'cancelled', reason), 'Cancelado.')}>
               <XCircle className="h-3.5 w-3.5" /> Cancelar agendamento
             </button>
           </section>
 
           <a href={buildWhatsappLink(row.clientWhatsapp, '')} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold text-success border border-line hover:bg-surface-2 transition-colors">
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-caption font-semibold text-success bg-success-bg hover:bg-success hover:text-white transition-ui">
             <MessageCircle className="h-3.5 w-3.5" /> Abrir WhatsApp da cliente
           </a>
         </div>

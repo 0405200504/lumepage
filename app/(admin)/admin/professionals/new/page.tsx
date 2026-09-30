@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { NewProfessionalForm } from '@/components/admin/NewProfessionalForm';
 
-export const metadata = { title: 'Cadastrar Profissional | Lume Admin' };
+export const metadata = { title: 'Nova conta | Lume Admin' };
 
 export default async function NewProfessionalPage() {
   const session = await requireAdmin();
@@ -11,8 +11,10 @@ export default async function NewProfessionalPage() {
   return (
     <LayoutAdmin
       session={session}
-      title="Cadastrar Nova Profissional"
-      subtitle="Insira os dados cadastrais da profissional de estética para ativar o sistema e o link público."
+      title="Nova conta"
+      subtitle="Cadastre a profissional para liberar o painel e a página pública de agendamento."
+      backHref="/admin/professionals"
+      backLabel="Contas"
     >
       <NewProfessionalForm />
     </LayoutAdmin>

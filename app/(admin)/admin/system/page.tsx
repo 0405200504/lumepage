@@ -1,9 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import { Database, HardDrive, Bot, Trash2, Activity } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
-import { StatCard } from '@/components/admin/primitives';
+import { StatStrip, Panel, Notice } from '@/components/admin/primitives';
+import { SubNav, SISTEMA_NAV } from '@/components/admin/SubNav';
 import { dbService } from '@/lib/supabase/db';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
@@ -13,7 +13,7 @@ import { formatDateTimeBR } from '@/lib/format';
 
 export const metadata = { title: 'Saúde do sistema | Lume Admin' };
 
-const FREE_TIER_BYTES = 500 * 1024 * 1024; // plano Free do Supabase
+const FREE_TIER_BYTES = 500 * 1024 * 1024;
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 export default async function AdminSystemPage() {
@@ -54,75 +54,74 @@ export default async function AdminSystemPage() {
 
   const usedPct = storage ? (storage.dbSizeBytes / FREE_TIER_BYTES) * 100 : 0;
 
-  const card = (icon: React.ReactNode, label: string, value: string, hint?: string) => (
-    <StatCard key={label} label={label} value={value} note={hint} icon={icon} tint="indigo" />
-  );
-
   return (
     <LayoutAdmin
       session={session}
-      title="Saúde do sistema"
-      subtitle="Infraestrutura e integrações. Isto saiu da home — lá o espaço nobre é do negócio."
+      title="Sistema"
+      subtitle="Infraestrutura, integrações e manutenção da plataforma."
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {card(<Database className="h-4 w-4" />, 'Banco de dados', storage ? mb(storage.dbSizeBytes) : '—', storage ? `${usedPct.toFixed(1)}% do plano Free` : 'função get_db_stats ausente (migration v21)')}
-          {card(<Bot className="h-4 w-4" />, 'Contas com bot', `${configured.length}/${settings.length || 0}`, `${configured.filter(s => s.bot_enabled).length} com o bot ligado`)}
-          {card(<Activity className="h-4 w-4" />, 'Automações no mês', String(automationsMonth), lastAutomation ? `última em ${formatDateTimeBR(new Date(lastAutomation))}` : 'nenhuma disparada')}
-          {card(<Trash2 className="h-4 w-4" />, 'Na lixeira da rede', `${trash.appointments + trash.clients}`, `${trash.appointments} agendamentos · ${trash.clients} clientes`)}
+        <SubNav items={SISTEMA_NAV} />
+
+        <StatStrip items={[
+          { label: 'Banco de dados', value: storage ? mb(storage.dbSizeBytes) : '—', note: storage ? `${usedPct.toFixed(1)}% do plano Free` : 'função get_db_stats ausente (migration v21)', tone: usedPct > 80 ? 'bad' : 'default' },
+          { label: 'Contas com bot', value: `${configured.length}/${settings.length || 0}`, note: `${configured.filter(s => s.bot_enabled).length} com o bot ligado` },
+          { label: 'Automações no mês', value: String(automationsMonth), note: lastAutomation ? `última em ${formatDateTimeBR(new Date(lastAutomation))}` : 'nenhuma disparada' },
+          { label: 'Na lixeira da rede', value: String(trash.appointments + trash.clients), note: `${trash.appointments} agendamentos · ${trash.clients} clientes` },
+        ]} />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {storage && (
+            <Panel title="Uso do banco por tabela" note={`${mb(storage.dbSizeBytes)} de 500 MB`}>
+              <div className="h-2 rounded-full bg-surface-2 overflow-hidden mb-4" aria-hidden>
+                <span className={`block h-full rounded-full ${usedPct > 80 ? 'bg-danger' : 'bg-wine-700'}`} style={{ width: `${Math.min(100, usedPct)}%` }} />
+              </div>
+              <ul className="space-y-2">
+                {storage.tables.slice(0, 10).map(t => (
+                  <li key={t.name} className="flex items-center gap-3 text-body-sm">
+                    <span className="text-heading font-medium flex-1 truncate">{t.name}</span>
+                    <span className="text-n-500 num">{mb(t.bytes)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
+          <Panel title="Integração WhatsApp (uazapi)" note={`${configured.length} conta(s) com servidor configurado`}>
+            {missingWebhook.length > 0 ? (
+              <Notice tone="warn" className="mb-3">
+                {missingWebhook.length} conta(s) com bot configurado mas <strong>sem webhook_secret</strong> — o bot não recebe mensagens.
+              </Notice>
+            ) : configured.length > 0 && (
+              <Notice tone="ok" className="mb-3">Todas as contas com bot têm webhook configurado.</Notice>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              {configured.map(s => (
+                <Link key={s.professional_id} href={`/admin/professionals/${s.professional_id}`}>
+                  <Badge tone={s.bot_enabled ? 'ok' : 'neutral'}>{s.professional_id.slice(0, 8)}…</Badge>
+                </Link>
+              ))}
+              {configured.length === 0 && <span className="text-caption text-n-500">Nenhuma conta com bot configurado.</span>}
+            </div>
+          </Panel>
         </div>
 
-        {storage && (
-          <section className="card p-4">
-            <h2 className="text-label font-bold text-ink mb-3">Uso do banco por tabela</h2>
-            <div className="h-2 rounded-full bg-surface-2 overflow-hidden mb-4" aria-hidden>
-              <span className={`block h-full rounded-full ${usedPct > 80 ? 'bg-danger' : 'bg-accent'}`} style={{ width: `${Math.min(100, usedPct)}%` }} />
+        <Panel title="Manutenção" note="Ações registradas na auditoria">
+          <div className="space-y-4 text-body-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-n-600 max-w-xl">
+                <strong className="text-heading">Lixeira da rede.</strong> Apaga em definitivo os agendamentos e clientes já excluídos pelas profissionais. Irreversível.
+              </p>
+              <NetworkTrashButton appointments={trash.appointments} clients={trash.clients} />
             </div>
-            <ul className="space-y-1.5">
-              {storage.tables.slice(0, 10).map(t => (
-                <li key={t.name} className="flex items-center gap-3 text-caption">
-                  <span className="text-ink font-semibold flex-1 truncate">{t.name}</span>
-                  <span className="text-muted num">{mb(t.bytes)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <section className="card p-4 space-y-3">
-          <h2 className="text-label font-bold text-ink flex items-center gap-2"><HardDrive className="h-4 w-4 text-muted" /> Manutenção</h2>
-          <p className="text-caption text-muted">
-            Esvaziar a lixeira apaga em definitivo os agendamentos e clientes já excluídos pelas profissionais.
-            Ação irreversível, registrada na auditoria.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <NetworkTrashButton appointments={trash.appointments} clients={trash.clients} />
-            <TestDataButton />
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line">
+              <p className="text-n-600 max-w-xl">
+                <strong className="text-heading">Contas de teste.</strong> “page 1”…“page 5”, “teste” e e-mails @example.com poluem os números. A limpeza é reversível: vão para a lixeira.
+              </p>
+              <TestDataButton />
+            </div>
           </div>
-          <p className="text-caption text-muted">
-            Contas de teste (“page 1”…“page 5”, “teste”, e-mails @example.com) poluem KPIs, ranking e
-            gráficos. A limpeza é reversível: elas vão para a lixeira, não somem.
-          </p>
-        </section>
-
-        <section className="card p-4">
-          <h2 className="text-label font-bold text-ink mb-2">Integração WhatsApp (uazapi)</h2>
-          {missingWebhook.length > 0 ? (
-            <p className="text-caption text-warning">
-              {missingWebhook.length} conta(s) com bot configurado mas <strong>sem webhook_secret</strong> — o bot não recebe mensagens.
-            </p>
-          ) : (
-            <p className="text-caption text-muted">Todas as contas com bot têm webhook configurado.</p>
-          )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {configured.map(s => (
-              <Link key={s.professional_id} href={`/admin/professionals/${s.professional_id}?tab=bot`}>
-                <Badge tone={s.bot_enabled ? 'ok' : 'neutral'}>{s.professional_id.slice(0, 8)}…</Badge>
-              </Link>
-            ))}
-            {configured.length === 0 && <span className="text-caption text-muted">Nenhuma conta com bot configurado.</span>}
-          </div>
-        </section>
+        </Panel>
       </div>
     </LayoutAdmin>
   );

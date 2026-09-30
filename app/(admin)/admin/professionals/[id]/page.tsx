@@ -1,17 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import {
-  ExternalLink, CheckCircle2, Circle, AlertTriangle, Bot, MessageCircle, TrendingUp,
-} from 'lucide-react';
+import { ExternalLink, CheckCircle2, Circle, AlertTriangle, Info } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { EditProfessionalPanel } from '@/components/admin/EditProfessionalPanel';
 import { ProfessionalActions } from '@/components/admin/ProfessionalActions';
-import { AccountStateGroup, Badge } from '@/components/admin/badges';
-import { StatCard } from '@/components/admin/primitives';
-import { getProfessionalOverview, getSubscriptionHistory, getProfessionalAgenda } from '@/lib/admin/professional-detail';
-import { AgendaMonth } from '@/components/admin/AgendaMonth';
+import { AccountStateGroup, Badge, AppointmentStatusBadge } from '@/components/admin/badges';
+import { StatStrip, Panel, Notice, EmptyState, KeyValue } from '@/components/admin/primitives';
+import { TabNav } from '@/components/admin/SubNav';
+import { textLink } from '@/components/admin/ui';
+import { getProfessionalOverview, getSubscriptionHistory } from '@/lib/admin/professional-detail';
 import { BarChart } from '@/components/admin/BarChart';
 import { listConversations } from '@/lib/admin/queries';
 import { parseTableParams } from '@/lib/query-params';
@@ -19,29 +18,35 @@ import { getAccessOverview, METHOD_LABEL } from '@/lib/admin/access';
 import { AccessPanel, AccessPanelData } from '@/components/admin/AccessPanel';
 import { readAuditLog } from '@/lib/audit';
 import { brl, formatDateBR, formatDateTimeBR, formatTimeBR, formatDurationBR, pct } from '@/lib/format';
-import { AppointmentStatusBadge } from '@/components/admin/badges';
 
 export const metadata = { title: 'Conta | Lume Admin' };
 
-type Tab =
-  | 'overview' | 'subscription' | 'access' | 'agenda' | 'appointments' | 'clients'
-  | 'services' | 'finance' | 'bot' | 'conversations' | 'page' | 'settings' | 'logs';
+/**
+ * DETALHE DA CONTA — seis abas.
+ *
+ * Eram treze. Agenda, Serviços, Bot, Página pública, Financeiro e Conversas eram
+ * espelhos do painel da profissional — e "Entrar como" abre o painel dela de
+ * verdade, em uma aba, com tudo funcionando. O que sobrou é o que só o admin
+ * enxerga: números consolidados, assinatura, acesso, atividade recente, dados
+ * cadastrais e a trilha do que o suporte fez aqui.
+ */
+type Tab = 'overview' | 'subscription' | 'access' | 'activity' | 'data' | 'history';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Visão geral' },
   { key: 'subscription', label: 'Assinatura' },
   { key: 'access', label: 'Acesso' },
-  { key: 'agenda', label: 'Agenda' },
-  { key: 'appointments', label: 'Agendamentos' },
-  { key: 'clients', label: 'Clientes' },
-  { key: 'services', label: 'Serviços' },
-  { key: 'finance', label: 'Financeiro' },
-  { key: 'bot', label: 'Bot & IA' },
-  { key: 'conversations', label: 'Conversas' },
-  { key: 'page', label: 'Página pública' },
-  { key: 'settings', label: 'Configurações' },
-  { key: 'logs', label: 'Logs' },
+  { key: 'activity', label: 'Atividade' },
+  { key: 'data', label: 'Dados' },
+  { key: 'history', label: 'Histórico' },
 ];
+
+/** Links antigos (`?tab=bot`, `?tab=agenda`…) caem na aba que herdou o conteúdo. */
+const LEGACY_TAB: Record<string, Tab> = {
+  bot: 'overview', services: 'overview', finance: 'overview', page: 'overview',
+  agenda: 'activity', appointments: 'activity', clients: 'activity', conversations: 'activity',
+  settings: 'data', logs: 'history',
+};
 
 export default async function ProfessionalDetailPage({
   params, searchParams,
@@ -49,34 +54,27 @@ export default async function ProfessionalDetailPage({
   const session = await requireAdmin();
   const { id } = await params;
   const sp = await searchParams;
-  const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) as Tab | undefined;
-  const active: Tab = TABS.some(t => t.key === tab) ? (tab as Tab) : 'overview';
+  const rawTab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? 'overview';
+  const active: Tab = TABS.some(t => t.key === rawTab) ? (rawTab as Tab) : LEGACY_TAB[rawTab] ?? 'overview';
 
   const data = await getProfessionalOverview(id);
   if (!data) notFound();
 
   const { professional: p, kpis, monthly, onboarding, alerts, bot, services, topServices, recentAppointments, recentClients } = data;
-  const [history, audit, accessData] = await Promise.all([
+  const [history, audit, accessData, conversations] = await Promise.all([
     active === 'subscription' ? getSubscriptionHistory(id) : Promise.resolve([]),
-    // A aba Acesso também lê a trilha: é de lá que sai "o que o suporte já fez aqui".
-    active === 'logs' || active === 'access'
+    active === 'history' || active === 'access'
       ? readAuditLog({ entityType: 'professional', entityId: id, limit: 100 })
       : Promise.resolve({ rows: [], total: 0 }),
     active === 'access' ? getAccessOverview(id) : Promise.resolve(null),
+    active === 'activity'
+      ? listConversations(
+          parseTableParams({ prof: id, size: '10' }, { filterKeys: ['prof', 'state'], defaultSort: 'last' }),
+          new Map([[id, p.brand_name || p.name]]),
+        )
+      : Promise.resolve(null),
   ]);
 
-  // Espelho de dados: as telas dela renderizadas com os componentes do admin.
-  const monthParam = Array.isArray(sp.month) ? sp.month[0] : sp.month;
-  const agenda = active === 'agenda' ? await getProfessionalAgenda(id, monthParam) : null;
-  const conversations = active === 'conversations'
-    ? await listConversations(
-        parseTableParams({ prof: id, size: '25' }, { filterKeys: ['prof', 'state'], defaultSort: 'last' }),
-        new Map([[id, p.brand_name || p.name]]),
-      )
-    : null;
-
-  // Monta o pacote da aba Acesso. Nada aqui carrega senha — por construção, ver
-  // lib/admin/access.ts.
   const accessPanel: AccessPanelData | null = accessData && {
     professionalId: id,
     brandName: p.brand_name || p.name,
@@ -106,8 +104,14 @@ export default async function ProfessionalDetailPage({
       .map(r => ({ id: r.id, action: r.action, adminEmail: r.admin_email, createdAt: r.created_at })),
   };
 
-  const kpiCard = (label: string, value: string, hint?: string) => (
-    <StatCard key={label} label={label} value={value} note={hint} />
+  const activeServices = services.filter(s => s.is_active).length;
+  const check = (ok: boolean, label: string, bad = false) => (
+    <li className="flex items-center gap-2.5 text-body-sm">
+      {ok
+        ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
+        : bad ? <AlertTriangle className="h-4 w-4 text-danger shrink-0" aria-hidden /> : <Circle className="h-4 w-4 text-n-300 shrink-0" aria-hidden />}
+      <span className={ok ? 'text-heading' : bad ? 'text-danger font-semibold' : 'text-n-500'}>{label}</span>
+    </li>
   );
 
   return (
@@ -115,6 +119,8 @@ export default async function ProfessionalDetailPage({
       session={session}
       title={p.brand_name || p.name}
       subtitle={`${p.name} · ${p.email} · cadastrada em ${formatDateBR(p.created_at)}`}
+      backHref="/admin/professionals"
+      backLabel="Contas"
       actions={
         <ProfessionalActions
           id={p.id}
@@ -127,81 +133,117 @@ export default async function ProfessionalDetailPage({
       }
     >
       <div className="space-y-4">
-        {/* Faixa de identidade */}
-        <div className="card px-4 py-3 flex flex-wrap items-center gap-2.5">
-          <AccountStateGroup account={p} />
-          <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-caption font-semibold text-accent-link hover:underline">
-            /agendar/{p.slug} <ExternalLink className="h-3 w-3" />
-          </Link>
-          {p.whatsapp && <span className="text-caption text-muted">WhatsApp {p.whatsapp}</span>}
-        </div>
-
-        {/* Abas */}
-        <nav className="flex gap-1 overflow-x-auto scrollbar-none border-b border-line" aria-label="Seções da conta">
-          {TABS.map(t => (
-            <Link
-              key={t.key}
-              href={`/admin/professionals/${id}?tab=${t.key}`}
-              scroll={false}
-              aria-current={active === t.key ? 'page' : undefined}
-              className={`px-3 py-2 text-caption font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                active === t.key ? 'border-accent text-accent-link' : 'border-transparent text-muted hover:text-ink'
-              }`}
-            >
-              {t.label}
+        {/* Identidade + abas */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabNav items={TABS} active={active} hrefFor={key => `/admin/professionals/${id}?tab=${key}`} />
+          <div className="flex flex-wrap items-center gap-2.5 px-1">
+            <AccountStateGroup account={p} />
+            <Link href={`/agendar/${p.slug}`} target="_blank" className={`inline-flex items-center gap-1 ${textLink}`}>
+              /agendar/{p.slug} <ExternalLink className="h-3 w-3" />
             </Link>
-          ))}
-        </nav>
+          </div>
+        </div>
 
         {/* ————— Visão geral ————— */}
         {active === 'overview' && (
           <div className="space-y-4">
             {alerts.length > 0 && (
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {alerts.map((a, i) => (
-                  <li key={i} className={`card px-3 py-2.5 flex items-start gap-2 text-caption ${
-                    a.level === 'bad' ? 'text-danger' : a.level === 'warn' ? 'text-warning' : 'text-muted'
-                  }`}>
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-px" aria-hidden />
-                    <span className="font-semibold">{a.text}</span>
-                  </li>
+                  <Notice key={i} tone={a.level === 'bad' ? 'bad' : a.level === 'warn' ? 'warn' : 'info'}
+                    icon={a.level === 'info' ? <Info /> : <AlertTriangle />}>
+                    {a.text}
+                  </Notice>
                 ))}
-              </ul>
+              </div>
             )}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {kpiCard('Faturamento 30d', brl(kpis.revenue30dCents), `total ${brl(kpis.revenueTotalCents)}`)}
-              {kpiCard('Agendamentos 30d', String(kpis.appointments30d), `total ${kpis.appointmentsTotal}`)}
-              {kpiCard('Clientes', String(kpis.clients))}
-              {kpiCard('Ticket médio', brl(kpis.ticketCents))}
-              {kpiCard('Comparecimento', pct(kpis.completionRate, 0))}
-              {kpiCard('Faltas', pct(kpis.noShowRate, 0))}
-              {kpiCard('Conversas esperando', String(bot.conversationsWaiting))}
-              {kpiCard('Mensagens do bot (mês)', String(bot.messagesMonth))}
-            </div>
+            <StatStrip items={[
+              { label: 'Faturamento 30d', value: brl(kpis.revenue30dCents), note: `total ${brl(kpis.revenueTotalCents)}`, tone: 'accent' },
+              { label: 'Agendamentos 30d', value: String(kpis.appointments30d), note: `total ${kpis.appointmentsTotal}` },
+              { label: 'Clientes', value: String(kpis.clients), note: `ticket médio ${brl(kpis.ticketCents)}` },
+              { label: 'Comparecimento', value: pct(kpis.completionRate, 0), note: `faltas ${pct(kpis.noShowRate, 0)}`, tone: kpis.noShowRate > 15 ? 'warn' : 'default' },
+            ]} />
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section className="card p-4 sm:p-5 rounded-3xl">
-                <h2 className="text-label font-bold text-ink flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-muted" /> Agendamentos por mês
-                </h2>
+            <div className="grid gap-4 lg:grid-cols-12">
+              <Panel title="Agendamentos por mês" className="lg:col-span-7">
                 <BarChart points={monthly.map(m => ({ label: m.label, value: m.count }))} format={v => String(Math.round(v))} />
-              </section>
+              </Panel>
 
-              <section className="card p-4 sm:p-5 rounded-3xl">
-                <h2 className="text-label font-bold text-ink mb-3">Ativação da conta</h2>
-                <ul className="space-y-2">
+              <Panel title="Ativação" note="O que a conta já configurou" className="lg:col-span-5">
+                <ul className="space-y-2.5">
                   {onboarding.map(step => (
-                    <li key={step.label} className="flex items-center gap-2 text-caption">
+                    <li key={step.label} className="flex items-center gap-2.5 text-body-sm">
                       {step.done
                         ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
-                        : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
-                      <span className={step.done ? 'text-ink font-semibold' : 'text-muted'}>{step.label}</span>
-                      {step.hint && <span className="ml-auto text-caption text-muted num">{step.hint}</span>}
+                        : <Circle className="h-4 w-4 text-n-300 shrink-0" aria-hidden />}
+                      <span className={step.done ? 'text-heading' : 'text-n-500'}>{step.label}</span>
+                      {step.hint && <span className="ml-auto text-caption text-n-500 num">{step.hint}</span>}
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Panel>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-12">
+              <Panel title="WhatsApp e página pública" note="Ligar o bot e editar a persona é feito no painel dela: use “Entrar como”." className="lg:col-span-5">
+                <dl>
+                  <KeyValue label="Servidor uazapi">{bot.configured ? <Badge tone="ok">configurado</Badge> : <Badge tone="neutral">não configurado</Badge>}</KeyValue>
+                  <KeyValue label="Bot">{bot.enabled ? <Badge tone="ok">ligado</Badge> : <Badge tone="neutral">desligado</Badge>}</KeyValue>
+                  <KeyValue label="Automações">{bot.automationsOn ? <Badge tone="ok">ativas</Badge> : <Badge tone="neutral">desligadas</Badge>}</KeyValue>
+                  <KeyValue label="Número">{bot.number ?? '—'}</KeyValue>
+                  <KeyValue label="Mensagens no mês">{bot.messagesMonth}</KeyValue>
+                  <KeyValue label="Conversas esperando humano">
+                    {bot.conversationsWaiting > 0
+                      ? <Link href={`/admin/conversations?prof=${id}&state=waiting`} className="text-warning font-semibold hover:underline">{bot.conversationsWaiting}</Link>
+                      : '0'}
+                  </KeyValue>
+                </dl>
+                <ul className="space-y-2 mt-4 pt-4 border-t border-line">
+                  {check(activeServices > 0, `${activeServices} serviço(s) ativo(s) para escolher`, true)}
+                  {check(!!p.logo_url, 'Logo da marca')}
+                  {check(!!p.public_bio, 'Texto de apresentação')}
+                  {check(!!p.whatsapp, 'WhatsApp de contato')}
+                </ul>
+              </Panel>
+
+              <Panel flush title={`Serviços (${services.length})`} note="É isto que a cliente vê na página de agendamento" className="lg:col-span-7">
+                {services.length === 0 ? (
+                  <EmptyState icon={<AlertTriangle className="text-danger" />} title="Nenhum serviço cadastrado" description="A página de agendamento dela está vazia: ninguém consegue marcar horário." />
+                ) : (
+                  <div className="overflow-x-auto border-t border-line">
+                    <table className="admin-table min-w-full">
+                      <caption className="sr-only">Serviços da profissional com preço e duração</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Serviço</th>
+                          <th scope="col" className="text-right">Duração</th>
+                          <th scope="col" className="text-right">Preço</th>
+                          <th scope="col" className="text-right">Vendas</th>
+                          <th scope="col">Situação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {services.map(s => {
+                          const sold = topServices.find(t => t.name === s.name);
+                          return (
+                            <tr key={s.id}>
+                              <td>
+                                <span className="block font-semibold text-heading">{s.name}</span>
+                                {s.description && <span className="block text-caption text-n-500 truncate max-w-md">{s.description}</span>}
+                              </td>
+                              <td className="text-right num text-n-500">{s.duration_minutes} min</td>
+                              <td className="text-right num font-semibold text-heading">{brl(s.price_cents)}</td>
+                              <td className="text-right num text-n-500">{sold ? `${sold.count}×` : '—'}</td>
+                              <td>{s.is_active ? <Badge tone="ok">ativo</Badge> : <Badge tone="neutral">inativo</Badge>}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
             </div>
           </div>
         )}
@@ -209,34 +251,31 @@ export default async function ProfessionalDetailPage({
         {/* ————— Assinatura ————— */}
         {active === 'subscription' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {kpiCard('Plano', p.subscription_plan ? p.subscription_plan : 'Legada')}
-              {kpiCard('Situação', p.subscription_status ?? '—')}
-              {kpiCard('Trial termina', formatDateBR(p.trial_ends_at, '—'))}
-              {kpiCard('Acesso vence', formatDateBR(p.subscription_ends_at, '—'))}
-            </div>
+            <StatStrip items={[
+              { label: 'Plano', value: p.subscription_plan ? p.subscription_plan : 'Legada' },
+              { label: 'Situação', value: p.subscription_status ?? '—' },
+              { label: 'Teste termina', value: formatDateBR(p.trial_ends_at, '—') },
+              { label: 'Acesso vence', value: formatDateBR(p.subscription_ends_at, '—') },
+            ]} />
 
-            <section className="card overflow-hidden">
-              <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Histórico de mudanças</h2>
+            <Panel flush title="Histórico de mudanças" note="Cada troca de plano ou situação, com quem fez e quando">
               {history.length === 0 ? (
-                <p className="px-4 py-8 text-center text-caption text-muted">
-                  Nenhuma mudança registrada. O histórico começa a ser gravado a partir da migration v33.
-                </p>
+                <EmptyState title="Nenhuma mudança registrada" description="O histórico começa a ser gravado a partir da migration v33." />
               ) : (
-                <ul className="divide-y divide-line">
+                <ul className="divide-y divide-line border-t border-line">
                   {history.map(h => (
-                    <li key={h.id} className="px-4 py-3 flex flex-wrap items-center gap-2 text-caption">
-                      <span className="num text-muted">{formatDateTimeBR(h.created_at)}</span>
+                    <li key={h.id} className="px-5 py-3 flex flex-wrap items-center gap-2 text-body-sm">
+                      <span className="num text-caption text-n-500">{formatDateTimeBR(h.created_at)}</span>
                       <Badge tone="accent">{h.plan_key ?? 'sem plano'}</Badge>
-                      <span className="text-muted">{h.status}</span>
-                      {h.current_period_end && <span className="text-muted">até {formatDateBR(h.current_period_end)}</span>}
-                      {h.note && <span className="text-ink">“{h.note}”</span>}
-                      <span className="ml-auto text-muted">{h.changed_by}</span>
+                      <span className="text-n-500">{h.status}</span>
+                      {h.current_period_end && <span className="text-n-500">até {formatDateBR(h.current_period_end)}</span>}
+                      {h.note && <span className="text-heading">“{h.note}”</span>}
+                      <span className="ml-auto text-caption text-n-500">{h.changed_by}</span>
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
+            </Panel>
           </div>
         )}
 
@@ -244,260 +283,83 @@ export default async function ProfessionalDetailPage({
         {active === 'access' && (
           accessPanel
             ? <AccessPanel data={accessPanel} />
-            : <p className="card px-4 py-8 text-center text-caption text-muted">
-                Dados de acesso indisponíveis para esta conta.
-              </p>
+            : <div className="card"><EmptyState title="Dados de acesso indisponíveis para esta conta" /></div>
         )}
 
-        {/* ————— Agenda ————— */}
-        {active === 'agenda' && agenda && (
-          <AgendaMonth agenda={agenda} basePath={`/admin/professionals/${id}?tab=agenda`} />
-        )}
-
-        {/* ————— Agendamentos ————— */}
-        {active === 'appointments' && (
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-label font-bold text-ink">Últimos agendamentos</h2>
-              <Link href={`/admin/appointments?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Ver todos com filtro</Link>
-            </div>
-            <ul className="divide-y divide-line">
-              {recentAppointments.map(a => (
-                <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
-                  <span className="num font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
-                  <span className="num text-muted w-12">{formatTimeBR(a.start_time)}</span>
-                  <span className="font-semibold text-ink flex-1 min-w-[8rem] truncate">{a.client_name}</span>
-                  <span className="text-muted truncate max-w-[12rem]">{a.service?.name}</span>
-                  <span className="num text-ink">{brl(a.service?.price_cents || 0)}</span>
-                  <AppointmentStatusBadge status={a.status} />
-                </li>
-              ))}
-              {recentAppointments.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhum agendamento.</li>}
-            </ul>
-          </section>
-        )}
-
-        {/* ————— Clientes ————— */}
-        {active === 'clients' && (
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h2 className="text-label font-bold text-ink">Clientes recentes</h2>
-              <Link href={`/admin/clients?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Ver todas com filtro</Link>
-            </div>
-            <ul className="divide-y divide-line">
-              {recentClients.map(c => (
-                <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
-                  <span className="font-semibold text-ink flex-1 min-w-[10rem] truncate">{c.name}</span>
-                  <span className="text-muted num">{c.whatsapp}</span>
-                  <span className="text-muted num">{c.total_appointments ?? 0} visita(s)</span>
-                  <span className="text-muted num">{formatDateBR(c.last_appointment_at, 'nunca')}</span>
-                </li>
-              ))}
-              {recentClients.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhuma cliente.</li>}
-            </ul>
-          </section>
-        )}
-
-        {/* ————— Financeiro ————— */}
-        {active === 'finance' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {kpiCard('Faturamento total', brl(kpis.revenueTotalCents))}
-              {kpiCard('Últimos 30 dias', brl(kpis.revenue30dCents))}
-              {kpiCard('Ticket médio', brl(kpis.ticketCents))}
-              {kpiCard('Atendimentos pagos', String(kpis.appointmentsTotal))}
-            </div>
-            <section className="card overflow-hidden">
-              <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Serviços mais vendidos</h2>
-              <ul className="divide-y divide-line">
-                {topServices.map(s => (
-                  <li key={s.name} className="px-4 py-2.5 flex items-center gap-3 text-caption">
-                    <span className="font-semibold text-ink flex-1 truncate">{s.name}</span>
-                    <span className="text-muted num">{s.count}×</span>
-                    <span className="text-ink num font-semibold">{brl(s.revenueCents)}</span>
+        {/* ————— Atividade ————— */}
+        {active === 'activity' && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Panel flush title="Últimos agendamentos" action={<Link href={`/admin/appointments?prof=${id}`} className={textLink}>Ver todos</Link>}>
+              <ul className="divide-y divide-line border-t border-line">
+                {recentAppointments.map(a => (
+                  <li key={a.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-body-sm">
+                    <span className="num text-caption text-n-500 w-28">{formatDateBR(a.date)} · {formatTimeBR(a.start_time)}</span>
+                    <span className="font-semibold text-heading flex-1 min-w-[8rem] truncate">{a.client_name}</span>
+                    <span className="text-caption text-n-500 truncate max-w-[10rem]">{a.service?.name}</span>
+                    <AppointmentStatusBadge status={a.status} />
                   </li>
                 ))}
-                {topServices.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Sem vendas registradas.</li>}
+                {recentAppointments.length === 0 && <li><EmptyState title="Nenhum agendamento" className="py-8" /></li>}
               </ul>
-            </section>
-          </div>
-        )}
+            </Panel>
 
-        {/* ————— Bot & IA ————— */}
-        {active === 'bot' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {kpiCard('Conexão', bot.configured ? 'Configurada' : 'Não configurada')}
-              {kpiCard('Bot', bot.enabled ? 'Ligado' : 'Desligado')}
-              {kpiCard('Automações', bot.automationsOn ? 'Ativas' : 'Desligadas')}
-              {kpiCard('Mensagens (mês)', String(bot.messagesMonth))}
-            </div>
-            <div className="card p-4 text-caption text-muted space-y-2">
-              <p className="flex items-center gap-2"><Bot className="h-4 w-4" /> Servidor uazapi: <span className="text-ink font-semibold">{bot.number ?? '—'}</span></p>
-              <p className="flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Conversas esperando atendimento humano: <span className="text-ink font-semibold num">{bot.conversationsWaiting}</span></p>
-              <p className="pt-2 border-t border-line">
-                Ligar/desligar o bot e editar a persona é feito no painel da profissional —
-                use <strong className="text-ink">Entrar como</strong> acima. As mudanças ficam registradas na auditoria.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ————— Serviços ————— */}
-        {active === 'services' && (
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-              <h2 className="text-label font-bold text-ink">{services.length} serviço(s) cadastrado(s)</h2>
-              <span className="text-caption text-muted">É isto que a cliente vê na página de agendamento.</span>
-            </div>
-            {services.length === 0 ? (
-              <p className="px-4 py-10 text-center text-caption text-muted">
-                Nenhum serviço cadastrado — a página de agendamento dela está vazia e ninguém consegue marcar horário.
-              </p>
-            ) : (
-              <table className="min-w-full text-left border-collapse">
-                <caption className="sr-only">Serviços da profissional com preço e duração</caption>
-                <thead className="bg-surface-2 text-caption font-bold text-muted uppercase tracking-[0.08em]">
-                  <tr>
-                    <th scope="col" className="px-4 py-2.5 border-b border-line">Serviço</th>
-                    <th scope="col" className="px-4 py-2.5 border-b border-line text-right">Duração</th>
-                    <th scope="col" className="px-4 py-2.5 border-b border-line text-right">Preço</th>
-                    <th scope="col" className="px-4 py-2.5 border-b border-line text-right">Vendas</th>
-                    <th scope="col" className="px-4 py-2.5 border-b border-line">Situação</th>
-                  </tr>
-                </thead>
-                <tbody className="text-label">
-                  {services.map(s => {
-                    const sold = topServices.find(t => t.name === s.name);
-                    return (
-                      <tr key={s.id} className="border-b border-line/70">
-                        <td className="px-4 py-2.5">
-                          <span className="block font-semibold text-ink">{s.name}</span>
-                          {s.description && <span className="block text-caption text-muted truncate max-w-md">{s.description}</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-right num text-muted">{s.duration_minutes} min</td>
-                        <td className="px-4 py-2.5 text-right num font-semibold text-ink">{brl(s.price_cents)}</td>
-                        <td className="px-4 py-2.5 text-right num text-muted">{sold ? `${sold.count}×` : '—'}</td>
-                        <td className="px-4 py-2.5">{s.is_active ? <Badge tone="ok">ativo</Badge> : <Badge tone="neutral">inativo</Badge>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </section>
-        )}
-
-        {/* ————— Conversas ————— */}
-        {active === 'conversations' && conversations && (
-          <section className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-              <h2 className="text-label font-bold text-ink">Conversas de WhatsApp desta conta</h2>
-              <Link href={`/admin/conversations?prof=${id}`} className="text-caption font-bold text-accent-link hover:underline">Abrir na tela cheia</Link>
-            </div>
-            {conversations.rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-caption text-muted">Nenhuma conversa registrada.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {conversations.rows.map(c => (
-                  <li key={c.id} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption">
-                    <Link href={`/admin/conversations/${c.id}`} className="font-semibold text-ink hover:underline w-36 shrink-0 num">
-                      {c.clientPhone}
-                    </Link>
-                    <span className="text-muted flex-1 min-w-[10rem] truncate">{c.lastMessage || '—'}</span>
-                    <span className="text-muted num">{c.messageCount} msg</span>
-                    {c.botPaused
-                      ? <Badge tone="warn">esperando {formatDurationBR(c.waitingHours * 3_600_000)}</Badge>
-                      : <Badge tone="neutral">bot atendendo</Badge>}
-                    <span className="text-muted num w-24 text-right">{formatDateTimeBR(c.lastMessageAt)}</span>
+            <Panel flush title="Clientes recentes" action={<Link href={`/admin/clients?prof=${id}`} className={textLink}>Ver todas</Link>}>
+              <ul className="divide-y divide-line border-t border-line">
+                {recentClients.map(c => (
+                  <li key={c.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-body-sm">
+                    <span className="font-semibold text-heading flex-1 min-w-[10rem] truncate">{c.name}</span>
+                    <span className="text-caption text-n-500 num">{c.whatsapp}</span>
+                    <span className="text-caption text-n-500 num">{c.total_appointments ?? 0} visita(s)</span>
+                    <span className="text-caption text-n-500 num">{formatDateBR(c.last_appointment_at, 'nunca')}</span>
                   </li>
                 ))}
+                {recentClients.length === 0 && <li><EmptyState title="Nenhuma cliente" className="py-8" /></li>}
               </ul>
-            )}
-          </section>
-        )}
+            </Panel>
 
-        {/* ————— Página pública ————— */}
-        {active === 'page' && (
-          <div className="grid gap-4 lg:grid-cols-12">
-            <section className="card overflow-hidden lg:col-span-7">
-              <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
-                <h2 className="text-label font-bold text-ink">Prévia de /agendar/{p.slug}</h2>
-                <Link href={`/agendar/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-caption font-bold text-accent-link hover:underline">
-                  Abrir em tamanho real <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-              <iframe
-                src={`/agendar/${p.slug}`}
-                title={`Página pública de ${p.brand_name || p.name}`}
-                loading="lazy"
-                className="w-full h-[70vh] bg-white"
-              />
-            </section>
-
-            <section className="card p-4 lg:col-span-5 space-y-3 text-caption">
-              <h2 className="text-label font-bold text-ink">O que a cliente encontra</h2>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2">
-                  {services.filter(s => s.is_active).length > 0
-                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
-                    : <AlertTriangle className="h-4 w-4 text-danger shrink-0" aria-hidden />}
-                  <span className={services.filter(s => s.is_active).length > 0 ? 'text-ink' : 'text-danger font-semibold'}>
-                    {services.filter(s => s.is_active).length} serviço(s) ativo(s) para escolher
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  {p.logo_url
-                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
-                    : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
-                  <span className={p.logo_url ? 'text-ink' : 'text-muted'}>Logo da marca</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  {p.public_bio
-                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
-                    : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
-                  <span className={p.public_bio ? 'text-ink' : 'text-muted'}>Texto de apresentação</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  {p.whatsapp
-                    ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden />
-                    : <Circle className="h-4 w-4 text-muted shrink-0" aria-hidden />}
-                  <span className={p.whatsapp ? 'text-ink' : 'text-muted'}>WhatsApp de contato</span>
-                </li>
-              </ul>
-              <p className="pt-2 border-t border-line text-muted">
-                A prévia é a página real, carregada como uma cliente a veria — sem sessão nenhuma.
-              </p>
-            </section>
+            <Panel flush title="Conversas do WhatsApp" className="lg:col-span-2" action={<Link href={`/admin/conversations?prof=${id}`} className={textLink}>Abrir na fila</Link>}>
+              {!conversations || conversations.rows.length === 0 ? (
+                <EmptyState title="Nenhuma conversa registrada" className="py-8" />
+              ) : (
+                <ul className="divide-y divide-line border-t border-line">
+                  {conversations.rows.map(c => (
+                    <li key={c.id} className="px-5 py-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
+                      <Link href={`/admin/conversations/${c.id}`} className="font-semibold text-heading hover:underline underline-offset-2 w-36 shrink-0 num">{c.clientPhone}</Link>
+                      <span className="text-caption text-n-500 flex-1 min-w-[10rem] truncate">{c.lastMessage || '—'}</span>
+                      <span className="text-caption text-n-500 num">{c.messageCount} msg</span>
+                      {c.botPaused
+                        ? <Badge tone="warn">esperando {formatDurationBR(c.waitingHours * 3_600_000)}</Badge>
+                        : <Badge tone="neutral">bot atendendo</Badge>}
+                      <span className="text-caption text-n-500 num w-32 text-right">{formatDateTimeBR(c.lastMessageAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
           </div>
         )}
 
-        {/* ————— Configurações ————— */}
-        {active === 'settings' && (
-          <div className="space-y-4">
-            <EditProfessionalPanel professional={p} />
-          </div>
-        )}
+        {/* ————— Dados ————— */}
+        {active === 'data' && <EditProfessionalPanel professional={p} />}
 
-        {/* ————— Logs ————— */}
-        {active === 'logs' && (
-          <section className="card overflow-hidden">
-            <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">O que o admin fez nesta conta</h2>
+        {/* ————— Histórico ————— */}
+        {active === 'history' && (
+          <Panel flush title="O que o admin fez nesta conta" note="Trilha de auditoria desta conta">
             {audit.rows.length === 0 ? (
-              <p className="px-4 py-8 text-center text-caption text-muted">Nada registrado ainda.</p>
+              <EmptyState title="Nada registrado ainda" />
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y divide-line border-t border-line">
                 {audit.rows.map(r => (
-                  <li key={r.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
-                    <span className="num text-muted w-36">{formatDateTimeBR(r.created_at)}</span>
-                    <Badge tone="neutral">{r.action}</Badge>
-                    <span className="text-muted flex-1 truncate">{JSON.stringify(r.after ?? {})}</span>
-                    <span className="text-muted">{r.admin_email}</span>
+                  <li key={r.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-body-sm">
+                    <span className="num text-caption text-n-500 w-36">{formatDateTimeBR(r.created_at)}</span>
+                    <Badge tone="accent">{r.action}</Badge>
+                    <span className="text-caption text-n-500 flex-1 truncate">{JSON.stringify(r.after ?? {})}</span>
+                    <span className="text-caption text-n-500">{r.admin_email}</span>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </Panel>
         )}
       </div>
     </LayoutAdmin>

@@ -5,34 +5,46 @@ import { Sun, Moon, Monitor } from 'lucide-react';
 
 type Theme = 'light' | 'dark' | 'system';
 
-const NEXT: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' };
-const META: Record<Theme, { icon: React.ElementType; label: string }> = {
-  light: { icon: Sun, label: 'Tema claro' },
-  dark: { icon: Moon, label: 'Tema escuro' },
-  system: { icon: Monitor, label: 'Tema do sistema' },
-};
+/** Cookie de um ano + aplicação imediata na casca, sem esperar navegação. */
+function persistTheme(next: Theme) {
+  document.cookie = `lume_admin_theme=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+  document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', next));
+}
+
+const OPTIONS: { value: Theme; icon: React.ElementType; label: string }[] = [
+  { value: 'light', icon: Sun, label: 'Claro' },
+  { value: 'dark', icon: Moon, label: 'Escuro' },
+  { value: 'system', icon: Monitor, label: 'Sistema' },
+];
 
 /**
- * Alterna claro / escuro / sistema. A escolha vai para um cookie e a casca do admin
- * já renderiza com o atributo certo no servidor — sem piscar branco no carregamento.
+ * Tema do admin, em segmented. A escolha vai para cookie e a casca já renderiza
+ * com o atributo certo no servidor — sem piscar branco no carregamento.
+ * Mora em Sistema › Configurações: preferência não é ação de tela.
  */
 export function ThemeToggle({ initial }: { initial: Theme }) {
   const [theme, setTheme] = useState<Theme>(initial);
-  const { icon: Icon, label } = META[theme];
 
-  const cycle = () => {
-    const next = NEXT[theme];
+  const apply = (next: Theme) => {
     setTheme(next);
-    document.cookie = `lume_admin_theme=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-    // Aplica na hora, sem esperar navegação.
-    document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', next));
+    persistTheme(next);
   };
 
   return (
-    <button type="button" onClick={cycle} title={`${label} — clique para trocar`} aria-label={label}
-      className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-surface border border-n-200 text-wine-700 shadow-soft hover:bg-white hover:border-wine-700/20 hover:shadow-md hover:text-wine-700 transition-ui">
-      <Icon className="h-4 w-4" aria-hidden />
-    </button>
+    <div className="segmented" role="radiogroup" aria-label="Tema do painel">
+      {OPTIONS.map(({ value, icon: Icon, label }) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={theme === value}
+          data-active={theme === value ? 'true' : undefined}
+          onClick={() => apply(value)}
+        >
+          <Icon className="h-4 w-4" aria-hidden /> {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

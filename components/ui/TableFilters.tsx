@@ -2,23 +2,22 @@
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, ChevronDown } from 'lucide-react';
 import { buildHref } from '@/lib/query-params';
 
 /**
  * Controles de filtro das listas do admin. Todos escrevem na URL (nunca em estado
  * local), para que o servidor faça o recorte e o CSV exporte exatamente o que se vê.
+ * Desenho: campo preenchido em pílula, sem borda — o mesmo controle do produto.
  */
 
 interface SearchInputProps {
   basePath: string;
   placeholder?: string;
-  /** ms de espera antes de navegar (padrão 350). */
   delay?: number;
   className?: string;
 }
 
-/** Busca com debounce → grava `q` na URL. */
 export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, className = '' }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +27,6 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
 
-  // A URL pode mudar por fora (voltar, limpar filtros): reflete no campo.
   useEffect(() => {
     if (!dirty.current) setValue(urlValue);
   }, [urlValue]);
@@ -47,7 +45,7 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
 
   return (
     <div className={`relative ${className}`}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" aria-hidden />
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-n-400 pointer-events-none" aria-hidden />
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -57,16 +55,16 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-9 pl-9 pr-8 rounded-xl border border-line bg-surface text-label text-ink placeholder-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+        className="field-input h-9 !rounded-full !pl-10 !pr-9 text-caption"
       />
       {pending
-        ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted" aria-hidden />
+        ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-n-400" aria-hidden />
         : value && (
           <button
             type="button" onClick={() => { setValue(''); push(''); }} aria-label="Limpar busca"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-ink hover:bg-surface-2"
+            className="absolute right-2 top-1/2 -translate-y-1/2 icon-chip h-6 w-6 bg-transparent"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
     </div>
@@ -75,35 +73,39 @@ export function SearchInput({ basePath, placeholder = 'Buscar…', delay = 350, 
 
 interface FilterSelectProps {
   basePath: string;
-  /** Nome do parâmetro na URL. */
   name: string;
   label: string;
   options: { value: string; label: string }[];
-  /** Rótulo da opção "sem filtro" (valor 'all'). */
   allLabel?: string;
   className?: string;
 }
 
-/** Select simples → grava `name` na URL ('all' remove o parâmetro). */
+/** Select em pílula → grava `name` na URL ('all' remove o parâmetro). Ativo = vinho suave. */
 export function FilterSelect({ basePath, name, label, options, allLabel = 'Todos', className = '' }: FilterSelectProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
   const value = searchParams.get(name) ?? 'all';
+  const active = value !== 'all';
 
   return (
-    <select
-      value={value}
-      aria-label={label}
-      onChange={e => {
-        const next = e.target.value;
-        startTransition(() => router.push(buildHref(basePath, searchParams, { [name]: next === 'all' ? null : next }), { scroll: false }));
-      }}
-      className={`h-9 px-3 rounded-xl border border-line bg-surface text-caption font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 ${className}`}
-    >
-      <option value="all">{allLabel}</option>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+    <span className={`relative inline-flex ${className}`}>
+      <select
+        value={value}
+        aria-label={label}
+        onChange={e => {
+          const next = e.target.value;
+          startTransition(() => router.push(buildHref(basePath, searchParams, { [name]: next === 'all' ? null : next }), { scroll: false }));
+        }}
+        className={`appearance-none h-9 pl-3.5 pr-8 rounded-full text-caption font-semibold transition-ui cursor-pointer
+          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700
+          ${active ? 'bg-accent-soft text-accent-link' : 'bg-surface-2 text-n-600 hover:bg-n-150 hover:text-heading'}`}
+      >
+        <option value="all">{allLabel}</option>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <ChevronDown className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${active ? 'text-accent-link' : 'text-n-400'}`} aria-hidden />
+    </span>
   );
 }
 
@@ -121,10 +123,10 @@ export function ClearFilters({ basePath, keys }: { basePath: string; keys: strin
     <button
       type="button"
       onClick={() => router.push(buildHref(basePath, searchParams, patch), { scroll: false })}
-      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-caption font-bold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+      className="inline-flex items-center gap-1 h-9 px-3 rounded-full text-caption font-semibold text-n-500 hover:text-heading hover:bg-surface-2 transition-ui"
     >
-      <X className="h-4 w-4" />
-      Limpar filtros ({active.length})
+      <X className="h-3.5 w-3.5" />
+      Limpar ({active.length})
     </button>
   );
 }

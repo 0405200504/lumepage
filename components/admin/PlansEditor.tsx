@@ -32,19 +32,19 @@ function PlanCard({ plan, subscribers }: { plan: PlanRow; subscribers: number })
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
-  const label = 'block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1';
+  const field = 'field-input h-10 text-body-sm';
+  const label = 'block text-caption font-semibold text-n-600 mb-1.5';
 
   return (
-    <div className="card p-4 space-y-3">
+    <div className="card p-5 space-y-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-label font-bold text-ink">{form.name}</p>
-          <p className="text-caption text-muted">chave <code className="font-mono">{form.key}</code></p>
+          <p className="text-label text-heading">{form.name}</p>
+          <p className="text-caption text-n-500">chave <code className="font-mono">{form.key}</code></p>
         </div>
         <span className="text-right">
           <span className="block text-h3 font-bold text-heading num leading-none">{brl(form.price_cents)}</span>
-          <span className="block text-caption text-muted mt-0.5">{subscribers} assinante(s)</span>
+          <span className="block text-caption text-n-500 mt-0.5">{subscribers} assinante(s)</span>
         </span>
       </div>
 
@@ -80,7 +80,7 @@ function PlanCard({ plan, subscribers }: { plan: PlanRow; subscribers: number })
       </label>
 
       <button type="button" disabled={!dirty || saving} onClick={save}
-        className="w-full h-9 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors">
+        className="w-full h-9 rounded-full bg-wine-700 hover:bg-wine-800 text-white shadow-[var(--shadow-wine)] transition-ui text-caption font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-40">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
         {dirty ? 'Salvar alterações' : 'Sem alterações'}
       </button>

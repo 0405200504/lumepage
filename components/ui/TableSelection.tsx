@@ -64,7 +64,7 @@ export function TableSelectionProvider({ pageIds, children }: { pageIds: string[
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-const boxClass = 'h-4 w-4 rounded border-n-300 text-wine-700 accent-[color:var(--color-wine-700)] cursor-pointer';
+const boxClass = 'h-4 w-4 rounded-badge accent-[color:var(--color-wine-700)] cursor-pointer';
 
 /** Caixa de uma linha. Usar dentro do `cell` de uma coluna. */
 export function RowCheckbox({ id, label }: { id: string; label?: string }) {
@@ -139,23 +139,23 @@ export function BulkActionsBar({ actions, noun = 'registro' }: { actions: BulkAc
     <div className="no-print fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-slide-up">
       <div className="flex flex-col gap-1.5">
         {error && (
-          <p className="text-caption font-bold text-white bg-danger rounded-lg px-3 py-1.5 shadow-md">{error}</p>
+          <p className="text-caption font-semibold text-white bg-danger rounded-chip px-3 py-1.5 shadow-[var(--shadow-md)]">{error}</p>
         )}
-        <div className="flex items-center gap-2 rounded-2xl bg-surface border border-line shadow-lg px-3 py-2.5">
-          <span className="text-caption font-bold text-ink num px-1">
+        <div className="flex items-center gap-1.5 rounded-full surface-ink shadow-[var(--shadow-lg)] pl-4 pr-2 py-2">
+          <span className="text-caption font-semibold num pr-1">
             {count} {noun}{count > 1 ? 's' : ''} selecionado{count > 1 ? 's' : ''}
           </span>
-          <span className="h-5 w-px bg-line" aria-hidden />
+          <span className="h-5 w-px bg-white/20 mx-1" aria-hidden />
           {actions.map(action => (
             <button
               key={action.label}
               type="button"
               disabled={running !== null}
               onClick={() => run(action)}
-              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-caption font-bold transition-colors disabled:opacity-50 ${
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-caption font-semibold transition-ui disabled:opacity-50 ${
                 action.destructive
-                  ? 'text-danger hover:bg-danger-bg'
-                  : 'text-ink hover:bg-surface-2'
+                  ? 'text-[#FFB4A6] hover:bg-white/10'
+                  : 'hover:bg-white/10'
               }`}
             >
               {running === action.label ? <Loader2 className="h-4 w-4 animate-spin" /> : action.icon}
@@ -164,7 +164,7 @@ export function BulkActionsBar({ actions, noun = 'registro' }: { actions: BulkAc
           ))}
           <button
             type="button" onClick={clear} aria-label="Limpar seleção"
-            className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            className="icon-chip h-8 w-8 bg-white/10 text-current hover:!bg-white/20 hover:!text-current"
           >
             <X className="h-4 w-4" />
           </button>

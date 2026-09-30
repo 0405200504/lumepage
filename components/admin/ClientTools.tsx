@@ -24,7 +24,7 @@ export function NormalizePhonesButton() {
 
   return (
     <button type="button" onClick={run} disabled={busy}
-      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 transition-colors disabled:opacity-50">
+      className="inline-flex items-center gap-1.5 h-9 px-3.5 text-caption font-semibold rounded-full bg-surface text-heading ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:bg-n-25 hover:ring-line-strong transition-ui disabled:opacity-50">
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
       Padronizar telefones
     </button>
@@ -42,7 +42,7 @@ export function RenameClientButton({ id, current }: { id: string; current: strin
   if (!editing) {
     return (
       <button type="button" onClick={() => setEditing(true)} aria-label="Corrigir nome"
-        className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-surface-2 transition-colors">
+        className="icon-chip h-8 w-8">
         <Pencil className="h-3.5 w-3.5" />
       </button>
     );
@@ -59,7 +59,7 @@ export function RenameClientButton({ id, current }: { id: string; current: strin
   return (
     <span className="inline-flex items-center gap-1">
       <input value={value} onChange={e => setValue(e.target.value)} autoFocus aria-label="Novo nome"
-        className="h-8 px-2 rounded-lg border border-line bg-surface text-caption text-ink w-40" />
+        className="field-input h-9 w-auto text-caption w-40" />
       <button type="button" onClick={save} disabled={busy} aria-label="Salvar nome"
         className="p-1.5 rounded-lg text-success hover:bg-surface-2">
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -99,14 +99,14 @@ export function MergeGroupCard({ phoneKey, professionalName, clients }: {
   };
 
   return (
-    <div className="card p-4 space-y-3">
+    <div className="card p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-label font-bold text-ink num">{phoneKey}</p>
-          <p className="text-caption text-muted">{professionalName} · {clients.length} cadastros</p>
+          <p className="text-label text-heading num">{phoneKey}</p>
+          <p className="text-caption text-n-500">{professionalName} · {clients.length} cadastros</p>
         </div>
         <button type="button" onClick={merge} disabled={busy}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold disabled:opacity-50 transition-colors">
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-wine-700 hover:bg-wine-800 text-white shadow-[var(--shadow-wine)] transition-ui text-caption font-semibold disabled:opacity-50 transition-colors">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Merge className="h-3.5 w-3.5" />} Unificar
         </button>
       </div>
@@ -114,12 +114,12 @@ export function MergeGroupCard({ phoneKey, professionalName, clients }: {
       <ul className="space-y-1.5">
         {clients.map(c => (
           <li key={c.id}>
-            <label className="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-line hover:bg-surface-2 cursor-pointer text-caption">
+            <label className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-chip bg-surface-2 hover:bg-n-150 cursor-pointer text-caption transition-ui">
               <input type="radio" name={`primary-${phoneKey}`} checked={primary === c.id} onChange={() => setPrimary(c.id)}
                 className="h-4 w-4 accent-[color:var(--color-wine-700)]" />
               <span className="flex-1 min-w-0">
                 <span className="block font-semibold text-ink truncate">{c.name}</span>
-                <span className="block text-caption text-muted num">{c.whatsapp} · {c.visits} visita(s) · desde {formatDateBR(c.createdAt)}</span>
+                <span className="block text-caption text-n-500 num">{c.whatsapp} · {c.visits} visita(s) · desde {formatDateBR(c.createdAt)}</span>
               </span>
               {primary === c.id && <span className="text-caption font-bold uppercase text-accent-link">principal</span>}
             </label>

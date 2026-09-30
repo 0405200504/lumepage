@@ -37,14 +37,14 @@ export function SalonManager({ salons, unassigned }: {
 
   return (
     <div className="space-y-4">
-      <section className="card p-4 flex flex-wrap items-end gap-2">
+      <section className="card p-5 flex flex-wrap items-end gap-2">
         <label className="flex-1 min-w-[14rem]">
-          <span className="block text-caption font-bold uppercase tracking-[0.1em] text-muted mb-1">Novo grupo</span>
+          <span className="block text-caption font-semibold text-n-600 mb-1.5">Novo grupo</span>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="ex.: Studio Bella — unidade Centro"
-            className="w-full h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700" />
+            className="field-input h-10 text-body-sm" />
         </label>
         <button type="button" onClick={create} disabled={busy || !name.trim()}
-          className="h-9 px-3.5 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold inline-flex items-center gap-1.5 disabled:opacity-40">
+          className="h-9 px-3.5 rounded-full bg-wine-700 hover:bg-wine-800 text-white shadow-[var(--shadow-wine)] transition-ui text-caption font-semibold inline-flex items-center gap-1.5 disabled:opacity-40">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Criar grupo
         </button>
       </section>
@@ -53,8 +53,8 @@ export function SalonManager({ salons, unassigned }: {
 
       {salons.length === 0 && (
         <div className="card py-14 text-center">
-          <p className="text-label font-bold text-ink">Nenhum grupo criado</p>
-          <p className="mt-1 text-caption text-muted max-w-md mx-auto">
+          <p className="text-label text-heading">Nenhum grupo criado</p>
+          <p className="mt-1 text-caption text-n-500 max-w-md mx-auto">
             Um grupo junta várias profissionais sob um login de gerente, que enxerga a agenda
             e o faturamento de todas — útil para salões com mais de uma profissional.
           </p>
@@ -91,13 +91,13 @@ function SalonCard({ salon, unassigned }: { salon: SalonView; unassigned: { id: 
     else error('Não deu', res.error ?? 'Tente de novo.');
   };
 
-  const field = 'h-9 px-3 rounded-xl border border-line bg-surface text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
+  const field = 'field-input h-10 text-body-sm';
 
   return (
-    <section className="card p-4 space-y-3">
+    <section className="card p-5 space-y-4">
       <header className="flex flex-wrap items-center gap-3">
-        <h2 className="text-label font-bold text-ink flex-1">{salon.name}</h2>
-        <span className="text-caption text-muted num">{salon.members.length} profissional(is) · {appts} agend.</span>
+        <h2 className="text-label text-heading flex-1">{salon.name}</h2>
+        <span className="text-caption text-n-500 num">{salon.members.length} profissional(is) · {appts} agend.</span>
         <span className="text-label font-bold text-heading num">{brl(gmv)}</span>
       </header>
 
@@ -105,13 +105,13 @@ function SalonCard({ salon, unassigned }: { salon: SalonView; unassigned: { id: 
         {salon.members.map(m => (
           <li key={m.id} className="py-2 flex items-center gap-3 text-caption">
             <span className="font-semibold text-ink flex-1 truncate">{m.name}</span>
-            <span className="text-muted num">{m.appointments} agend.</span>
+            <span className="text-n-500 num">{m.appointments} agend.</span>
             <span className="text-ink num font-semibold w-24 text-right">{brl(m.gmvCents)}</span>
             <button type="button" disabled={busy} onClick={() => link(m.id, null)}
-              className="text-caption font-bold text-muted hover:text-danger">remover</button>
+              className="text-caption font-semibold text-n-500 hover:text-danger transition-ui">remover</button>
           </li>
         ))}
-        {salon.members.length === 0 && <li className="py-3 text-caption text-muted">Nenhuma profissional vinculada.</li>}
+        {salon.members.length === 0 && <li className="py-3 text-caption text-n-500">Nenhuma profissional vinculada.</li>}
       </ul>
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -120,18 +120,18 @@ function SalonCard({ salon, unassigned }: { salon: SalonView; unassigned: { id: 
           {unassigned.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <button type="button" disabled={!linking || busy} onClick={() => link(linking, salon.id)}
-          className="h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 inline-flex items-center gap-1.5 disabled:opacity-40">
+          className="h-9 px-3 rounded-full bg-surface-2 text-caption font-semibold text-heading hover:bg-n-150 transition-ui inline-flex items-center gap-1.5 disabled:opacity-40">
           <Link2 className="h-3.5 w-3.5" /> Vincular
         </button>
 
         <button type="button" onClick={() => setShowManager(v => !v)}
-          className="h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2 inline-flex items-center gap-1.5">
+          className="h-9 px-3 rounded-full bg-surface-2 text-caption font-semibold text-heading hover:bg-n-150 transition-ui inline-flex items-center gap-1.5">
           <UserPlus className="h-3.5 w-3.5" /> Criar login de gerente
         </button>
       </div>
 
       {salon.managers.length > 0 && (
-        <p className="text-caption text-muted">
+        <p className="text-caption text-n-500">
           Gerentes: {salon.managers.map(m => `${m.name} (${m.email})`).join(', ')}
         </p>
       )}
@@ -142,7 +142,7 @@ function SalonCard({ salon, unassigned }: { salon: SalonView; unassigned: { id: 
           <input placeholder="E-mail" type="email" value={manager.email} onChange={e => setManager(m => ({ ...m, email: e.target.value }))} className={`${field} text-caption`} />
           <input placeholder="Senha (mín. 6)" type="text" value={manager.password} onChange={e => setManager(m => ({ ...m, password: e.target.value }))} className={`${field} text-caption`} />
           <button type="button" disabled={busy} onClick={addManager}
-            className="h-9 px-3 rounded-xl bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold disabled:opacity-40">
+            className="h-9 px-3 rounded-full bg-wine-700 hover:bg-wine-800 text-white shadow-[var(--shadow-wine)] transition-ui text-caption font-bold disabled:opacity-40">
             {busy ? 'Criando…' : 'Criar gerente'}
           </button>
         </div>

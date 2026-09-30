@@ -6,11 +6,12 @@ import { ServerTable, ServerColumn } from '@/components/ui/ServerTable';
 import { SearchInput, FilterSelect, ClearFilters } from '@/components/ui/TableFilters';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { Badge } from '@/components/admin/badges';
+import { SubNav, SISTEMA_NAV } from '@/components/admin/SubNav';
 import { readAuditLog, AdminAuditRow } from '@/lib/audit';
 import { parseTableParams, RawSearchParams } from '@/lib/query-params';
 import { formatDateTimeBR } from '@/lib/format';
 
-export const metadata = { title: 'Logs | Lume Admin' };
+export const metadata = { title: 'Auditoria | Lume Admin' };
 
 const BASE = '/admin/logs';
 
@@ -28,62 +29,64 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
     offset: (params.page - 1) * params.pageSize,
   });
 
-  // A busca livre filtra a página carregada (o log é append-only e já vem recortado).
   const filtered = params.q
     ? rows.filter(r => JSON.stringify(r).toLowerCase().includes(params.q.toLowerCase()))
     : rows;
 
   const columns: ServerColumn<AdminAuditRow>[] = [
-    { key: 'when', header: 'Quando', primary: true, cell: r => <span className="num text-caption text-ink">{formatDateTimeBR(r.created_at)}</span> },
-    { key: 'admin', header: 'Quem', cell: r => <span className="text-caption text-muted truncate">{r.admin_email ?? '—'}</span> },
+    { key: 'when', header: 'Quando', primary: true, cell: r => <span className="num text-caption text-heading">{formatDateTimeBR(r.created_at)}</span> },
+    { key: 'admin', header: 'Quem', cell: r => <span className="text-caption text-n-500 truncate">{r.admin_email ?? '—'}</span> },
     { key: 'action', header: 'Ação', cell: r => <Badge tone="accent">{r.action}</Badge> },
-    { key: 'entity', header: 'Alvo', cell: r => <span className="text-caption text-muted truncate">{r.entity_type}{r.entity_id ? ` · ${r.entity_id.slice(0, 12)}…` : ''}</span> },
+    { key: 'entity', header: 'Alvo', cell: r => <span className="text-caption text-n-500 truncate">{r.entity_type}{r.entity_id ? ` · ${r.entity_id.slice(0, 12)}…` : ''}</span> },
     {
       key: 'diff', header: 'Antes → depois', hideOnMobile: true,
       cell: r => (
-        <span className="block max-w-md truncate text-caption text-muted font-mono" title={`${JSON.stringify(r.before ?? null)} → ${JSON.stringify(r.after ?? null)}`}>
+        <span className="block max-w-md truncate text-caption text-n-500" title={`${JSON.stringify(r.before ?? null)} → ${JSON.stringify(r.after ?? null)}`}>
           {JSON.stringify(r.before ?? null)} → {JSON.stringify(r.after ?? null)}
         </span>
       ),
     },
-    { key: 'ip', header: 'IP', hideOnMobile: true, cell: r => <span className="text-caption text-muted num">{r.ip ?? '—'}</span> },
+    { key: 'ip', header: 'IP', hideOnMobile: true, cell: r => <span className="text-caption text-n-500 num">{r.ip ?? '—'}</span> },
   ];
 
   return (
     <LayoutAdmin
       session={session}
-      title="Trilha de auditoria"
-      subtitle="Toda ação do admin, com antes e depois. Se a lista está vazia, rode a migration v32."
+      title="Auditoria"
+      subtitle="Toda ação feita pelo admin, com antes e depois."
       actions={<DateRangeFilter basePath={BASE} />}
     >
-      <ServerTable
-        columns={columns}
-        rows={filtered}
-        rowKey={r => r.id}
-        total={total}
-        params={params}
-        basePath={BASE}
-        searchParams={raw}
-        caption="Registro de ações administrativas"
-        toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            <SearchInput basePath={BASE} placeholder="Buscar nesta página…" className="w-full sm:w-64" />
-            <FilterSelect basePath={BASE} name="entity" label="Tipo de alvo" allLabel="Todos os alvos"
-              options={[
-                { value: 'professional', label: 'Profissional' }, { value: 'appointment', label: 'Agendamento' },
-                { value: 'client', label: 'Cliente' }, { value: 'conversation', label: 'Conversa' },
-                { value: 'plan', label: 'Plano' }, { value: 'export', label: 'Exportação' },
-                { value: 'notice', label: 'Aviso' }, { value: 'settings', label: 'Configuração' },
-              ]} />
-            <ClearFilters basePath={BASE} keys={['q', 'action', 'entity', 'range', 'from', 'to']} />
-          </div>
-        }
-        empty={{
-          title: 'Nenhum registro',
-          description: 'Nada foi feito nesse recorte — ou a migration v32 (admin_audit_log) ainda não foi aplicada.',
-          icon: <ScrollText className="h-8 w-8" />,
-        }}
-      />
+      <div className="space-y-4">
+        <SubNav items={SISTEMA_NAV} />
+        <ServerTable
+          columns={columns}
+          rows={filtered}
+          rowKey={r => r.id}
+          total={total}
+          params={params}
+          basePath={BASE}
+          searchParams={raw}
+          caption="Registro de ações administrativas"
+          toolbar={
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchInput basePath={BASE} placeholder="Buscar nesta página…" className="w-full sm:w-64" />
+              <FilterSelect basePath={BASE} name="entity" label="Tipo de alvo" allLabel="Todos os alvos"
+                options={[
+                  { value: 'professional', label: 'Conta' }, { value: 'appointment', label: 'Agendamento' },
+                  { value: 'client', label: 'Cliente' }, { value: 'conversation', label: 'Conversa' },
+                  { value: 'plan', label: 'Plano' }, { value: 'export', label: 'Exportação' },
+                  { value: 'notice', label: 'Aviso' }, { value: 'settings', label: 'Configuração' },
+                ]} />
+              <ClearFilters basePath={BASE} keys={['q', 'action', 'entity', 'range', 'from', 'to']} />
+            </div>
+          }
+          empty={{
+            title: 'Nenhum registro',
+            description: 'Nada foi feito nesse recorte — ou a migration v32 (admin_audit_log) ainda não foi aplicada.',
+            icon: <ScrollText />,
+          }}
+        />
+      </div>
     </LayoutAdmin>
   );
 }

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createProfessionalAction } from '@/app/actions/admin';
-import { ArrowLeft, Copy, CheckCircle2 } from 'lucide-react';
+import { Copy, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
 
@@ -94,17 +94,10 @@ export function NewProfessionalForm() {
   return (
     <div className="space-y-6 max-w-2xl select-none">
         {/* Voltar */}
-        <Link 
-          href="/admin/professionals"
-          className="inline-flex items-center gap-1.5 text-caption font-bold text-n-500 hover:text-wine-700 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Voltar para listagem</span>
-        </Link>
 
         {/* Modal de Sucesso com Credenciais Geradas */}
         {createdCredentials && (
-          <div className="bg-wine-950 text-white rounded-hero p-6 md:p-8 border border-wine-700 space-y-4 animate-scale-up">
+          <div className="surface-wine text-white rounded-hero p-6 md:p-8 space-y-4 animate-slide-up">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-8 w-8 text-wine-200" />
               <div>
@@ -113,39 +106,39 @@ export function NewProfessionalForm() {
               </div>
             </div>
 
-            <div className="bg-wine-700 rounded-2xl p-4 border border-wine-600 space-y-3 font-mono text-caption">
+            <div className="bg-white/10 rounded-surface p-4 space-y-3 font-mono text-caption">
               <div className="flex justify-between items-center gap-4">
                 <div>
-                  <span className="text-caption text-n-400 block font-sans font-bold">LINK PÚBLICO DE AGENDAMENTOS</span>
+                  <span className="text-micro text-white/60 block font-sans font-semibold tracking-wide">LINK PÚBLICO DE AGENDAMENTOS</span>
                   <span className="text-white">/agendar/{slug}</span>
                 </div>
                 <button 
                   onClick={() => copyToClipboard(`${window.location.origin}/agendar/${slug}`)}
-                  className="p-2 hover:bg-white/10 rounded-lg text-n-300"
+                  className="icon-chip h-9 w-9 bg-white/10 text-white hover:!bg-white/20 hover:!text-white" aria-label="Copiar"
                 >
                   <Copy className="h-4 w-4" />
                 </button>
               </div>
-              <div className="flex justify-between items-center gap-4 border-t border-wine-600 pt-3">
+              <div className="flex justify-between items-center gap-4 border-t border-white/15 pt-3">
                 <div>
-                  <span className="text-caption text-n-400 block font-sans font-bold">E-MAIL DE LOGIN</span>
+                  <span className="text-micro text-white/60 block font-sans font-semibold tracking-wide">E-MAIL DE LOGIN</span>
                   <span className="text-wine-200">{createdCredentials.email}</span>
                 </div>
                 <button 
                   onClick={() => copyToClipboard(createdCredentials.email)}
-                  className="p-2 hover:bg-white/10 rounded-lg text-n-300"
+                  className="icon-chip h-9 w-9 bg-white/10 text-white hover:!bg-white/20 hover:!text-white" aria-label="Copiar"
                 >
                   <Copy className="h-4 w-4" />
                 </button>
               </div>
-              <div className="flex justify-between items-center gap-4 border-t border-wine-600 pt-3">
+              <div className="flex justify-between items-center gap-4 border-t border-white/15 pt-3">
                 <div>
-                  <span className="text-caption text-n-400 block font-sans font-bold">SENHA TEMPORÁRIA</span>
+                  <span className="text-micro text-white/60 block font-sans font-semibold tracking-wide">SENHA TEMPORÁRIA</span>
                   <span className="text-wine-200">{createdCredentials.tempPass}</span>
                 </div>
                 <button 
                   onClick={() => copyToClipboard(createdCredentials.tempPass)}
-                  className="p-2 hover:bg-white/10 rounded-lg text-n-300"
+                  className="icon-chip h-9 w-9 bg-white/10 text-white hover:!bg-white/20 hover:!text-white" aria-label="Copiar"
                 >
                   <Copy className="h-4 w-4" />
                 </button>
@@ -154,7 +147,7 @@ export function NewProfessionalForm() {
 
             <button
               onClick={() => router.push('/admin/professionals')}
-              className="px-5 py-2.5 bg-wine-200 hover:bg-wine-300 text-wine-800 text-caption font-bold rounded-xl shadow-xs transition-colors w-full cursor-pointer"
+              className="inline-flex items-center justify-center h-11 px-5 w-full rounded-full bg-white hover:bg-wine-50 text-wine-800 text-caption font-semibold transition-ui"
             >
               Concluir e Voltar
             </button>
@@ -163,14 +156,14 @@ export function NewProfessionalForm() {
 
         {/* Formulário Principal */}
         {!createdCredentials && (
-          <form onSubmit={handleSubmit} className="bg-white border border-n-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
-            <h3 className="text-label font-bold text-n-800 uppercase tracking-wider border-b border-n-100 pb-3">
+          <form onSubmit={handleSubmit} className="card p-6 md:p-8 space-y-6">
+            <h3 className="text-h3 text-heading border-b border-line pb-3">
               Informações Cadastrais
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Nome Completo *
                 </label>
                 <input
@@ -179,12 +172,12 @@ export function NewProfessionalForm() {
                   placeholder="Ex: Amanda Costa"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Nome Comercial / Marca *
                 </label>
                 <input
@@ -193,12 +186,12 @@ export function NewProfessionalForm() {
                   placeholder="Ex: Amanda Costa Estética"
                   value={brandName}
                   onChange={(e) => handleBrandNameChange(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Slug da Agenda (lumeagenda.com/agendar/...) *
                 </label>
                 <input
@@ -207,12 +200,12 @@ export function NewProfessionalForm() {
                   placeholder="Ex: amanda-costa"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700 font-mono"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   WhatsApp *
                 </label>
                 <input
@@ -221,12 +214,12 @@ export function NewProfessionalForm() {
                   placeholder="Ex: 11999999999"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   E-mail de Login *
                 </label>
                 <input
@@ -235,12 +228,12 @@ export function NewProfessionalForm() {
                   placeholder="Ex: amanda@estetica.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Instagram (Opcional)
                 </label>
                 <input
@@ -248,13 +241,13 @@ export function NewProfessionalForm() {
                   placeholder="Ex: @amandacosta.estetica"
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+              <label className="block text-caption font-semibold text-n-600 mb-1.5">
                 Descrição Curta (Bio Pública)
               </label>
               <textarea
@@ -262,7 +255,7 @@ export function NewProfessionalForm() {
                 placeholder="Ex: Especialista em limpeza de pele e cuidado personalizado..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                className="field-input h-10 text-body-sm"
               />
             </div>
 
@@ -272,7 +265,7 @@ export function NewProfessionalForm() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Endereço Completo
                 </label>
                 <input
@@ -280,12 +273,12 @@ export function NewProfessionalForm() {
                   placeholder="Av. Paulista, 1000 - Sala 42"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+                  className="field-input h-10 text-body-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-semibold text-n-600 mb-1.5">
                   Cidade / Estado
                 </label>
                 <div className="flex gap-2">
@@ -308,17 +301,17 @@ export function NewProfessionalForm() {
               </div>
             </div>
 
-            <div className="pt-4 flex justify-end gap-3 border-t border-n-200">
+            <div className="pt-4 flex justify-end gap-3 border-t border-line">
               <Link
                 href="/admin/professionals"
-                className="px-5 py-3 border border-n-200 rounded-xl text-caption font-semibold text-n-600 hover:bg-n-50 transition-colors"
+                className="inline-flex items-center h-10 px-5 rounded-full text-caption font-semibold text-heading bg-surface ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:bg-n-25 transition-ui"
               >
                 Cancelar
               </Link>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full bg-wine-700 hover:bg-wine-800 text-white text-caption font-semibold shadow-[var(--shadow-wine)] transition-ui disabled:opacity-45"
               >
                 {isLoading ? 'Cadastrando...' : 'Salvar e Gerar Acesso'}
               </button>

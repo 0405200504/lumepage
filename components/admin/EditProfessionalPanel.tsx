@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Professional, ProfessionalStatus } from '@/types/database';
-import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { updateProfessionalAction } from '@/app/actions/professional';
 import { useToast } from '../ui/Toast';
 import Link from 'next/link';
@@ -66,7 +66,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
       } else {
         error('Falha ao salvar', res.error || 'Ocorreu um erro.');
       }
-    } catch (e) {
+    } catch {
       error('Erro', 'Ocorreu uma falha na rede.');
     } finally {
       setIsLoading(false);
@@ -75,23 +75,14 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
 
   return (
     <div className="space-y-6 max-w-3xl select-none">
-      {/* Voltar */}
-      <Link 
-        href="/admin/professionals"
-        className="inline-flex items-center gap-1.5 text-caption font-bold text-n-500 hover:text-wine-700 transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span>Voltar para listagem</span>
-      </Link>
-
-      <form onSubmit={handleSubmit} className="bg-white border border-n-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
-        <h3 className="text-label font-bold text-n-800 uppercase tracking-wider border-b border-n-100 pb-3">
+      <form onSubmit={handleSubmit} className="card p-6 md:p-8 space-y-6">
+        <h3 className="text-h3 text-heading border-b border-line pb-3">
           Editar Informações Principais
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Nome Completo
             </label>
             <input
@@ -99,12 +90,12 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Nome Comercial / Marca
             </label>
             <input
@@ -112,12 +103,12 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Slug da Agenda (lumeagenda.com/agendar/...)
             </label>
             <input
@@ -125,12 +116,12 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700 font-mono"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               WhatsApp
             </label>
             <input
@@ -138,12 +129,12 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               E-mail Comercial
             </label>
             <input
@@ -151,44 +142,44 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Instagram
             </label>
             <input
               type="text"
               value={instagram}
               onChange={(e) => setInstagram(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+          <label className="block text-caption font-semibold text-n-600 mb-1.5">
             Descrição Curta (Bio Rápida)
           </label>
           <textarea
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+            className="field-input h-10 text-body-sm"
           />
         </div>
 
         <div>
-          <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+          <label className="block text-caption font-semibold text-n-600 mb-1.5">
             Bio Completa da Página Pública
           </label>
           <textarea
             rows={3}
             value={publicBio}
             onChange={(e) => setPublicBio(e.target.value)}
-            className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+            className="field-input h-10 text-body-sm"
           />
         </div>
 
@@ -199,7 +190,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Cor Primária (Fundo)
             </label>
             <div className="flex gap-2">
@@ -219,7 +210,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Cor Secundária (Destaque)
             </label>
             <div className="flex gap-2">
@@ -239,7 +230,7 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Status da Operação
             </label>
             <select
@@ -261,19 +252,19 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Endereço Comercial Completo
             </label>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-n-200 rounded-xl text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 focus:border-wine-700"
+              className="field-input h-10 text-body-sm"
             />
           </div>
 
           <div>
-            <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-caption font-semibold text-n-600 mb-1.5">
               Cidade / Estado
             </label>
             <div className="flex gap-2">
@@ -296,17 +287,17 @@ export const EditProfessionalPanel: React.FC<EditProfessionalPanelProps> = ({
           </div>
         </div>
 
-        <div className="pt-4 flex justify-end gap-3 border-t border-n-200">
+        <div className="pt-4 flex justify-end gap-3 border-t border-line">
           <Link
             href="/admin/professionals"
-            className="px-5 py-3 border border-n-200 rounded-xl text-caption font-semibold text-n-600 hover:bg-n-50 transition-colors"
+            className="inline-flex items-center h-10 px-5 rounded-full text-caption font-semibold text-heading bg-surface ring-1 ring-inset ring-line-strong/70 shadow-[var(--shadow-xs)] hover:bg-n-25 transition-ui"
           >
             Cancelar
           </Link>
           <button
             type="submit"
             disabled={isLoading}
-            className="px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-caption font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full bg-wine-700 hover:bg-wine-800 text-white text-caption font-semibold shadow-[var(--shadow-wine)] transition-ui disabled:opacity-45"
           >
             <Save className="h-4 w-4" />
             <span>{isLoading ? 'Salvando...' : 'Salvar Alterações'}</span>

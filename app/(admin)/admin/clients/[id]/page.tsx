@@ -1,11 +1,11 @@
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
-import { StatCard } from '@/components/admin/primitives';
+import { StatStrip, Panel, KeyValue, EmptyState } from '@/components/admin/primitives';
 import { AppointmentStatusBadge, Badge } from '@/components/admin/badges';
+import { button } from '@/components/admin/ui';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { normalizePhone } from '@/lib/admin/queries';
 import { brl, formatDateBR, formatTimeBR } from '@/lib/format';
@@ -43,71 +43,69 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const first = appts.length ? appts[appts.length - 1].date : null;
   const last = appts.length ? appts[0].date : null;
   const prof = profData as { id: string; name: string; brand_name: string } | null;
-
-  const kpi = (label: string, value: string) => <StatCard key={label} label={label} value={value} />;
+  const forms = (anamnesis || []) as { id: string; created_at: string; status: string }[];
 
   return (
     <LayoutAdmin
       session={session}
       title={client.name}
-      subtitle={`${client.whatsapp}${client.email ? ` · ${client.email}` : ''} · cliente de ${prof?.brand_name || '—'}`}
+      subtitle={`Cliente de ${prof?.brand_name || '—'}`}
+      backHref="/admin/clients"
+      backLabel="Clientes"
       actions={
-        <>
-          <a href={buildWhatsappLink(client.whatsapp, '')} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-success hover:bg-surface-2">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </a>
-          <Link href="/admin/clients" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-line bg-surface text-caption font-bold text-ink hover:bg-surface-2">
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
-          </Link>
-        </>
+        <a href={buildWhatsappLink(client.whatsapp, '')} target="_blank" rel="noopener noreferrer" className={button('secondary', 'md')}>
+          <MessageCircle className="h-4 w-4" /> Abrir no WhatsApp
+        </a>
       }
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {kpi('Total gasto', brl(spent))}
-          {kpi('Ticket médio', brl(paid.length ? Math.round(spent / paid.length) : 0))}
-          {kpi('Atendimentos', String(appts.filter(a => a.status !== 'cancelled').length))}
-          {kpi('Faltas', String(noShows))}
-          {kpi('Primeira visita', formatDateBR(first, '—'))}
-          {kpi('Última visita', formatDateBR(last, '—'))}
-          {kpi('Telefone padronizado', normalizePhone(client.whatsapp) || '—')}
-          {kpi('Fichas de anamnese', String((anamnesis || []).length))}
-        </div>
+        <StatStrip items={[
+          { label: 'Total gasto', value: brl(spent), tone: 'accent' },
+          { label: 'Ticket médio', value: brl(paid.length ? Math.round(spent / paid.length) : 0) },
+          { label: 'Atendimentos', value: String(appts.filter(a => a.status !== 'cancelled').length) },
+          { label: 'Faltas', value: String(noShows), tone: noShows ? 'bad' : 'default' },
+        ]} />
 
-        {client.notes && (
-          <section className="card p-4">
-            <h2 className="text-label font-bold text-ink mb-1.5">Observações da profissional</h2>
-            <p className="text-caption text-muted whitespace-pre-wrap">{client.notes}</p>
-          </section>
-        )}
-
-        <section className="card overflow-hidden">
-          <h2 className="px-4 py-3 text-label font-bold text-ink border-b border-line">Histórico de agendamentos</h2>
-          <ul className="divide-y divide-line">
-            {appts.map(a => (
-              <li key={a.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-caption">
-                <span className="num font-semibold text-ink w-24">{formatDateBR(a.date)}</span>
-                <span className="num text-muted w-12">{formatTimeBR(a.start_time)}</span>
-                <span className="text-ink flex-1 min-w-[8rem] truncate">{a.service?.name}</span>
-                <span className="num text-ink">{brl(a.service?.price_cents || 0)}</span>
-                <AppointmentStatusBadge status={a.status} />
-              </li>
-            ))}
-            {appts.length === 0 && <li className="px-4 py-8 text-center text-caption text-muted">Nenhum agendamento.</li>}
-          </ul>
-        </section>
-
-        {(anamnesis || []).length > 0 && (
-          <section className="card p-4">
-            <h2 className="text-label font-bold text-ink mb-2">Fichas de anamnese</h2>
-            <ul className="flex flex-wrap gap-2">
-              {(anamnesis as { id: string; created_at: string; status: string }[]).map(f => (
-                <li key={f.id}><Badge tone="neutral">{formatDateBR(f.created_at)} · {f.status}</Badge></li>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <Panel flush title="Histórico de agendamentos" note={`${appts.length} registro(s)`} className="lg:col-span-8">
+            <ul className="divide-y divide-line border-t border-line">
+              {appts.map(a => (
+                <li key={a.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-body-sm">
+                  <span className="num font-semibold text-heading w-24">{formatDateBR(a.date)}</span>
+                  <span className="num text-n-500 w-12">{formatTimeBR(a.start_time)}</span>
+                  <span className="text-ink flex-1 min-w-[8rem] truncate">{a.service?.name}</span>
+                  <span className="num text-heading">{brl(a.service?.price_cents || 0)}</span>
+                  <AppointmentStatusBadge status={a.status} />
+                </li>
               ))}
+              {appts.length === 0 && <li><EmptyState title="Nenhum agendamento" className="py-8" /></li>}
             </ul>
-          </section>
-        )}
+          </Panel>
+
+          <div className="lg:col-span-4 space-y-4">
+            <Panel title="Ficha">
+              <dl>
+                <KeyValue label="WhatsApp">{client.whatsapp}</KeyValue>
+                <KeyValue label="Padronizado">{normalizePhone(client.whatsapp) || '—'}</KeyValue>
+                {client.email && <KeyValue label="E-mail">{client.email}</KeyValue>}
+                <KeyValue label="Primeira visita">{formatDateBR(first, '—')}</KeyValue>
+                <KeyValue label="Última visita">{formatDateBR(last, '—')}</KeyValue>
+                <KeyValue label="Fichas de anamnese">{forms.length}</KeyValue>
+              </dl>
+              {forms.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5 mt-3">
+                  {forms.map(f => <li key={f.id}><Badge tone="neutral">{formatDateBR(f.created_at)} · {f.status}</Badge></li>)}
+                </ul>
+              )}
+            </Panel>
+
+            {client.notes && (
+              <Panel title="Observações da profissional">
+                <p className="text-body-sm text-n-600 whitespace-pre-wrap">{client.notes}</p>
+              </Panel>
+            )}
+          </div>
+        </div>
       </div>
     </LayoutAdmin>
   );

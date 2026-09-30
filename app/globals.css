@@ -1241,20 +1241,68 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
    O /admin usa o MESMO sistema visual do painel da profissional: mesmos
    tokens do @theme, mesma tipografia, mesmos raios, mesmas sombras, mesmos
    cartões. Não há paleta separada — é um produto só, com duas áreas.
-
-   `.admin-shell` sobrou como gancho para uma coisa só: a densidade das
-   tabelas, que é preferência de quem passa o dia no painel, não decisão
-   de marca.
+   `.admin-shell` só marca a casca (tema via data-theme).
    ========================================================= */
 
-.admin-shell[data-density='compact'] table tbody td {
-  height: 44px;
-  padding-top: 0.375rem;
-  padding-bottom: 0.375rem;
+/* Link dentro de um `.segmented` (sub-navegação por rota). Mesmo desenho do
+   botão: o segmented original só estilizava <button>, e uma aba que é rota
+   precisa ser <a> para o navegador saber que é navegação. */
+.segmented > a.segmented-link {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  min-height: 40px;
+  white-space: nowrap;
+  font-size: var(--text-body-sm);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--color-n-600);
+  border-radius: var(--radius-pill);
+  transition: color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
 }
-.admin-shell[data-density='compact'] table thead th {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+@media (min-width: 640px) {
+  .segmented > a.segmented-link { min-height: 34px; }
+}
+.segmented > a.segmented-link[data-active='true'] {
+  color: var(--color-n-0);
+  background: var(--color-wine-700);
+  box-shadow: var(--shadow-xs);
+}
+[data-theme='dark'] .segmented > a.segmented-link[data-active='true'] { color: var(--color-wine-950); }
+@media (hover: hover) and (pointer: fine) {
+  .segmented > a.segmented-link:hover { color: var(--color-heading); }
+  .segmented > a.segmented-link[data-active='true']:hover { background: var(--color-wine-800); color: var(--color-n-0); }
+}
+
+/* Tabela do admin: cabeçalho em caixa normal, sem zebra, divisória clara. */
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  padding: 10px 16px;
+  text-align: left;
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-n-500);
+}
+.admin-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  vertical-align: middle;
+  font-size: var(--text-body-sm);
+}
+.admin-table tbody tr:last-child td { border-bottom: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-table tbody tr:hover td { background: var(--color-n-25); }
 }
 
 

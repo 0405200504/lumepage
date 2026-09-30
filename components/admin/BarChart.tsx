@@ -40,7 +40,7 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
   if (data.every(p => p.value === 0)) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-10" style={{ minHeight: height }}>
-        <p className="text-caption font-semibold text-muted">Sem movimento no período</p>
+        <p className="text-caption font-semibold text-n-500">Sem movimento no período</p>
         <p className="text-caption text-faint mt-0.5">Quando houver dados, o gráfico aparece aqui.</p>
       </div>
     );
@@ -80,12 +80,12 @@ export function BarChart({ points, format = v => String(v), height = 160, trimLe
           {/* Eixo X */}
           <ul className="absolute bottom-0 left-0 right-0 flex gap-1.5">
             {data.map((p, i) => (
-              <li key={i} className="flex-1 min-w-0 text-center text-caption text-muted truncate">{p.label}</li>
+              <li key={i} className="flex-1 min-w-0 text-center text-caption text-n-500 truncate">{p.label}</li>
             ))}
           </ul>
         </div>
       </div>
-      {caption && <figcaption className="mt-2 text-caption text-muted">{caption}</figcaption>}
+      {caption && <figcaption className="mt-2 text-caption text-n-500">{caption}</figcaption>}
     </figure>
   );
 }
