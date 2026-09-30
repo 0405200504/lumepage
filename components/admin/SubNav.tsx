@@ -43,12 +43,18 @@ export function SubNav({ items, className = '' }: { items: SubNavItem[]; classNa
   );
 }
 
-/** Abas dentro de uma tela (detalhe da conta): mesma pílula, com `?tab=` na URL. */
-export function TabNav({ items, active, hrefFor }: {
+/**
+ * Abas dentro de uma tela (detalhe da conta): mesma pílula, com `?tab=` na URL.
+ * Recebe o caminho base como TEXTO: este arquivo é 'use client', e o servidor não
+ * pode passar função para componente de navegador (a página quebrava ao abrir).
+ */
+export function TabNav({ items, active, basePath, param = 'tab' }: {
   items: { key: string; label: string }[];
   active: string;
-  hrefFor: (key: string) => string;
+  basePath: string;
+  param?: string;
 }) {
+  const hrefFor = (key: string) => `${basePath}?${param}=${key}`;
   return (
     <nav className="segmented" aria-label="Seções">
       {items.map(t => (

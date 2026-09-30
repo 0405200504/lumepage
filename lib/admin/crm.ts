@@ -322,7 +322,11 @@ export function hublaPayerOf(payload: unknown): { name: string | null; phone: st
 
 export interface MigrationProbe { label: string; file: string; table?: string; column?: string; fn?: string }
 
-/** As migrations que o código depende para funcionar por completo. */
+/**
+ * As migrations que o código depende para funcionar por completo.
+ * Só entram funções SEM parâmetros: chamar pelo PostgREST uma função que exige
+ * argumentos devolve "não encontrada" mesmo quando ela existe (caso da v31).
+ */
 export const MIGRATION_PROBES: MigrationProbe[] = [
   { label: 'Financeiro, tarefas e sinal', file: 'migration_v3.sql', table: 'transactions' },
   { label: 'Grupos (salões)', file: 'migration_v6.sql', table: 'salons' },
@@ -336,7 +340,6 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
   { label: 'Vencimento do acesso', file: 'migration_v28_subscription_access.sql', table: 'professionals', column: 'subscription_ends_at' },
   { label: 'Fichas de anamnese', file: 'migration_v29_anamnesis.sql', table: 'anamnesis_forms' },
   { label: 'Minha Página', file: 'migration_v30_professional_sites.sql', table: 'professional_sites' },
-  { label: 'Trava de horário', file: 'migration_v31_slot_lock.sql', fn: 'lume_claim_slot' },
   { label: 'Auditoria do admin', file: 'migration_v32_admin_audit.sql', table: 'admin_audit_log' },
   { label: 'Planos e histórico', file: 'migration_v33_plans.sql', table: 'plans' },
   { label: 'Avisos e configurações', file: 'migration_v34_admin_system.sql', table: 'admin_notices' },

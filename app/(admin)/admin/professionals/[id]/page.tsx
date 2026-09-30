@@ -160,7 +160,7 @@ export default async function ProfessionalDetailPage({
       <div className="space-y-4">
         {/* Identidade + abas */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabNav items={TABS} active={active} hrefFor={key => `/admin/professionals/${id}?tab=${key}`} />
+          <TabNav items={TABS} active={active} basePath={`/admin/professionals/${id}`} />
           <div className="flex flex-wrap items-center gap-2.5 px-1">
             <AccountStateGroup account={p} />
             <Link href={`/agendar/${p.slug}`} target="_blank" className={`inline-flex items-center gap-1 ${textLink}`}>
