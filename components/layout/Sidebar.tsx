@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -305,11 +305,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
     } catch { /* modo privativo: segue recolhida */ }
   }, []);
 
+  const togglePinned = useCallback(() => setPinned((p) => {
+    const next = !p;
+    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch { /* ignora */ }
+    return next;
+  }), []);
+
+  // O ≡ do topo (Header) dispara OPEN_NAV_EVENT. No celular abre a gaveta.
+  // No computador a gaveta não existe (é lg:hidden), mas o ≡ aparece mesmo
+  // assim: o .icon-chip fica fora de @layer e vence o `lg:hidden` dele. Lá o
+  // clique abre (ou recolhe) a barra com os nomes, que é o que se espera.
   useEffect(() => {
-    const abrir = () => setDrawerOpen(true);
+    const abrir = () => {
+      if (window.matchMedia('(min-width: 64rem)').matches) togglePinned();
+      else setDrawerOpen(true);
+    };
     window.addEventListener(OPEN_NAV_EVENT, abrir);
     return () => window.removeEventListener(OPEN_NAV_EVENT, abrir);
-  }, []);
+  }, [togglePinned]);
 
   // Trava a rolagem do fundo enquanto a gaveta está aberta.
   useEffect(() => {
@@ -318,12 +331,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = anterior; };
   }, [drawerOpen]);
-
-  const togglePinned = () => setPinned((p) => {
-    const next = !p;
-    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch { /* ignora */ }
-    return next;
-  });
 
   const handleLogout = async () => {
     try {
