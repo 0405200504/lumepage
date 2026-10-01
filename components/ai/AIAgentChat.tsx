@@ -5,7 +5,7 @@ import { useChat } from 'ai/react';
 import type { Message } from 'ai';
 import { X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square, AudioLines } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { VoiceMode } from './VoiceMode';
+import { VoiceMode, warmVoice } from './VoiceMode';
 import { AnaButton } from './AnaButton';
 import { AnaAvatar } from './AnaBrand';
 
@@ -291,13 +291,23 @@ export function AIAgentChat() {
       setVoiceMini(mini);
       setVoiceOpen(true);
     };
+    // A voz pode ser aberta a qualquer momento (botão, menu, chat): a função
+    // que abre a conversa já fica acordada com o painel aberto e quando o
+    // app volta para a frente.
+    const aVista = () => { if (document.visibilityState === 'visible') warmVoice(); };
+    aVista();
     window.addEventListener(OPEN_AI_EVENT, abrir);
     window.addEventListener(OPEN_VOICE_EVENT, abrirVoz);
+    document.addEventListener('visibilitychange', aVista);
     return () => {
       window.removeEventListener(OPEN_AI_EVENT, abrir);
       window.removeEventListener(OPEN_VOICE_EVENT, abrirVoz);
+      document.removeEventListener('visibilitychange', aVista);
     };
   }, []);
+
+  // Com o chat aberto, o botão de voz está a um toque.
+  useEffect(() => { if (isOpen) warmVoice(); }, [isOpen]);
 
   // Enter envia; Shift+Enter quebra a linha (o padrão dos chats de IA).
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
