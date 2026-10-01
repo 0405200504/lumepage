@@ -345,9 +345,11 @@ svg.lucide {
 
 /* Cetim — só o hero do Início (faturamento). A foto do tecido substitui o
    degradê; o vinho escuro fica por baixo enquanto a imagem carrega. A foto
-   já traz grão próprio, então o grão da .surface-wine sai. */
+   já traz grão próprio, então o grão da .surface-wine sai. A película
+   escura de 20% por cima destaca os números sem apagar o brilho do tecido. */
 .surface-satin {
   background:
+    linear-gradient(rgb(10 0 3 / 0.2), rgb(10 0 3 / 0.2)),
     url('/textures/cetim-hero.webp') center / cover no-repeat,
     var(--color-wine-950);
 }
