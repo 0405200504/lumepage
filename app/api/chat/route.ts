@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
     const professionalId = session.professional_id;
 
-    // 2. Teto de IA do mês (migração v42). Sem a migração o chat segue sem
+    // 2. Teto de IA do mês (migração v43). Sem a migração o chat segue sem
     //    contar: custa frações de centavo por mensagem. A voz, essa sim, fica
     //    desligada sem o teto.
     let metered = true;

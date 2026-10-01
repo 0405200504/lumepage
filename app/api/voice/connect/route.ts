@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     minutes = Math.min(VOICE_MAX_MINUTES, Math.floor(remaining / (VOICE_RESERVE_USD_PER_MIN * 1e6)));
   } catch (e) {
     if (e instanceof BudgetUnavailable) {
-      return Response.json({ error: 'A conversa por voz ainda não foi ativada (falta rodar a migração v42 no banco).' }, { status: 503 });
+      return Response.json({ error: 'A conversa por voz ainda não foi ativada (falta rodar a migração v43 no banco).' }, { status: 503 });
     }
     throw e;
   }
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
     : { error: new Error('sem banco') };
   if (insErr) {
     await hangupRealtimeCall(callId);
-    return Response.json({ error: 'A conversa por voz ainda não foi ativada (falta rodar a migração v42 no banco).' }, { status: 503 });
+    return Response.json({ error: 'A conversa por voz ainda não foi ativada (falta rodar a migração v43 no banco).' }, { status: 503 });
   }
 
   return Response.json({

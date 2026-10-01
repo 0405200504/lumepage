@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const session = await requireProfessional();
     const professionalId = session.professional_id!;
 
-    // Teto de IA do mês (migração v42); sem a migração, segue sem contar.
+    // Teto de IA do mês (migração v43); sem a migração, segue sem contar.
     let metered = true;
     try {
       if ((await remainingMicros(professionalId)) <= 0) return new Response(BUDGET_REACHED_MSG, { status: 402 });

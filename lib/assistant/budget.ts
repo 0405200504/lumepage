@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/client';
  *
  * Tudo o que a assistente consome na OpenAI (chat de texto, ditado e voz)
  * vira custo em micro-dólares (US$ 1 = 1.000.000) e é somado em
- * ai_usage_monthly (migração v42). Ao chegar no teto, a assistente para até
+ * ai_usage_monthly (migração v43). Ao chegar no teto, a assistente para até
  * o dia 1º. O teto é em REAIS; a conversão usa o dólar com IOF e folga.
  *
  * Preços por 1M tokens: developers.openai.com/api/docs/pricing (30/09/2026).
@@ -49,7 +49,7 @@ const WHISPER_USD_PER_MIN = 0.006;
 const VOICE_TRANSCRIBE_USD_PER_MIN = 0.003;
 
 export class BudgetUnavailable extends Error {
-  constructor() { super('Teto de IA indisponível: rode a migração v42 no Supabase.'); }
+  constructor() { super('Teto de IA indisponível: rode a migração v43 no Supabase.'); }
 }
 
 /** Mês corrente no fuso de São Paulo, 'YYYY-MM'. */

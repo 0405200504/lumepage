@@ -1,5 +1,5 @@
 -- =====================================================================
--- LUME · Migração v42 — teto de gasto de IA por profissional (R$/mês)
+-- LUME · Migração v43 — teto de gasto de IA por profissional (R$/mês)
 --
 -- Toda chamada à IA da assistente (chat de texto, ditado e conversa por
 -- voz) soma o custo REAL em ai_usage_monthly. Quando a profissional chega

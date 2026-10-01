@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 /**
  * Guarda da conversa por voz — chamada a cada minuto pelo pg_cron (migração
- * v42). Encerra na OpenAI toda chamada que passou do prazo. É o que segura o
+ * v43). Encerra na OpenAI toda chamada que passou do prazo. É o que segura o
  * teto mesmo se o app for adulterado para não desligar sozinho.
  */
 export async function GET(req: NextRequest) {
