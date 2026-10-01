@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden bg-[#0d0a0b]">
+    <div className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative">
       <LoginVideoBackground />
 
       {/* A entrada anima cada bloco, não o wrapper: opacidade animada num ancestral

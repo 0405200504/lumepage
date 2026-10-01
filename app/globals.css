@@ -421,7 +421,8 @@ svg.lucide {
   -webkit-appearance: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .bg-video { display: none; }
+  .bg-video,
+  .bg-video-fallback { display: none; }
 }
 /* Nos controles novos do WebKit as regras acima não alcançam o botão de
    play. Então o primeiro quadro cobre o vídeo enquanto ele está pausado.
@@ -433,6 +434,15 @@ svg.lucide {
   transition: opacity 200ms var(--ease-out);
 }
 .bg-video:paused + .bg-video-cover { opacity: 1; }
+
+/* Login: a página inteira é o bordô da borda do vídeo. O Safari do iOS 26
+   ignora o theme-color e pinta a barra de status e a área da barra de
+   endereço com o fundo do html/body — com o cinza do painel, eram duas
+   faixas claras. Também é a cor do elástico da rolagem. */
+html:has(.login-backdrop),
+body:has(.login-backdrop) {
+  background-color: #2d0c17;
+}
 
 /* ── CARTÃO ────────────────────────────────────────────────
    Branco, raio 20, sombra difusa e NENHUMA borda.
