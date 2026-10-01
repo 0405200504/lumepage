@@ -1,5 +1,5 @@
 // Gera as telas de abertura do iPhone em public/splash/ — o primeiro quadro
-// da cortina de abertura (#lume-splash em app/globals.css), sem a marca: o
+// da cortina de abertura (#lume-splash em lib/ui/splashScene.ts), sem a marca: o
 // cetim do login (LUME_SATIN_MOBILE) em "cover" com a folga de 6% da
 // cortina, e a vinheta dela por cima. Contexto em lib/ui/appleStartupImages.ts.
 //

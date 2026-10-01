@@ -2,14 +2,16 @@
 
 import { useEffect } from 'react';
 import { isChimeEnabled, playAppChime } from '@/lib/ui/appChime';
+import {
+  PANEL_FLAG_KEY,
+  SPLASH_EXIT_MS,
+  SPLASH_HANDOFF_KEY,
+  SPLASH_SCENE_MS,
+  SPLASH_SESSION_KEY,
+} from '@/lib/ui/splashScene';
 
-/** Marca "esta sessão já viu a abertura". Some quando o app é fechado de
- *  verdade — que é justamente quando a abertura deve voltar a acontecer. */
-export const SPLASH_SESSION_KEY = 'lume:abertura-vista';
-
-/** Cortina: 2350ms de cena + 450ms de saída. Tem de casar com os keyframes
- *  de `#lume-splash` em globals.css. */
-const SPLASH_MS = 2800;
+/** Cortina: 2350ms de cena + 450ms de saída (lib/ui/splashScene). */
+const SPLASH_MS = SPLASH_SCENE_MS + SPLASH_EXIT_MS;
 
 /** O som toca no encaixe das metades da estrela (o clarão), não no primeiro
  *  quadro: a nota chega junto com o gesto que ela sublinha. */
@@ -23,6 +25,18 @@ const CHIME_AT_MS = 860;
 export function SplashRunner() {
   useEffect(() => {
     const html = document.documentElement;
+
+    // "Esta pessoa entra no painel": a tela de abertura do service worker
+    // (app/abertura/route.ts) só toca a cena quando sabe disso — senão a
+    // estrela acenderia antes do formulário de login. O login apaga.
+    // O bastão da tela de abertura já foi lido pela porteira (ou não serve
+    // mais, se o painel chegou por navegação de cliente).
+    try {
+      localStorage.setItem(PANEL_FLAG_KEY, '1');
+      sessionStorage.removeItem(SPLASH_HANDOFF_KEY);
+    } catch {
+      /* storage bloqueado: a abertura instantânea só não toca a cena */
+    }
 
     // Porteira já decidiu que esta sessão não vê abertura (recarregou a
     // página, ou voltou ao painel depois de sair). Sem som, sem cortina.
@@ -53,14 +67,25 @@ export function SplashRunner() {
       html.dataset.splash = 'off';
     };
 
+    // Continuação da tela de abertura: a cena já vinha tocando, então o
+    // relógio é o que falta da saída (a porteira gravou em --lume-exit). O
+    // som não toca — o encaixe passou, e numa abertura fria sem toque o
+    // navegador não deixaria tocar mesmo (lib/ui/appChime).
+    const continuacao = html.dataset.splash === 'handoff';
+    const restante = continuacao
+      ? (parseFloat(html.style.getPropertyValue('--lume-exit')) || 0) + SPLASH_EXIT_MS
+      : SPLASH_MS;
+
     // Relógio da animação de CSS.
-    let timer = window.setTimeout(encerrar, SPLASH_MS);
+    let timer = window.setTimeout(encerrar, restante);
 
     // O som, no tempo do encaixe. Quem pulou antes não ouve nada — uma nota
     // sobre o painel já aberto soaria fora de lugar.
-    const chime = window.setTimeout(() => {
-      if (!encerrada && isChimeEnabled()) playAppChime();
-    }, CHIME_AT_MS);
+    const chime = continuacao
+      ? 0
+      : window.setTimeout(() => {
+          if (!encerrada && isChimeEnabled()) playAppChime();
+        }, CHIME_AT_MS);
 
     // Toque/clique pula a abertura: a cortina abrevia a saída ('skip') e
     // some logo depois.

@@ -15,6 +15,12 @@ export default function PwaRegister() {
         /* registro falhou silenciosamente — app continua funcionando */
       });
     };
+    // A hidratação pode chegar depois do `load` — aí o evento já passou e o
+    // service worker nunca seria registrado (nem a abertura instantânea).
+    if (document.readyState === 'complete') {
+      onLoad();
+      return;
+    }
     window.addEventListener('load', onLoad);
     return () => window.removeEventListener('load', onLoad);
   }, []);
