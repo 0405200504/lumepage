@@ -72,7 +72,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="stagger-item flex justify-center mb-8" style={{ ['--i' as string]: 0 }}>
           <h1 className="sr-only">Entrar na Lume</h1>
-          <LumeLogo variant="light" className="h-9" />
+          <LumeLogo variant="light" className="h-14" />
         </div>
 
         {/* Card de Login — vidro fosco sobre o vídeo */}

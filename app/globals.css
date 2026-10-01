@@ -1111,10 +1111,11 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear 
   to   { transform: scale(1.03); }
 }
 
-/* O wordmark é MÁSCARA (arte só-alfa em --lume-mark) preenchida de creme. */
+/* A logo é MÁSCARA (arte só-alfa em --lume-mark) preenchida de branco.
+   A estrela come ~40% da largura: o "lume" sai do tamanho de antes. */
 .lume-splash__mark {
-  width: min(48vw, 200px);
-  aspect-ratio: 577 / 206;   /* proporção real do wordmark */
+  width: min(72vw, 300px);
+  aspect-ratio: 673 / 227;   /* proporção real da logo (estrela + "lume") */
   background: #fff;
   -webkit-mask-image: var(--lume-mark);
           mask-image: var(--lume-mark);
@@ -1134,7 +1135,7 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear 
 /* Fio de luz que se abre do centro sob a marca — o mesmo gesto da hairline
    da LP. */
 .lume-splash__line {
-  width: min(40vw, 168px);
+  width: min(56vw, 240px);
   height: 1px;
   background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5), transparent);
   transform-origin: center;

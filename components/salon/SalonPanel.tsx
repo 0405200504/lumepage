@@ -69,7 +69,7 @@ export const SalonPanel: React.FC<SalonPanelProps> = ({ managerName, salonName, 
       <header className="surface-wine text-white">
         <div className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <LumeLogo variant="light" className="h-7" />
+            <LumeLogo variant="light" className="h-12" />
             <span className="hidden sm:inline text-caption font-bold uppercase tracking-[0.2em] text-white/55 border-l border-white/20 pl-3">Gerente de Contas</span>
           </div>
           <button onClick={logout} className="inline-flex items-center gap-2 text-caption font-bold text-white/70 hover:text-white transition-colors"><LogOut className="h-4 w-4" /> Sair</button>

@@ -89,7 +89,7 @@ export default function AuthCallbackPage() {
       className="min-h-screen min-h-dvh flex flex-col items-center justify-center px-4 select-none"
       style={{ background: 'linear-gradient(160deg, #26040a 0%, #1a0409 55%, #120207 100%)' }}
     >
-      <LumeLogo variant="light" className="h-11 text-white mb-6" />
+      <LumeLogo variant="light" className="h-18 mb-6" />
       <div className="flex items-center gap-3 text-white/80">
         {!falhou && <span className="h-5 w-5 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />}
         <span className="text-sm font-semibold text-center">{message}</span>

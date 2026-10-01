@@ -93,7 +93,7 @@ export function WelcomeForm({
   return (
     <div className="max-w-md w-full z-10 animate-fade-up">
       <div className="flex flex-col items-center mb-6">
-        <LumeLogo variant="light" className="h-12 text-white mb-5" />
+        <LumeLogo variant="light" className="h-20 mb-5" />
         <h2 className="text-h2 font-semibold text-white tracking-tight text-center">
           {step === 1 ? 'Falta pouco pra começar' : 'Conta pronta!'}
         </h2>

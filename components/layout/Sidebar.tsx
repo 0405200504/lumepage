@@ -387,7 +387,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
               className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               aria-label="Lume — Início"
             >
-              <LumeLogo variant="light" className={expanded ? 'h-5' : 'h-4'} />
+              {expanded
+                ? <LumeLogo variant="light" className="h-8" />
+                : <LumeLogo variant="light" star className="h-7" />}
             </Link>
             {expanded && toggleButton}
           </div>
@@ -413,7 +415,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
           <aside className="rail-wine surface-wine text-white relative w-[88%] max-w-xs h-full shadow-[var(--shadow-lg)] flex flex-col animate-slide-right rounded-r-hero overflow-hidden">
             <div className="shrink-0 pt-safe">
               <div className="flex items-center justify-between h-16 px-5">
-                <LumeLogo variant="light" className="h-5" />
+                <LumeLogo variant="light" className="h-8" />
                 <button
                   type="button"
                   aria-label="Fechar menu"

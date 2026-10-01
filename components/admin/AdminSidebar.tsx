@@ -226,7 +226,9 @@ export function AdminSidebar({ name, email, initialCollapsed, alertCount = 0 }: 
         >
           <div className={`shrink-0 flex items-center h-16 ${expanded ? 'justify-between px-5' : 'justify-center'}`}>
             <Link href="/admin" aria-label="Lume · painel administrativo" className="flex items-center gap-2 rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
-              <LumeLogo variant="wine" className={expanded ? 'h-5' : 'h-4'} />
+              {expanded
+                ? <LumeLogo variant="wine" className="h-8" />
+                : <LumeLogo variant="wine" star className="h-7" />}
               {expanded && <span className="text-micro font-bold uppercase tracking-[0.14em] text-n-400 mt-0.5">Admin</span>}
             </Link>
             {expanded && (
@@ -253,7 +255,7 @@ export function AdminSidebar({ name, email, initialCollapsed, alertCount = 0 }: 
           <aside className="relative w-[280px] max-w-[85vw] h-full bg-surface shadow-[var(--shadow-lg)] flex flex-col animate-slide-right rounded-r-hero">
             <div className="shrink-0 flex items-center justify-between h-16 px-5">
               <Link href="/admin" aria-label="Lume · painel administrativo" className="flex items-center gap-2">
-                <LumeLogo variant="wine" className="h-5" />
+                <LumeLogo variant="wine" className="h-8" />
                 <span className="text-micro font-bold uppercase tracking-[0.14em] text-n-400 mt-0.5">Admin</span>
               </Link>
               <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu" className="icon-chip h-9 w-9">

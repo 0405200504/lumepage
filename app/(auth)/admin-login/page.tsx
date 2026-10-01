@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
 
       <div className="max-w-md w-full z-10 animate-fade-up">
         <div className="flex flex-col items-center mb-6">
-          <LumeLogo variant="light" className="h-12 text-white mb-5" />
+          <LumeLogo variant="light" className="h-20 mb-5" />
           <h2 className="text-h2 font-semibold text-white tracking-tight flex items-center gap-2">
             <ShieldCheck className="text-wine-500 h-6 w-6" />
             Lume Admin

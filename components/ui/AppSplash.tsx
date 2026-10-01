@@ -41,9 +41,9 @@ export const AppSplash: React.FC = () => {
 
       <div id="lume-splash" aria-hidden="true">
         <div className="lume-splash__stage">
-          {/* O wordmark é uma máscara, não um <img>: a arte só-alfa
-              (lib/ui/lumeMaskData, 26 kB) entra uma vez como data URI em
-              --lume-mark e o preenchimento é a cor creme. */}
+          {/* A logo é uma máscara, não um <img>: a arte só-alfa
+              (lib/ui/lumeMaskData, 19 kB) entra uma vez como data URI em
+              --lume-mark e o preenchimento é branco. */}
           <div
             className="lume-splash__mark"
             style={{ '--lume-mark': `url(${LUME_MARK_MASK})` } as React.CSSProperties}

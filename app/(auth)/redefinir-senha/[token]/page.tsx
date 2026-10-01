@@ -26,7 +26,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
     >
       <div className="max-w-md w-full z-10">
         <div className="flex flex-col items-center mb-6">
-          <LumeLogo variant="light" className="h-12 text-white mb-5" />
+          <LumeLogo variant="light" className="h-20 mb-5" />
           <h1 className="text-h2 font-semibold text-white tracking-tight">Criar uma nova senha</h1>
           <p className="text-caption text-white/55 mt-1.5">Você escolhe. Ninguém da Lume vê o que você digitar aqui.</p>
         </div>

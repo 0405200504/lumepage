@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
       <div className="max-w-md w-full z-10 animate-fade-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-6">
-          <LumeLogo variant="light" className="h-12 text-white mb-5" />
+          <LumeLogo variant="light" className="h-20 mb-5" />
           <h1 className="text-h2 font-semibold text-white tracking-tight">
             Recuperar senha
           </h1>
