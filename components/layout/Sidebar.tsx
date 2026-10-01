@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
   LayoutDashboard, LogOut, ExternalLink, Wallet, NotebookPen, Hourglass,
   MessageCircle, Smartphone, Bot, ShoppingBag, Contact, ClipboardList, Globe,
-  X, PanelLeftClose, PanelLeftOpen, Mic,
+  X, Mic,
 } from 'lucide-react';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
@@ -96,9 +96,9 @@ const NavItem: React.FC<{
 }> = ({ link, active, locked, badge, showLabel, onNavigate }) => {
   const Icon = link.icon;
 
-  // Recolhido: disco de 40px; ativo em branco sobre o vinho. O rótulo aparece
-  // no tooltip depois de 400ms — tempo suficiente para não piscar quando o
-  // mouse só está atravessando a barra rumo ao conteúdo.
+  // Recolhido: disco de 40px; ativo em branco sobre o vinho. Com o mouse a
+  // barra inteira abre com os nomes; o tooltip fica para quem navega pelo
+  // teclado (aparece no foco).
   if (!showLabel) {
     return (
       <Link
@@ -144,7 +144,7 @@ const NavItem: React.FC<{
  *
  *  Recolhido: TODOS os destinos, só o ícone, com um fio entre os grupos. O
  *  rail não esconde mais nada atrás de um botão — o que ela procura está
- *  sempre à vista, e o rótulo vem no tooltip.
+ *  sempre à vista, e o nome aparece quando o mouse abre a barra.
  *  Aberto: os mesmos grupos, com título e rótulo. */
 const NavBody: React.FC<{
   pathname: string;
@@ -286,43 +286,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
   const router = useRouter();
   const { success, error } = useToast();
 
-  // Desktop: recolhido por padrão (todos os ícones à vista); `pinned` abre com
-  // os rótulos e persiste entre sessões. Não abre mais no hover: com todos
-  // os destinos já visíveis, abrir ao passar o mouse só punha uma coluna de
-  // texto na frente do conteúdo a cada travessia da barra.
-  const [pinned, setPinned] = useState(false);
-  const expanded = pinned;
+  // Desktop: recolhida (só os ícones) e abre com os nomes ao passar o mouse;
+  // tirou o mouse, recolhe sozinha. Sem botão de fixar nem estado salvo: uma
+  // barra presa aberta desmentiria o "recolhe sozinha".
+  //
+  // Os dois atrasos são curtos de propósito: o de abrir só filtra o mouse que
+  // ATRAVESSA a barra a caminho de outro lugar; o de fechar perdoa a mão que
+  // escapa um instante da borda enquanto mira um item.
+  const [expanded, setExpanded] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverTo = (open: boolean) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setExpanded(open), open ? 90 : 180);
+  };
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
 
   // Mobile: gaveta, aberta pelo hambúrguer do topo.
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // O valor só existe no navegador; ler durante o render quebraria a
-  // hidratação (servidor e cliente renderizariam barras diferentes).
   useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (localStorage.getItem('lume_sidebar_pinned') === '1') setPinned(true);
-    } catch { /* modo privativo: segue recolhida */ }
-  }, []);
-
-  const togglePinned = useCallback(() => setPinned((p) => {
-    const next = !p;
-    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch { /* ignora */ }
-    return next;
-  }), []);
-
-  // O ≡ do topo (Header) dispara OPEN_NAV_EVENT. No celular abre a gaveta.
-  // No computador a gaveta não existe (é lg:hidden), mas o ≡ aparece mesmo
-  // assim: o .icon-chip fica fora de @layer e vence o `lg:hidden` dele. Lá o
-  // clique abre (ou recolhe) a barra com os nomes, que é o que se espera.
-  useEffect(() => {
-    const abrir = () => {
-      if (window.matchMedia('(min-width: 64rem)').matches) togglePinned();
-      else setDrawerOpen(true);
-    };
+    const abrir = () => setDrawerOpen(true);
     window.addEventListener(OPEN_NAV_EVENT, abrir);
     return () => window.removeEventListener(OPEN_NAV_EVENT, abrir);
-  }, [togglePinned]);
+  }, []);
 
   // Trava a rolagem do fundo enquanto a gaveta está aberta.
   useEffect(() => {
@@ -358,38 +344,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
   const badgeFor = (href: string) =>
     href === '/dashboard/pending' && pendingConversations ? pendingConversations : 0;
 
-  const toggleButton = (
-    <button
-      type="button"
-      onClick={togglePinned}
-      aria-pressed={pinned}
-      aria-label={pinned ? 'Recolher o menu' : 'Abrir o menu com os nomes'}
-      title={pinned ? 'Recolher o menu' : 'Abrir o menu com os nomes'}
-      className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-    >
-      {pinned ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-      {!pinned && <span className="rail-tooltip top-1/2 -translate-y-1/2">Abrir o menu</span>}
-    </button>
-  );
-
   return (
     <>
       {/* ================= RAIL (desktop ≥1024px) =================
           A superfície vinho da tela — UMA por tela, e aqui é ela: a barra
           escura dá contraste com qualquer aba, que é sempre clara.
 
-          76px recolhido, 272px aberto. O painel é `fixed`, fora do fluxo, e o
-          <aside> ao lado reserva uma faixa de largura CONSTANTE: o conteúdo
-          da página não relayoutiza, a barra abre por cima. */}
+          76px recolhido, 272px com o mouse em cima. O painel é `fixed`, fora
+          do fluxo, e o <aside> ao lado reserva uma faixa de largura CONSTANTE:
+          o conteúdo da página não relayoutiza, a barra abre por cima. */}
       <aside className="hidden lg:block shrink-0 w-[100px]" aria-label="Navegação principal">
         <div
+          onMouseEnter={() => hoverTo(true)}
+          onMouseLeave={() => hoverTo(false)}
           data-expanded={expanded || undefined}
           className={`rail-wine surface-wine text-white fixed left-4 top-4 bottom-4 z-40 flex flex-col
             rounded-hero shadow-[var(--shadow-md)]
             transition-[width] duration-[var(--dur-base)] ease-[var(--ease-out)]
             ${expanded ? 'w-[272px]' : 'w-[76px]'}`}
         >
-          <div className={`shrink-0 flex items-center h-16 ${expanded ? 'justify-between px-5' : 'justify-center'}`}>
+          <div className={`shrink-0 flex items-center h-16 ${expanded ? 'px-5' : 'justify-center'}`}>
             <Link
               href="/dashboard"
               className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -399,7 +373,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
                 ? <LumeLogo variant="light" className="h-8" />
                 : <LumeLogo variant="light" star className="h-7" />}
             </Link>
-            {expanded && toggleButton}
           </div>
 
           <NavBody
@@ -408,9 +381,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
             lockedFor={lockedFor}
             badgeFor={badgeFor}
           />
-          {!expanded && (
-            <div className="shrink-0 flex justify-center pb-1">{toggleButton}</div>
-          )}
           <NavFooter showLabel={expanded} publicSlug={publicSlug} displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} />
         </div>
       </aside>
