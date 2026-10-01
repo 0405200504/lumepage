@@ -1,6 +1,6 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v5'; // v5: ícones novos (logo 2026)
-const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+const CACHE = 'lume-shell-v6'; // v6: ícone do app em cetim (os ícones são cache-first)
+const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));

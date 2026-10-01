@@ -1069,7 +1069,9 @@ select.field-input { padding-right: 34px; }
      abertura continua a tela de onde a profissional veio. Um centro um
      pouco mais claro, como a luz do vídeo. O tom médio (#43121f) é o
      background_color do manifesto, para a splash nativa do Android emendar
-     nesta sem piscar. */
+     nesta sem piscar. No iPhone quem emenda são os PNGs de public/splash/,
+     que reproduzem este degradê: mudou aqui, rode
+     scripts/gerar-splash-ios.mts. */
   background: radial-gradient(120% 90% at 50% 42%, #4a1424 0%, #3b0c1b 55%, #2e0813 100%);
   animation: lume-splash-out 260ms var(--ease-in) 640ms both;
   touch-action: none;
