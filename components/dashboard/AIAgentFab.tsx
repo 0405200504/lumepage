@@ -45,7 +45,7 @@ export const AIAgentFab: React.FC = () => {
       onClick={() => window.dispatchEvent(new Event(OPEN_AI_EVENT))}
       aria-label="Abrir a assistente de IA"
       data-visible={visible || undefined}
-      className="lg:hidden no-print fixed right-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40
+      className="lg:hidden no-print fixed right-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom)+var(--voice-pill-h,0px))] z-40
         h-14 w-14 rounded-full bg-wine-700 text-white shadow-wine
         flex items-center justify-center
         transition-[opacity,transform] duration-[220ms] ease-out

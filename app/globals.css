@@ -1010,9 +1010,13 @@ select.field-input { padding-right: 34px; }
   animation-delay: calc(min(var(--i, 0), 5) * 40ms);
 }
 
-/* Troca de rota: só o conteúdo se move — a navegação nunca anima junto. */
+/* Troca de rota: só o conteúdo se move — a navegação nunca anima junto.
+   `backwards`, e não `both`: com `both` o último quadro (transform
+   translateY(0)) ficava aplicado para sempre, e QUALQUER transform num
+   ancestral faz `position: fixed` deixar de ser fixo na tela — gavetas e
+   modais abertos de dentro da página nasciam presos no conteúdo. */
 .route-fade {
-  animation: route-in var(--dur-base) var(--ease-out) both;
+  animation: route-in var(--dur-base) var(--ease-out) backwards;
 }
 @keyframes route-in {
   from { opacity: 0; transform: translateY(8px); }

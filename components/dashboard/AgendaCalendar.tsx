@@ -37,6 +37,8 @@ interface AgendaCalendarProps {
   services: Service[];
   clients: Client[];
   availabilityRules?: AvailabilityRule[];
+  /** Dia em que a agenda abre (YYYY-MM-DD). Sem ele, hoje. */
+  initialDate?: string;
 }
 
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -64,7 +66,7 @@ const apptDragStart = (e: React.DragEvent, apptId: string) => {
 };
 
 export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
-  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients, availabilityRules = [],
+  appointments, timeBlocks, reminderTemplate, professionalId, initialTasks, services, clients, availabilityRules = [], initialDate,
 }) => {
   const router = useRouter();
   const { success, error } = useToast();
@@ -72,7 +74,8 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   // Abre sempre na visão diária, apontando para hoje (desktop e mobile).
   // Valor inicial determinístico → sem mismatch de hidratação.
   const [view, setView] = useState<View>('day');
-  const [cursor, setCursor] = useState<Date>(today);
+  const initialDay = initialDate ? new Date(`${initialDate}T12:00:00`) : today;
+  const [cursor, setCursor] = useState<Date>(initialDay);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   // Estado local de agendamentos: permite mover (arrastar) com resposta imediata
@@ -88,7 +91,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const [showWeekends, setShowWeekends] = useState(true);
   const [showHolidays, setShowHolidays] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
-  const [miniCursor, setMiniCursor] = useState<Date>(startOfMonth(today));
+  const [miniCursor, setMiniCursor] = useState<Date>(startOfMonth(initialDay));
   const [sidebarOpen, setSidebarOpen] = useState(false); // drawer no mobile
 
   // Celular: cabeçalho de app de calendário. `monthOpen` troca a tira da
@@ -96,7 +99,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   // dia escolhido continua sendo `cursor`). O deslize lateral na grade
   // troca o dia.
   const [monthOpen, setMonthOpen] = useState(false);
-  const [mobileMonth, setMobileMonth] = useState<Date>(startOfMonth(today));
+  const [mobileMonth, setMobileMonth] = useState<Date>(startOfMonth(initialDay));
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const hasFilters = filterStatus !== 'all' || filterClient !== 'all' || filterService !== 'all';
@@ -936,7 +939,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
         <div ref={scrollRef} className="agenda-day__scroll overflow-y-auto" style={{ maxHeight: '68vh' }}>
           <div className="flex" style={{ height: totalH }}>
             {/* Régua de horas (rótulos de 30 em 30 min) */}
-            <div className="relative w-12 lg:w-14 shrink-0 select-none">
+            <div className="relative w-16 lg:w-14 shrink-0 select-none">
               {/* Só a HORA CHEIA ganha rótulo. Antes a calha imprimia 08:00,
                   08:30, 09:00, 09:30… — o dobro de números, todos parecidos, e
                   o olho perdia a contagem das horas. A meia hora continua

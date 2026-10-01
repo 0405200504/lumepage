@@ -1,0 +1,361 @@
+import { tool } from 'ai';
+import { z } from 'zod';
+import { dbService } from '@/lib/supabase/db';
+import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
+
+/**
+ * A assistente da profissional — usada pelo chat de texto (/api/chat) e pela
+ * conversa por voz (/api/voice/*). Um prompt e um conjunto de ferramentas só:
+ * o que ela sabe fazer e o que ela pode tocar é igual nos dois canais.
+ *
+ * Toda ferramenta age como a profissional LOGADA (o professionalId vem da
+ * sessão no servidor, nunca do cliente).
+ */
+
+export interface AssistantContext {
+  professionalId: string;
+  todayISO: string;
+  systemPrompt: string;
+}
+
+/** Hoje no fuso de São Paulo, YYYY-MM-DD. */
+export function todayInSaoPaulo() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
+export async function buildAssistantContext(professionalId: string): Promise<AssistantContext> {
+  const services = await dbService.getServicesByProfessional(professionalId);
+  const servicesList = services.length
+    ? services
+        .map(s => `- ${s.name} (ID: ${s.id}, Duração: ${s.duration_minutes} min)`)
+        .join('\n')
+    : '(nenhum serviço cadastrado ainda)';
+
+  const now = new Date();
+  const todayISO = todayInSaoPaulo();
+  const weekday = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
+
+  // System prompt: persona + escopo restrito ao sistema Lume
+  const systemPrompt = `Você é a "Lume", a assistente virtual integrada EXCLUSIVAMENTE ao sistema de gestão Lume.
+Você ajuda a profissional de beleza (dona da agenda) a administrar o próprio negócio DENTRO do Lume.
+
+Hoje é ${weekday}, ${todayISO} (horário de São Paulo). Use isso para entender datas relativas como "hoje", "amanhã", "sexta", "semana que vem".
+
+O ID da profissional logada é: ${professionalId}
+
+Serviços cadastrados (use estes IDs ao agendar):
+${servicesList}
+
+== ESCOPO (muito importante) ==
+- Você SÓ trata da gestão do salão desta profissional no Lume: agenda, agendamentos, clientes, serviços, tarefas/notas e finanças.
+- Se perguntarem algo fora desse escopo (conhecimento geral, outros assuntos, outros sistemas, opiniões etc.), recuse com educação e ofereça ajuda com o que você sabe fazer no Lume.
+- NUNCA invente dados. SEMPRE use as ferramentas para ler os dados reais antes de afirmar qualquer coisa (agendamentos, clientes, horários etc.).
+- Responda sempre em português do Brasil, de forma curta, clara e amigável.
+- IMPORTANTE: responda em TEXTO SIMPLES, SEM Markdown. Nunca use asteriscos (*), sublinhados (_), cerquilhas (#) ou crases (\`). Não use **negrito** nem listas com "*". Se precisar listar, use traço "-" no início da linha ou apenas quebras de linha.
+
+== AÇÕES QUE VOCÊ EXECUTA ==
+Você pode realizar ações de verdade pela profissional. Antes de executar, confira se tem os dados necessários (pergunte o que faltar); depois de executar, confirme o resultado de forma simples.
+Para agir sobre um agendamento existente (cancelar, remarcar, concluir), primeiro use getAppointments para achar o ID correto.
+1. Cadastrar cliente (createClient): precisa de nome e WhatsApp (e-mail é opcional).
+2. Agendar (createAppointment): precisa de serviço (ID da lista), nome da cliente, WhatsApp, data (YYYY-MM-DD) e hora de início (HH:MM).
+   - Antes de confirmar um horário, use checkAvailability para ver se está livre e, se não estiver, sugira horários próximos disponíveis.
+   - O horário de término é calculado automaticamente pela duração do serviço.
+3. Cancelar agendamento (cancelAppointment): precisa do ID do agendamento. Confirme com a profissional antes de cancelar.
+4. Remarcar agendamento (rescheduleAppointment): precisa do ID, nova data e nova hora. Verifique antes se o novo horário está livre (checkAvailability).
+5. Concluir/marcar comparecimento (completeAppointment): marca um agendamento como atendido (concluído).
+6. Criar tarefa/nota (createTask): precisa do conteúdo. Se a profissional disser uma data/hora, preencha due_date (YYYY-MM-DD) e due_time (HH:MM) para a tarefa aparecer na Agenda.
+7. Concluir tarefa (markTaskDone): marca uma tarefa como feita (ou desfaz). Use listTasks para achar o ID.
+8. Lançar no financeiro (addTransaction): registra uma entrada (income) ou saída (expense), com valor em reais, categoria e data (padrão hoje).
+
+Se uma ação falhar, explique o motivo de forma simples e sugira o próximo passo.`;
+
+  return { professionalId, todayISO, systemPrompt };
+}
+
+/** As ferramentas da assistente, presas à profissional da sessão. */
+export function buildAssistantTools({ professionalId, todayISO }: Pick<AssistantContext, 'professionalId' | 'todayISO'>) {
+  return {
+    // ===== LEITURA (sempre baseada em dados reais do sistema) =====
+    getAppointments: tool({
+      description:
+        'Lista os agendamentos da profissional num período (from/to) e, se quiser, de uma cliente. ' +
+        'Sem período, traz dos últimos 30 dias até os próximos 60. Para "hoje", "amanhã", "este mês" etc., passe from/to.',
+      parameters: z.object({
+        from: z.string().optional().describe('Data inicial, YYYY-MM-DD'),
+        to: z.string().optional().describe('Data final, YYYY-MM-DD'),
+        client: z.string().optional().describe('Parte do nome da cliente (opcional)'),
+      }),
+      execute: async ({ from, to, client }) => {
+        const all = await dbService.getAppointmentsByProfessional(professionalId);
+        const start = from || addDaysISO(todayISO, -30);
+        const end = to || addDaysISO(todayISO, 60);
+        const q = client?.trim().toLowerCase();
+        const rows = all
+          .filter(a => a.date >= start && a.date <= end && (!q || (a.client_name || '').toLowerCase().includes(q)))
+          .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+        // A agenda inteira chegava a 800+ itens: lento e caro, sobretudo por voz.
+        const LIMIT = 60;
+        return {
+          from: start,
+          to: end,
+          total: rows.length,
+          truncated: rows.length > LIMIT,
+          appointments: rows.slice(0, LIMIT).map(app => ({
+            id: app.id,
+            date: app.date,
+            time: `${app.start_time.slice(0, 5)} - ${app.end_time.slice(0, 5)}`,
+            client: app.client_name,
+            status: app.status,
+          })),
+        };
+      },
+    }),
+    listClients: tool({
+      description: 'Lista as clientes cadastradas da profissional (nome, WhatsApp, total de atendimentos).',
+      parameters: z.object({}),
+      execute: async () => {
+        const clients = await dbService.getClientsByProfessional(professionalId);
+        return clients.map(c => ({
+          id: c.id,
+          name: c.name,
+          whatsapp: c.whatsapp,
+          email: c.email,
+          total_appointments: c.total_appointments,
+        }));
+      },
+    }),
+    listServices: tool({
+      description: 'Lista os serviços cadastrados, com duração e preço.',
+      parameters: z.object({}),
+      execute: async () => {
+        const svcs = await dbService.getServicesByProfessional(professionalId);
+        return svcs.map(s => ({
+          id: s.id,
+          name: s.name,
+          duration_minutes: s.duration_minutes,
+          price_cents: s.price_cents,
+          is_active: s.is_active,
+        }));
+      },
+    }),
+    listTasks: tool({
+      description: 'Lista as tarefas e notas da profissional.',
+      parameters: z.object({}),
+      execute: async () => {
+        const tasks = await dbService.getTasksByProfessional(professionalId);
+        return tasks.map(t => ({
+          id: t.id,
+          content: t.content,
+          done: t.done,
+          due_date: t.due_date ?? null,
+          due_time: t.due_time ?? null,
+        }));
+      },
+    }),
+    checkAvailability: tool({
+      description: 'Verifica os horários livres para um serviço em uma data específica. Use antes de agendar.',
+      parameters: z.object({
+        date: z.string().describe('Data no formato YYYY-MM-DD'),
+        service_id: z.string().describe('ID do serviço (veja na lista de serviços)'),
+      }),
+      execute: async ({ date, service_id }) => {
+        const res = await getSlotsAction(professionalId, date, service_id);
+        if (!res.success) return { success: false, error: res.error };
+        const livres = (res.slots || []).filter((s: { isAvailable: boolean }) => s.isAvailable).map((s: { time: string }) => s.time);
+        return { success: true, date, available_times: livres };
+      },
+    }),
+
+    // ===== EXECUÇÃO (ações reais) =====
+    createClient: tool({
+      description: 'Cadastra uma nova cliente para a profissional.',
+      parameters: z.object({
+        name: z.string().describe('Nome da cliente'),
+        whatsapp: z.string().describe('WhatsApp da cliente (apenas números)'),
+        email: z.string().optional().describe('E-mail da cliente (opcional)'),
+        birthday: z.string().optional().describe('Aniversário no formato YYYY-MM-DD (opcional)'),
+      }),
+      execute: async ({ name, whatsapp, email, birthday }) => {
+        try {
+          const client = await dbService.createClient({
+            professional_id: professionalId,
+            name,
+            whatsapp: whatsapp.replace(/\D/g, ''),
+            email: email || null,
+            birthday: birthday || null,
+          });
+          return { success: true, client_id: client.id, name: client.name };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao cadastrar cliente.' };
+        }
+      },
+    }),
+    createAppointment: tool({
+      description: 'Cria um novo agendamento na agenda. Valida conflito de horário e avisa a profissional.',
+      parameters: z.object({
+        service_id: z.string().describe('ID do serviço (veja na lista de serviços)'),
+        client_name: z.string().describe('Nome da cliente'),
+        client_whatsapp: z.string().describe('WhatsApp da cliente (apenas números)'),
+        date: z.string().describe('Data do agendamento no formato YYYY-MM-DD'),
+        start_time: z.string().describe('Hora de início no formato HH:MM'),
+        notes: z.string().optional().describe('Observações opcionais'),
+      }),
+      execute: async ({ service_id, client_name, client_whatsapp, date, start_time, notes }) => {
+        const res = await createAppointmentAction({
+          professionalId,
+          serviceId: service_id,
+          clientName: client_name,
+          clientWhatsapp: client_whatsapp,
+          date,
+          startTime: start_time,
+          notes,
+          captchaToken: process.env.INTERNAL_BOOKING_TOKEN, // chamada interna confiável (pula captcha)
+        });
+        return res;
+      },
+    }),
+    createTask: tool({
+      description: 'Cria uma nova tarefa ou anotação. Com data/hora, ela aparece na Agenda.',
+      parameters: z.object({
+        content: z.string().describe('O conteúdo da tarefa ou anotação'),
+        due_date: z.string().optional().describe('Data no formato YYYY-MM-DD (opcional)'),
+        due_time: z.string().optional().describe('Hora no formato HH:MM (opcional)'),
+      }),
+      execute: async ({ content, due_date, due_time }) => {
+        try {
+          const task = await dbService.createTask({
+            professional_id: professionalId,
+            content,
+            due_date: due_date || null,
+            due_time: due_time || null,
+          });
+          return { success: true, task_id: task.id };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao criar tarefa.' };
+        }
+      },
+    }),
+    cancelAppointment: tool({
+      description: 'Cancela um agendamento existente. Use getAppointments para achar o ID.',
+      parameters: z.object({
+        appointment_id: z.string().describe('ID do agendamento a cancelar'),
+        reason: z.string().optional().describe('Motivo do cancelamento (opcional)'),
+      }),
+      execute: async ({ appointment_id, reason }) => {
+        try {
+          const appt = await dbService.getAppointmentById(appointment_id);
+          if (!appt || appt.professional_id !== professionalId) {
+            return { success: false, error: 'Agendamento não encontrado.' };
+          }
+          await dbService.updateAppointmentStatus(appointment_id, 'cancelled', reason, professionalId);
+          return { success: true };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao cancelar.' };
+        }
+      },
+    }),
+    completeAppointment: tool({
+      description: 'Marca um agendamento como concluído/atendido. Use getAppointments para achar o ID.',
+      parameters: z.object({
+        appointment_id: z.string().describe('ID do agendamento'),
+      }),
+      execute: async ({ appointment_id }) => {
+        try {
+          const appt = await dbService.getAppointmentById(appointment_id);
+          if (!appt || appt.professional_id !== professionalId) {
+            return { success: false, error: 'Agendamento não encontrado.' };
+          }
+          await dbService.updateAppointmentStatus(appointment_id, 'completed', undefined, professionalId);
+          return { success: true };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao concluir.' };
+        }
+      },
+    }),
+    rescheduleAppointment: tool({
+      description: 'Remarca um agendamento para nova data/hora. Verifique antes com checkAvailability se o horário está livre.',
+      parameters: z.object({
+        appointment_id: z.string().describe('ID do agendamento a remarcar'),
+        new_date: z.string().describe('Nova data no formato YYYY-MM-DD'),
+        new_start_time: z.string().describe('Nova hora de início no formato HH:MM'),
+      }),
+      execute: async ({ appointment_id, new_date, new_start_time }) => {
+        try {
+          const appt = await dbService.getAppointmentById(appointment_id);
+          if (!appt || appt.professional_id !== professionalId) {
+            return { success: false, error: 'Agendamento não encontrado.' };
+          }
+          const service = await dbService.getServiceById(appt.service_id);
+          const duration = service?.duration_minutes ?? 60;
+
+          // Calcula o novo horário de término a partir da duração do serviço
+          const [h, m] = new_start_time.split(':').map(Number);
+          const startMin = h * 60 + m;
+          const endMin = startMin + duration;
+          const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00`;
+          const startTime = `${new_start_time}:00`;
+
+          await dbService.updateAppointmentSchedule(appointment_id, new_date, startTime, endTime, professionalId);
+          return { success: true, new_date, new_start_time };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao remarcar.' };
+        }
+      },
+    }),
+    markTaskDone: tool({
+      description: 'Marca uma tarefa como concluída (ou desfaz). Use listTasks para achar o ID.',
+      parameters: z.object({
+        task_id: z.string().describe('ID da tarefa'),
+        done: z.boolean().optional().describe('true = concluída (padrão), false = reabrir'),
+      }),
+      execute: async ({ task_id, done }) => {
+        try {
+          await dbService.toggleTask(task_id, done ?? true, professionalId);
+          return { success: true };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao atualizar tarefa.' };
+        }
+      },
+    }),
+    addTransaction: tool({
+      description: 'Lança uma movimentação no financeiro: entrada (income) ou saída (expense).',
+      parameters: z.object({
+        type: z.enum(['income', 'expense']).describe('income = entrada, expense = saída'),
+        amount: z.number().describe('Valor em reais (ex.: 80.50)'),
+        category: z.string().describe('Categoria (ex.: "Serviço", "Produtos", "Aluguel")'),
+        description: z.string().optional().describe('Descrição opcional'),
+        date: z.string().optional().describe('Data no formato YYYY-MM-DD (padrão: hoje)'),
+      }),
+      execute: async ({ type, amount, category, description, date }) => {
+        try {
+          const tx = await dbService.createTransaction({
+            professional_id: professionalId,
+            type,
+            amount_cents: Math.round(amount * 100),
+            category,
+            description: description || null,
+            date: date || todayISO,
+          });
+          return { success: true, transaction_id: tx.id };
+        } catch (e: unknown) {
+          return { success: false, error: e instanceof Error ? e.message : 'Falha ao lançar no financeiro.' };
+        }
+      },
+    }),
+  };
+}
+
+export type AssistantTools = ReturnType<typeof buildAssistantTools>;
+
+/** Soma dias a uma data YYYY-MM-DD (meio-dia UTC: sem tropeço de fuso). */
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Ferramentas que MUDAM dados: depois delas a tela aberta precisa recarregar. */
+export const WRITE_TOOLS = new Set([
+  'createClient', 'createAppointment', 'createTask', 'cancelAppointment',
+  'completeAppointment', 'rescheduleAppointment', 'markTaskDone', 'addTransaction',
+]);

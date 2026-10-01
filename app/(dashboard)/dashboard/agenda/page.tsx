@@ -8,7 +8,10 @@ export const metadata = {
   description: 'Visualize seus agendamentos por ano, mês e semana, com feriados nacionais em destaque.'
 };
 
-export default async function AgendaPage() {
+// ?data=YYYY-MM-DD abre a agenda nesse dia (a assistente de voz usa isso).
+export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ data?: string }> }) {
+  const { data } = await searchParams;
+  const initialDate = data && /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : undefined;
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
@@ -24,6 +27,8 @@ export default async function AgendaPage() {
 
   return (
     <AgendaCalendar
+      key={initialDate ?? 'hoje'}
+      initialDate={initialDate}
       appointments={appointments}
       timeBlocks={timeBlocks}
       reminderTemplate={settings?.whatsapp_confirmation_message || ''}

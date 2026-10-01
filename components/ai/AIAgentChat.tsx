@@ -3,13 +3,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import type { Message } from 'ai';
-import { Sparkles, X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square } from 'lucide-react';
+import { Sparkles, X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square, AudioLines } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { VoiceMode } from './VoiceMode';
 
 /** O botão flutuante do celular e a gaveta disparam este evento para abrir o
  *  assistente. Mesmo padrão do OPEN_NAV_EVENT — sem contexto novo só para
  *  ligar componentes que já são irmãos na casca. */
 export const OPEN_AI_EVENT = 'lume:open-ai';
+/** Abre direto a conversa por voz. */
+export const OPEN_VOICE_EVENT = 'lume:open-voice';
 
 // Remove marcações de Markdown que apareceriam como texto cru na resposta
 function stripMarkdown(text: string): string {
@@ -91,6 +94,10 @@ const TOOL_LABEL: Record<string, string> = {
  */
 export function AIAgentChat() {
   const [isOpen, setIsOpen] = useState(false);
+  // Conversa por voz: vive aqui (na casca do painel) para continuar
+  // ouvindo quando a assistente troca de tela.
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const startVoice = () => { setIsOpen(false); setShowHistory(false); setVoiceOpen(true); };
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -246,8 +253,13 @@ export function AIAgentChat() {
 
   useEffect(() => {
     const abrir = () => setIsOpen(true);
+    const abrirVoz = () => { setIsOpen(false); setVoiceOpen(true); };
     window.addEventListener(OPEN_AI_EVENT, abrir);
-    return () => window.removeEventListener(OPEN_AI_EVENT, abrir);
+    window.addEventListener(OPEN_VOICE_EVENT, abrirVoz);
+    return () => {
+      window.removeEventListener(OPEN_AI_EVENT, abrir);
+      window.removeEventListener(OPEN_VOICE_EVENT, abrirVoz);
+    };
   }, []);
 
   // Enter envia; Shift+Enter quebra a linha (o padrão dos chats de IA).
@@ -279,6 +291,13 @@ export function AIAgentChat() {
         </button>
       )}
 
+      {voiceOpen && (
+        <VoiceMode
+          onClose={() => setVoiceOpen(false)}
+          onSwitchToText={() => { setVoiceOpen(false); setIsOpen(true); }}
+        />
+      )}
+
       {/* Janela de Chat */}
       {isOpen && (
         <div
@@ -287,7 +306,11 @@ export function AIAgentChat() {
           className="fixed inset-0 lg:inset-auto lg:bottom-6 lg:right-6 lg:w-[420px] lg:h-[680px] lg:max-h-[calc(100vh-3rem)] bg-surface lg:border lg:border-line z-50 flex flex-col lg:rounded-hero lg:shadow-[var(--shadow-lg)] overflow-hidden animate-slide-up"
         >
           {/* Topo: fino e neutro — a conversa é o conteúdo. */}
-          <div className="shrink-0 flex items-center gap-1 h-14 px-2 pt-safe border-b border-line">
+          <div className="shrink-0 pt-safe border-b border-line">
+          {/* A faixa da barra de status (pt-safe) fica fora da linha de 56px:
+              somadas no mesmo elemento, o iPhone com o app instalado espremia
+              a linha e o fio de baixo cortava os botões. */}
+          <div className="flex items-center gap-1 h-14 px-2">
             {showHistory ? (
               <button type="button" onClick={() => setShowHistory(false)} aria-label="Voltar para a conversa" className={iconBtn}>
                 <ChevronLeft className="h-5 w-5" />
@@ -313,6 +336,7 @@ export function AIAgentChat() {
             >
               <History className="h-5 w-5" />
             </button>
+          </div>
           </div>
 
           {showHistory ? (
@@ -366,7 +390,14 @@ export function AIAgentChat() {
                   <p className="text-body-sm text-n-500 mt-1.5 max-w-xs">
                     Marco horários, cadastro clientes, anoto tarefas e respondo sobre a sua agenda.
                   </p>
-                  <div className="flex flex-wrap justify-center gap-2 mt-7 max-w-sm">
+                  <button
+                    type="button"
+                    onClick={startVoice}
+                    className="tap mt-6 inline-flex items-center gap-2 h-11 px-5 rounded-full bg-wine-700 text-white text-body-sm font-semibold hover:bg-wine-800 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+                  >
+                    <AudioLines className="h-[18px] w-[18px]" aria-hidden /> Conversar por voz
+                  </button>
+                  <div className="flex flex-wrap justify-center gap-2 mt-5 max-w-sm">
                     {QUICK_PROMPTS.map((prompt) => (
                       <button
                         key={prompt}
@@ -467,7 +498,7 @@ export function AIAgentChat() {
                   <button type="button" onClick={() => stop()} aria-label="Parar a resposta" className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-heading text-surface">
                     <Square className="h-4 w-4 fill-current" />
                   </button>
-                ) : (
+                ) : input.trim() ? (
                   <button
                     type="submit"
                     disabled={!canSend}
@@ -475,6 +506,17 @@ export function AIAgentChat() {
                     className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-wine-700 text-white transition-ui disabled:bg-n-200 disabled:text-n-400"
                   >
                     <ArrowUp className="h-5 w-5" />
+                  </button>
+                ) : (
+                  /* Sem texto: o botão vira a conversa por voz, como no ChatGPT. */
+                  <button
+                    type="button"
+                    onClick={startVoice}
+                    aria-label="Conversar por voz"
+                    title="Conversar por voz"
+                    className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-wine-700 text-white hover:bg-wine-800 transition-ui"
+                  >
+                    <AudioLines className="h-5 w-5" />
                   </button>
                 )}
               </form>
