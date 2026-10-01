@@ -15,6 +15,7 @@ import { textLink } from '@/components/admin/ui';
 import { getSaasRevenue, getNetworkVolume } from '@/lib/admin/business';
 import { getAdminAlerts } from '@/lib/admin/alerts';
 import { listTasks, listHublaEvents, MIGRATION_CRM } from '@/lib/admin/crm';
+import { orphanKeyOf } from '@/lib/subscription/orphans';
 import { accountState } from '@/lib/admin/account-state';
 import { listPlansAction } from '@/app/actions/admin-plans';
 import { professionalOptions } from '@/lib/admin/queries';
@@ -36,7 +37,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
   const [{ plans }, options, alerts, tasksRes, unmatched, profsRes, recentRes, waitingRes] = await Promise.all([
     listPlansAction(), professionalOptions(), getAdminAlerts(),
     listTasks({ limit: 8 }),
-    listHublaEvents({ unmatchedOnly: true, limit: 50 }),
+    listHublaEvents({ unmatchedOnly: true, limit: 200 }),
     isSupabaseConfigured
       ? db().from('professionals').select('id, status, created_at, subscription_status, subscription_plan, subscription_ends_at, trial_ends_at')
         .is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID)
@@ -51,6 +52,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
       : Promise.resolve({ count: 0 }),
   ]);
   const profNames = new Map(options.map(o => [o.value, o.label]));
+  const orphanCount = new Set(unmatched.events.map(orphanKeyOf)).size;
 
   const [saas, network] = await Promise.all([
     getSaasRevenue(plans),
@@ -96,7 +98,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
           { label: 'Vencem em 7 dias', value: String(expiring7d), note: 'acesso ou teste', tone: expiring7d ? 'warn' : 'default', href: '/admin/professionals?risk=trial7' },
           { label: 'Inadimplentes', value: String(pastDue), tone: pastDue ? 'bad' : 'default', href: '/admin/subscriptions?state=past_due' },
           { label: 'Esperando humano', value: String(waiting), note: 'conversas do WhatsApp', tone: waiting ? 'warn' : 'default', href: '/admin/conversations?state=waiting' },
-          { label: 'Pagamentos sem dona', value: String(unmatched.events.length), note: 'chegaram pela Hubla', tone: unmatched.events.length ? 'bad' : 'default', href: '/admin/subscriptions#sem-dona' },
+          { label: 'Compras órfãs', value: String(orphanCount), note: 'pagaram sem ter conta', tone: orphanCount ? 'bad' : 'default', href: '/admin/subscriptions/orphans' },
         ]} />
 
         <div className="grid gap-4 lg:grid-cols-12">

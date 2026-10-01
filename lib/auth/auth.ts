@@ -6,6 +6,10 @@ import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/
 import { signSession, verifySession } from './cookie';
 import { logAccessEvent } from '../access-tokens';
 import { precisaOnboarding, slugLivre } from './onboarding';
+import { claimOrphanOnSignup } from '../subscription/orphans';
+import { resolvePlan } from '../subscription/entitlements';
+import { sendMail } from '../mail';
+import { welcomeEmail } from '../mail-templates';
 
 /**
  * ESCOPOS DE SESSÃO
@@ -214,6 +218,16 @@ export const authService = {
       const sessionData: SessionData = buildSession(profile, user.id);
       await writeSessionCookie(sessionData);
       await logAccessEvent({ professionalId, email: cleanEmail, method: 'google' });
+
+      // Conta nova de quem já tinha pago na Hubla com este e-mail (o Google já
+      // provou que o e-mail é dela): o plano ativa agora.
+      if (criouAgora && professionalId) {
+        const paid = await claimOrphanOnSignup(cleanEmail, professionalId, 'google');
+        if (paid) {
+          await sendMail({ to: cleanEmail, ...welcomeEmail({ name: displayName, email: cleanEmail, paid: { plan: resolvePlan(paid.plan), endsAt: paid.endsAt, months: paid.months } }) })
+            .catch(() => undefined);
+        }
+      }
 
       // 6. Quem entra pelo Google pula o formulário de cadastro: chega sem nome
       //    de negócio e sem WhatsApp. Sinaliza para a tela de boas-vindas

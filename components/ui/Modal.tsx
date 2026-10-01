@@ -31,15 +31,26 @@ export const Modal: React.FC<{
 }> = ({ open, onClose, title, trail, footer, children, busy, className = '' }) => {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // `onClose` costuma chegar como arrow nova a cada render do pai. Lido por
+  // ref, ele não reinicia o efeito abaixo — antes, cada tecla digitada num
+  // campo do modal re-renderizava o pai, o efeito rodava de novo e devolvia o
+  // foco ao painel: "Design" virava "D" e, no celular, o teclado fechava.
+  const latest = useRef({ onClose, busy });
+  useEffect(() => {
+    latest.current = { onClose, busy };
+  });
+
   // Esc fecha; o foco entra no painel ao abrir. Sem isso o teclado fica
   // preso na página de trás e o leitor de tela nunca chega ao formulário.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onClose();
+      if (e.key === 'Escape' && !latest.current.busy) latest.current.onClose();
     };
     document.addEventListener('keydown', onKey);
-    panelRef.current?.focus();
+    // Só ao ABRIR, e sem tirar o foco de um campo com autoFocus.
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
     // Trava a rolagem do fundo enquanto o modal está aberto.
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -47,7 +58,7 @@ export const Modal: React.FC<{
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, busy, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

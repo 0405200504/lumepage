@@ -1,21 +1,22 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CreditCard } from 'lucide-react';
+import { CreditCard, ShoppingBag } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { SubNav, FINANCEIRO_NAV } from '@/components/admin/SubNav';
-import { StatStrip, Panel, Notice, EmptyState, SectionHeader } from '@/components/admin/primitives';
+import { StatStrip, Panel, Notice, EmptyState } from '@/components/admin/primitives';
+import { textLink } from '@/components/admin/ui';
 import { AccountStateBadge, PlanBadge, DeadlineText, Badge } from '@/components/admin/badges';
 import { FilterSelect, SearchInput, ClearFilters } from '@/components/ui/TableFilters';
-import { HublaReconcileRow } from '@/components/admin/HublaReconcile';
 import { getSaasRevenue } from '@/lib/admin/business';
-import { listHublaEvents, hublaPayerOf, HublaEventRow } from '@/lib/admin/crm';
+import { listHublaEvents } from '@/lib/admin/crm';
+import { orphanKeyOf } from '@/lib/subscription/orphans';
 import { accountState } from '@/lib/admin/account-state';
 import { listPlansAction } from '@/app/actions/admin-plans';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { parseTableParams, RawSearchParams } from '@/lib/query-params';
-import { brl, formatDateBR, formatDateTimeBR, formatRelativeBR } from '@/lib/format';
+import { brl, formatDateBR, formatDateTimeBR } from '@/lib/format';
 
 export const metadata = { title: 'Assinaturas | Lume Admin' };
 
@@ -30,6 +31,7 @@ type P = {
 const RESULT_TONE: Record<string, 'ok' | 'warn' | 'bad' | 'neutral' | 'info'> = {
   activated: 'ok', activated_unmapped: 'ok', activated_manual: 'ok', linked_manual: 'info', revoked: 'bad', past_due: 'warn',
   unmatched: 'bad', dismissed: 'neutral', sandbox: 'neutral', revoke_ignored_old_subscription: 'neutral',
+  claimed_signup: 'ok', claimed_google: 'ok', claimed_admin: 'ok', linked_signup: 'info', linked_google: 'info', linked_admin: 'info',
 };
 
 export default async function AdminSubscriptionsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
@@ -71,19 +73,6 @@ export default async function AdminSubscriptionsPage({ searchParams }: { searchP
   }
   rows = [...rows].sort((a, b) => (a.subscription_ends_at ?? '9999').localeCompare(b.subscription_ends_at ?? '9999'));
 
-  const options = profs.map(p => ({ value: p.id, label: p.brand_name || p.name }));
-  const digits = (v: string | null | undefined) => (v || '').replace(/\D/g, '');
-  const suggest = (e: HublaEventRow): string | null => {
-    const payer = hublaPayerOf(e.payload);
-    const byEmail = e.email ? profs.find(p => p.email.toLowerCase() === e.email!.toLowerCase()) : null;
-    if (byEmail) return byEmail.id;
-    const phone = digits(payer.phone).slice(-8);
-    if (phone.length === 8) {
-      const byPhone = profs.find(p => digits(p.whatsapp).endsWith(phone));
-      if (byPhone) return byPhone.id;
-    }
-    return null;
-  };
   const nameOf = new Map(profs.map(p => [p.id, p.brand_name || p.name]));
 
   return (
@@ -99,37 +88,14 @@ export default async function AdminSubscriptionsPage({ searchParams }: { searchP
           { label: 'MRR', value: brl(saas.mrrCents), note: `${saas.activeSubscriptions} ativa(s)`, tone: 'accent', href: '/admin/finance' },
           { label: 'Renovam em 30 dias', value: String(renewing.length), note: brl(renewing.reduce((s, p) => s + priceOf(p.subscription_plan), 0)) + '/mês em jogo' },
           { label: 'Inadimplentes', value: String(pastDue.length), tone: pastDue.length ? 'bad' : 'default', href: `${BASE}?state=past_due` },
-          { label: 'Pagamentos sem dona', value: String(unmatched.events.length), tone: unmatched.events.length ? 'bad' : 'default', note: 'conciliar abaixo' },
+          { label: 'Compras órfãs', value: String(new Set(unmatched.events.map(orphanKeyOf)).size), tone: unmatched.events.length ? 'bad' : 'default', note: 'pagaram sem ter conta', href: '/admin/subscriptions/orphans' },
         ]} />
 
-        {/* ——— Conciliação ——— */}
-        <section id="sem-dona" className="scroll-mt-6">
-          <SectionHeader title="Pagamentos sem dona" note="chegaram pela Hubla com um e-mail que não bate com nenhuma conta" />
-          {!unmatched.available ? (
-            <Notice tone="warn" icon={<AlertTriangle />}>Rode <code className="font-mono">supabase/migration_v37_hubla_webhook.sql</code> para guardar os eventos da Hubla.</Notice>
-          ) : unmatched.events.length === 0 ? (
-            <div className="card"><EmptyState title="Nenhum pagamento pendente de conciliação" className="py-6" /></div>
-          ) : (
-            <ul className="card divide-y divide-line overflow-hidden">
-              {unmatched.events.map(e => {
-                const payer = hublaPayerOf(e.payload);
-                const suggested = suggest(e);
-                return (
-                  <li key={e.idempotency_key} className="px-5 py-4 flex flex-wrap items-center gap-4">
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-body-sm font-semibold text-heading">{payer.name ?? e.email ?? 'Comprador sem nome'}</span>
-                      <span className="block text-caption text-n-500 truncate">
-                        {e.email ?? 'sem e-mail'}{payer.phone ? ` · ${payer.phone}` : ''}{payer.offer ? ` · ${payer.offer}` : ''} · {e.event_type ?? 'evento'} · {formatRelativeBR(e.received_at)}
-                      </span>
-                      {suggested && <span className="block text-caption text-success mt-0.5">Parece ser {nameOf.get(suggested)} (mesmo e-mail ou telefone).</span>}
-                    </span>
-                    <HublaReconcileRow eventKey={e.idempotency_key} accounts={options} suggestedId={suggested} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        {unmatched.events.length > 0 && (
+          <Notice tone="bad" icon={<ShoppingBag />} action={<Link href="/admin/subscriptions/orphans" className={textLink}>Ver compras órfãs</Link>}>
+            Tem gente que pagou na Hubla e ainda não tem conta com o e-mail da compra.
+          </Notice>
+        )}
 
         {/* ——— Lista ——— */}
         <Panel flush title={`${rows.length} conta(s)`} note="Ordenado pelo vencimento mais próximo"

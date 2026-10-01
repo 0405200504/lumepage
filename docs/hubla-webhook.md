@@ -9,7 +9,10 @@ O código vive em:
 - `app/api/webhooks/hubla/route.ts` — o endpoint que recebe e aplica
 - `lib/subscription/hubla.ts` — leitura do payload e de-para checkout → plano
 - `lib/lp/site.ts` — os seis links de checkout (a fonte de tudo)
+- `lib/subscription/activation.ts` — a regra que aplica o plano (webhook, admin e cadastro usam a mesma)
+- `lib/subscription/orphans.ts` — compras órfãs: fila, e-mail com link do cadastro, vínculo automático
 - `supabase/migration_v37_hubla_webhook.sql` — log e deduplicação
+- `supabase/migration_v42_hubla_orphans.sql` — um e-mail de boas-vindas por compradora órfã
 
 ---
 
@@ -145,17 +148,12 @@ vira venda que o webhook não sabe mapear.
    - `503` → a variável não existe no ambiente
    - `3xx` → a URL está redirecionando; use a URL final
    - `500` → falha nossa; a Hubla retenta 5 vezes, e o log do servidor tem o motivo
-2. **Pagamentos órfãos** (pagou e não achamos a conta):
-
-```sql
-select received_at, email, event_type, payload->'event'->'user' as comprador
-from hubla_webhook_events
-where result = 'unmatched'
-order by received_at desc;
-```
-
-Achou o e-mail certo? Ative no `/admin` mesmo, e depois acerte o e-mail da conta
-para as renovações caírem sozinhas.
+2. **Compras órfãs** (pagou e não achamos a conta): admin → Financeiro →
+   **Compras órfãs** (`/admin/subscriptions/orphans`). Uma linha por compradora
+   (os três avisos da mesma venda viram uma só), com plano, valor e se o e-mail
+   com o link do cadastro já saiu. Dali dá pra vincular a uma conta (o plano é
+   aplicado na hora), reenviar o e-mail, copiar o link pra mandar no WhatsApp ou
+   descartar.
 
 3. Rodando falha por dias seguidos, a Hubla **desativa a regra** e avisa por
    e-mail. Se parou tudo de uma vez, confira se a regra ainda está ativa.
@@ -171,6 +169,7 @@ pagador, que pode ser outro:
 | Acesso liberado | *Parabéns! Seu plano X está ativo* |
 | `invoice.payment_failed` | *Não conseguimos confirmar seu pagamento* |
 | Cancelamento ou reembolso | *Sua assinatura da Lume foi encerrada* |
+| Pagou e não tem conta (vai para o e-mail da **compra**) | *Pagamento aprovado! Falta só criar sua conta na Lume* |
 
 O disparo só acontece quando o estado **muda de verdade**. Os três eventos de
 liberação (`invoice.payment_succeeded`, `subscription.activated`,
@@ -183,10 +182,50 @@ faria ela reenviar o evento inteiro. Sem a chave configurada, tudo é pulado.
 Para conferir os textos: `npx tsx scripts/test-emails.mts voce@exemplo.com`
 (carregue o `.env` antes com `set -a && . ./.env && set +a`).
 
+## Compra sem conta (compra órfã)
+
+Quem compra direto pela página de vendas ainda não tem conta. O caminho é:
+
+1. O aviso chega, ninguém tem aquele e-mail → fica `result = 'unmatched'`.
+2. A compradora recebe **"Pagamento aprovado! Falta só criar sua conta na
+   Lume"**, com um botão pro cadastro já com o e-mail da compra preenchido. O
+   link é assinado (HMAC com `SESSION_SECRET`): só ele faz a tela de cadastro
+   dizer "seu plano já está pago" — sem assinatura, ninguém descobre quem
+   comprou digitando e-mails na URL.
+3. Ela se cadastra com aquele e-mail (formulário ou Google, ou o admin cria a
+   conta) → o plano ativa **na hora**, os avisos viram `claimed_signup` /
+   `claimed_google` / `claimed_admin` e o e-mail de boas-vindas fala do plano
+   pago, não do teste grátis.
+
+Os três avisos de uma venda chegam quase juntos, em funções separadas. A
+`migration_v42_hubla_orphans.sql` garante **um** e-mail por compradora (o
+e-mail é chave primária de `hubla_orphan_notices`). Sem ela, o e-mail só sai no
+`invoice.payment_succeeded` — um por cobrança — e o admin não mostra quando foi
+enviado.
+
+## Depois da compra — configurar na Hubla
+
+Por padrão a Hubla manda a compradora para a área de membros dela
+(`hub.la/g/<produto>` ou `app.hub.la/user_groups`), que no caso da Lume está
+vazia. Troque o **redirecionamento pós-compra** de cada uma das seis ofertas
+para o cadastro, com o plano na URL:
+
+| Ofertas | Redirecionar para |
+| --- | --- |
+| Start mensal e anual | `https://www.lumepage.com.br/register?plano=start` |
+| Pro mensal e anual | `https://www.lumepage.com.br/register?plano=pro` |
+| Premium mensal e anual | `https://www.lumepage.com.br/register?plano=premium` |
+
+Com `?plano=`, a tela de cadastro troca "teste grátis" por "Falta só criar sua
+conta — use o mesmo e-mail da compra". Se ela se cadastrar antes de o aviso da
+Hubla chegar, tudo bem: o aviso encontra a conta pelo e-mail e libera.
+
+Para conferir sem abrir o painel: o valor atual aparece no HTML público do
+checkout, no campo `redirectAfterPurchaseUrl`.
+
 ## O que o webhook não faz
 
-- **Não cria conta.** Quem compra sem ter cadastro precisa se cadastrar com o
-  mesmo e-mail; o próximo aviso da Hubla (ou a ativação manual) libera.
+- **Não cria conta.** Cria a compra órfã e avisa a compradora (seção acima).
 - **Não mexe em conta legada.** Contas criadas antes do marco em
   `ENTITLEMENTS_CUTOFF` (`lib/subscription/entitlements.ts`) têm acesso cheio de
   qualquer jeito.

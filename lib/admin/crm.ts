@@ -348,6 +348,7 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
   { label: 'Onboarding e Google sync', file: 'migration_v38_google_onboarding.sql', table: 'professionals', column: 'onboarding_completed_at' },
   { label: 'Tour de boas-vindas', file: 'migration_v40_tour.sql', table: 'professionals', column: 'tour_completed_at' },
   { label: 'CRM, tarefas e alertas do admin', file: 'migration_v41_admin_360.sql', table: 'admin_tasks' },
+  { label: 'Compras órfãs (e-mail sem duplicar)', file: 'migration_v42_hubla_orphans.sql', table: 'hubla_orphan_notices' },
   { label: 'Notificações push', file: 'migration_push.sql', table: 'push_subscriptions' },
 ];
 
