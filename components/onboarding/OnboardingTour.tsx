@@ -133,7 +133,7 @@ function buildSteps(firstName?: string): Step[] {
     {
       route: '/dashboard/finance',
       tab: 'Financeiro',
-      body: 'O que entrou, o que saiu e quanto sobrou no mês.',
+      body: 'O que entrou, o que saiu e quanto sobrou — no dia, na semana, no mês ou nas datas que você escolher.',
     },
     {
       route: '/dashboard/sales',

@@ -4,7 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Transaction, Appointment, TransactionType, FixedExpense, Service } from '@/types/database';
 import {
-  ChevronLeft, ChevronRight, ArrowDownLeft, ArrowUpRight, Plus, Trash2, X,
+  ArrowDownLeft, ArrowUpRight, Plus, Trash2, X,
   Receipt, Wallet, TrendingUp, Calendar, Search, SlidersHorizontal,
   CreditCard, PieChart, Repeat, AlertCircle, Clock4, CheckCircle2, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
@@ -17,9 +17,14 @@ import { formatDateBR } from '@/lib/whatsapp';
 import { brl } from '@/lib/format';
 import { indexServices, appointmentRevenueCents } from '@/lib/finance';
 import {
-  monthRange, metricsForRange, compare, projectionForMonth, receivablesAging,
-  byPaymentMethod, monthlySeries, DEFAULT_PAYMENT_RATES, PaymentRates, paymentLabel,
+  metricsForRange, compare, projectionForMonth, receivablesAging, inRange,
+  byPaymentMethod, fixedChargesInRange, seriesForRange, DEFAULT_PAYMENT_RATES, PaymentRates, paymentLabel,
+  type DateRange,
 } from '@/lib/analytics';
+import {
+  Period, periodFor, previousPeriod, periodLabel, periodPhrase, comparisonLabel, periodSlug,
+  rangeLabel, addDays, isoOf,
+} from '@/lib/period';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
 import { Button } from '../ui/Button';
@@ -28,6 +33,7 @@ import { DrillDownModal, DrillDownRow } from '../ui/DrillDownModal';
 import { TechChart } from '../ui/charts/TechChart';
 import { DonutChart, DonutSlice } from '../ui/charts/DonutChart';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
+import { PeriodPicker } from '../ui/PeriodPicker';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
 interface FinancePanelProps {
@@ -38,7 +44,6 @@ interface FinancePanelProps {
   services: Service[];
 }
 
-const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const EXPENSE_CATS = ['Produtos e materiais', 'Aluguel', 'Energia/Água/Internet', 'Marketing', 'Salários/Comissões', 'Impostos', 'Equipamentos', 'Outros'];
 const INCOME_CATS = ['Serviço avulso', 'Venda de produto', 'Pacote/Plano', 'Outros'];
 const DONUT_COLORS = ['#6B1525', '#8C2438', '#A94257', '#C66E84', '#DEA0B0', '#F0CBD5', '#CFCBCC', '#E3E0E1'];
@@ -66,8 +71,12 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const { success, error } = useToast();
   const now = new Date();
   const byId = useMemo(() => indexServices(services), [services]);
-  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
-  const isCurrentMonth = cursor.y === now.getFullYear() && cursor.m === now.getMonth();
+  const todayIso = isoOf(now);
+  const [period, setPeriod] = useState<Period>(() => periodFor('month', todayIso));
+  const range = useMemo<DateRange>(() => ({ start: period.start, end: period.end }), [period]);
+  const prevRange = useMemo(() => previousPeriod(period), [period]);
+  const phrase = periodPhrase(period, todayIso);
+  const label = periodLabel(period, todayIso);
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [drill, setDrill] = useState<DrillType>(null);
@@ -103,66 +112,59 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const [fxAmount, setFxAmount] = useState('');
   const [fxSaving, setFxSaving] = useState(false);
 
-  const inMonth = (iso: string, y: number, m: number) => {
-    const [yy, mm] = iso.split('-').map(Number);
-    return yy === y && mm === m + 1;
-  };
-  const monthFirst = `${cursor.y}-${pad(cursor.m + 1)}-01`;
-
-  const fixedForMonth = useCallback((y: number, m: number) =>
-    fixedExpenses.filter(f => f.active).filter(f => {
-      const c = new Date(f.created_at);
-      return idxOf(y, m) >= idxOf(c.getFullYear(), c.getMonth());
-    }), [fixedExpenses]);
-
-  // Itens do mês
-  const monthAuto: LedgerItem[] = useMemo(() =>
+  // Itens do período: atendimentos faturados, lançamentos manuais e as contas
+  // fixas — estas caem no dia 1º de cada mês, então só entram no período que
+  // passa por um dia 1º.
+  const periodAuto: LedgerItem[] = useMemo(() =>
     appointments
-      .filter(a => (a.status === 'completed' || a.status === 'confirmed') && inMonth(a.date, cursor.y, cursor.m))
+      .filter(a => (a.status === 'completed' || a.status === 'confirmed') && inRange(a.date, range.start, range.end))
       .map(a => ({
         id: `appt-${a.id}`, kind: 'income' as TransactionType, amount_cents: appointmentRevenueCents(a, byId),
         category: a.status === 'completed' ? 'Atendimento concluído' : 'Atendimento confirmado',
         description: `${a.service?.name ?? 'Serviço'} · ${a.client_name}`, date: a.date, auto: true,
       })).filter(i => i.amount_cents > 0),
-  [appointments, cursor, byId]);
+  [appointments, range, byId]);
 
-  const monthManual: LedgerItem[] = useMemo(() =>
-    transactions.filter(t => inMonth(t.date, cursor.y, cursor.m))
+  const periodManual: LedgerItem[] = useMemo(() =>
+    transactions.filter(t => inRange(t.date, range.start, range.end))
       .map(t => ({ id: t.id, kind: t.type, amount_cents: t.amount_cents, category: t.category, description: t.description, date: t.date })),
-  [transactions, cursor]);
+  [transactions, range]);
 
-  const monthFixed: LedgerItem[] = useMemo(() =>
-    fixedForMonth(cursor.y, cursor.m).map(f => ({
-      id: `fixed-${f.id}`, kind: 'expense' as TransactionType, amount_cents: f.amount_cents,
-      category: 'Conta fixa', description: f.name, date: monthFirst, auto: true,
+  const periodFixed: LedgerItem[] = useMemo(() =>
+    fixedChargesInRange(fixedExpenses, range).map(({ fixed: f, date: day }) => ({
+      id: `fixed-${f.id}-${day}`, kind: 'expense' as TransactionType, amount_cents: f.amount_cents,
+      category: 'Conta fixa', description: f.name, date: day, auto: true,
     })),
-  [fixedForMonth, cursor, monthFirst]);
+  [fixedExpenses, range]);
 
-  const monthItems = useMemo(
-    () => [...monthAuto, ...monthManual, ...monthFixed].sort((a, b) => b.date.localeCompare(a.date)),
-    [monthAuto, monthManual, monthFixed]
+  const periodItems = useMemo(
+    () => [...periodAuto, ...periodManual, ...periodFixed].sort((a, b) => b.date.localeCompare(a.date)),
+    [periodAuto, periodManual, periodFixed]
   );
 
-  // Métricas
-  const range = useMemo(() => monthRange(cursor.y, cursor.m), [cursor]);
-  const metrics = useMemo(
-    () => metricsForRange(appointments, transactions, fixedForMonth(cursor.y, cursor.m), byId, range),
-    [appointments, transactions, fixedForMonth, byId, range, cursor]
-  );
-  const prevC = useMemo(() => { const d = new Date(cursor.y, cursor.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; }, [cursor]);
-  const prevMetrics = useMemo(
-    () => metricsForRange(appointments, transactions, fixedForMonth(prevC.y, prevC.m), byId, monthRange(prevC.y, prevC.m)),
-    [appointments, transactions, fixedForMonth, byId, prevC]
-  );
+  // Métricas — as contas fixas entram pela mesma regra do extrato acima.
+  const resultFor = useCallback((r: DateRange) => {
+    const m = metricsForRange(appointments, transactions, [], byId, r);
+    const fixedTotal = fixedChargesInRange(fixedExpenses, r).reduce((sum, c) => sum + c.fixed.amount_cents, 0);
+    const income = m.grossRevenue + m.manualIncome;
+    const expense = m.variableCosts + m.fixedCosts + fixedTotal;
+    const profit = income - expense;
+    return { income, expense, profit, margin: income > 0 ? (profit / income) * 100 : 0 };
+  }, [appointments, transactions, fixedExpenses, byId]);
 
-  const income = metrics.grossRevenue + metrics.manualIncome;
-  const prevIncome = prevMetrics.grossRevenue + prevMetrics.manualIncome;
-  const expense = metrics.variableCosts + metrics.fixedCosts;
-  const prevExpense = prevMetrics.variableCosts + prevMetrics.fixedCosts;
-
-  const cmpIncome = compare(income, prevIncome);
-  const cmpExpense = compare(expense, prevExpense);
-  const cmpProfit = compare(metrics.netProfit, prevMetrics.netProfit);
+  const current = useMemo(() => resultFor(range), [resultFor, range]);
+  const previous = useMemo(() => resultFor(prevRange), [resultFor, prevRange]);
+  const { income, expense } = current;
+  const cmpProfit = compare(current.profit, previous.profit);
+  // Sem nenhum movimento no período anterior não há base: o selo some em vez
+  // de mostrar um "+100%" que não quer dizer nada.
+  const hasPrevious = previous.income !== 0 || previous.expense !== 0;
+  // Percentual só faz sentido sobre um lucro anterior positivo. Sobre prejuízo
+  // ou quase zero (o dia 1º, que leva as contas fixas) ele vira "-4189%":
+  // nesses casos o selo mostra a diferença em reais.
+  const profitDelta = previous.profit > 0 && Math.abs(cmpProfit.deltaPct) < 1000
+    ? `${cmpProfit.deltaPct >= 0 ? '+' : ''}${cmpProfit.deltaPct.toFixed(0)}%`
+    : `${cmpProfit.abs >= 0 ? '+' : '−'} ${brl(Math.abs(cmpProfit.abs))}`;
 
   // Saldo acumulado
   const totalBalance = useMemo(() => {
@@ -188,21 +190,39 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   const receivables = useMemo(() => receivablesAging(appointments, byId), [appointments, byId]);
   const payments = useMemo(() => byPaymentMethod(appointments, byId, rates, range), [appointments, byId, rates, range]);
   const totalPaymentGross = useMemo(() => payments.reduce((acc, p) => acc + p.gross, 0), [payments]);
-  const netSeries = useMemo(() => monthlySeries(appointments, transactions, fixedExpenses, services, 6), [appointments, transactions, fixedExpenses, services]);
+
+  // Gráfico: o próprio período, dia a dia (ou semana/mês, se for longo). Um
+  // dia sozinho não forma linha, então o dia mostra os 7 dias até ele.
+  const chartRange = useMemo<DateRange>(
+    () => (period.kind === 'day' ? { start: addDays(period.start, -6), end: period.end } : range),
+    [period, range]
+  );
+  const chart = useMemo(() => seriesForRange(appointments, transactions, byId, chartRange), [appointments, transactions, byId, chartRange]);
+  const chartCaption = period.kind === 'day'
+    ? `7 dias até ${rangeLabel({ start: period.start, end: period.start }, todayIso)}`
+    : chart.granularity === 'day' ? 'Dia a dia' : chart.granularity === 'week' ? 'Semana a semana' : 'Mês a mês';
+
+  // "Todo o período" do calendário: do primeiro ao último movimento.
+  const allTime = useMemo<DateRange | null>(() => {
+    const dates = [...appointments.map(a => a.date), ...transactions.map(t => t.date)].filter(Boolean).sort();
+    if (!dates.length) return null;
+    const last = dates[dates.length - 1];
+    return { start: dates[0], end: last > todayIso ? last : todayIso };
+  }, [appointments, transactions, todayIso]);
 
   // Categorias
   const expenseByCat = useMemo(() => {
     const map: Record<string, number> = {};
-    monthItems.filter(i => i.kind === 'expense').forEach(i => { map[i.category] = (map[i.category] || 0) + i.amount_cents; });
+    periodItems.filter(i => i.kind === 'expense').forEach(i => { map[i.category] = (map[i.category] || 0) + i.amount_cents; });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [monthItems]);
+  }, [periodItems]);
 
   const fixedMonthlyTotal = fixedExpenses.filter(f => f.active).reduce((s, f) => s + f.amount_cents, 0);
 
-  const step = (dir: 1 | -1) => {
-    let m = cursor.m + dir, y = cursor.y;
-    if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; }
-    setCursor({ y, m });
+  // Olhando um dia que não é hoje, o lançamento novo já nasce naquele dia.
+  const openForm = () => {
+    setDate(period.kind === 'day' ? period.start : todayIso);
+    setShowForm(true);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -250,16 +270,16 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
 
   const drillData = useMemo((): { title: string; rows: DrillDownRow[] } => {
     if (drill === 'income') return {
-      title: 'Entradas do mês',
-      rows: monthItems.filter(i => i.kind === 'income').map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: 'in' as const })),
+      title: `Entradas ${phrase}`,
+      rows: periodItems.filter(i => i.kind === 'income').map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: 'in' as const })),
     };
     if (drill === 'expense') return {
-      title: 'Saídas do mês',
-      rows: monthItems.filter(i => i.kind === 'expense').map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: 'out' as const })),
+      title: `Saídas ${phrase}`,
+      rows: periodItems.filter(i => i.kind === 'expense').map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: 'out' as const })),
     };
     if (drill === 'profit') return {
-      title: 'Composição do lucro do mês',
-      rows: monthItems.map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: i.kind === 'income' ? 'in' as const : 'out' as const })),
+      title: `Composição do lucro ${phrase}`,
+      rows: periodItems.map(i => ({ id: i.id, title: i.category, subtitle: `${i.description ?? ''} · ${formatDateBR(i.date)}`, amountCents: i.amount_cents, tone: i.kind === 'income' ? 'in' as const : 'out' as const })),
     };
     if (drill === 'receivable') return {
       title: 'Contas a receber',
@@ -270,17 +290,17 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
       })),
     };
     return { title: '', rows: [] };
-  }, [drill, monthItems, receivables]);
+  }, [drill, periodItems, receivables, phrase]);
 
   const exportLedgerCSV = () => {
-    const csv = toCSV(monthItems, [
+    const csv = toCSV(periodItems, [
       { header: 'Data', value: i => formatDateBR(i.date) },
       { header: 'Tipo', value: i => i.kind === 'income' ? 'Entrada' : 'Saída' },
       { header: 'Categoria', value: i => i.category },
       { header: 'Descrição', value: i => i.description ?? '' },
       { header: 'Valor', value: i => `${i.kind === 'expense' ? '-' : ''}${centsToPlain(i.amount_cents)}` },
     ]);
-    downloadCSV(`extrato-${cursor.y}-${pad(cursor.m + 1)}`, csv);
+    downloadCSV(`extrato-${periodSlug(period)}`, csv);
   };
 
   const tabs = [
@@ -292,39 +312,35 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
   ];
 
   const filteredLedgerItems = useMemo(() => {
-    if (!searchLedger.trim()) return monthItems;
+    if (!searchLedger.trim()) return periodItems;
     const q = searchLedger.toLowerCase();
-    return monthItems.filter(i => i.category.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
-  }, [monthItems, searchLedger]);
+    return periodItems.filter(i => i.category.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
+  }, [periodItems, searchLedger]);
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
-      {/* 1. SELETOR DE MÊS / CABEÇALHO BANCÁRIO */}
-      <div className="flex items-center justify-between no-print pt-1">
-        <div className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-line shadow-xs">
-          <button onClick={() => step(-1)} aria-label="Mês anterior" className="p-1 text-n-600 hover:text-ink">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-body-sm font-bold text-heading capitalize px-2">
-            {MONTHS[cursor.m]} {cursor.y}
-          </span>
-          <button onClick={() => step(1)} aria-label="Próximo mês" className="p-1 text-n-600 hover:text-ink">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
+      {/* 1. SELETOR DE PERÍODO / CABEÇALHO BANCÁRIO */}
+      <PeriodPicker
+        value={period}
+        onChange={setPeriod}
+        today={todayIso}
+        allTime={allTime}
+        className="no-print pt-1"
+        action={
           <Button
             size="sm"
             data-tour="module-action"
-            onClick={() => setShowForm(true)}
-            className="rounded-full bg-wine-700 hover:bg-wine-800 text-white font-bold"
-            leadingIcon={<Plus className="h-4 w-4" />}
+            onClick={openForm}
+            aria-label="Novo lançamento"
+            className="rounded-full bg-wine-700 hover:bg-wine-800 text-white font-bold max-sm:w-11 max-sm:px-0"
+            leadingIcon={<Plus className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />}
           >
-            Novo lançamento
+            {/* No celular fica só o +, redondo, ao lado da data. */}
+            <span className="hidden sm:inline">Novo lançamento</span>
           </Button>
-        </div>
-      </div>
+        }
+      />
+      <p className="print-only text-body-sm text-n-600">Período: {label}</p>
 
       {/* 2. ABAS NAVEGAÇÃO LIMPA */}
       <div className="no-print">
@@ -339,15 +355,20 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
           <div className="bg-surface rounded-2xl p-6 sm:p-7 border border-line shadow-xs space-y-5">
             <div>
               <span className="text-caption font-semibold text-n-500 block">
-                Lucro líquido do mês
+                Lucro líquido {phrase}
               </span>
-              <div className="flex items-baseline gap-3 mt-1">
-                <p className={`text-display font-bold num tracking-tight leading-none ${metrics.netProfit >= 0 ? 'text-heading' : 'text-danger'}`}>
-                  <AnimatedCounter value={metrics.netProfit} format={brl} />
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-1">
+                <p className={`text-display font-bold num tracking-tight leading-none ${current.profit >= 0 ? 'text-heading' : 'text-danger'}`}>
+                  <AnimatedCounter value={current.profit} format={brl} />
                 </p>
-                <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${cmpProfit.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
-                  {cmpProfit.deltaPct >= 0 ? `+${cmpProfit.deltaPct.toFixed(0)}%` : `${cmpProfit.deltaPct.toFixed(0)}%`}
-                </span>
+                {hasPrevious && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className={`text-caption font-bold px-2 py-0.5 rounded-full num ${cmpProfit.abs >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
+                      {profitDelta}
+                    </span>
+                    <span className="text-caption text-n-500">{comparisonLabel(period.kind)}</span>
+                  </span>
+                )}
               </div>
               <span className="text-caption text-n-500 block mt-1.5">
                 Saldo total em caixa: <strong className="text-heading num font-bold">{brl(totalBalance)}</strong>
@@ -398,22 +419,22 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-body font-bold text-heading">Evolução do faturamento</h3>
-                <p className="text-caption text-n-500">Últimos 6 meses</p>
+                <p className="text-caption text-n-500">{chartCaption}</p>
               </div>
               <span className="text-caption font-bold text-wine-700 bg-wine-50 px-2.5 py-1 rounded-full">
-                Margem {metrics.margin.toFixed(0)}%
+                Margem {current.margin.toFixed(0)}%
               </span>
             </div>
             <TechChart
               height={180}
-              labels={netSeries.map(p => p.label)}
+              labels={chart.points.map(p => p.label)}
               format={(v) => brl(Math.round(v * 100))}
               axisFormat={(v) => {
                 const r = Math.round(v);
                 return Math.abs(r) >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')}k` : String(r);
               }}
               series={[
-                { name: 'Faturamento', color: 'var(--color-wine-700)', values: netSeries.map(p => p.gross / 100) },
+                { name: 'Faturamento', color: 'var(--color-wine-700)', values: chart.points.map(p => p.gross / 100) },
               ]}
             />
           </div>
@@ -431,10 +452,10 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
             </div>
 
             <div className="divide-y divide-line">
-              {monthItems.length === 0 ? (
-                <p className="text-caption text-n-500 py-8 text-center">Nenhuma movimentação registrada no mês.</p>
+              {periodItems.length === 0 ? (
+                <p className="text-caption text-n-500 py-8 text-center">Nenhuma movimentação registrada no período.</p>
               ) : (
-                monthItems.slice(0, 5).map((item) => {
+                periodItems.slice(0, 5).map((item) => {
                   const isInc = item.kind === 'income';
                   return (
                     <div key={item.id} className="p-4 flex items-center justify-between gap-3 hover:bg-n-25 transition-colors">
@@ -571,7 +592,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
         <div className="bg-surface rounded-2xl p-5 sm:p-6 border border-line shadow-xs space-y-4 animate-fade-up">
           <h3 className="text-body font-bold text-heading">Gastos por categoria</h3>
           {expenseByCat.length === 0 ? (
-            <p className="text-caption text-n-500 py-8 text-center">Sem saídas registradas neste mês.</p>
+            <p className="text-caption text-n-500 py-8 text-center">Sem saídas registradas neste período.</p>
           ) : (
             <DonutChart format={brl} data={expenseByCat.map(([cat, val], i): DonutSlice => ({ label: cat, value: val, color: DONUT_COLORS[i % DONUT_COLORS.length] }))} />
           )}
@@ -676,7 +697,7 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({
       <DrillDownModal
         open={drill !== null}
         title={drillData.title}
-        subtitle={`${MONTHS[cursor.m]} ${cursor.y}`}
+        subtitle={label}
         rows={drillData.rows}
         onClose={() => setDrill(null)}
       />

@@ -384,3 +384,87 @@ export function monthlySeries(
   }
   return out;
 }
+
+/* ---------- Contas fixas de um intervalo qualquer ---------- */
+
+export interface FixedCharge { fixed: FixedExpense; date: string }
+
+/** Contas fixas lançadas dentro do intervalo. Cada uma cai no dia 1º de cada
+ *  mês, a partir do mês em que foi criada — exatamente como aparece no
+ *  extrato. Um dia ou uma semana que não passa pelo dia 1º não tem conta fixa. */
+export function fixedChargesInRange(fixed: FixedExpense[], range: DateRange): FixedCharge[] {
+  const [sy, sm] = range.start.split('-').map(Number);
+  const [ey, em] = range.end.split('-').map(Number);
+  const out: FixedCharge[] = [];
+  for (let idx = sy * 12 + sm - 1; idx <= ey * 12 + em - 1; idx++) {
+    const y = Math.floor(idx / 12), m = idx % 12;
+    const date = `${y}-${pad(m + 1)}-01`;
+    if (!inRange(date, range.start, range.end)) continue;
+    for (const f of fixed) {
+      if (!f.active) continue;
+      const c = new Date(f.created_at);
+      if (c.getFullYear() * 12 + c.getMonth() > idx) continue;
+      out.push({ fixed: f, date });
+    }
+  }
+  return out;
+}
+
+/* ---------- Série do período (gráfico de evolução) ---------- */
+
+export type SeriesGranularity = 'day' | 'week' | 'month';
+export interface RangePoint { label: string; start: string; gross: number }
+
+const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+/** Faturamento (atendimentos + entradas manuais) dentro do intervalo, em
+ *  pontos de dia (até ~2 meses), de semana (até ~6 meses) ou de mês. */
+export function seriesForRange(
+  appointments: Appointment[],
+  transactions: Transaction[],
+  byId: ServicesById,
+  range: DateRange,
+): { granularity: SeriesGranularity; points: RangePoint[] } {
+  const startD = new Date(`${range.start}T00:00:00`);
+  const endD = new Date(`${range.end}T00:00:00`);
+  const days = Math.round((endD.getTime() - startD.getTime()) / 86400000) + 1;
+  const granularity: SeriesGranularity = days <= 62 ? 'day' : days <= 182 ? 'week' : 'month';
+
+  // Chave do balde de cada data. Semana começa no domingo, como na Agenda.
+  const keyOf = (iso: string): string => {
+    if (granularity === 'day') return iso;
+    if (granularity === 'month') return iso.slice(0, 7);
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() - d.getDay());
+    const k = toISO(d);
+    return k < range.start ? range.start : k;
+  };
+
+  const points: RangePoint[] = [];
+  const index = new Map<string, number>();
+  const cur = new Date(startD);
+  while (cur <= endD) {
+    const iso = toISO(cur);
+    const k = keyOf(iso);
+    if (!index.has(k)) {
+      const label = granularity === 'month'
+        ? `${MONTHS_SHORT[cur.getMonth()]}/${String(cur.getFullYear()).slice(2)}`
+        : `${cur.getDate()} ${MONTHS_SHORT[cur.getMonth()]}`;
+      index.set(k, points.length);
+      points.push({ label, start: iso, gross: 0 });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  for (const a of appointments) {
+    if (!APPROVED(a) || !inRange(a.date, range.start, range.end)) continue;
+    const i = index.get(keyOf(a.date));
+    if (i !== undefined) points[i].gross += appointmentRevenueCents(a, byId);
+  }
+  for (const t of transactions) {
+    if (t.type !== 'income' || !inRange(t.date, range.start, range.end)) continue;
+    const i = index.get(keyOf(t.date));
+    if (i !== undefined) points[i].gross += t.amount_cents;
+  }
+  return { granularity, points };
+}
