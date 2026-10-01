@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Appointment, Setting, AppointmentStatus, Service, Client } from '@/types/database';
 import {
-  MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus, Pencil, RotateCcw
+  MessageCircle, Check, X, CheckCircle, Ban, Bell, Trash2, Plus, Pencil, RotateCcw, MoreHorizontal,
 } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { Portal } from '../ui/Portal';
@@ -13,6 +13,7 @@ import { SearchField } from '../ui/SearchField';
 import { Button } from '../ui/Button';
 import { PillGroup } from '../ui/PillGroup';
 import { StatusPill } from '../ui/StatusPill';
+import { StatusLabel } from '../ui/StatusDot';
 import { EmptyState } from '../ui/EmptyState';
 import {
   updateAppointmentStatusAction, deleteAppointmentAction, updateAppointmentAction,
@@ -59,6 +60,10 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   const { success, error, info } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Celular: as ações de um horário ficam dobradas atrás do "⋯"; só um
+  // cartão aberto por vez. E a lista entra por partes: 14 dias de cada vez.
+  const [openActions, setOpenActions] = useState<string | null>(null);
+  const [visibleDays, setVisibleDays] = useState(14);
   const [dateFilter, setDateFilter] = useState<string>('');
 
   // Novo agendamento manual (com duração personalizada)
@@ -492,7 +497,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
           pílula COM CONTAGEM: a profissional vê que há 3 pendentes antes de
           decidir filtrar, em vez de abrir o menu para descobrir. */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex gap-2">
           <SearchField
             className="flex-1 min-w-0"
             label="Buscar agendamentos"
@@ -506,7 +511,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               aria-label="Filtrar por data"
-              className="field-input mono w-auto"
+              className="field-input mono w-auto max-w-[9.5rem]"
             />
             {dateFilter && (
               <Button variant="ghost" size="sm" onClick={() => setDateFilter('')}>Limpar</Button>
@@ -546,10 +551,10 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          {porDia.map(({ iso, rotulo, apps }) => (
+          {porDia.slice(0, visibleDays).map(({ iso, rotulo, apps }) => (
             <section key={iso}>
               {/* Cabeçalho do dia: gruda no topo enquanto o dia rola. */}
-              <div className="sticky top-[52px] lg:top-16 z-10 -mx-4 px-4 lg:mx-0 lg:px-0 py-2 bg-bg/85 backdrop-blur-[20px] flex items-baseline gap-2">
+              <div className="sticky top-[60px] lg:top-16 z-10 -mx-4 px-4 lg:mx-0 lg:px-0 py-2 bg-bg/85 backdrop-blur-[20px] flex items-baseline gap-2">
                 <h2 className="text-h3 text-heading">{rotulo}</h2>
                 <span className="mono-micro text-n-500">
                   {apps.length} {apps.length === 1 ? 'HORÁRIO' : 'HORÁRIOS'}
@@ -581,6 +586,9 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                               {apptServiceLabel(app)} · {realDurationMin(app)}MIN
                               {apptTotalCents(app) > 0 ? ` · ${formatPriceBRL(apptTotalCents(app))}` : ''}
                             </p>
+                            {/* Celular: o status vem aqui embaixo, em vez de disputar
+                                a largura com o nome na mesma linha. */}
+                            <span className="lg:hidden mt-1.5 block"><StatusLabel tone={m.tone}>{m.label}</StatusLabel></span>
                             {app.notes && (
                               <p className="mt-1.5 text-caption text-n-600 border-l-2 border-wine-200 pl-2">
                                 {app.notes}
@@ -601,16 +609,28 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                             <div className="hidden lg:flex items-center gap-1.5 opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 group-focus-within:opacity-100">
                               <AppointmentActions app={app} />
                             </div>
-                            <StatusPill tone={m.tone} className="shrink-0 lg:group-hover:hidden lg:group-focus-within:hidden">
+                            <StatusPill tone={m.tone} className="max-lg:hidden shrink-0 lg:group-hover:hidden lg:group-focus-within:hidden">
                               {m.label}
                             </StatusPill>
+                            {/* Celular: as ações dobram atrás deste botão. Sete
+                                botões sempre à vista em cada cartão era o que
+                                deixava a lista com cara de painel de controle. */}
+                            <button
+                              type="button"
+                              onClick={() => setOpenActions((o) => (o === app.id ? null : app.id))}
+                              aria-expanded={openActions === app.id}
+                              aria-label={openActions === app.id ? 'Esconder ações' : 'Ações deste horário'}
+                              className="lg:hidden icon-chip h-9 w-9"
+                            >
+                              <MoreHorizontal className="h-5 w-5" aria-hidden />
+                            </button>
                           </div>
                         </div>
-                        {/* Em ponteiro grosso não existe hover: as ações ficam
-                            visíveis, numa faixa própria abaixo da linha. */}
-                        <div className="lg:hidden flex items-center gap-1.5 flex-wrap px-5 pb-3 -mt-1">
-                          <AppointmentActions app={app} />
-                        </div>
+                        {openActions === app.id && (
+                          <div className="lg:hidden flex items-center gap-1 flex-wrap px-4 pb-3 pt-2 border-t border-line">
+                            <AppointmentActions app={app} />
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -618,6 +638,13 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
               </div>
             </section>
           ))}
+          {porDia.length > visibleDays && (
+            <div className="flex justify-center">
+              <Button variant="secondary" size="md" onClick={() => setVisibleDays((n) => n + 14)}>
+                Mostrar mais dias ({porDia.length - visibleDays} restantes)
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

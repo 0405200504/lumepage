@@ -1,7 +1,7 @@
 import { Sora, Inter, Cormorant_Garamond } from 'next/font/google';
 
 /**
- * Tipografia da LP (o painel usa Manrope).
+ * Tipografia da LP (o resto do produto usa Inter + Hanken Grotesk, em lib/fonts.ts).
  *
  * As variáveis ficam escopadas na casca `.lp-page` — nada disso vaza pro resto
  * do app. Mora aqui porque duas telas montam essa casca: a página de vendas

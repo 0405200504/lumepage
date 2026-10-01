@@ -71,8 +71,9 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
   const done = tasks.filter(t => t.done);
 
   return (
-    <div className="card p-6 space-y-4">
-      <div>
+    <div className="card p-4 lg:p-6 space-y-4">
+      {/* No celular o nome da tela já está na barra do topo. */}
+      <div className="hidden lg:block">
         <h3 className="text-h3 text-heading">Bloco de notas &amp; tarefas</h3>
         <p className="text-caption text-n-500 mt-1">Anote o que é importante. Com data, a tarefa aparece na sua Agenda.</p>
       </div>
@@ -80,7 +81,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
       {/* Sem card dentro de card: a moldura cinza aninhada era o que fazia o
           bloco de notas parecer uma caixa dentro de outra. Uma hairline
           superior separa o formulário da lista, e basta. */}
-      <form onSubmit={add} data-tour="module-action" className="space-y-3 border-t border-line pt-4">
+      <form onSubmit={add} data-tour="module-action" className="space-y-3 lg:border-t lg:border-line lg:pt-4">
         {/* Passo 1: o que anotar */}
         <div>
           <label className="mono-micro text-n-500 block mb-1.5">
@@ -164,7 +165,7 @@ export const TasksWidget: React.FC<TasksWidgetProps> = ({ professionalId, initia
         </button>
       </form>
 
-      <div className="space-y-1.5 max-h-80 overflow-y-auto -mx-1 px-1">
+      <div className="space-y-1.5 lg:max-h-80 lg:overflow-y-auto -mx-1 px-1">
         {tasks.length === 0 && (
           <p className="text-caption text-n-600 text-center py-6">Nada anotado ainda. Comece pela primeira tarefa acima.</p>
         )}
@@ -211,7 +212,8 @@ const TaskRow: React.FC<{ task: Task; onToggle: (t: Task) => void; onRemove: (t:
         </span>
       )}
     </div>
-    <button type="button" onClick={() => onRemove(task)} className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-n-600 hover:text-danger transition-ui" aria-label="Excluir">
+    {/* Sem hover no toque: no celular a lixeira fica sempre visível. */}
+    <button type="button" onClick={() => onRemove(task)} className="lg:opacity-0 lg:group-hover:opacity-100 p-2 -mr-1 rounded-lg text-n-500 hover:text-danger transition-ui" aria-label="Excluir">
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   </div>

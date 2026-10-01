@@ -1,19 +1,21 @@
 /**
- * Assinatura sonora da Lume — o "tim" da abertura do app.
+ * Assinatura sonora da Lume — duas notas de vidro na abertura do painel.
  *
- * É SINTETIZADO na hora (Web Audio), não é um arquivo: um mp3 de 40 kB no
- * caminho crítico do primeiro paint, servido pelo service worker, chegaria
- * atrasado justamente na única vez em que ele precisa tocar. Aqui o som sai
- * de osciladores — custo zero de rede, toca no mesmo quadro.
+ * É SINTETIZADO na hora (Web Audio), não é um arquivo: um mp3 no caminho
+ * crítico do primeiro paint chegaria atrasado justamente na única vez em que
+ * precisa tocar. Aqui o som sai de osciladores — custo zero de rede, toca no
+ * mesmo quadro da animação.
  *
- * O timbre: um sopro curto que sobe (a luz "acendendo") e, por cima, um
- * arpejo de sino em Ré maior com um pouco de espaço (delay realimentado).
- * Cabe em ~1,6 s, que é a duração da animação da marca.
+ * O timbre: uma nota e, 120 ms depois, a quinta acima — Mi e Si —, cada uma
+ * com um sobretom curto que dá o "vidro", e um grave discreto por baixo para
+ * não ficar fino no celular. Um pouco de sala (delay curto realimentado).
+ * A cauda acaba em ~1 s, logo depois da cortina (900 ms).
  *
- * IMPORTANTE — política de autoplay: navegador só deixa tocar som sem gesto
- * do usuário em alguns contextos (PWA instalado, aba com histórico de
- * engajamento). Quando bloqueia, o AudioContext nasce suspenso e nada soa.
- * Isso é ESPERADO e silencioso: a animação continua, ninguém vê erro.
+ * IMPORTANTE — política de autoplay: navegador só deixa tocar som depois de
+ * um gesto da pessoa na página. Vindo do login (clique em "Acessar Painel" e
+ * navegação de cliente) o gesto já aconteceu e o som sai. Numa abertura fria
+ * do app instalado, sem toque antes, o AudioContext nasce suspenso e nada
+ * soa. Isso é ESPERADO e silencioso: a animação continua, ninguém vê erro.
  */
 
 /** Preferência da profissional. Ausente = ligado. */
@@ -37,6 +39,12 @@ export function setChimeEnabled(on: boolean): void {
 
 type Ctor = typeof AudioContext;
 
+/* Mi5 → Si5 (quinta justa) e Mi3 de corpo. Mudou aqui, mude a prévia em
+   scripts/ (o .wav de referência é gerado com estes mesmos números). */
+const NOTA_1 = 659.25;
+const NOTA_2 = 987.77;
+const GRAVE = 164.81;
+
 export function playAppChime(): void {
   if (typeof window === 'undefined') return;
 
@@ -54,96 +62,65 @@ export function playAppChime(): void {
   if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
 
   try {
-    const t0 = ctx.currentTime + 0.02;
+    const t0 = ctx.currentTime + 0.03;
 
     const master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = 0.7;
     master.connect(ctx.destination);
 
-    // Espaço: delay curto realimentado e abafado. Faz as vezes de uma sala
-    // pequena sem precisar carregar impulso de reverb.
-    const delay = ctx.createDelay(0.6);
-    delay.delayTime.value = 0.17;
+    // Sala: delay curto realimentado e abafado.
+    const delay = ctx.createDelay(0.5);
+    delay.delayTime.value = 0.14;
     const damp = ctx.createBiquadFilter();
     damp.type = 'lowpass';
-    damp.frequency.value = 2600;
+    damp.frequency.value = 3000;
     const feedback = ctx.createGain();
-    feedback.gain.value = 0.26;
+    feedback.gain.value = 0.22;
     const wet = ctx.createGain();
-    wet.gain.value = 0.22;
+    wet.gain.value = 0.18;
     delay.connect(damp);
     damp.connect(feedback);
     feedback.connect(delay);
     damp.connect(wet);
     wet.connect(master);
 
-    // Tudo entra por aqui: vai seco para o master e molhado para o delay.
+    // Tudo entra por aqui: seco para o master, molhado para o delay.
     const bus = ctx.createGain();
-    bus.gain.value = 1;
     bus.connect(master);
     bus.connect(delay);
 
-    /* — 1. sopro que sobe (a luz acendendo) — */
-    const dur = 0.9;
-    const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-    const data = noiseBuf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    }
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuf;
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.Q.value = 0.9;
-    band.frequency.setValueAtTime(300, t0);
-    band.frequency.exponentialRampToValueAtTime(3800, t0 + 0.55);
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.0001, t0);
-    noiseGain.gain.exponentialRampToValueAtTime(0.06, t0 + 0.28);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    noise.connect(band);
-    band.connect(noiseGain);
-    noiseGain.connect(bus);
-    noise.start(t0);
-    noise.stop(t0 + dur + 0.05);
+    /** Uma nota de vidro: senoide com ataque macio e cauda longa, mais o
+     *  2º parcial (uma oitava acima), fraco e curto — é ele que faz "vidro"
+     *  em vez de "apito". */
+    const nota = (freq: number, at: number, peak: number, decay: number) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(peak, at + 0.018);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+      osc.connect(g);
+      g.connect(bus);
+      osc.start(at);
+      osc.stop(at + decay + 0.05);
 
-    /* — 2. sino: uma nota = duas senoides levemente desafinadas + 3ª harmônica — */
-    const voice = (freq: number, at: number, peak: number, decay: number) => {
-      for (const cents of [-5, 5]) {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.detune.value = cents;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, at);
-        g.gain.exponentialRampToValueAtTime(peak / 2, at + 0.012); // ataque de sino: quase instantâneo
-        g.gain.exponentialRampToValueAtTime(0.0001, at + decay);
-        osc.connect(g);
-        g.connect(bus);
-        osc.start(at);
-        osc.stop(at + decay + 0.05);
-      }
-      // Brilho: a harmônica que faz soar "sino" e não "apito".
-      const shine = ctx.createOscillator();
-      shine.type = 'triangle';
-      shine.frequency.value = freq * 3.01;
-      const sg = ctx.createGain();
-      sg.gain.setValueAtTime(0.0001, at);
-      sg.gain.exponentialRampToValueAtTime(peak * 0.16, at + 0.01);
-      sg.gain.exponentialRampToValueAtTime(0.0001, at + decay * 0.45);
-      shine.connect(sg);
-      sg.connect(bus);
-      shine.start(at);
-      shine.stop(at + decay);
+      const parcial = ctx.createOscillator();
+      parcial.type = 'sine';
+      parcial.frequency.value = freq * 2.002;
+      const pg = ctx.createGain();
+      pg.gain.setValueAtTime(0.0001, at);
+      pg.gain.exponentialRampToValueAtTime(peak * 0.22, at + 0.01);
+      pg.gain.exponentialRampToValueAtTime(0.0001, at + decay * 0.35);
+      parcial.connect(pg);
+      pg.connect(bus);
+      parcial.start(at);
+      parcial.stop(at + decay);
     };
 
-    // Ré maior subindo — D5, F#5, A5 e a oitava fechando.
-    const arp = [587.33, 739.99, 880.0, 1174.66];
-    arp.forEach((freq, i) => {
-      voice(freq, t0 + 0.22 + i * 0.105, 0.17 - i * 0.025, i === arp.length - 1 ? 1.7 : 1.25);
-    });
-    // Corpo grave por baixo (D3), para o acorde não ficar fino no celular.
-    voice(146.83, t0 + 0.2, 0.1, 1.9);
+    nota(NOTA_1, t0, 0.2, 0.85);
+    nota(NOTA_2, t0 + 0.12, 0.15, 0.95);
+    nota(GRAVE, t0, 0.07, 0.8);
   } catch {
     /* qualquer nó indisponível: sem som, sem erro na tela */
   }
@@ -152,5 +129,5 @@ export function playAppChime(): void {
   // contextos e passa a recusar novos ("max hardware contexts reached").
   window.setTimeout(() => {
     void ctx.close().catch(() => {});
-  }, 3200);
+  }, 2000);
 }

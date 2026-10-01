@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { ToastProvider } from '@/components/ui/Toast';
 import PwaRegister from '@/components/PwaRegister';
+import { fontVars } from '@/lib/fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,23 +37,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* UMA família em todo o painel: Plus Jakarta Sans.
-            Antes eram três (Manrope no corpo, Instrument Sans nos títulos e
-            no dinheiro, JetBrains Mono nos dados) e o resultado era uma tela
-            em que nome de cliente, horário e valor tinham esqueletos
-            tipográficos diferentes — a queixa de "as fontes não combinam".
-            Hierarquia agora se faz com peso (400→800), tamanho e cor.
-            Os pesos vão até 800 porque o número grande do faturamento é o
-            assunto da tela e precisa de um degrau acima do título. */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    // Inter (corpo e interface) + Hanken Grotesk (títulos) — lib/fonts.ts.
+    // As variáveis ficam no <html> porque os tokens de fonte vivem no :root.
+    <html lang="pt-BR" className={fontVars}>
       <body className="antialiased min-h-screen bg-bg">
         <ToastProvider>
           {children}

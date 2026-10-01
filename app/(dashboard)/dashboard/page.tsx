@@ -3,7 +3,7 @@ import { dbService } from '@/lib/supabase/db';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { TasksWidget } from '@/components/dashboard/TasksWidget';
 import { PushNotificationBanner } from '@/components/dashboard/PushNotificationBanner';
-import { NewAppointmentFab } from '@/components/dashboard/NewAppointmentFab';
+import { AIAgentFab } from '@/components/dashboard/AIAgentFab';
 
 export const metadata = {
   title: 'Início | Lume Agenda',
@@ -14,12 +14,11 @@ export default async function DashboardPage() {
   const session = await requireProfessional();
   const professionalId = session.professional_id!;
 
-  const [professional, appointments, services, tasks, clients] = await Promise.all([
+  const [professional, appointments, services, tasks] = await Promise.all([
     dbService.getProfessionalById(professionalId),
     dbService.getAppointmentsByProfessional(professionalId),
     dbService.getServicesByProfessional(professionalId),
     dbService.getTasksByProfessional(professionalId),
-    dbService.getClientsByProfessional(professionalId).catch(() => []),
   ]);
 
   return (
@@ -39,7 +38,7 @@ export default async function DashboardPage() {
 
       {/* Os dois flutuam: nenhum empurra o conteúdo acima. */}
       <PushNotificationBanner />
-      <NewAppointmentFab professionalId={professionalId} services={services} clients={clients} />
+      <AIAgentFab />
     </div>
   );
 }

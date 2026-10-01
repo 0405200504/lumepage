@@ -91,6 +91,14 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const [miniCursor, setMiniCursor] = useState<Date>(startOfMonth(today));
   const [sidebarOpen, setSidebarOpen] = useState(false); // drawer no mobile
 
+  // Celular: cabeçalho de app de calendário. `monthOpen` troca a tira da
+  // semana pelo painel do mês; `mobileMonth` é o mês que o painel mostra (o
+  // dia escolhido continua sendo `cursor`). O deslize lateral na grade
+  // troca o dia.
+  const [monthOpen, setMonthOpen] = useState(false);
+  const [mobileMonth, setMobileMonth] = useState<Date>(startOfMonth(today));
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
   const hasFilters = filterStatus !== 'all' || filterClient !== 'all' || filterService !== 'all';
   const clearFilters = () => { setFilterStatus('all'); setFilterClient('all'); setFilterService('all'); };
 
@@ -314,6 +322,19 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
   const pickDay = (day: Date) => { setCursor(day); setView('day'); setMiniCursor(startOfMonth(day)); setSidebarOpen(false); };
   const jumpToday = () => { goToday(); setMiniCursor(startOfMonth(today)); };
 
+  const pickMobileDay = (d: Date) => {
+    setCursor(d); setView('day'); setMonthOpen(false); setMobileMonth(startOfMonth(d));
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const st = touchStart.current; touchStart.current = null; if (!st) return;
+    const t = e.changedTouches[0]; const dx = t.clientX - st.x; const dy = t.clientY - st.y;
+    // Só um deslize claramente horizontal vira troca de dia; rolar continua rolando.
+    if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.5) pickMobileDay(addDays(cursor, dx < 0 ? 1 : -1));
+  };
+
   // Painel de filtros (reutilizado no desktop e no drawer mobile).
   const sidebar = (
     <AgendaSidebar
@@ -348,6 +369,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
 
         {/* Coluna principal */}
         <div className="flex-1 min-w-0 space-y-4">
+          <div className="hidden lg:block space-y-4">
           {/* Topbar. O título ganhou a trilha mono de contexto acima e os
               quatro botões de visão viraram um segmented retangular — antes
               eram pílulas com uma cápsula deslizando entre elas. */}
@@ -433,9 +455,28 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
               </span>
             )}
           </div>
+          </div>
+
+          {/* CELULAR: mês + tira da semana (ou painel do mês), como um app de calendário. */}
+          <MobileAgendaChrome
+            cursor={cursor}
+            today={today}
+            monthOpen={monthOpen}
+            onToggleMonth={() => { setMobileMonth(startOfMonth(cursor)); setMonthOpen((o) => !o); }}
+            mobileMonth={mobileMonth}
+            onStepMonth={(dir) => setMobileMonth(addMonths(mobileMonth, dir))}
+            countOf={(iso) => activeOf(apptByDate[iso]).length}
+            holidayMap={visibleHolidayMap}
+            hasFilters={hasFilters}
+            onOpenFilters={() => setSidebarOpen(true)}
+            onPickDay={pickMobileDay}
+            onToday={() => pickMobileDay(today)}
+          />
 
           {view === 'day' && (
+            <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <DayView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} lunchByWeekday={lunchByWeekday} workByWeekday={workByWeekday} activeOf={activeOf} onSelectDay={setSelectedISO} onQuickBook={(date: string, time?: string) => setQuickBook({ date, time })} onMoveAppt={moveAppt} />
+            </div>
           )}
           {view === 'month' && (
             <MonthView cursor={cursor} today={today} apptByDate={apptByDate} taskByDate={taskByDate} holidayMap={visibleHolidayMap} blockByDate={blockByDate} activeOf={activeOf} onSelectDay={setSelectedISO} dropProps={dropProps} dragOverISO={dragOverISO} />
@@ -828,11 +869,20 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
   // Rola para perto do horário atual (ou do primeiro agendamento) ao abrir o dia.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrolledOnce = useRef(false);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const targetMin = nowInRange ? nowMin : (appts.length ? tmin(appts[0].start_time) : 8 * 60);
-    el.scrollTop = Math.max(0, yOf(targetMin) - 80);
+    const y = Math.max(0, yOf(targetMin) - 80);
+    if (el.scrollHeight > el.clientHeight + 4) {
+      el.scrollTop = y;
+    } else if (!scrolledOnce.current && window.matchMedia('(max-width: 1023px)').matches) {
+      // Celular: a grade rola com a página. Leva a página até o horário uma
+      // vez, ao abrir — ao trocar de dia a posição fica onde estava.
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY + y - 150 });
+    }
+    scrolledOnce.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
 
@@ -851,9 +901,9 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
   };
 
   return (
-    <div className="card p-0 overflow-hidden">
-      {/* Cabeçalho do dia */}
-      <div className={`flex items-center justify-between gap-3 px-5 py-4 border-b border-line ${isToday ? 'bg-wine-50/60' : 'bg-surface'}`}>
+    <div className="agenda-day card p-0 overflow-hidden">
+      {/* Cabeçalho do dia (no celular a tira da semana já diz o dia) */}
+      <div className={`hidden lg:flex items-center justify-between gap-3 px-5 py-4 border-b border-line ${isToday ? 'bg-wine-50/60' : 'bg-surface'}`}>
         <div className="flex items-center gap-3">
           <span className={`num inline-flex items-center justify-center h-10 w-10 rounded-control text-label font-semibold ${isToday ? 'bg-wine-700 text-white' : 'text-heading bg-n-100'}`}>{cursor.getDate()}</span>
           <div>
@@ -883,10 +933,10 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
 
       {/* Timeline rolável: régua de horas (esquerda) + coluna de eventos (direita) */}
       {!fullDayBlock && (
-        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: '68vh' }}>
+        <div ref={scrollRef} className="agenda-day__scroll overflow-y-auto" style={{ maxHeight: '68vh' }}>
           <div className="flex" style={{ height: totalH }}>
             {/* Régua de horas (rótulos de 30 em 30 min) */}
-            <div className="relative w-14 shrink-0 select-none">
+            <div className="relative w-12 lg:w-14 shrink-0 select-none">
               {/* Só a HORA CHEIA ganha rótulo. Antes a calha imprimia 08:00,
                   08:30, 09:00, 09:30… — o dobro de números, todos parecidos, e
                   o olho perdia a contagem das horas. A meia hora continua
@@ -1013,7 +1063,8 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                     onDragStart={(e) => apptDragStart(e, a.id)}
                     onClick={() => onSelectDay(iso)}
                     title={off ? 'Fora do expediente · arraste para reagendar · clique para ver' : 'Arraste para reagendar · clique para ver'}
-                    className={`group absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
+                    data-status={a.status}
+                    className={`appt-block group absolute z-10 text-left rounded-badge border overflow-hidden cursor-grab active:cursor-grabbing transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 flex ${m.block}`}
                     style={{
                       top: yOf(s) + 1,
                       height: height - 2,
@@ -1024,7 +1075,7 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
                     {/* A cor do status mora NESTA barra de 3px. O bloco em si é
                         neutro — com um fundo pastel por status, um dia cheio
                         virava mosaico e nada se destacava. */}
-                    <span className={`w-[3px] shrink-0 ${m.bar}`} aria-hidden />
+                    <span className={`max-lg:hidden w-[3px] shrink-0 ${m.bar}`} aria-hidden />
                     {/* Abaixo de 40px (um atendimento de 30min ocupa ~28px) o
                         bloco COLAPSA para uma linha: nome à esquerda, horário à
                         direita. Empilhado, a segunda linha era cortada no meio
@@ -1080,6 +1131,100 @@ const DayView: React.FC<any> = ({ cursor, today, apptByDate, taskByDate, holiday
               />
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ---------------- CELULAR: cabeçalho de app de calendário ---------------- */
+const WEEKDAY_INITIALS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+/** Um dia da tira/painel: número num disco, ponto embaixo se há agendamento.
+ *  Escopo de módulo (ver NavItem em Sidebar): dentro do componente seria
+ *  um tipo novo a cada render. */
+const MobileDayCell: React.FC<{
+  d: Date; selected: boolean; isToday: boolean; dim?: boolean; count: number; holiday?: boolean;
+  onPick: (d: Date) => void;
+}> = ({ d, selected, isToday, dim, count, holiday, onPick }) => (
+  <button
+    type="button"
+    onClick={() => onPick(d)}
+    aria-label={`${d.getDate()} de ${MONTHS[d.getMonth()]}${count ? `, ${count} agendamento${count === 1 ? '' : 's'}` : ''}`}
+    aria-pressed={selected}
+    className="flex flex-col items-center gap-0.5 py-1 tap focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine-700 rounded-chip"
+  >
+    <span className={`num inline-flex h-9 w-9 items-center justify-center rounded-full text-body-sm font-semibold transition-ui ${
+      selected ? 'bg-wine-700 text-white' : isToday ? 'text-wine-700 ring-1 ring-wine-300' : dim ? 'text-n-300' : holiday ? 'text-wine-600' : 'text-heading'
+    }`}>{d.getDate()}</span>
+    <span className={`h-1 w-1 rounded-full ${count > 0 ? (dim ? 'bg-n-300' : 'bg-wine-500') : 'bg-transparent'}`} aria-hidden />
+  </button>
+);
+
+const MobileAgendaChrome: React.FC<{
+  cursor: Date; today: Date;
+  monthOpen: boolean; onToggleMonth: () => void;
+  mobileMonth: Date; onStepMonth: (dir: 1 | -1) => void;
+  countOf: (iso: string) => number;
+  holidayMap: Record<string, Holiday>;
+  hasFilters: boolean; onOpenFilters: () => void;
+  onPickDay: (d: Date) => void; onToday: () => void;
+}> = ({ cursor, today, monthOpen, onToggleMonth, mobileMonth, onStepMonth, countOf, holidayMap, hasFilters, onOpenFilters, onPickDay, onToday }) => {
+  const ws = startOfWeek(cursor);
+  const week = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const gridStart = startOfWeek(startOfMonth(mobileMonth));
+  const grid = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  const shown = monthOpen ? mobileMonth : cursor;
+
+  return (
+    <div className="lg:hidden -mx-4 bg-surface border-b border-line select-none">
+      <div className="flex items-center justify-between pl-4 pr-2 h-12">
+        <button type="button" onClick={onToggleMonth} aria-expanded={monthOpen} className="tap flex items-center gap-1 text-h3 text-heading rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700">
+          {MONTHS[shown.getMonth()]} <span className="font-normal text-n-500">{shown.getFullYear()}</span>
+          <ChevronDown className={`h-5 w-5 text-n-500 transition-transform ${monthOpen ? 'rotate-180' : ''}`} aria-hidden />
+        </button>
+        <div className="flex items-center gap-0.5">
+          {monthOpen && (
+            <>
+              <button type="button" onClick={() => onStepMonth(-1)} aria-label="Mês anterior" className="icon-chip h-10 w-10"><ChevronLeft className="h-5 w-5" /></button>
+              <button type="button" onClick={() => onStepMonth(1)} aria-label="Próximo mês" className="icon-chip h-10 w-10"><ChevronRight className="h-5 w-5" /></button>
+            </>
+          )}
+          <button type="button" onClick={onToday} className="tap h-8 px-3 rounded-full border border-line text-caption font-semibold text-heading hover:bg-n-50 transition-ui">Hoje</button>
+          <button type="button" onClick={onOpenFilters} aria-label="Filtros e opções" className="icon-chip h-10 w-10 relative">
+            <SlidersHorizontal className="h-5 w-5" />
+            {hasFilters && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[color:var(--color-signal)]" aria-label="filtros ativos" />}
+          </button>
+        </div>
+      </div>
+
+      {monthOpen ? (
+        <div className="px-2 pb-2">
+          <div className="grid grid-cols-7">
+            {WEEKDAY_INITIALS.map((w, i) => <span key={i} className="text-center text-micro font-semibold text-n-500 py-1">{w}</span>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {grid.map((d) => {
+              const iso = isoOf(d);
+              return <MobileDayCell key={iso} d={d} selected={sameDay(d, cursor)} isToday={sameDay(d, today)} dim={d.getMonth() !== mobileMonth.getMonth()} count={countOf(iso)} holiday={!!holidayMap[iso]} onPick={onPickDay} />;
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center px-1 pb-1">
+          <button type="button" onClick={() => onPickDay(addDays(cursor, -7))} aria-label="Semana anterior" className="icon-chip h-9 w-8 shrink-0"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="grid grid-cols-7 flex-1">
+            {week.map((d, i) => {
+              const iso = isoOf(d);
+              return (
+                <div key={iso} className="flex flex-col items-center">
+                  <span className="text-micro font-semibold text-n-500">{WEEKDAY_INITIALS[i]}</span>
+                  <MobileDayCell d={d} selected={sameDay(d, cursor)} isToday={sameDay(d, today)} count={countOf(iso)} holiday={!!holidayMap[iso]} onPick={onPickDay} />
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" onClick={() => onPickDay(addDays(cursor, 7))} aria-label="Próxima semana" className="icon-chip h-9 w-8 shrink-0"><ChevronRight className="h-4 w-4" /></button>
         </div>
       )}
     </div>

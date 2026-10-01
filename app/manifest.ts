@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     // mostra o ícone antes do app carregar). Com o creme antigo, a sequência
     // era clarão → cortina vinho → painel. Agora emenda na abertura da marca
     // (components/ui/AppSplash) sem piscar de cor.
-    background_color: '#500b18',
-    theme_color: '#500b18',
+    background_color: '#43121f',
+    theme_color: '#43121f',
     lang: 'pt-BR',
     categories: ['business', 'productivity', 'lifestyle'],
     icons: [

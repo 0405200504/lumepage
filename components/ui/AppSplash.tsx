@@ -3,23 +3,11 @@ import { LUME_MARK_MASK } from '@/lib/ui/lumeMaskData';
 import { SplashRunner, SPLASH_SESSION_KEY } from './SplashRunner';
 
 /**
- * ABERTURA DO APP — a marca acendendo.
+ * ABERTURA DO APP — a cortina de marca entre o login e o painel.
  *
- * Muita profissional usa a Lume instalada na tela inicial do celular, e app
- * instalado que abre direto no conteúdo parece site. Esta é a cortina de
- * marca entre o toque no ícone e o painel.
- *
- * SÃO DUAS ABERTURAS, e uma é o piso da outra:
- *   · CELULAR — o filme da marca (public/splash-mobile-v1.mp4), com o traço
- *     desenhando "lume" e a trilha dele. É o que aparece quando o arquivo já
- *     está no cache do navegador e o autoplay é permitido.
- *   · COMPUTADOR, e o celular em toda abertura em que o filme não entrar em
- *     cena a tempo — a animação de CSS: fundo vinho, o wordmark surgindo com
- *     uma varredura de luz atravessando o traço, a estrelinha do logo
- *     piscando e um sino curto (lib/ui/appChime).
- *
- * A de CSS pinta no primeiro quadro, sem rede. Por isso ela é a base e o
- * filme entra POR CIMA: nenhuma abertura fica em branco esperando download.
+ * Um gesto só: fundo vinho chapado, a marca surge, um fio de luz se abre
+ * sob ela e a cortina se desfaz sobre o painel. Junto, duas notas de vidro
+ * (lib/ui/appChime). Cabe em 1,4 s.
  *
  * POR QUE ISTO É SERVER COMPONENT (e não um `useEffect` que monta um portal):
  * a cortina precisa estar no HTML do primeiro paint. Componente cliente só
@@ -52,42 +40,14 @@ export const AppSplash: React.FC = () => {
       <script dangerouslySetInnerHTML={{ __html: gate }} />
 
       <div id="lume-splash" aria-hidden="true">
-        {/* CELULAR · o filme da marca.
-            `data-src` em vez de `src` de propósito: quem decide baixar 1,2 MB
-            é o SplashRunner, e só no celular. No computador o vídeo é 9:16 e
-            ficaria cortado — lá vale a animação de CSS abaixo. */}
-        <video
-          id="lume-splash-video"
-          className="lume-splash__video"
-          data-src="/splash-mobile-v1.mp4"
-          playsInline
-          preload="auto"
-          disablePictureInPicture
-          disableRemotePlayback
-          aria-hidden="true"
-        />
-
         <div className="lume-splash__stage">
-          <div className="lume-splash__wordmark">
-            {/* O halo mora aqui dentro para acender ATRÁS das letras, e não
-                atrás do conjunto (marca + fio), que ficaria descentrado. */}
-            <div className="lume-splash__glow" />
-
-            {/* O wordmark NÃO é um <img>: é uma máscara.
-                Assim o preenchimento é um gradiente animado — a luz varre as
-                letras por dentro do traço, em vez de passar um brilho por
-                cima da caixa retangular. A arte entra uma única vez, como
-                data URI, na variável --lume-mark — e é a versão só-alfa
-                (lib/ui/lumeMaskData), que pesa 26 kB no HTML em vez dos 45 kB
-                da arte colorida, que aqui seria desperdício. */}
-            <div
-              className="lume-splash__mark"
-              style={{ '--lume-mark': `url(${LUME_MARK_MASK})` } as React.CSSProperties}
-            />
-            {/* A estrela que existe no próprio logo, entre o "m" e o "e". */}
-            <span className="lume-splash__spark" />
-          </div>
-
+          {/* O wordmark é uma máscara, não um <img>: a arte só-alfa
+              (lib/ui/lumeMaskData, 26 kB) entra uma vez como data URI em
+              --lume-mark e o preenchimento é a cor creme. */}
+          <div
+            className="lume-splash__mark"
+            style={{ '--lume-mark': `url(${LUME_MARK_MASK})` } as React.CSSProperties}
+          />
           <div className="lume-splash__line" />
         </div>
       </div>

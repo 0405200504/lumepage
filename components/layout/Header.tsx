@@ -15,6 +15,7 @@ interface HeaderProps {
   subtitle?: string;
   userName: string;
   userEmail: string;
+  avatarUrl?: string | null;
   role: 'super_admin' | 'professional';
 }
 
@@ -108,7 +109,7 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
  * No celular ela colapsa: em repouso mostra título e subtítulo; ao rolar,
  * encolhe e mantém só o título com as ações.
  */
-export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, role }) => {
+export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, avatarUrl, role }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
@@ -201,15 +202,22 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
             <RefreshCw className={`h-[18px] w-[18px] ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden />
           </button>
 
-          <span title={`${userName} · ${userEmail}`} className="lg:hidden ml-0.5">
-            {role === 'super_admin' ? (
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-wine-50 text-wine-700">
-                <ShieldAlert className="h-5 w-5" />
-              </span>
-            ) : (
-              <Avatar name={userName} size="sm" />
-            )}
-          </span>
+          {/* No celular o avatar é a porta das configurações (perfil, foto,
+              regras da agenda): é o canto em que todo app guarda "sua conta". */}
+          {role === 'super_admin' ? (
+            <span title={`${userName} · ${userEmail}`} className="lg:hidden ml-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-wine-50 text-wine-700">
+              <ShieldAlert className="h-5 w-5" />
+            </span>
+          ) : (
+            <Link
+              href="/dashboard/settings"
+              title={`${userName} · ${userEmail}`}
+              aria-label="Sua conta e configurações"
+              className="lg:hidden ml-0.5 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+            >
+              <Avatar name={userName} src={avatarUrl} size="sm" />
+            </Link>
+          )}
         </div>
       </div>
     </header>

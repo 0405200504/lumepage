@@ -7,13 +7,12 @@ import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
   LayoutDashboard, LogOut, ExternalLink, Wallet, NotebookPen, Hourglass,
   MessageCircle, Smartphone, Bot, ShoppingBag, Contact, ClipboardList, Globe,
-  X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
+  X, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
 import { LumeLogo } from '../ui/LumeLogo';
 import { Avatar } from '../ui/Avatar';
-import { Button } from '../ui/Button';
 import { Badge } from '../ui/StatusPill';
 import { SplashSoundToggle } from '../ui/SplashSoundToggle';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
@@ -30,6 +29,7 @@ interface SidebarProps {
   name: string;
   brandName?: string;
   slug?: string;
+  avatarUrl?: string | null;
   plan?: string | null;
   /** Aplicar limites de plano (só conta nova com assinatura ativa). */
   enforcePlan?: boolean;
@@ -38,7 +38,7 @@ interface SidebarProps {
 
 type NavLink = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
-/** Menu completo, agrupado. Fonte de verdade do rail aberto e do drawer. */
+/** Menu completo, agrupado. Fonte de verdade do rail e da gaveta. */
 const GROUPS: { title: string; links: NavLink[] }[] = [
   {
     title: 'Atendimento',
@@ -79,33 +79,6 @@ const GROUPS: { title: string; links: NavLink[] }[] = [
   },
 ];
 
-/**
- * O rail RECOLHIDO não mostra os dezoito destinos.
- *
- * Esta é a resposta direta a "a barra está feia e cheia de informação":
- * dezoito ícones empilhados numa coluna de 72px passam de 850px de altura,
- * não cabem sem rolagem em notebook nenhum, e nenhum deles se destaca —
- * o olho não tem onde pousar. As referências mostram cinco ou seis, e
- * escondem o resto atrás de um botão.
- *
- * Estes são os seis do dia a dia. O menu completo continua a UM gesto de
- * distância: passar o mouse (ou tocar em "Todas as áreas") abre o rail com
- * os quatro grupos inteiros.
- */
-const PRIMARY_HREFS = [
-  '/dashboard',
-  '/dashboard/agenda',
-  '/dashboard/clients',
-  '/dashboard/whatsapp/conversas',
-  '/dashboard/finance',
-  '/dashboard/services',
-];
-
-const ALL_LINKS = GROUPS.flatMap((g) => g.links);
-const PRIMARY_LINKS = PRIMARY_HREFS
-  .map((href) => ALL_LINKS.find((l) => l.href === href))
-  .filter((l): l is NavLink => !!l);
-
 /** Um item de navegação. Serve o rail e a gaveta — o que muda é só se o
  *  rótulo está visível.
  *
@@ -122,9 +95,9 @@ const NavItem: React.FC<{
 }> = ({ link, active, locked, badge, showLabel, onNavigate }) => {
   const Icon = link.icon;
 
-  // Recolhido: disco de 44px, ativo em vinho chapado. O rótulo aparece no
-  // tooltip escuro depois de 400ms — tempo suficiente para não piscar
-  // quando o mouse só está atravessando a barra rumo ao conteúdo.
+  // Recolhido: disco de 40px; ativo em branco sobre o vinho. O rótulo aparece
+  // no tooltip depois de 400ms — tempo suficiente para não piscar quando o
+  // mouse só está atravessando a barra rumo ao conteúdo.
   if (!showLabel) {
     return (
       <Link
@@ -132,14 +105,14 @@ const NavItem: React.FC<{
         onClick={onNavigate}
         aria-current={active ? 'page' : undefined}
         data-active={active ? 'true' : undefined}
-        className="group rail-item mx-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+        className="group rail-item mx-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         <Icon className="h-5 w-5" />
         {locked && (
-          <Lock className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 text-n-400 bg-surface rounded-full p-px" aria-hidden />
+          <Lock className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 text-white/70 bg-wine-800 rounded-full p-px" aria-hidden />
         )}
         {badge > 0 && (
-          <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-wine-700 ring-2 ring-surface" aria-hidden />
+          <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-white ring-2 ring-wine-800" aria-hidden />
         )}
         <span className="rail-tooltip top-1/2 -translate-y-1/2">{link.label}</span>
       </Link>
@@ -152,13 +125,13 @@ const NavItem: React.FC<{
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       data-active={active ? 'true' : undefined}
-      className="rail-row focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wine-700"
+      className="rail-row focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
     >
       <Icon className="h-5 w-5 shrink-0" />
       <span className="flex-1 truncate">{link.label}</span>
       {locked && <Lock className="h-4 w-4 shrink-0 opacity-60" aria-hidden />}
       {badge > 0 && (
-        <Badge tone={active ? 'neutral' : 'accent'} className={active ? 'bg-white/20 text-white' : ''}>
+        <Badge tone="neutral" className={active ? 'bg-wine-700 text-white' : 'bg-white/20 text-white'}>
           {badge}
         </Badge>
       )}
@@ -168,43 +141,38 @@ const NavItem: React.FC<{
 
 /** Corpo da navegação.
  *
- *  Recolhido: só os seis primários, sem título de grupo e sem divisória —
- *  seis discos alinhados, e nada mais.
- *  Aberto: os quatro grupos completos, com o título em cinza-claro. */
+ *  Recolhido: TODOS os destinos, só o ícone, com um fio entre os grupos. O
+ *  rail não esconde mais nada atrás de um botão — o que ela procura está
+ *  sempre à vista, e o rótulo vem no tooltip.
+ *  Aberto: os mesmos grupos, com título e rótulo. */
 const NavBody: React.FC<{
   pathname: string;
   showLabel: boolean;
   lockedFor: (href: string) => boolean;
   badgeFor: (href: string) => number;
   onNavigate?: () => void;
-  /** Botão "todas as áreas" — só existe no rail recolhido do desktop. */
-  onExpand?: () => void;
-}> = ({ pathname, showLabel, lockedFor, badgeFor, onNavigate, onExpand }) => {
+}> = ({ pathname, showLabel, lockedFor, badgeFor, onNavigate }) => {
   if (!showLabel) {
     return (
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full px-2 py-3 flex flex-col items-center gap-1.5" aria-label="Navegação principal">
-        {PRIMARY_LINKS.map((link) => (
-          <NavItem
-            key={link.href}
-            link={link}
-            active={isActiveHref(pathname, link.href)}
-            locked={lockedFor(link.href)}
-            badge={badgeFor(link.href)}
-            showLabel={false}
-            onNavigate={onNavigate}
-          />
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full px-2 py-2 flex flex-col items-center" aria-label="Navegação principal">
+        {GROUPS.map((group, gi) => (
+          <React.Fragment key={group.title}>
+            {gi > 0 && <span className="my-1.5 h-px w-6 bg-white/15 shrink-0" aria-hidden />}
+            <div className="flex flex-col items-center gap-1">
+              {group.links.map((link) => (
+                <NavItem
+                  key={link.href}
+                  link={link}
+                  active={isActiveHref(pathname, link.href)}
+                  locked={lockedFor(link.href)}
+                  badge={badgeFor(link.href)}
+                  showLabel={false}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </React.Fragment>
         ))}
-        {onExpand && (
-          <button
-            type="button"
-            onClick={onExpand}
-            className="group rail-item mt-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-            aria-label="Ver todas as áreas"
-          >
-            <LayoutGrid className="h-5 w-5" />
-            <span className="rail-tooltip top-1/2 -translate-y-1/2">Todas as áreas</span>
-          </button>
-        )}
       </nav>
     );
   }
@@ -213,7 +181,7 @@ const NavBody: React.FC<{
     <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full px-3 py-3 space-y-5" aria-label="Navegação principal">
       {GROUPS.map((group) => (
         <div key={group.title}>
-          <p className="text-micro font-bold uppercase tracking-[0.07em] text-n-400 px-3 mb-1.5">
+          <p className="text-micro font-bold uppercase tracking-[0.07em] text-white/50 px-3 mb-1.5">
             {group.title}
           </p>
           <div className="space-y-0.5">
@@ -235,44 +203,48 @@ const NavBody: React.FC<{
   );
 };
 
-/** Rodapé: conta, página pública e sair.
- *
- *  Eram três linhas soltas de 44px empilhadas com uma borda em cima. Viraram
- *  DUAS: a linha da conta (avatar + nome + sair) e o link da página pública.
- *  O "Sair" perdeu a linha inteira e virou o ícone à direita do nome, que é
- *  onde qualquer pessoa já procura por ele. */
+/** Rodapé: conta, página pública e sair. */
 const NavFooter: React.FC<{
   showLabel: boolean;
   publicSlug: string;
   displayName: string;
+  avatarUrl?: string | null;
   onLogout: () => void;
   onNavigate?: () => void;
-}> = ({ showLabel, publicSlug, displayName, onLogout, onNavigate }) => {
+}> = ({ showLabel, publicSlug, displayName, avatarUrl, onLogout, onNavigate }) => {
   if (!showLabel) {
     return (
-      <div className="shrink-0 w-full px-2 pb-3 pt-2 flex flex-col items-center gap-1.5">
+      <div className="shrink-0 w-full px-2 pb-3 pt-2 flex flex-col items-center gap-1.5 border-t border-white/15">
         <Link
           href={`/agendar/${publicSlug}`}
           target="_blank"
           onClick={onNavigate}
-          className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           aria-label="Ver página pública"
         >
           <ExternalLink className="h-5 w-5" />
           <span className="rail-tooltip top-1/2 -translate-y-1/2">Ver página pública</span>
         </Link>
-        <span className="mt-1"><Avatar name={displayName} size="sm" /></span>
+        <Link
+          href="/dashboard/settings"
+          onClick={onNavigate}
+          className="group rail-item mt-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          aria-label="Sua conta e configurações"
+        >
+          <Avatar name={displayName} src={avatarUrl} size="sm" />
+          <span className="rail-tooltip top-1/2 -translate-y-1/2">{displayName}</span>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="shrink-0 w-full px-3 pb-3 pt-2 space-y-1">
+    <div className="shrink-0 w-full px-3 pb-3 pt-2 space-y-1 border-t border-white/15">
       <Link
         href={`/agendar/${publicSlug}`}
         target="_blank"
         onClick={onNavigate}
-        className="rail-row focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wine-700"
+        className="rail-row focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
       >
         <ExternalLink className="h-5 w-5 shrink-0" />
         <span className="flex-1 truncate">Ver página pública</span>
@@ -282,17 +254,19 @@ const NavFooter: React.FC<{
           disputando espaço com os destinos. */}
       <SplashSoundToggle />
 
-      <div className="flex items-center gap-3 h-14 px-3 rounded-chip bg-surface-2">
-        <Avatar name={displayName} size="sm" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-body-sm font-bold text-heading truncate">{displayName}</span>
-          <span className="block text-caption text-n-500">Sua conta</span>
-        </span>
+      <div className="flex items-center gap-3 h-14 px-3 rounded-chip bg-white/10">
+        <Link href="/dashboard/settings" onClick={onNavigate} className="flex items-center gap-3 min-w-0 flex-1 rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+          <Avatar name={displayName} src={avatarUrl} size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body-sm font-bold text-white truncate">{displayName}</span>
+            <span className="block text-caption text-white/60">Sua conta</span>
+          </span>
+        </Link>
         <button
           onClick={onLogout}
           title="Sair da conta"
           aria-label="Sair da conta"
-          className="icon-chip h-9 w-9 shrink-0 bg-surface hover:bg-danger-bg hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          className="inline-flex items-center justify-center h-9 w-9 shrink-0 rounded-full bg-white/10 text-white hover:bg-white hover:text-wine-700 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           <LogOut className="h-4 w-4" />
         </button>
@@ -306,19 +280,19 @@ function isActiveHref(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, plan, enforcePlan, pendingConversations }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, avatarUrl, plan, enforcePlan, pendingConversations }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { success, error } = useToast();
 
-  // Desktop: recolhido por padrão, abre no hover. `pinned` fixa aberto e
-  // persiste entre sessões — quem usa teclado ou trackpad lento não quer
-  // depender do mouse parado em cima da barra.
+  // Desktop: recolhido por padrão (todos os ícones à vista); `pinned` abre com
+  // os rótulos e persiste entre sessões. Não abre mais no hover: com todos
+  // os destinos já visíveis, abrir ao passar o mouse só punha uma coluna de
+  // texto na frente do conteúdo a cada travessia da barra.
   const [pinned, setPinned] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const expanded = pinned || hovered;
+  const expanded = pinned;
 
-  // Mobile: gaveta, aberta pelo botão do topo.
+  // Mobile: gaveta, aberta pelo hambúrguer do topo.
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // O valor só existe no navegador; ler durante o render quebraria a
@@ -376,45 +350,46 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
   const badgeFor = (href: string) =>
     href === '/dashboard/pending' && pendingConversations ? pendingConversations : 0;
 
+  const toggleButton = (
+    <button
+      type="button"
+      onClick={togglePinned}
+      aria-pressed={pinned}
+      aria-label={pinned ? 'Recolher o menu' : 'Abrir o menu com os nomes'}
+      title={pinned ? 'Recolher o menu' : 'Abrir o menu com os nomes'}
+      className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+    >
+      {pinned ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+      {!pinned && <span className="rail-tooltip top-1/2 -translate-y-1/2">Abrir o menu</span>}
+    </button>
+  );
+
   return (
     <>
       {/* ================= RAIL (desktop ≥1024px) =================
-          76px recolhido, 272px aberto no hover.
+          A superfície vinho da tela — UMA por tela, e aqui é ela: a barra
+          escura dá contraste com qualquer aba, que é sempre clara.
 
-          A largura É animada aqui, contra a regra geral — mas o painel é
-          `fixed`, fora do fluxo, e o <aside> ao lado reserva uma faixa de
-          largura CONSTANTE. Ou seja: o conteúdo da página não relayoutiza,
-          e a barra abre por cima em vez de empurrar a tela inteira. */}
+          76px recolhido, 272px aberto. O painel é `fixed`, fora do fluxo, e o
+          <aside> ao lado reserva uma faixa de largura CONSTANTE: o conteúdo
+          da página não relayoutiza, a barra abre por cima. */}
       <aside className="hidden lg:block shrink-0 w-[100px]" aria-label="Navegação principal">
         <div
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
           data-expanded={expanded || undefined}
-          className={`fixed left-4 top-4 bottom-4 z-40 flex flex-col
-            bg-surface rounded-hero shadow-[var(--shadow-sm)]
-            transition-[width,box-shadow] duration-[var(--dur-base)] ease-[var(--ease-out)]
-            ${expanded ? 'w-[272px] shadow-[var(--shadow-lg)]' : 'w-[76px]'}`}
+          className={`rail-wine surface-wine text-white fixed left-4 top-4 bottom-4 z-40 flex flex-col
+            rounded-hero shadow-[var(--shadow-md)]
+            transition-[width] duration-[var(--dur-base)] ease-[var(--ease-out)]
+            ${expanded ? 'w-[272px]' : 'w-[76px]'}`}
         >
           <div className={`shrink-0 flex items-center h-16 ${expanded ? 'justify-between px-5' : 'justify-center'}`}>
             <Link
               href="/dashboard"
-              className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+              className="flex items-center rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               aria-label="Lume — Início"
             >
-              <LumeLogo variant="wine" className={expanded ? 'h-5' : 'h-4'} />
+              <LumeLogo variant="light" className={expanded ? 'h-5' : 'h-4'} />
             </Link>
-            {expanded && (
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                onClick={togglePinned}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar o menu' : 'Fixar o menu aberto'}
-                title={pinned ? 'Desafixar (recolhe ao tirar o mouse)' : 'Fixar o menu aberto'}
-                leadingIcon={pinned ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-              />
-            )}
+            {expanded && toggleButton}
           </div>
 
           <NavBody
@@ -422,28 +397,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
             showLabel={expanded}
             lockedFor={lockedFor}
             badgeFor={badgeFor}
-            onExpand={togglePinned}
           />
-          <NavFooter showLabel={expanded} publicSlug={publicSlug} displayName={displayName} onLogout={handleLogout} />
+          {!expanded && (
+            <div className="shrink-0 flex justify-center pb-1">{toggleButton}</div>
+          )}
+          <NavFooter showLabel={expanded} publicSlug={publicSlug} displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} />
         </div>
       </aside>
 
       {/* ================= GAVETA (mobile <1024px) =================
-          Aberta pelo item "Mais" do dock inferior. */}
+          Aberta pelo hambúrguer do topo. Mesma superfície vinho do rail. */}
       {drawerOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Menu de navegação">
           <div className="sheet-backdrop absolute inset-0" onClick={() => setDrawerOpen(false)} />
-          <aside className="relative w-[88%] max-w-xs h-full bg-surface shadow-[var(--shadow-lg)] flex flex-col animate-slide-right rounded-r-hero overflow-hidden">
+          <aside className="rail-wine surface-wine text-white relative w-[88%] max-w-xs h-full shadow-[var(--shadow-lg)] flex flex-col animate-slide-right rounded-r-hero overflow-hidden">
             <div className="shrink-0 flex items-center justify-between h-16 px-5 pt-safe">
-              <LumeLogo variant="wine" className="h-5" />
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
+              <LumeLogo variant="light" className="h-5" />
+              <button
+                type="button"
                 aria-label="Fechar menu"
                 onClick={() => setDrawerOpen(false)}
-                leadingIcon={<X className="h-5 w-5" />}
-              />
+                className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
             <NavBody pathname={pathname} showLabel lockedFor={lockedFor} badgeFor={badgeFor} onNavigate={() => setDrawerOpen(false)} />
 
@@ -451,28 +428,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, p
                 A lista de destinos ROLA (dezoito itens não cabem em nenhuma
                 tela de celular) e este bloco fica FIXO no rodapé da gaveta.
                 Sem uma linha separando os dois, o corte da rolagem cai no meio
-                da lista e o último título de grupo visível — "Dinheiro", por
-                exemplo — aparece encostado em "Assistente IA", como se este
-                pertencesse àquele grupo. A linha diz "o que vem abaixo é outra
-                coisa" e, de quebra, denuncia que a lista continua acima.
-
-                O Assistente IA está aqui, e não flutuando sobre o conteúdo,
-                porque no celular ele disputava o canto inferior direito com o
-                FAB de novo agendamento e os dois cobriam a coluna de valores
-                em /finance e /services. */}
-            <div className="shrink-0 border-t border-line pt-2">
+                da lista e o último título de grupo visível aparece encostado
+                em "Assistente IA", como se este pertencesse àquele grupo. */}
+            <div className="shrink-0 border-t border-white/15 pt-2">
               <div className="px-3 pb-1">
                 <button
                   type="button"
                   onClick={() => { setDrawerOpen(false); window.dispatchEvent(new Event(OPEN_AI_EVENT)); }}
-                  className="rail-row w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wine-700"
+                  className="rail-row w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
                 >
-                  <Sparkles className="h-5 w-5 shrink-0 text-wine-700" aria-hidden />
+                  <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
                   <span className="flex-1 text-left truncate">Assistente IA</span>
                 </button>
               </div>
               <div className="safe-sheet">
-                <NavFooter showLabel publicSlug={publicSlug} displayName={displayName} onLogout={handleLogout} onNavigate={() => setDrawerOpen(false)} />
+                <NavFooter showLabel publicSlug={publicSlug} displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} onNavigate={() => setDrawerOpen(false)} />
               </div>
             </div>
           </aside>

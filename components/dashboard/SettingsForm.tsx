@@ -6,6 +6,9 @@ import { Professional, Setting, ConfirmationMode, GoogleCalendarConnection } fro
 import { Save, Sparkles, User, Settings as SettingsIcon, Paintbrush, Link as LinkIcon, Calendar } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { updateProfessionalAction, updateSettingsAction } from '@/app/actions/professional';
+import { uploadSiteImageAction } from '@/app/actions/site';
+import { Avatar } from '../ui/Avatar';
+import { Camera, Trash2 } from 'lucide-react';
 import { BOOKING_THEMES, normalizeTheme } from '@/lib/booking-theme';
 import { BookingDecor } from '@/components/booking/BookingDecor';
 import { formatDateTimeBR } from '@/lib/format';
@@ -41,6 +44,44 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   const [syncing, setSyncing] = useState(false);
   const googleAviso = googleStatus ? GOOGLE_STATUS[googleStatus] ?? GOOGLE_STATUS.error : null;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Foto de perfil: salva na hora (não espera o "Salvar" do formulário).
+  const [photoUrl, setPhotoUrl] = useState<string | null>(professional.profile_image_url ?? null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const savePhoto = async (url: string | null) => {
+    setPhotoBusy(true);
+    try {
+      const res = await updateProfessionalAction(professional.id, { profile_image_url: url });
+      if (!res.success) throw new Error(res.error);
+      setPhotoUrl(url);
+      success(url ? 'Foto atualizada' : 'Foto removida', url ? 'Sua foto já aparece no painel.' : 'Voltou a aparecer suas iniciais.');
+      router.refresh();
+    } catch (e: unknown) {
+      error('Não deu', e instanceof Error && e.message ? e.message : 'Não foi possível salvar a foto.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const onPhotoChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('kind', 'perfil');
+      const up = await uploadSiteImageAction(professional.id, fd);
+      if (!up.success) throw new Error(up.error);
+      await savePhoto(up.url);
+    } catch (err: unknown) {
+      error('Não deu', err instanceof Error && err.message ? err.message : 'Não foi possível enviar a foto.');
+      setPhotoBusy(false);
+    }
+  };
 
   // Estados de Cadastro
   const [name, setName] = useState(professional.name);
@@ -204,6 +245,46 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
             <div>
               <h3 className="text-body font-bold text-n-800 tracking-tight">Cadastro do Profissional</h3>
               <p className="text-caption text-n-600 mt-1">Configure seus dados cadastrais, redes sociais e endereço comercial.</p>
+            </div>
+
+            {/* Foto de perfil: aparece no topo do painel e, se a página
+                pública usar foto, lá também. Salva na hora. */}
+            <div className="flex items-center gap-4">
+              <Avatar name={brandName || name} src={photoUrl} size="xl" />
+              <div className="min-w-0">
+                <p className="text-label font-semibold text-heading">Foto de perfil</p>
+                <p className="text-caption text-n-500 mt-0.5">JPG, PNG ou WEBP, até 5 MB.</p>
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoBusy}
+                    className="tap inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-wine-700 text-white text-caption font-semibold hover:bg-wine-800 transition-ui disabled:opacity-60"
+                  >
+                    <Camera className="h-4 w-4" aria-hidden />
+                    {photoBusy ? 'Enviando…' : photoUrl ? 'Trocar foto' : 'Escolher foto'}
+                  </button>
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => savePhoto(null)}
+                      disabled={photoBusy}
+                      className="tap inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-line text-n-600 text-caption font-semibold hover:bg-n-50 hover:text-danger transition-ui disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  className="sr-only"
+                  onChange={onPhotoChosen}
+                  tabIndex={-1}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

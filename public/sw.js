@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v4';
+const CACHE = 'lume-shell-v5'; // v5: ícones novos (logo 2026)
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

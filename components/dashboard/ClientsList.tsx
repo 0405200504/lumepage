@@ -348,7 +348,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           em vez de repetida em cada aba. */}
       <div className="flex flex-wrap items-center gap-3">
         <SearchField
-          className="flex-1 min-w-[14rem] max-w-sm"
+          className="flex-1 min-w-[14rem] max-w-sm max-lg:max-w-none"
           label="Buscar contato"
           placeholder="Nome, WhatsApp ou e-mail"
           value={searchTerm}
@@ -358,6 +358,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({ professionalId, initia
           ariaLabel="Recorte da carteira"
           value={filter}
           onChange={setFilter}
+          className="max-lg:max-w-full max-lg:overflow-x-auto max-lg:scrollbar-none"
           items={[
             { key: 'all', label: 'Todos' },
             { key: 'birthday', label: 'Aniversário' },
