@@ -151,18 +151,20 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
             O dock do rodapé continua existindo com os quatro atalhos do dia
             a dia; o que saiu de lá foi só o botão de abrir.
 
-            No computador ele aparece também (o .icon-chip, fora de @layer,
-            vence o lg:hidden) e abre ou recolhe a barra lateral com os nomes:
-            quem decide é o Sidebar, ao ouvir o OPEN_NAV_EVENT. */}
-        <button
-          type="button"
-          className="lg:hidden icon-chip h-11 w-11 -ml-1.5 shrink-0
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-          aria-label="Abrir menu de navegação"
-          onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
-        >
-          <Menu className="h-5 w-5" aria-hidden />
-        </button>
+            No computador ele não existe: lá a barra lateral abre sozinha com o
+            mouse em cima. O lg:hidden fica no invólucro, não no botão — o
+            .icon-chip mora fora de @layer e venceria o lg:hidden nele. */}
+        <div className="lg:hidden -ml-1.5 shrink-0">
+          <button
+            type="button"
+            className="icon-chip h-11 w-11
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+            aria-label="Abrir menu de navegação"
+            onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
+          >
+            <Menu className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
 
         <div className="min-w-0 flex-1" data-tour="page-header">
           {crumb && (
