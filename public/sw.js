@@ -143,15 +143,20 @@ self.addEventListener('push', (event) => {
   try {
     const data = event.data.json();
     const title = data.title || 'Lume Agendamentos';
+    // No iPhone o ícone é sempre o do app instalado (a estrela em cetim);
+    // `icon` e `badge` valem no Android e no computador. O badge é a estrela
+    // branca sobre transparente: o Android pinta só a silhueta na barra.
     const options = {
       body: data.body || 'Você tem uma nova notificação.',
       icon: '/icon-192.png',
-      badge: '/icon-192.png', // Ícone monocromático idealmente
-      vibrate: [200, 100, 200, 100, 200, 100, 200],
+      badge: '/badge-96.png',
+      vibrate: [200, 100, 200],
       data: {
         url: data.url || '/dashboard'
       }
     };
+    // Mesma tag = substitui em vez de empilhar (ex.: o resumo do dia).
+    if (data.tag) options.tag = data.tag;
     
     event.waitUntil(self.registration.showNotification(title, options));
   } catch (e) {

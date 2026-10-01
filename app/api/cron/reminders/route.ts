@@ -4,6 +4,7 @@ import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
 import { runWhatsAppHealthCheck } from '@/lib/whatsapp/health';
 import { resolveAppointmentServices, formatServiceNames, sumPriceCents } from '@/lib/appointments/services';
+import { sendRevenueDigests } from '@/lib/push/digest';
 
 export const maxDuration = 60;
 
@@ -39,6 +40,13 @@ export async function GET(req: NextRequest) {
   const in5DaysDate = new Date(nowBR);
   in5DaysDate.setDate(in5DaysDate.getDate() + 5);
   const in5DaysISO = `${in5DaysDate.getFullYear()}-${pad(in5DaysDate.getMonth() + 1)}-${pad(in5DaysDate.getDate())}`;
+
+  // Notificação de faturamento do fim do dia (push). Vem antes do laço do
+  // WhatsApp, que com fila cheia leva quase o minuto inteiro.
+  const digests = await sendRevenueDigests(nowBR).catch((e) => {
+    console.error('[cron/reminders] Falha no resumo de faturamento:', e);
+    return { sent: 0 };
+  });
 
   let sent = 0;
   let errors = 0;
@@ -265,5 +273,5 @@ export async function GET(req: NextRequest) {
   }
 
   console.log(`[cron/reminders] enviados: ${sent}, erros: ${errors}`);
-  return NextResponse.json({ ok: true, sent, errors, health });
+  return NextResponse.json({ ok: true, sent, errors, digests: digests.sent, health });
 }
