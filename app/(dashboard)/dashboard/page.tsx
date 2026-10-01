@@ -3,7 +3,6 @@ import { dbService } from '@/lib/supabase/db';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { TasksWidget } from '@/components/dashboard/TasksWidget';
 import { PushNotificationBanner } from '@/components/dashboard/PushNotificationBanner';
-import { AIAgentFab } from '@/components/dashboard/AIAgentFab';
 
 export const metadata = {
   title: 'Início | Lume Agenda',
@@ -36,9 +35,9 @@ export default async function DashboardPage() {
         <TasksWidget professionalId={professionalId} initialTasks={tasks} />
       </div>
 
-      {/* Os dois flutuam: nenhum empurra o conteúdo acima. */}
+      {/* Flutua: não empurra o conteúdo acima. O botão da Ana fica na casca
+          (components/ai/AIAgentChat), em todas as telas. */}
       <PushNotificationBanner />
-      <AIAgentFab />
     </div>
   );
 }

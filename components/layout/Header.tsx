@@ -149,7 +149,11 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
             Hambúrguer no topo é o gesto que todo mundo já procura primeiro.
 
             O dock do rodapé continua existindo com os quatro atalhos do dia
-            a dia; o que saiu de lá foi só o botão de abrir. */}
+            a dia; o que saiu de lá foi só o botão de abrir.
+
+            No computador ele aparece também (o .icon-chip, fora de @layer,
+            vence o lg:hidden) e abre ou recolhe a barra lateral com os nomes:
+            quem decide é o Sidebar, ao ouvir o OPEN_NAV_EVENT. */}
         <button
           type="button"
           className="lg:hidden icon-chip h-11 w-11 -ml-1.5 shrink-0

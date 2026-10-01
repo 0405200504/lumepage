@@ -16,7 +16,7 @@
  * vira um scroll dentro de um scroll.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, Copy, ExternalLink, Loader2, Rocket, Sparkles,
   LayoutTemplate, List, Instagram, AlertTriangle,
@@ -77,6 +77,14 @@ export function SimpleSetup({
   professionalId, initialConfig, initialTemplateId, publicUrl, isDemo, onFinish, onDone, onError,
 }: SimpleSetupProps) {
   const [step, setStep] = useState<Step>(1);
+
+  // A barra fixa do rodapé ocupa a largura toda no celular: avisa a casca
+  // para os botões flutuantes (Ana, "+") subirem acima dela (globals.css).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-bottom-bar', '');
+    return () => root.removeAttribute('data-bottom-bar');
+  }, []);
   const [niche, setNiche] = useState<NicheId | null>(null);
   const [mode, setMode] = useState<SitePageMode>('site');
   const [look, setLook] = useState<ResolvedLook | null>(null);

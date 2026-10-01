@@ -3,16 +3,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import type { Message } from 'ai';
-import { Sparkles, X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square, AudioLines } from 'lucide-react';
+import { X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square, AudioLines } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { VoiceMode } from './VoiceMode';
+import { AnaButton } from './AnaButton';
+import { AnaAvatar } from './AnaBrand';
 
 /** O botão flutuante do celular e a gaveta disparam este evento para abrir o
  *  assistente. Mesmo padrão do OPEN_NAV_EVENT — sem contexto novo só para
  *  ligar componentes que já são irmãos na casca. */
 export const OPEN_AI_EVENT = 'lume:open-ai';
-/** Abre direto a conversa por voz. */
+/** Abre direto a conversa por voz. Com `detail: { mini: true }` ela já
+ *  começa na pílula do rodapé, sem cobrir a tela. */
 export const OPEN_VOICE_EVENT = 'lume:open-voice';
+
+/** Começa a conversa por voz de qualquer lugar, sem abrir o chat. */
+export const talkToAna = () =>
+  window.dispatchEvent(new CustomEvent(OPEN_VOICE_EVENT, { detail: { mini: true } }));
 
 // Remove marcações de Markdown que apareceriam como texto cru na resposta
 function stripMarkdown(text: string): string {
@@ -119,7 +126,10 @@ export function AIAgentChat() {
   // Conversa por voz: vive aqui (na casca do painel) para continuar
   // ouvindo quando a assistente troca de tela.
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const startVoice = () => { setIsOpen(false); setShowHistory(false); setVoiceOpen(true); };
+  // Pela pílula de cetim (sem chat aberto) a voz já começa minimizada: ela
+  // fala com a Ana sem sair da tela em que está.
+  const [voiceMini, setVoiceMini] = useState(false);
+  const startVoice = (mini = false) => { setIsOpen(false); setShowHistory(false); setVoiceMini(mini); setVoiceOpen(true); };
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -275,7 +285,12 @@ export function AIAgentChat() {
 
   useEffect(() => {
     const abrir = () => setIsOpen(true);
-    const abrirVoz = () => { setIsOpen(false); setVoiceOpen(true); };
+    const abrirVoz = (e: Event) => {
+      const mini = (e as CustomEvent<{ mini?: boolean } | null>).detail?.mini === true;
+      setIsOpen(false);
+      setVoiceMini(mini);
+      setVoiceOpen(true);
+    };
     window.addEventListener(OPEN_AI_EVENT, abrir);
     window.addEventListener(OPEN_VOICE_EVENT, abrirVoz);
     return () => {
@@ -299,22 +314,16 @@ export function AIAgentChat() {
 
   return (
     <>
-      {/* Gatilho no desktop: botão discreto ancorado no canto. No celular quem
-          abre é o botão flutuante da Início e a gaveta do menu. */}
-      {!isOpen && (
-        <button
-          data-tour="ai-chat"
-          onClick={() => setIsOpen(true)}
-          className="hidden lg:flex fixed bottom-6 right-6 h-11 items-center gap-2 px-5 bg-surface shadow-[var(--shadow-md)] rounded-full text-body-sm font-semibold text-wine-700 hover:bg-wine-50 transition-ui z-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-          aria-label="Abrir a Ana, sua assistente"
-        >
-          <Sparkles className="h-[18px] w-[18px]" aria-hidden />
-          Ana
-        </button>
+      {/* O botão da Ana, em todas as telas. Some com o chat aberto e durante
+          a conversa por voz: aí quem fala por ela é a própria janela ou a
+          pílula do rodapé. */}
+      {!isOpen && !voiceOpen && (
+        <AnaButton onOpenChat={() => setIsOpen(true)} onTalk={() => startVoice(true)} />
       )}
 
       {voiceOpen && (
         <VoiceMode
+          startMini={voiceMini}
           onClose={() => setVoiceOpen(false)}
           onSwitchToText={() => { setVoiceOpen(false); setIsOpen(true); }}
         />
@@ -324,7 +333,7 @@ export function AIAgentChat() {
       {isOpen && (
         <div
           role="dialog"
-          aria-label="Ana, sua assistente"
+          aria-label="Chat com a Ana"
           className="fixed inset-0 lg:inset-auto lg:bottom-6 lg:right-6 lg:w-[420px] lg:h-[680px] lg:max-h-[calc(100vh-3rem)] bg-surface lg:border lg:border-line z-50 flex flex-col lg:rounded-hero lg:shadow-[var(--shadow-lg)] overflow-hidden animate-slide-up"
         >
           {/* Topo: fino e neutro — a conversa é o conteúdo. */}
@@ -342,8 +351,9 @@ export function AIAgentChat() {
                 <X className="h-5 w-5" />
               </button>
             )}
-            <p className="flex-1 text-center text-label font-semibold text-heading truncate">
-              {showHistory ? 'Conversas' : 'Ana'}
+            <p className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 text-label font-semibold text-heading">
+              {!showHistory && <AnaAvatar className="h-6 w-6" />}
+              <span className="truncate">{showHistory ? 'Conversas' : 'Ana'}</span>
             </p>
             <button type="button" onClick={startNewChat} aria-label="Nova conversa" title="Nova conversa" className={iconBtn}>
               <Plus className="h-5 w-5" />
@@ -405,16 +415,14 @@ export function AIAgentChat() {
               {messages.length === 0 ? (
                 /* Tela vazia: um cumprimento e sugestões, nada mais. */
                 <div className="min-h-full flex flex-col items-center justify-center px-6 py-10 text-center animate-fade-up">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-wine-50 text-wine-700 mb-5">
-                    <Sparkles className="h-6 w-6" aria-hidden />
-                  </span>
+                  <AnaAvatar className="h-14 w-14 mb-5" />
                   <h2 className="text-h3 text-heading">Oi! Eu sou a Ana.</h2>
                   <p className="text-body-sm text-n-500 mt-1.5 max-w-xs">
                     Pergunte sobre faturamento, agenda, clientes e horários, ou peça pra eu marcar, cadastrar e anotar.
                   </p>
                   <button
                     type="button"
-                    onClick={startVoice}
+                    onClick={() => startVoice()}
                     className="tap mt-6 inline-flex items-center gap-2 h-11 px-5 rounded-full bg-wine-700 text-white text-body-sm font-semibold hover:bg-wine-800 transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
                   >
                     <AudioLines className="h-[18px] w-[18px]" aria-hidden /> Conversar por voz
@@ -540,7 +548,7 @@ export function AIAgentChat() {
                   /* Sem texto: o botão vira a conversa por voz, como no ChatGPT. */
                   <button
                     type="button"
-                    onClick={startVoice}
+                    onClick={() => startVoice()}
                     aria-label="Conversar por voz"
                     title="Conversar por voz"
                     className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-wine-700 text-white hover:bg-wine-800 transition-ui"

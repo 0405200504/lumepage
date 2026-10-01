@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
   LayoutDashboard, LogOut, ExternalLink, Wallet, NotebookPen, Hourglass,
   MessageCircle, Smartphone, Bot, ShoppingBag, Contact, ClipboardList, Globe,
-  X, PanelLeftClose, PanelLeftOpen,
+  X, PanelLeftClose, PanelLeftOpen, Mic,
 } from 'lucide-react';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
@@ -16,7 +16,8 @@ import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/StatusPill';
 import { SplashSoundToggle } from '../ui/SplashSoundToggle';
 import { ROUTE_CAPABILITY, can } from '@/lib/subscription/entitlements';
-import { OPEN_AI_EVENT } from '../ai/AIAgentChat';
+import { OPEN_AI_EVENT, talkToAna } from '../ai/AIAgentChat';
+import { AnaStar } from '../ai/AnaBrand';
 
 /** O Header (topo) dispara este evento para abrir a navegação no celular.
  *  Mesmo padrão que o tour de boas-vindas já usa — sem contexto novo só para
@@ -304,11 +305,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
     } catch { /* modo privativo: segue recolhida */ }
   }, []);
 
+  const togglePinned = useCallback(() => setPinned((p) => {
+    const next = !p;
+    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch { /* ignora */ }
+    return next;
+  }), []);
+
+  // O ≡ do topo (Header) dispara OPEN_NAV_EVENT. No celular abre a gaveta.
+  // No computador a gaveta não existe (é lg:hidden), mas o ≡ aparece mesmo
+  // assim: o .icon-chip fica fora de @layer e vence o `lg:hidden` dele. Lá o
+  // clique abre (ou recolhe) a barra com os nomes, que é o que se espera.
   useEffect(() => {
-    const abrir = () => setDrawerOpen(true);
+    const abrir = () => {
+      if (window.matchMedia('(min-width: 64rem)').matches) togglePinned();
+      else setDrawerOpen(true);
+    };
     window.addEventListener(OPEN_NAV_EVENT, abrir);
     return () => window.removeEventListener(OPEN_NAV_EVENT, abrir);
-  }, []);
+  }, [togglePinned]);
 
   // Trava a rolagem do fundo enquanto a gaveta está aberta.
   useEffect(() => {
@@ -317,12 +331,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = anterior; };
   }, [drawerOpen]);
-
-  const togglePinned = () => setPinned((p) => {
-    const next = !p;
-    try { localStorage.setItem('lume_sidebar_pinned', next ? '1' : '0'); } catch { /* ignora */ }
-    return next;
-  });
 
   const handleLogout = async () => {
     try {
@@ -433,16 +441,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
                 tela de celular) e este bloco fica FIXO no rodapé da gaveta.
                 Sem uma linha separando os dois, o corte da rolagem cai no meio
                 da lista e o último título de grupo visível aparece encostado
-                em "Ana, sua assistente", como se este pertencesse àquele grupo. */}
+                em "Ana", como se ela pertencesse àquele grupo. */}
             <div className="shrink-0 border-t border-white/15 pt-2">
-              <div className="px-3 pb-1">
+              {/* Ana: a linha abre o chat; o microfone começa a conversa por
+                  voz direto, como no botão de cetim do canto. */}
+              <div className="px-3 pb-1 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => { setDrawerOpen(false); window.dispatchEvent(new Event(OPEN_AI_EVENT)); }}
-                  className="rail-row w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
+                  className="rail-row flex-1 min-w-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
                 >
-                  <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
-                  <span className="flex-1 text-left truncate">Ana, sua assistente</span>
+                  <AnaStar className="h-5" />
+                  <span className="flex-1 text-left truncate">Ana</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDrawerOpen(false); talkToAna(); }}
+                  aria-label="Falar com a Ana por voz"
+                  title="Falar com a Ana"
+                  className="rail-row w-11 shrink-0 justify-center !px-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
+                >
+                  <Mic className="h-5 w-5" aria-hidden />
                 </button>
               </div>
               <div className="safe-sheet">
