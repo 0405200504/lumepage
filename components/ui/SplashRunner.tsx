@@ -7,9 +7,13 @@ import { isChimeEnabled, playAppChime } from '@/lib/ui/appChime';
  *  verdade — que é justamente quando a abertura deve voltar a acontecer. */
 export const SPLASH_SESSION_KEY = 'lume:abertura-vista';
 
-/** Cortina: 640ms de cena + 260ms de saída. Tem de casar com os keyframes
+/** Cortina: 2350ms de cena + 450ms de saída. Tem de casar com os keyframes
  *  de `#lume-splash` em globals.css. */
-const SPLASH_MS = 900;
+const SPLASH_MS = 2800;
+
+/** O som toca no encaixe das metades da estrela (o clarão), não no primeiro
+ *  quadro: a nota chega junto com o gesto que ela sublinha. */
+const CHIME_AT_MS = 860;
 
 /**
  * A parte da abertura que precisa de JS: tocar o som, deixar pular no toque
@@ -52,20 +56,26 @@ export function SplashRunner() {
     // Relógio da animação de CSS.
     let timer = window.setTimeout(encerrar, SPLASH_MS);
 
+    // O som, no tempo do encaixe. Quem pulou antes não ouve nada — uma nota
+    // sobre o painel já aberto soaria fora de lugar.
+    const chime = window.setTimeout(() => {
+      if (!encerrada && isChimeEnabled()) playAppChime();
+    }, CHIME_AT_MS);
+
     // Toque/clique pula a abertura: a cortina abrevia a saída ('skip') e
     // some logo depois.
     const pular = () => {
       if (encerrada) return;
       window.clearTimeout(timer);
+      window.clearTimeout(chime);
       html.dataset.splash = 'skip';
       timer = window.setTimeout(encerrar, 160);
     };
     overlay?.addEventListener('pointerdown', pular);
 
-    if (isChimeEnabled()) playAppChime();
-
     return () => {
       window.clearTimeout(timer);
+      window.clearTimeout(chime);
       overlay?.removeEventListener('pointerdown', pular);
     };
   }, []);

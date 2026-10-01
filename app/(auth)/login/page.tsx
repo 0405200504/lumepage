@@ -10,6 +10,7 @@ import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import TurnstileWidget from '@/components/booking/TurnstileWidget';
 import { LoginVideoBackground } from '@/components/auth/LoginVideoBackground';
+import { LoginCurtain } from '@/components/auth/LoginCurtain';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,12 +21,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+  // Login deu certo e o destino é o painel: a cortina de cetim sobe aqui e a
+  // abertura (components/ui/AppSplash) continua dela, sem piscar no meio.
+  const [entering, setEntering] = useState(false);
 
   const handleDemo = async () => {
     setDemoLoading(true);
     try {
       await loginDemoAction();
-      success('Conta teste', 'Entrando na conta de exemplo (Amanda Costa)...');
+      setEntering(true);
       router.push('/dashboard');
     } catch {
       error('Erro', 'Não foi possível abrir a conta teste.');
@@ -44,12 +48,15 @@ export default function LoginPage() {
     try {
       const res = await loginAction(email, password);
       if (res.success && res.profile) {
-        success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
         if (res.profile.role === 'super_admin') {
+          success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
           router.push('/admin');
         } else if (res.profile.is_salon_manager) {
+          success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
           router.push('/salon');
         } else {
+          // Sem toast por cima da abertura: a cortina é a confirmação.
+          setEntering(true);
           router.push('/dashboard');
         }
       } else {
@@ -65,6 +72,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative">
       <LoginVideoBackground />
+      {entering && <LoginCurtain />}
 
       {/* A entrada anima cada bloco, não o wrapper: opacidade animada num ancestral
           impede o backdrop-filter do vidro de enxergar o vídeo. */}

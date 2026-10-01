@@ -1,6 +1,7 @@
 // Gera as telas de abertura do iPhone em public/splash/ — o primeiro quadro
-// da cortina de abertura (#lume-splash em app/globals.css), sem a marca.
-// Contexto em lib/ui/appleStartupImages.ts.
+// da cortina de abertura (#lume-splash em app/globals.css), sem a marca: o
+// cetim do login (LUME_SATIN_MOBILE) em "cover" com a folga de 6% da
+// cortina, e a vinheta dela por cima. Contexto em lib/ui/appleStartupImages.ts.
 //
 // Como rodar:
 //   node scripts/gerar-splash-ios.mts
@@ -9,60 +10,49 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { IPHONE_SCREENS, startupImagePath } from '../lib/ui/appleStartupImages.ts';
+import { LUME_SATIN_MOBILE } from '../lib/ui/lumeSplashData.ts';
 
-// = background de #lume-splash:
-//   radial-gradient(120% 90% at 50% 42%, #4a1424 0%, #3b0c1b 55%, #2e0813 100%)
-// Mudou lá, mude aqui e rode de novo.
-const SIZE_X = 1.2;
-const SIZE_Y = 0.9;
-const AT_X = 0.5;
-const AT_Y = 0.42;
-const STOPS: Array<[number, [number, number, number]]> = [
-  [0, [0x4a, 0x14, 0x24]],
-  [0.55, [0x3b, 0x0c, 0x1b]],
-  [1, [0x2e, 0x08, 0x13]],
-];
+// = .lume-splash__satin { inset: -6% }: o tecido cobre uma caixa 12% maior
+//   que a tela, centrada. Mudou lá, mude aqui e rode de novo.
+const OVERSCAN = 1.12;
 
-/** Cor no raio `t` do degradê (interpolação em sRGB, como o CSS faz com hex). */
-function colorAt(t: number): [number, number, number] {
-  if (t >= 1) return STOPS[STOPS.length - 1][1];
-  for (let i = 1; i < STOPS.length; i++) {
-    const [p1, c1] = STOPS[i];
-    if (t <= p1) {
-      const [p0, c0] = STOPS[i - 1];
-      const f = (t - p0) / (p1 - p0);
-      return [0, 1, 2].map((k) => c0[k] + (c1[k] - c0[k]) * f) as [number, number, number];
-    }
-  }
-  return STOPS[STOPS.length - 1][1];
-}
+// = .lume-splash__vignette:
+//   radial-gradient(90% 72% at 50% 46%, transparent 38%, rgba(14,2,8,.58) 100%)
+const VIGNETTE = { cx: 0.5, cy: 0.46, rx: 0.9, ry: 0.72, from: 0.38, alpha: 0.58, color: '#0e0208' };
+
+const satin = Buffer.from(LUME_SATIN_MOBILE.split(',')[1], 'base64');
 
 mkdirSync(new URL('../public/splash/', import.meta.url), { recursive: true });
 
 for (const screen of IPHONE_SCREENS) {
   const width = screen.w * screen.dpr;
   const height = screen.h * screen.dpr;
-  const rx = SIZE_X * width;
-  const ry = SIZE_Y * height;
-  const cx = AT_X * width;
-  const cy = AT_Y * height;
+  const boxW = Math.round(width * OVERSCAN);
+  const boxH = Math.round(height * OVERSCAN);
 
-  const px = Buffer.alloc(width * height * 3);
-  for (let y = 0; y < height; y++) {
-    const dy = (y + 0.5 - cy) / ry;
-    for (let x = 0; x < width; x++) {
-      const dx = (x + 0.5 - cx) / rx;
-      const [r, g, b] = colorAt(Math.sqrt(dx * dx + dy * dy));
-      const i = (y * width + x) * 3;
-      px[i] = Math.round(r);
-      px[i + 1] = Math.round(g);
-      px[i + 2] = Math.round(b);
-    }
-  }
+  // Elipse de 90% × 72% centrada em (50%, 46%): o círculo unitário do SVG
+  // esticado por gradientTransform, em unidades da caixa.
+  const vignette = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <defs>
+        <radialGradient id="v" cx="${VIGNETTE.cx}" cy="${VIGNETTE.cy}" r="0.5" fx="${VIGNETTE.cx}" fy="${VIGNETTE.cy}"
+          gradientTransform="translate(${VIGNETTE.cx} ${VIGNETTE.cy}) scale(${VIGNETTE.rx * 2} ${VIGNETTE.ry * 2}) translate(${-VIGNETTE.cx} ${-VIGNETTE.cy})">
+          <stop offset="${VIGNETTE.from}" stop-color="${VIGNETTE.color}" stop-opacity="0"/>
+          <stop offset="1" stop-color="${VIGNETTE.color}" stop-opacity="${VIGNETTE.alpha}"/>
+        </radialGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#v)"/>
+    </svg>`,
+  );
 
   const out = fileURLToPath(new URL(`../public${startupImagePath(screen)}`, import.meta.url));
-  await sharp(px, { raw: { width, height, channels: 3 } })
-    .png({ compressionLevel: 9 })
+  await sharp(satin)
+    .resize(boxW, boxH, { fit: 'cover', position: 'centre' })
+    .extract({ left: Math.round((boxW - width) / 2), top: Math.round((boxH - height) / 2), width, height })
+    .composite([{ input: vignette, blend: 'over' }])
+    // PNG com paleta: o cetim é quase monocromático, 192 cores bastam e o
+    // arquivo cai de ~1 MB para ~400 kB.
+    .png({ compressionLevel: 9, palette: true, colors: 192, dither: 0.6 })
     .toFile(out);
   console.log(startupImagePath(screen));
 }
