@@ -9,11 +9,13 @@ interface ExportMenuProps {
   onCSV?: () => void;
   /** rótulo do botão. */
   label?: string;
+  /** No celular fica só o ícone — o botão divide a linha com o seletor de período. */
+  compact?: boolean;
   className?: string;
 }
 
 /** Botão de exportação: CSV (nativo) + Imprimir/Salvar PDF (window.print). */
-export const ExportMenu: React.FC<ExportMenuProps> = ({ onCSV, label = 'Exportar', className = '' }) => {
+export const ExportMenu: React.FC<ExportMenuProps> = ({ onCSV, label = 'Exportar', compact, className = '' }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,9 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ onCSV, label = 'Exportar
         onClick={() => setOpen(o => !o)}
         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface border border-line text-caption font-bold text-ink hover:bg-surface-2 transition-colors"
       >
-        <Download className="h-4 w-4" /> {label}
+        <Download className="h-4 w-4" aria-hidden />
+        {compact ? <span className="hidden sm:inline">{label}</span> : label}
+        {compact && <span className="sr-only sm:hidden">{label}</span>}
         <ChevronDown className={`h-4 w-4 text-n-600 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (

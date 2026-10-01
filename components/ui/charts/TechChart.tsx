@@ -20,8 +20,11 @@ interface TechChartProps {
   className?: string;
 }
 
-/** Catmull-Rom → Bézier cúbica suave. */
-function smoothPath(pts: readonly (readonly [number, number])[]): string {
+/** Catmull-Rom → Bézier cúbica suave. `yMin`/`yMax` seguram os pontos de
+ *  controle dentro da área do gráfico: sem isso, num dia sem venda entre dois
+ *  dias cheios a curva mergulha abaixo do zero. */
+function smoothPath(pts: readonly (readonly [number, number])[], yMin = -Infinity, yMax = Infinity): string {
+  const cy = (v: number) => Math.min(yMax, Math.max(yMin, v));
   if (pts.length < 2) return '';
   if (pts.length === 2) return `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]}`;
 
@@ -32,9 +35,9 @@ function smoothPath(pts: readonly (readonly [number, number])[]): string {
     const p2 = pts[i + 1];
     const p3 = pts[i + 2] ?? p2;
     const c1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c1y = cy(p1[1] + (p2[1] - p0[1]) / 6);
     const c2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    const c2y = cy(p2[1] - (p3[1] - p1[1]) / 6);
     d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
   }
   return d;
@@ -148,7 +151,7 @@ export const TechChart: React.FC<TechChartProps> = ({
         {/* Área sob a série principal com gradiente suave */}
         {main && main.style !== 'dashed' && main.values.length > 1 && (
           <path
-            d={`${smoothPath(main.values.map((v, i) => [xOf(i), yOf(v)] as const))} L${xOf(main.values.length - 1)},${padT + innerH} L${xOf(0)},${padT + innerH} Z`}
+            d={`${smoothPath(main.values.map((v, i) => [xOf(i), yOf(v)] as const), padT, padT + innerH)} L${xOf(main.values.length - 1)},${padT + innerH} L${xOf(0)},${padT + innerH} Z`}
             fill={`url(#${gid}-fill-0)`}
             className="chart-area-in"
           />
@@ -161,7 +164,7 @@ export const TechChart: React.FC<TechChartProps> = ({
           return (
             <path
               key={si}
-              d={smoothPath(pts)}
+              d={smoothPath(pts, padT, padT + innerH)}
               fill="none"
               stroke={s.color ?? 'var(--color-wine-700)'}
               strokeWidth={s.style === 'dashed' ? '2' : '2.5'}

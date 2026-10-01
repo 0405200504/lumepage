@@ -10,14 +10,19 @@ import { formatDateBR } from '@/lib/whatsapp';
 import { brl } from '@/lib/format';
 import { indexServices, appointmentRevenueCents } from '@/lib/finance';
 import {
-  monthRange, compare, clientRecurrence, serviceStats, topClientsBySpend,
-  monthlySeries, inRange as inDateRange,
+  compare, clientRecurrence, serviceStats, topClientsBySpend, seriesForRange,
+  inRange as inDateRange, type DateRange,
 } from '@/lib/analytics';
+import {
+  Period, periodFor, previousPeriod, periodLabel, periodPhrase, comparisonLabel, periodSlug,
+  rangeLabel, addDays, isoOf,
+} from '@/lib/period';
 import { Segmented } from '../ui/Segmented';
 import { ExportMenu } from '../ui/ExportMenu';
 import { DataTable, Column } from '../ui/DataTable';
 import { TechChart } from '../ui/charts/TechChart';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
+import { PeriodPicker } from '../ui/PeriodPicker';
 import { toCSV, downloadCSV, centsToPlain } from '@/lib/export';
 
 interface SalesPanelProps {
@@ -26,38 +31,27 @@ interface SalesPanelProps {
 }
 
 type TabType = 'overview' | 'sales' | 'services' | 'clients';
-type PeriodKey = 'month' | 'year' | 'all';
 
 const STATUS_LABEL: Record<string, string> = {
   completed: 'Concluído', confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', no_show: 'Falta'
 };
-const now = new Date();
 
 interface SaleRow {
-  id: string; date: string; client: string; serviceName: string; extra: number;
+  id: string; date: string; time: string; client: string; serviceName: string; extra: number;
   status: string; payment: string; amount: number;
 }
 
 export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }) => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [period, setPeriod] = useState<PeriodKey>('month');
+  const todayIso = isoOf(new Date());
+  const [period, setPeriod] = useState<Period>(() => periodFor('month', todayIso));
   const byId = useMemo(() => indexServices(services), [services]);
 
   const sales = useMemo(() => appointments.filter(a => a.status === 'completed' || a.status === 'confirmed'), [appointments]);
 
-  const { range, prevRange, label } = useMemo(() => {
-    if (period === 'month') {
-      const r = monthRange(now.getFullYear(), now.getMonth());
-      const p = monthRange(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(), (now.getMonth() + 11) % 12);
-      return { range: r, prevRange: p, label: 'mês' };
-    }
-    if (period === 'year') {
-      const r = { start: `${now.getFullYear()}-01-01`, end: `${now.getFullYear()}-12-31` };
-      const p = { start: `${now.getFullYear() - 1}-01-01`, end: `${now.getFullYear() - 1}-12-31` };
-      return { range: r, prevRange: p, label: 'ano' };
-    }
-    return { range: { start: '0000-01-01', end: '9999-12-31' }, prevRange: { start: '0000-01-01', end: '0000-01-01' }, label: 'período' };
-  }, [period]);
+  const range = useMemo<DateRange>(() => ({ start: period.start, end: period.end }), [period]);
+  const prevRange = useMemo(() => previousPeriod(period), [period]);
+  const phrase = periodPhrase(period, todayIso);
 
   const inR = (iso: string) => inDateRange(iso, range.start, range.end);
 
@@ -72,20 +66,38 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
   const recurrence = useMemo(() => clientRecurrence(appointments, byId, range), [appointments, byId, range]);
   const svcStats = useMemo(() => serviceStats(appointments, services, byId, range), [appointments, services, byId, range]);
   const topClients = useMemo(() => topClientsBySpend(appointments, byId, range, 10), [appointments, byId, range]);
-  const netSeries = useMemo(() => monthlySeries(appointments, [], [], services, 6), [appointments, services]);
+
+  // Gráfico do próprio período; o dia sozinho mostra os 7 dias até ele.
+  const chartRange = useMemo<DateRange>(
+    () => (period.kind === 'day' ? { start: addDays(period.start, -6), end: period.end } : range),
+    [period, range]
+  );
+  const chart = useMemo(() => seriesForRange(appointments, [], byId, chartRange), [appointments, byId, chartRange]);
+  const chartCaption = period.kind === 'day'
+    ? `7 dias até ${rangeLabel({ start: period.start, end: period.start }, todayIso)}`
+    : chart.granularity === 'day' ? 'Dia a dia' : chart.granularity === 'week' ? 'Semana a semana' : 'Mês a mês';
+
+  // "Todo o período" do calendário: da primeira à última venda.
+  const allTime = useMemo<DateRange | null>(() => {
+    const dates = sales.map(s => s.date).filter(Boolean).sort();
+    if (!dates.length) return null;
+    const last = dates[dates.length - 1];
+    return { start: dates[0], end: last > todayIso ? last : todayIso };
+  }, [sales, todayIso]);
 
   const [search, setSearch] = useState('');
   const [fService, setFService] = useState('');
 
-  const allRows: SaleRow[] = useMemo(() => sales.map(s => {
+  // Vendas do período, da mais recente para a mais antiga.
+  const allRows: SaleRow[] = useMemo(() => sales.filter(s => inDateRange(s.date, range.start, range.end)).map(s => {
     const ids = s.service_ids && s.service_ids.length ? s.service_ids : [s.service_id];
     return {
-      id: s.id, date: s.date, client: s.client_name,
+      id: s.id, date: s.date, time: s.start_time ?? '', client: s.client_name,
       serviceName: s.service?.name ?? byId[s.service_id]?.name ?? 'Serviço',
       extra: Math.max(0, ids.length - 1),
       status: s.status, payment: s.payment_method ?? '', amount: appointmentRevenueCents(s, byId),
     };
-  }), [sales, byId]);
+  }).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)), [sales, byId, range]);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -105,7 +117,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
       { header: 'Status', value: r => STATUS_LABEL[r.status] ?? r.status },
       { header: 'Valor', value: r => centsToPlain(r.amount) },
     ]);
-    downloadCSV('vendas', csv);
+    downloadCSV(`vendas-${periodSlug(period)}`, csv);
   };
 
   const tabs = [
@@ -115,30 +127,19 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
     { key: 'clients' as const, label: 'Clientes' },
   ];
 
-  const periods: { key: PeriodKey; label: string }[] = [
-    { key: 'month', label: 'Este mês' }, { key: 'year', label: 'Este ano' }, { key: 'all', label: 'Tudo' },
-  ];
-
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* 1. SELETOR DE PERÍODO / CABEÇALHO BANCÁRIO */}
-      <div className="flex items-center justify-between no-print pt-1">
-        <div data-tour="module-action" className="flex items-center gap-1 bg-surface px-2.5 py-1 rounded-full border border-line shadow-xs">
-          {periods.map(p => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1 rounded-full text-caption font-bold transition-colors ${
-                period === p.key ? 'bg-wine-700 text-white shadow-xs' : 'text-n-600 hover:text-ink'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        <ExportMenu onCSV={exportSalesCSV} />
-      </div>
+      <PeriodPicker
+        value={period}
+        onChange={setPeriod}
+        today={todayIso}
+        allTime={allTime}
+        dataTour="module-action"
+        className="no-print pt-1"
+        action={<ExportMenu onCSV={exportSalesCSV} compact />}
+      />
+      <p className="print-only text-body-sm text-n-600">Período: {periodLabel(period, todayIso)}</p>
 
       {/* 2. ABAS NAVEGAÇÃO LIMPA */}
       <div className="no-print">
@@ -153,15 +154,19 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
           <div className="bg-surface rounded-2xl p-6 sm:p-7 border border-line shadow-xs space-y-4">
             <div>
               <span className="text-caption font-semibold text-n-500 block">
-                Total de vendas ({label})
+                Total de vendas {phrase}
               </span>
-              <div className="flex items-baseline gap-3 mt-1">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-1">
                 <p className="text-display font-bold num text-heading tracking-tight leading-none">
                   <AnimatedCounter value={curRevenue} format={brl} />
                 </p>
-                {period !== 'all' && (
-                  <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${cmpRev.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
-                    {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`}
+                {/* Sem venda no período anterior não há base de comparação. */}
+                {prevCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${cmpRev.deltaPct >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
+                      {cmpRev.deltaPct >= 0 ? `+${cmpRev.deltaPct.toFixed(0)}%` : `${cmpRev.deltaPct.toFixed(0)}%`}
+                    </span>
+                    <span className="text-caption text-n-500">{comparisonLabel(period.kind)}</span>
                   </span>
                 )}
               </div>
@@ -191,7 +196,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-body font-bold text-heading">Evolução de vendas</h3>
-                <p className="text-caption text-n-500">Histórico de receita</p>
+                <p className="text-caption text-n-500">{chartCaption}</p>
               </div>
               <span className="text-caption font-bold text-wine-700 bg-wine-50 px-2.5 py-1 rounded-full">
                 {curCount} atendimentos
@@ -199,14 +204,14 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ appointments, services }
             </div>
             <TechChart
               height={180}
-              labels={netSeries.map(p => p.label)}
+              labels={chart.points.map(p => p.label)}
               format={(v) => brl(Math.round(v * 100))}
               axisFormat={(v) => {
                 const r = Math.round(v);
                 return Math.abs(r) >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')}k` : String(r);
               }}
               series={[
-                { name: 'Receita', color: 'var(--color-wine-700)', values: netSeries.map(p => p.gross / 100) },
+                { name: 'Receita', color: 'var(--color-wine-700)', values: chart.points.map(p => p.gross / 100) },
               ]}
             />
           </div>

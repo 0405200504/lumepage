@@ -103,10 +103,12 @@ function apptRow(a: Appointment, services: Service[], byId: ServicesById) {
   });
 }
 
-/** Contas fixas de um período: cada mês cobra as ativas criadas até ele (igual à tela Contas). */
+/** Contas fixas de um período: cada mês cobra as ativas criadas até ele, no dia 1º
+ *  (igual à tela Contas) — um período que não passa por um dia 1º não tem conta fixa. */
 function fixedTotalCents(fixed: FixedExpense[], range: DateRange) {
   let total = 0;
-  for (let idx = monthIdx(range.start); idx <= monthIdx(range.end); idx++) {
+  const firstIdx = monthIdx(range.start) + (range.start.endsWith('-01') ? 0 : 1);
+  for (let idx = firstIdx; idx <= monthIdx(range.end); idx++) {
     for (const f of fixed) if (f.active && monthIdx(spDate(f.created_at)) <= idx) total += f.amount_cents;
   }
   return total;
