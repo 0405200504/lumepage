@@ -66,7 +66,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   appointments,
   services,
 }) => {
-  const [period, setPeriod] = useState<Period>('mes');
+  // Abre sempre no dia: é o número que a profissional quer ver ao entrar.
+  const [period, setPeriod] = useState<Period>('hoje');
 
   const today = useMemo(() => new Date(), []);
   const todayIso = toISO(today);
