@@ -1220,6 +1220,98 @@ select.field-input { padding-right: 34px; }
 }
 
 /* =========================================================
+   CONVITE DE NOTIFICAÇÕES (components/dashboard/PushNotificationBanner)
+   Chega como uma mensagem do próprio app: no celular desce do topo, onde
+   o iPhone mostra as notificações; no computador entra pela direita.
+   Bordô em cetim nos dois temas — é a cor da marca, não muda no escuro.
+   O brilho (::before) passa UMA vez, logo depois que ela pousa.
+   A chegada usa fill `backwards`: terminada a animação, ela não segura
+   mais o transform, e o arrastar para cima (transform inline) funciona.
+   Em @layer components para as utilities do JSX (posição, largura)
+   continuarem valendo.
+   ========================================================= */
+@layer components {
+.push-invite {
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 24px;
+  padding: 12px 14px 14px;
+  background:
+    radial-gradient(130% 120% at 12% -10%, rgb(255 255 255 / 0.16), transparent 52%),
+    radial-gradient(90% 80% at 100% 110%, rgb(44 7 15 / 0.55), transparent 60%),
+    linear-gradient(158deg,
+      color-mix(in srgb, var(--color-wine-600) 45%, var(--color-wine-700)) 0%,
+      var(--color-wine-700) 44%,
+      var(--color-wine-800) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 22px 44px -18px rgb(44 7 15 / 0.62),
+    0 6px 14px -6px rgb(44 7 15 / 0.4);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: push-invite-drop 620ms cubic-bezier(0.2, 1, 0.3, 1) backwards;
+}
+.push-invite::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.2) 48%, transparent 66%)
+    130% 0 / 260% 100% no-repeat;
+  animation: push-invite-sheen 1100ms cubic-bezier(0.45, 0, 0.2, 1) 700ms both;
+}
+.push-invite[data-leaving] {
+  animation: push-invite-rise 300ms var(--ease-in) forwards;
+}
+.push-invite__pop {
+  animation: push-invite-pop 320ms var(--ease-spring) both;
+}
+@media (min-width: 64rem) {
+  .push-invite {
+    border-radius: 20px;
+    padding: 14px 16px 16px;
+    animation-name: push-invite-slide;
+  }
+  .push-invite[data-leaving] { animation-name: push-invite-away; }
+}
+}
+
+@keyframes push-invite-drop {
+  0%   { transform: translateY(calc(-100% - 60px)) scale(0.94); opacity: 0; }
+  18%  { opacity: 1; }
+  62%  { transform: translateY(7px) scale(1.008); }
+  82%  { transform: translateY(-2px) scale(1); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes push-invite-rise {
+  to { transform: translateY(calc(-100% - 60px)); opacity: 0.2; }
+}
+@keyframes push-invite-slide {
+  0%   { transform: translateX(calc(100% + 40px)); opacity: 0; }
+  20%  { opacity: 1; }
+  64%  { transform: translateX(-8px); }
+  84%  { transform: translateX(2px); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes push-invite-away {
+  to { transform: translateX(calc(100% + 40px)); opacity: 0.2; }
+}
+@keyframes push-invite-sheen {
+  0%   { background-position: 130% 0; opacity: 1; }
+  85%  { opacity: 1; }
+  100% { background-position: -30% 0; opacity: 0; }
+}
+@keyframes push-invite-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================================================
    IMPRESSÃO → "Salvar como PDF"
    Esconde navegação/ações, fundo branco, evita cortar cards.
    Elementos marcados com .no-print somem; .print-only aparecem.
