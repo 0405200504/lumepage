@@ -1,9 +1,14 @@
 import {
   PANEL_FLAG_KEY,
   SPLASH_CSS,
+  SPLASH_DIAG_KEY,
   SPLASH_HANDOFF_AT_MS,
   SPLASH_HANDOFF_KEY,
+  SPLASH_LAUNCH_VERSION,
   SPLASH_MARKUP,
+  SPLASH_RETRY_MS,
+  SPLASH_WAIT_KEY,
+  SPLASH_WAIT_MAX_MS,
 } from '@/lib/ui/splashScene';
 
 /**
@@ -29,31 +34,57 @@ import {
  * documento mostra só o cetim parado — igual à tela de abertura do iPhone —
  * e segue direto, porque o destino vai ser o login.
  *
- * ALTURA NO IPHONE: este documento pinta enquanto o app ainda está abrindo, e
- * nesse instante o iOS dá à página uma altura menor que a tela — tira a
- * barra de status (59 pt num iPhone 15), mas a página começa no topo mesmo
- * assim. Resultado medido em vídeo: o cetim acabava 59 pt antes do fim, com
- * uma faixa lisa embaixo, e a marca (a 47% da altura) ficava 28 pt acima de
- * onde o painel a desenha, pulando na troca. O painel, que chega depois, já
- * recebe a tela inteira. Por isso, no app instalado do iPhone a cena aqui é
- * medida pela tela (screen.height), não pela janela — e fica do tamanho
- * exato da do painel.
+ * O BUG DO iOS 26 (ver SPLASH_WAIT_KEY em lib/ui/splashScene): a página
+ * criada enquanto o app ainda abre nasce com a janela curta — falta a altura
+ * da barra de status, a faixa de baixo vira zona morta e nada desenhado ali
+ * aparece. Não há CSS que resolva dentro dessa página. Então:
+ *   · se a janela nasceu mais curta que a tela (só no app do iPhone, em pé),
+ *     a página mostra o cetim parado e se recria em /abertura, a cada
+ *     SPLASH_RETRY_MS, até nascer certa — e só então toca a cena;
+ *   · passando de SPLASH_WAIT_MAX_MS, toca do jeito que estiver. Para esse
+ *     caso a cena é medida pela tela (screen.height) — a marca fica no mesmo
+ *     ponto da do painel — e o fundo é a cor da borda de baixo do cetim com
+ *     a vinheta (#2d0614), para a zona morta sumir no tecido.
  *
- * A detecção não pode olhar a janela (innerWidth/innerHeight): é justamente
- * ela que o iOS ainda não acertou nesse instante. Olha só se é o app
- * instalado do iPhone (navigator.standalone) e se a tela está em pé (pela
- * orientação da tela, não pelas medidas da janela). E o fundo da página é a
- * cor da borda de baixo do cetim já com a vinheta (#2d0614): se o iOS
- * mesmo assim deixar alguma sobra embaixo, ela some no tecido em vez de
- * virar uma faixa clara.
+ * Diagnóstico (temporário, só no app do iPhone): cada página anota as medidas
+ * da janela em sessionStorage; o painel manda tudo para /api/diag/abertura.
  */
 export const dynamic = 'force-static';
 
-const LAUNCH_SCRIPT = `(function(){var d=document.documentElement;try{var o=screen.orientation&&screen.orientation.type||'',deitado=/landscape/.test(o)||Math.abs(window.orientation||0)===90;if(navigator.standalone===true&&!deitado&&screen.height>screen.width){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}}catch(e){}var alvo=/^\\/dashboard(\\/|$)/.test(location.pathname)?location.href:'/dashboard',ir=function(){location.replace(alvo)},logada=false,calma=false;try{logada=localStorage.getItem(${JSON.stringify(
-  PANEL_FLAG_KEY,
-)})==='1'}catch(e){}try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}if(!logada||calma){d.dataset.splash='still';ir();return}d.dataset.splash='launch';var t0=Date.now(),marca=function(){try{sessionStorage.setItem(${JSON.stringify(
-  SPLASH_HANDOFF_KEY,
-)},String(t0))}catch(e){}};marca();requestAnimationFrame(function(){t0=Date.now();marca()});setTimeout(ir,${SPLASH_HANDOFF_AT_MS})})();`;
+const LAUNCH_SCRIPT = `(function(){
+var d=document.documentElement,agora=Date.now(),s=null;
+try{s=sessionStorage}catch(e){}
+var noPainel=/^\\/dashboard(\\/|$)/.test(location.pathname),para=null,n=0;
+try{var q=new URLSearchParams(location.search);para=q.get('para');n=Number(q.get('n'))||0}catch(e){}
+var caminho=noPainel?location.pathname+location.search:(para&&/^\\/dashboard(\\/|\\?|$)/.test(para)?para:'/dashboard');
+var ir=function(){location.replace(caminho)};
+var o='',deitado=false;
+try{o=screen.orientation&&screen.orientation.type||'';deitado=/landscape/.test(o)||Math.abs(window.orientation||0)===90}catch(e){}
+var ios=navigator.standalone===true&&!deitado&&screen.height>screen.width;
+if(ios){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}
+var logada=false,calma=false;
+try{logada=localStorage.getItem(${JSON.stringify(PANEL_FLAG_KEY)})==='1'}catch(e){}
+try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+if(!logada||calma){d.dataset.splash='still';ir();return}
+var curta=ios&&innerHeight>0&&innerHeight<screen.height-2;
+var inicio=agora;
+try{if(noPainel){s.setItem(${JSON.stringify(SPLASH_WAIT_KEY)},String(agora))}else{inicio=Number(s.getItem(${JSON.stringify(SPLASH_WAIT_KEY)}))||agora}}catch(e){}
+var esperando=curta&&agora-inicio<${SPLASH_WAIT_MAX_MS}&&n<40;
+if(ios){try{
+var dg=noPainel?{v:${JSON.stringify(SPLASH_LAUNCH_VERSION)},ua:navigator.userAgent,tela:[screen.width,screen.height],dpr:devicePixelRatio,dm:matchMedia('(display-mode: standalone)').matches,pg:[]}:JSON.parse(s.getItem(${JSON.stringify(SPLASH_DIAG_KEY)})||'null');
+if(dg&&dg.pg.length<60){var vv=window.visualViewport;dg.pg.push({t:agora-inicio,j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,curta:curta,acao:esperando?'recria':'cena'});s.setItem(${JSON.stringify(SPLASH_DIAG_KEY)},JSON.stringify(dg))}
+}catch(e){}}
+if(esperando){
+d.dataset.splash='still';
+setTimeout(function(){location.replace('/abertura?para='+encodeURIComponent(caminho)+'&n='+(n+1))},${SPLASH_RETRY_MS});
+return}
+try{s.removeItem(${JSON.stringify(SPLASH_WAIT_KEY)})}catch(e){}
+d.dataset.splash='launch';
+var t0=Date.now(),marca=function(){try{s.setItem(${JSON.stringify(SPLASH_HANDOFF_KEY)},String(t0))}catch(e){}};
+marca();
+requestAnimationFrame(function(){t0=Date.now();marca()});
+setTimeout(ir,${SPLASH_HANDOFF_AT_MS});
+})();`;
 
 const LAUNCH_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
