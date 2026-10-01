@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -11,6 +11,7 @@ import Link from 'next/link';
 import TurnstileWidget from '@/components/booking/TurnstileWidget';
 import { LoginVideoBackground } from '@/components/auth/LoginVideoBackground';
 import { LoginCurtain } from '@/components/auth/LoginCurtain';
+import { PANEL_FLAG_KEY, SPLASH_HANDOFF_KEY } from '@/lib/ui/splashScene';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,19 @@ export default function LoginPage() {
   // Login deu certo e o destino é o painel: a cortina de cetim sobe aqui e a
   // abertura (components/ui/AppSplash) continua dela, sem piscar no meio.
   const [entering, setEntering] = useState(false);
+
+  // Caiu no login = não está logada. A tela de abertura do app instalado
+  // (app/abertura/route.ts) para de tocar a estrela até ela entrar de novo
+  // no painel — senão a próxima abertura acenderia a marca antes deste
+  // formulário. E o bastão dela, se veio parar aqui, não vale mais.
+  useEffect(() => {
+    try {
+      localStorage.removeItem(PANEL_FLAG_KEY);
+      sessionStorage.removeItem(SPLASH_HANDOFF_KEY);
+    } catch {
+      /* storage bloqueado: nada a desmarcar */
+    }
+  }, []);
 
   const handleDemo = async () => {
     setDemoLoading(true);

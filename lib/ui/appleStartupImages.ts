@@ -6,7 +6,7 @@
  * (components/ui/AppSplash). Era a "piscada" antes da animação.
  *
  * Cada PNG é o primeiro quadro da cortina: o cetim do login com a vinheta de
- * #lume-splash (app/globals.css), sem a marca. O iPhone mostra o PNG, a
+ * #lume-splash (lib/ui/splashScene.ts), sem a marca. O iPhone mostra o PNG, a
  * página pinta o mesmo quadro por cima e a estrela acende — sem emenda visível.
  *
  * O iOS só usa a imagem se o tamanho bater EXATO com a tela, por isso uma

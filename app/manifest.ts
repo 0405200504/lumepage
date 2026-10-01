@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // mostra o ícone antes do app carregar). Com o creme antigo, a sequência
     // era clarão → cortina vinho → painel. Agora emenda na abertura da marca
     // (components/ui/AppSplash) sem piscar de cor: é o tom médio do cetim
-    // da cortina (#lume-splash em app/globals.css).
+    // da cortina (#lume-splash em lib/ui/splashScene.ts).
     background_color: '#4a0e22',
     theme_color: '#4a0e22',
     lang: 'pt-BR',
