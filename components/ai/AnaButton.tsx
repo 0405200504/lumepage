@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { ANA_SATIN_STYLE, AnaStar } from './AnaBrand';
+import { warmVoice } from './VoiceMode';
 
 /**
  * O botão da Ana no canto inferior direito, em TODAS as telas do painel
@@ -76,6 +77,8 @@ export const AnaButton: React.FC<{ onOpenChat: () => void; onTalk: () => void }>
         <button
           type="button"
           onClick={onTalk}
+          onPointerEnter={warmVoice}
+          onPointerDown={warmVoice}
           aria-label="Falar com a Ana por voz"
           title="Falar com a Ana"
           className={`${part} justify-center pl-3 pr-4 lg:pr-3.5`}

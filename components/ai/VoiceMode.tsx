@@ -24,6 +24,19 @@ import { screenHref } from '@/lib/assistant/screens';
  *                  a agenda, a lista de clientes etc.
  */
 
+/**
+ * Acorda a função que abre a conversa antes do toque: fria, ela levava
+ * ~1,2 s a mais só para carregar. No máximo uma vez a cada 2 minutos; uma
+ * falha aqui não importa (o toque abre a conversa do mesmo jeito).
+ */
+let lastWarm = 0;
+export function warmVoice() {
+  const now = Date.now();
+  if (now - lastWarm < 120_000) return;
+  lastWarm = now;
+  void fetch('/api/voice/connect', { cache: 'no-store' }).catch(() => {});
+}
+
 type Phase = 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error';
 
 interface RealtimeItem {

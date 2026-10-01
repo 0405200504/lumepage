@@ -41,12 +41,22 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Oferta de conexão inválida.' }, { status: 400 });
   }
 
-  // Saldo do mês e prazo desta conversa.
+  // O prompt (lista de serviços) não depende do saldo: a consulta já sai
+  // agora, junto com a conferência abaixo, em vez de esperar por ela.
+  const ctxReady = buildAssistantContext(professionalId);
+  ctxReady.catch(() => {}); // se a conversa for recusada antes, o erro não fica solto
+
+  // Saldo do mês e prazo desta conversa. A varredura das chamadas vencidas e
+  // o saldo saem juntos; se a varredura fechou alguma (e cobrou o mínimo
+  // dela no mês), o saldo é refeito depois dela — mesmo resultado de antes.
   let minutes: number;
   let remaining: number;
   try {
-    await sweepExpiredVoiceCalls(professionalId);
-    remaining = await remainingMicros(professionalId);
+    const swept = sweepExpiredVoiceCalls(professionalId);
+    const before = remainingMicros(professionalId);
+    // Espera as duas: a varredura encerra chamadas na OpenAI e não pode ficar pela metade.
+    await Promise.allSettled([swept, before]);
+    remaining = (await swept) > 0 ? await remainingMicros(professionalId) : await before;
     minutes = Math.min(VOICE_MAX_MINUTES, Math.floor(remaining / (VOICE_RESERVE_USD_PER_MIN * 1e6)));
   } catch (e) {
     if (e instanceof BudgetUnavailable) {
@@ -58,7 +68,7 @@ export async function POST(req: Request) {
     return Response.json({ error: BUDGET_REACHED_MSG, budget: true }, { status: 402 });
   }
 
-  const ctx = await buildAssistantContext(professionalId);
+  const ctx = await ctxReady;
   const firstName = (session.name || '').trim().split(/\s+/)[0] || 'profissional';
   const config = voiceSessionConfig({
     instructions: voiceInstructions(ctx.systemPrompt, firstName),
@@ -114,4 +124,14 @@ export async function POST(req: Request) {
     minutesLeftMonth: typicalVoiceMinutes(remaining),
     firstName,
   });
+}
+
+/**
+ * Acorda esta função antes do toque. A voz é pouco usada, então ela costuma
+ * estar "fria" e o primeiro pedido levava ~1,2 s a mais só para carregar. O
+ * app chama isto quando a Ana pode ser usada (painel aberto ou de volta à
+ * frente, chat aberto, dedo no microfone). Não lê nem grava nada.
+ */
+export function GET() {
+  return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
 }
