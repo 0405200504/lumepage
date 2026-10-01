@@ -54,6 +54,10 @@ interface TurnstileWidgetProps {
   siteKey?: string;
   theme?: 'light' | 'dark' | 'auto';
   action?: string;
+  /** 'interaction-only' = invisível, só aparece se a Cloudflare pedir um desafio */
+  appearance?: 'always' | 'execute' | 'interaction-only';
+  /** 'flexible' = ocupa a largura do contêiner */
+  size?: 'normal' | 'flexible' | 'compact';
   className?: string;
 }
 
@@ -66,6 +70,8 @@ export default function TurnstileWidget({
   siteKey = DEFAULT_SITE_KEY,
   theme = 'auto',
   action,
+  appearance = 'always',
+  size = 'normal',
   className = '',
 }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,6 +111,8 @@ export default function TurnstileWidget({
           const id = window.turnstile.render(containerRef.current, {
             sitekey: siteKey,
             theme: theme,
+            appearance,
+            size,
             ...(action ? { action } : {}),
             callback: (token: string) => {
               if (isSubscribed && onVerifyRef.current) {
@@ -143,13 +151,16 @@ export default function TurnstileWidget({
         }
       }
     };
-  }, [mounted, siteKey, theme, action]);
+  }, [mounted, siteKey, theme, action, appearance, size]);
 
   if (!siteKey) return null;
 
+  // Invisível não reserva espaço: o widget só ganha altura se houver desafio.
+  const reserve = appearance === 'interaction-only' ? '' : 'my-3 min-h-[65px]';
+
   return (
-    <div className={`flex justify-center my-3 min-h-[65px] ${className}`}>
-      <div ref={containerRef} />
+    <div className={`flex justify-center ${reserve} ${className}`}>
+      <div ref={containerRef} className={size === 'flexible' ? 'w-full' : undefined} />
     </div>
   );
 }

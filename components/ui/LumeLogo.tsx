@@ -8,8 +8,8 @@ interface LumeLogoProps {
   className?: string;
 }
 
-// Proporção real do arquivo (1125 x 398)
-const ASPECT = 'aspect-[1125/398]';
+// Proporção real do arquivo (577 x 206)
+const ASPECT = 'aspect-[577/206]';
 
 /**
  * Wordmark oficial da Lume.

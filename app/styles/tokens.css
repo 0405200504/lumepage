@@ -12,9 +12,9 @@
    no lugar de sombra. Lia como rascunho de engenharia.
 
    O que manda agora:
-     · UMA tipografia (Plus Jakarta Sans) do micro-rótulo ao
-       display. Hierarquia se faz com PESO, TAMANHO e COR —
-       nunca trocando de família.
+     · DUAS famílias com papel fixo: Hanken Grotesk nos títulos,
+       Inter em todo o resto. Fora disso, hierarquia se faz com
+       PESO, TAMANHO e COR — nunca trocando de família.
      · Superfície BRANCA sobre fundo cinza-claro. O que separa
        um card do fundo é a diferença de luz, não um traço.
      · Raio generoso: 12 nos controles, 20 nos cards, 28 nos
@@ -163,24 +163,25 @@
   --color-bad:  var(--color-danger);
 
   /* ------------------------------------------------------
-     TIPOGRAFIA · uma família só
-     Plus Jakarta Sans do micro-rótulo ao display. Geométrica
-     de terminações macias, dígito tabular, e um desenho que
-     lê como produto caro sem virar "app de bem-estar".
+     TIPOGRAFIA · títulos e corpo
+     Hanken Grotesk nos títulos (h1–h6, via --font-display): a
+     grotesca gratuita mais próxima da Neue Montreal, de "R"
+     reto e "a" aberto. Inter em todo o resto — corpo, rótulo,
+     botão, número —, com dígito tabular.
 
-     As três famílias anteriores (Manrope + Instrument Sans +
-     JetBrains Mono) eram a causa direta de a interface parecer
-     montada por pessoas diferentes: cada bloco da tela tinha
-     um esqueleto tipográfico distinto.
+     As fontes vêm do next/font (lib/fonts.ts), que expõe
+     --font-inter e --font-hanken numa classe no <html>. Os
+     tokens abaixo são resolvidos no :root, por isso a classe
+     TEM de estar no <html>, e não numa casca mais embaixo.
 
-     --font-mono aponta para a MESMA família de propósito. As
-     dezenas de chamadas a `mono`/`mono-micro` espalhadas pelo
-     app continuam funcionando; o que elas produzem agora é o
-     mesmo desenho de letra, diferenciado por peso e tracking.
+     --font-mono aponta para a Inter de propósito. As dezenas
+     de chamadas a `mono`/`mono-micro` espalhadas pelo app
+     continuam funcionando; o que elas produzem é o mesmo
+     desenho de letra, diferenciado por peso e tracking.
      ------------------------------------------------------ */
-  --font-sans:    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono:    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans:    var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-hanken), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* Escala mais aberta no topo. O número grande das referências
      é o assunto da tela: ele ganha ar, o resto se cala. */

@@ -3,15 +3,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import type { Message } from 'ai';
-import { Sparkles, X, Send, Mic, Loader2, User, Plus, History, Trash2, MessageSquare, CheckCircle2, Zap } from 'lucide-react';
+import { Sparkles, X, ArrowUp, Mic, Loader2, Plus, History, Trash2, MessageSquare, ChevronLeft, Square } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
-/** A barra de abas do celular (item "Mais") dispara este evento para abrir o
+/** O botão flutuante do celular e a gaveta disparam este evento para abrir o
  *  assistente. Mesmo padrão do OPEN_NAV_EVENT — sem contexto novo só para
- *  ligar dois componentes que já são irmãos na casca. */
+ *  ligar componentes que já são irmãos na casca. */
 export const OPEN_AI_EVENT = 'lume:open-ai';
 
-// Remove marcações de Markdown que apareceriam como texto cru no balão do chat
+// Remove marcações de Markdown que apareceriam como texto cru na resposta
 function stripMarkdown(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, '$1')   // **negrito**
@@ -64,24 +64,31 @@ const relativeTime = (ts: number): string => {
   return d === 1 ? 'ontem' : `há ${d} dias`;
 };
 
-// Atalhos sugeridos no cartão de boas-vindas
+// Sugestões da tela vazia
 const QUICK_PROMPTS = [
   'Quais agendamentos eu tenho hoje?',
-  'Cadastrar um novo cliente',
   'Marcar um horário para amanhã',
+  'Cadastrar uma cliente nova',
   'Anotar uma tarefa',
 ];
 
-// Funcionalidades listadas na mensagem fixada
-const CAPABILITIES = [
-  'Tirar dúvidas sobre qualquer área do sistema',
-  'Criar clientes em segundos',
-  'Agendar horários com linguagem natural',
-  'Consultar sua agenda do dia',
-  'Anotar tarefas e lembretes',
-  'Verificar disponibilidade de horários',
-];
+const TOOL_LABEL: Record<string, string> = {
+  createAppointment: 'Agendamento marcado',
+  createClient: 'Cliente cadastrada',
+  createTask: 'Tarefa anotada',
+  getAppointments: 'Agenda consultada',
+};
 
+/**
+ * Assistente de IA.
+ *
+ * O desenho é o de um chat de IA de referência (ChatGPT, Claude): a
+ * conversa é o conteúdo. A resposta da assistente é texto corrido, sem
+ * balão nem avatar — balão é para o que a PESSOA disse, à direita, num
+ * cinza claro. A caixa de digitar é um campo arredondado com enviar e
+ * microfone dentro. No celular ocupa a tela inteira, como um app; no
+ * computador é a janela ancorada no canto.
+ */
 export function AIAgentChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -90,7 +97,7 @@ export function AIAgentChat() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentId, setCurrentId] = useState<string>(newId);
 
-  const { messages, input, handleInputChange, handleSubmit, append, isLoading, setMessages } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, isLoading, setMessages, stop } = useChat({
     api: '/api/chat',
     onError: (error) => {
       console.error('Chat error:', error);
@@ -98,25 +105,20 @@ export function AIAgentChat() {
     }
   });
 
-  // Carrega o histórico salvo ao montar.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSessions(loadSessions());
-  }, []);
-
-  // Salva/atualiza a conversa atual no histórico sempre que as mensagens mudam.
+  // Salva/atualiza a conversa atual no histórico sempre que as mensagens
+  // mudam. Só grava no storage: a lista em memória é lida na hora em que a
+  // tela de conversas abre (openHistory), então nenhum estado muda aqui.
   useEffect(() => {
     if (messages.length === 0) return;
-    setSessions((prev) => {
-      const updated: ChatSession = { id: currentId, title: deriveTitle(messages), messages, updatedAt: Date.now() };
-      const rest = prev.filter((s) => s.id !== currentId);
-      const next = [updated, ...rest]
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_SESSIONS);
-      saveSessions(next);
-      return next;
-    });
+    const updated: ChatSession = { id: currentId, title: deriveTitle(messages), messages, updatedAt: Date.now() };
+    const rest = loadSessions().filter((s) => s.id !== currentId);
+    saveSessions([updated, ...rest].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_SESSIONS));
   }, [messages, currentId]);
+
+  const openHistory = () => {
+    setSessions(loadSessions());
+    setShowHistory(true);
+  };
 
   // Inicia uma conversa nova (a atual já fica salva no histórico).
   const startNewChat = () => {
@@ -142,13 +144,14 @@ export function AIAgentChat() {
     if (id === currentId) startNewChat();
   };
 
-  // Envia um atalho sugerido do cartão de boas-vindas.
+  // Envia uma sugestão da tela vazia.
   const sendPrompt = (text: string) => append({ role: 'user', content: text });
 
   const toast = useToast();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll para a última mensagem (instantâneo — sem animação que engasga no mobile)
   useEffect(() => {
@@ -156,6 +159,14 @@ export function AIAgentChat() {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
   }, [messages, isTranscribing, isLoading]);
+
+  // A caixa cresce com o texto, até 6 linhas; depois rola por dentro.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [input, isOpen]);
 
   const startRecording = async () => {
     try {
@@ -178,16 +189,16 @@ export function AIAgentChat() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await handleAudioUpload(audioBlob);
-        
-        // Stop all tracks to release microphone
+        // Libera o microfone
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error accessing microphone:', error);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      const name = error instanceof Error ? error.name : '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         toast.error('Microfone bloqueado', 'Por favor, clique no ícone de cadeado na barra de endereços e permita o uso do microfone.');
       } else {
         toast.error('Erro no microfone', 'Não foi possível acessar o seu microfone.');
@@ -239,17 +250,23 @@ export function AIAgentChat() {
     return () => window.removeEventListener(OPEN_AI_EVENT, abrir);
   }, []);
 
+  // Enter envia; Shift+Enter quebra a linha (o padrão dos chats de IA).
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      if (input.trim() && !isLoading) handleSubmit();
+    }
+  };
+
+  const busy = isLoading || isTranscribing;
+  const canSend = input.trim().length > 0 && !busy && !isRecording;
+
+  const iconBtn = 'inline-flex items-center justify-center h-10 w-10 rounded-full text-n-600 hover:bg-n-100 hover:text-heading transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700';
+
   return (
     <>
-      {/* Gatilho do assistente.
-          UM flutuante por tela, e ele é "Novo agendamento" (na Agenda). O
-          assistente e o FAB dividiam o mesmo canto inferior direito e, em
-          /agenda, /finance e /services, os dois cobriam conteúdo em qualquer
-          posição de rolagem — dois círculos de 56px empilhados sobre a coluna
-          de valores.
-          No desktop ele vira um botão discreto e ancorado no canto; no
-          celular ele SAI da tela e é alcançado pelo menu "Mais" da barra de
-          abas, junto com o resto da navegação. */}
+      {/* Gatilho no desktop: botão discreto ancorado no canto. No celular quem
+          abre é o botão flutuante da Início e a gaveta do menu. */}
       {!isOpen && (
         <button
           data-tour="ai-chat"
@@ -264,310 +281,203 @@ export function AIAgentChat() {
 
       {/* Janela de Chat */}
       {isOpen && (
-        <div className="fixed inset-0 lg:inset-auto lg:bottom-20 lg:right-6 lg:w-[400px] lg:h-[600px] bg-surface border border-line z-50 flex flex-col lg:rounded-hero shadow-lg overflow-hidden animate-slide-up">
-          {/* Header */}
-          <div className="px-4 py-4 surface-wine text-white flex items-center justify-between shrink-0 shadow-soft">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-9 w-9 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm shrink-0">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-label truncate">{showHistory ? 'Suas conversas' : 'Assistente Lume'}</h3>
-                <p className="text-caption text-white/70 truncate">{showHistory ? `${sessions.length}/${MAX_SESSIONS} conversas salvas` : 'Online e pronta para ajudar'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                onClick={startNewChat}
-                title="Novo chat"
-                aria-label="Novo chat"
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              >
-                <Plus className="h-5 w-5" />
+        <div
+          role="dialog"
+          aria-label="Assistente IA"
+          className="fixed inset-0 lg:inset-auto lg:bottom-6 lg:right-6 lg:w-[420px] lg:h-[680px] lg:max-h-[calc(100vh-3rem)] bg-surface lg:border lg:border-line z-50 flex flex-col lg:rounded-hero lg:shadow-[var(--shadow-lg)] overflow-hidden animate-slide-up"
+        >
+          {/* Topo: fino e neutro — a conversa é o conteúdo. */}
+          <div className="shrink-0 flex items-center gap-1 h-14 px-2 pt-safe border-b border-line">
+            {showHistory ? (
+              <button type="button" onClick={() => setShowHistory(false)} aria-label="Voltar para a conversa" className={iconBtn}>
+                <ChevronLeft className="h-5 w-5" />
               </button>
-              <button
-                onClick={() => setShowHistory((v) => !v)}
-                title="Histórico de conversas"
-                aria-label="Histórico de conversas"
-                className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-white/20' : 'hover:bg-white/10'}`}
-              >
-                <History className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                title="Fechar"
-                aria-label="Fechar"
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              >
+            ) : (
+              <button type="button" onClick={() => setIsOpen(false)} aria-label="Fechar o assistente" className={iconBtn}>
                 <X className="h-5 w-5" />
               </button>
-            </div>
+            )}
+            <p className="flex-1 text-center text-label font-semibold text-heading truncate">
+              {showHistory ? 'Conversas' : 'Assistente'}
+            </p>
+            <button type="button" onClick={startNewChat} aria-label="Nova conversa" title="Nova conversa" className={iconBtn}>
+              <Plus className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => (showHistory ? setShowHistory(false) : openHistory())}
+              aria-label="Conversas anteriores"
+              title="Conversas anteriores"
+              aria-pressed={showHistory}
+              className={`${iconBtn} ${showHistory ? 'bg-n-100 text-heading' : ''}`}
+            >
+              <History className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* ================ PAINEL DE HISTÓRICO ================ */}
           {showHistory ? (
-            <div className="flex-1 overflow-y-auto bg-n-50">
+            /* ================ CONVERSAS ANTERIORES ================ */
+            <div className="flex-1 overflow-y-auto">
               {sessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                  <div className="h-14 w-14 rounded-full bg-wine-50 flex items-center justify-center mb-4">
-                    <MessageSquare className="h-7 w-7 text-wine-300" />
-                  </div>
-                  <p className="text-label font-semibold text-ink mb-1">Nenhuma conversa ainda</p>
-                  <p className="text-caption text-n-600">Suas conversas aparecerão aqui. Inicie um novo chat para começar!</p>
-                  <button
-                    onClick={startNewChat}
-                    className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-wine-700 text-white text-label font-semibold rounded-full shadow-soft hover:bg-wine-800 transition-colors tap"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Novo chat
-                  </button>
+                <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                  <MessageSquare className="h-8 w-8 text-n-300 mb-3" aria-hidden />
+                  <p className="text-label font-semibold text-heading">Nenhuma conversa ainda</p>
+                  <p className="text-caption text-n-500 mt-1">As conversas ficam guardadas aqui, neste aparelho.</p>
                 </div>
               ) : (
-                <div className="p-3 space-y-1.5">
-                  {/* Botão de novo chat no topo */}
-                  <button
-                    onClick={startNewChat}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-dashed border-wine-200 text-wine-700 hover:bg-wine-50 transition-colors tap text-label font-semibold"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Iniciar nova conversa
-                  </button>
-
+                <ul className="py-2">
                   {sessions.map((session) => {
                     const isActive = session.id === currentId;
-                    const msgCount = session.messages.filter((m) => m.role === 'user').length;
                     return (
-                      <div
-                        key={session.id}
-                        className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-ui cursor-pointer tap ${
-                          isActive
-                            ? 'bg-wine-700 text-white shadow-soft'
-                            : 'bg-white border border-n-200 hover:border-wine-200 hover:shadow-xs'
-                        }`}
-                        onClick={() => openSession(session)}
-                      >
-                        <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
-                          isActive ? 'bg-white/20' : 'bg-wine-50'
-                        }`}>
-                          <MessageSquare className={`h-4 w-4 ${isActive ? 'text-white' : 'text-wine-400'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-label font-medium truncate ${isActive ? 'text-white' : 'text-ink'}`}>
-                            {session.title}
-                          </p>
-                          <p className={`text-caption mt-0.5 ${isActive ? 'text-white/60' : 'text-n-600'}`}>
-                            {msgCount} msg · {relativeTime(session.updatedAt)}
-                          </p>
-                        </div>
+                      <li key={session.id} className="group flex items-center gap-2 px-3">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSession(session.id);
-                          }}
-                          title="Excluir conversa"
-                          aria-label={`Excluir conversa: ${session.title}`}
-                          className={`p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ${
-                            isActive
-                              ? 'hover:bg-white/20 text-white/70 hover:text-white'
-                              : 'hover:bg-danger-bg text-n-400 hover:text-danger'
-                          }`}
+                          type="button"
+                          onClick={() => openSession(session)}
+                          className={`flex-1 min-w-0 text-left px-3 py-3 rounded-2xl transition-ui tap ${isActive ? 'bg-n-100' : 'hover:bg-n-50'}`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <p className="text-label text-heading truncate">{session.title}</p>
+                          <p className="text-caption text-n-500 mt-0.5">{relativeTime(session.updatedAt)}</p>
                         </button>
-                      </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteSession(session.id)}
+                          aria-label={`Excluir conversa: ${session.title}`}
+                          title="Excluir conversa"
+                          className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-full text-n-400 hover:bg-danger-bg hover:text-danger transition-ui lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
             </div>
           ) : (
-            /* ================ ÁREA DE MENSAGENS ================ */
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-n-50">
-              {/* Mensagem fixada de boas-vindas (sempre visível quando não há mensagens) */}
-              {messages.length === 0 && (
-                <div className="animate-fade-up">
-                  {/* Cartão principal de boas-vindas */}
-                  <div className="bg-white border border-n-200 rounded-2xl shadow-soft overflow-hidden">
-                    {/* Topo do cartão com gradiente */}
-                    <div className="surface-wine px-5 py-4 text-white">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="h-10 w-10 bg-white/15 rounded-full flex items-center justify-center backdrop-blur-sm">
-                          <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-label">Olá! Sou a Lume ✨</h4>
-                          <p className="text-caption text-white/70">Sua assistente virtual inteligente</p>
+            /* ================ CONVERSA ================ */
+            <div className="flex-1 overflow-y-auto">
+              {messages.length === 0 ? (
+                /* Tela vazia: um cumprimento e sugestões, nada mais. */
+                <div className="min-h-full flex flex-col items-center justify-center px-6 py-10 text-center animate-fade-up">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-wine-50 text-wine-700 mb-5">
+                    <Sparkles className="h-6 w-6" aria-hidden />
+                  </span>
+                  <h2 className="text-h3 text-heading">Como posso ajudar hoje?</h2>
+                  <p className="text-body-sm text-n-500 mt-1.5 max-w-xs">
+                    Marco horários, cadastro clientes, anoto tarefas e respondo sobre a sua agenda.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 mt-7 max-w-sm">
+                    {QUICK_PROMPTS.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => sendPrompt(prompt)}
+                        className="tap px-4 py-2 rounded-full border border-line bg-surface text-body-sm text-n-700 hover:bg-n-50 hover:text-heading transition-ui"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="px-4 lg:px-5 py-5 space-y-5">
+                  {messages.map((m) => (
+                    m.role === 'user' ? (
+                      <div key={m.id} className="flex justify-end">
+                        <div className="max-w-[85%] rounded-3xl rounded-br-lg bg-n-100 text-heading px-4 py-2.5 text-body whitespace-pre-wrap break-words">
+                          {m.content}
                         </div>
                       </div>
-                      <p className="text-caption text-white/90 leading-relaxed">
-                        Como sua assistente virtual, estou aqui para facilitar seu uso da plataforma desde o primeiro acesso.
-                      </p>
-                    </div>
-
-                    {/* Lista de funcionalidades */}
-                    <div className="px-5 py-4">
-                      <p className="text-caption font-bold text-wine-700 mb-3 flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Comigo, você pode:
-                      </p>
-                      <ul className="space-y-2">
-                        {CAPABILITIES.map((cap, i) => (
-                          <li key={i} className="flex items-start gap-2 text-caption text-ink/80 leading-snug">
-                            <span className="text-wine-400 mt-0.5 shrink-0">•</span>
-                            {cap}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Rodapé do cartão */}
-                    <div className="px-5 py-3 bg-n-50 border-t border-n-200">
-                      <p className="text-caption text-n-600 leading-relaxed">
-                        Pode me pedir qualquer coisa em <span className="font-semibold text-ink">linguagem natural</span> — simples como conversar.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Atalhos rápidos */}
-                  <div className="mt-4">
-                    <p className="text-caption font-bold text-n-600 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 px-1">
-                      <Zap className="h-3 w-3" />
-                      Comece por aqui
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {QUICK_PROMPTS.map((prompt, i) => (
-                        <button
-                          key={i}
-                          onClick={() => sendPrompt(prompt)}
-                          className="text-left px-3.5 py-2.5 bg-white border border-n-200 rounded-xl text-caption text-ink/80 hover:border-wine-300 hover:bg-wine-50/50 hover:text-wine-700 transition-ui tap shadow-xs"
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CTA final */}
-                  <p className="text-center text-caption text-n-400 mt-4 font-medium">
-                    ✨ Me envie um comando ou me pergunte algo!
-                  </p>
-                </div>
-              )}
-              
-              {messages.map(m => (
-                <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {m.role !== 'user' && (
-                    <div className="h-8 w-8 rounded-full surface-wine text-white flex items-center justify-center shrink-0 mt-1">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                  )}
-                  
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-label whitespace-pre-wrap break-words ${
-                    m.role === 'user'
-                      ? 'bg-wine-700 text-white rounded-br-sm' 
-                      : 'bg-white border border-n-200 text-ink rounded-bl-sm shadow-sm'
-                  }`}>
-                    {m.role === 'user' ? m.content : stripMarkdown(m.content)}
-
-                    {/* Renderização de Tools (quando a IA chama uma função) */}
-                    {m.toolInvocations?.map((toolInvocation) => {
-                      const { toolName, toolCallId, state } = toolInvocation;
-                      if (state === 'result') {
-                        return (
-                          <div key={toolCallId} className="mt-2 p-2 bg-ok/10 text-ok text-caption font-medium rounded-lg border border-ok/20">
-                            ✓ Ação executada: {
-                              toolName === 'createAppointment' ? 'Agendamento marcado.' :
-                              toolName === 'createClient' ? 'Cliente cadastrada.' :
-                              toolName === 'createTask' ? 'Tarefa anotada.' :
-                              toolName === 'getAppointments' ? 'Agenda verificada.' : 'Concluído.'
-                            }
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div key={toolCallId} className="mt-2 p-2 bg-n-100 text-n-500 text-caption font-medium rounded-lg flex items-center gap-2">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Executando ação no sistema...
-                          </div>
-                        );
-                      }
-                    })}
-                  </div>
-
-                  {m.role === 'user' && (
-                    <div className="h-8 w-8 rounded-full bg-n-100 border border-n-200 text-n-500 flex items-center justify-center shrink-0 mt-1">
-                      <User className="h-4 w-4" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {/* Status de digitando/transcrevendo */}
-              {(isLoading || isTranscribing) && (
-                <div className="flex gap-3 justify-start">
-                  <div className="h-8 w-8 rounded-full surface-wine text-white flex items-center justify-center shrink-0 mt-1">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div className="bg-white border border-n-200 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5 shadow-sm">
-                    {isTranscribing ? (
-                      <span className="text-caption text-n-500 animate-pulse">Ouvindo áudio...</span>
                     ) : (
-                      <>
-                        <div className="w-1.5 h-1.5 bg-n-400 rounded-full animate-bounce" />
-                        <div className="w-1.5 h-1.5 bg-n-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                        <div className="w-1.5 h-1.5 bg-n-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                      </>
-                    )}
-                  </div>
+                      <div key={m.id} className="text-body text-heading leading-relaxed whitespace-pre-wrap break-words">
+                        {stripMarkdown(m.content)}
+
+                        {/* Ações que a IA executou no sistema */}
+                        {m.toolInvocations?.map((toolInvocation) => {
+                          const { toolName, toolCallId, state } = toolInvocation;
+                          return state === 'result' ? (
+                            <div key={toolCallId} className="mt-2 flex items-center gap-1.5 text-caption font-medium text-success">
+                              <span aria-hidden>✓</span> {TOOL_LABEL[toolName] ?? 'Concluído'}
+                            </div>
+                          ) : (
+                            <div key={toolCallId} className="mt-2 flex items-center gap-1.5 text-caption text-n-500">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Fazendo isso no sistema…
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )
+                  ))}
+
+                  {/* Pensando / ouvindo */}
+                  {busy && (
+                    <div className="flex items-center gap-1.5 h-6" aria-live="polite">
+                      {isTranscribing ? (
+                        <span className="text-body-sm text-n-500">Ouvindo o áudio…</span>
+                      ) : (
+                        <>
+                          <span className="w-2 h-2 bg-n-400 rounded-full animate-bounce" />
+                          <span className="w-2 h-2 bg-n-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                          <span className="w-2 h-2 bg-n-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
           )}
 
-          {/* Área de Input (oculta quando o histórico está aberto) */}
+          {/* Caixa de digitar (some com a lista de conversas aberta) */}
           {!showHistory && (
-            <div className="p-4 bg-white border-t border-n-200 shrink-0">
-              <form onSubmit={handleSubmit} className="flex items-center gap-2 relative">
-                <input
-                  className="flex-1 bg-n-50 border border-n-200 rounded-full pl-4 pr-12 py-3 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui placeholder:text-n-400 disabled:opacity-50"
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Digite ou mande um áudio..."
-                  disabled={isLoading || isTranscribing || isRecording}
-                />
-                
-                {/* Botão de Enviar Texto (aparece se houver texto) */}
-                {input.trim() ? (
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="absolute right-12 h-10 w-10 rounded-full flex items-center justify-center text-wine-700 hover:bg-wine-50 transition-colors disabled:opacity-50"
-                  >
-                    <Send className="h-5 w-5" />
-                  </button>
-                ) : null}
-
-                {/* Botão de Microfone (Pressione para falar) */}
+            <div className="shrink-0 px-3 pb-3 pt-2 safe-sheet bg-surface">
+              <form
+                onSubmit={(e) => { e.preventDefault(); if (canSend) handleSubmit(); }}
+                className="flex items-end gap-1.5 rounded-[26px] border border-line bg-surface shadow-[var(--shadow-sm)] px-2 py-1.5 focus-within:border-n-400 transition-ui"
+              >
+                {/* Microfone: segura para falar, solta para enviar */}
                 <button
                   type="button"
                   onPointerDown={startRecording}
                   onPointerUp={stopRecording}
                   onPointerLeave={stopRecording}
-                  disabled={isLoading || isTranscribing}
-                  className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-ui ${
-                    isRecording 
-                      ? 'bg-alert text-white scale-110 shadow-glow animate-pulse' 
-                      : 'bg-wine-700 text-white hover:scale-105 shadow-soft'
-                  } disabled:opacity-50 disabled:hover:scale-100`}
-                  title="Pressione e segure para falar"
+                  disabled={busy}
+                  aria-label={isRecording ? 'Gravando — solte para enviar' : 'Segure para falar'}
+                  title="Segure para falar"
+                  className={`shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center transition-ui disabled:opacity-40 ${
+                    isRecording ? 'bg-danger text-white animate-pulse' : 'text-n-600 hover:bg-n-100 hover:text-heading'
+                  }`}
                 >
                   <Mic className="h-5 w-5" />
                 </button>
+
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={onKeyDown}
+                  placeholder={isRecording ? 'Gravando… solte para enviar' : 'Pergunte ou peça algo'}
+                  disabled={busy || isRecording}
+                  className="flex-1 min-w-0 resize-none bg-transparent py-2.5 text-body text-heading placeholder:text-n-400 focus:outline-none disabled:opacity-60 max-h-40"
+                />
+
+                {isLoading ? (
+                  <button type="button" onClick={() => stop()} aria-label="Parar a resposta" className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-heading text-surface">
+                    <Square className="h-4 w-4 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!canSend}
+                    aria-label="Enviar"
+                    className="shrink-0 h-10 w-10 rounded-full inline-flex items-center justify-center bg-wine-700 text-white transition-ui disabled:bg-n-200 disabled:text-n-400"
+                  >
+                    <ArrowUp className="h-5 w-5" />
+                  </button>
+                )}
               </form>
-              <p className="text-caption text-n-400 text-center mt-2 font-medium">
-                {isRecording ? 'Solte para enviar o áudio' : 'Pressione e segure o microfone para falar'}
-              </p>
             </div>
           )}
         </div>

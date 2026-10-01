@@ -4,7 +4,6 @@ import { requireProfessional } from '@/lib/auth/session';
 import { dbService } from '@/lib/supabase/db';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { TabBar } from '@/components/layout/TabBar';
 import { RouteTransition } from '@/components/layout/RouteTransition';
 import { ActingBanner } from '@/components/salon/ActingBanner';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
@@ -36,6 +35,7 @@ export default async function DashboardLayout({
   const forcePasswordChange = await mustChangePassword(session);
 
   let brandName = '';
+  let avatarUrl: string | null = null;
   let slug = '';
   let pendingConversations = 0;
   let isTrialExpired = false;
@@ -62,6 +62,7 @@ export default async function DashboardLayout({
         precisaBoasVindas = professionalPrecisaOnboarding(prof);
 
         brandName = prof.brand_name;
+        avatarUrl = prof.profile_image_url ?? null;
         tourCompleted = prof.tour_completed_at === undefined ? undefined : prof.tour_completed_at !== null;
         slug = prof.slug;
         subscriptionPlan = prof.subscription_plan ?? null;
@@ -116,6 +117,7 @@ export default async function DashboardLayout({
         name={session.name}
         brandName={brandName || session.name}
         slug={slug}
+        avatarUrl={avatarUrl}
         plan={subscriptionPlan}
         enforcePlan={enforcePlan}
         pendingConversations={pendingConversations}
@@ -135,6 +137,7 @@ export default async function DashboardLayout({
         <Header
           userName={session.name}
           userEmail={session.email}
+          avatarUrl={avatarUrl}
           role="professional"
         />
 
@@ -143,16 +146,15 @@ export default async function DashboardLayout({
 
         {/* A rolagem é da JANELA, não de um contêiner interno: é o que faz a
             topbar colapsar e a barra do navegador sumir no celular. */}
-        {/* pb-28 no celular reserva a altura do dock flutuante + a margem
-            que ele descola da borda. */}
-        <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 lg:px-8 pt-1 pb-28 lg:pb-12">
+        {/* pb-24 no celular: o botão flutuante da assistente não pode cobrir
+            a última linha da tela. */}
+        <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 lg:px-8 pt-1 pb-24 lg:pb-12">
           <RouteTransition>{children}</RouteTransition>
         </main>
       </div>
 
       {/* Barra de abas do celular. O `pb-24` do <main> já reservava o espaço
           que ela ocupa — antes, para o FAB solto. */}
-      <TabBar />
 
       <AIAgentChat />
 

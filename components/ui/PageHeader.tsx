@@ -22,15 +22,19 @@ export const PageHeader: React.FC<{
   actions?: React.ReactNode;
   className?: string;
 }> = ({ trail, title, description, actions, className = '' }) => (
+  /* No celular o título e a descrição já estão na barra do topo (Header):
+     repetir os dois aqui era o que fazia cada tela abrir com o nome dela
+     escrito duas vezes. Fica só a trilha, como legenda. */
   <header data-tour="module-header" className={`flex flex-wrap items-end justify-between gap-x-4 gap-y-3 ${className}`}>
-    <div className="min-w-0">
-      {trail && trail.length > 0 && <MonoTrail items={trail} className="mb-2" />}
-      <h1 className="text-h2 text-heading truncate">{title}</h1>
-      {description && <p className="text-body-sm text-n-600 mt-1.5 max-w-2xl">{description}</p>}
+    <div className="min-w-0 max-lg:w-full">
+      {trail && trail.length > 0 && <MonoTrail items={trail} className="mb-2 max-lg:mb-0" />}
+      <h1 className="hidden lg:block text-h2 text-heading truncate">{title}</h1>
+      {description && <p className="hidden lg:block text-body-sm text-n-600 mt-1.5 max-w-2xl">{description}</p>}
     </div>
-    {/* As ações quebram em vez de esticar a página: num header com seletor de
-        período + exportar + botão primário, 375px não comporta a linha. */}
-    {actions && <div data-tour="module-action" className="flex flex-wrap items-center gap-2">{actions}</div>}
+    {/* As ações quebram em vez de esticar a página. No celular a linha ocupa
+        a largura toda e o botão primário (o último, por convenção) estica —
+        os ícones ficam do tamanho que são. */}
+    {actions && <div data-tour="module-action" className="flex flex-wrap items-center gap-2 max-lg:w-full max-lg:[&>*:last-child]:flex-1">{actions}</div>}
   </header>
 );
 

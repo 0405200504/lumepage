@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck, User, Store, Sparkles, UserPlus } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction, loginDemoAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
-import InstallApp from '@/components/pwa/InstallApp';
 import TurnstileWidget from '@/components/booking/TurnstileWidget';
+import { LoginVideoBackground } from '@/components/auth/LoginVideoBackground';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'pro' | 'manager'>('pro');
   const [demoLoading, setDemoLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
 
@@ -64,106 +63,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden"
-      style={{
-        background:
-          'radial-gradient(120% 90% at 85% -10%, rgba(140,36,56,0.5) 0%, transparent 55%), radial-gradient(110% 90% at 0% 110%, rgba(80,11,24,0.55) 0%, transparent 50%), linear-gradient(160deg, #26040a 0%, #1a0409 55%, #120207 100%)',
-      }}
-    >
-      {/* Halos decorativos bordô (futurista) */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-wine-500/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-48 -left-40 h-96 w-96 rounded-full bg-wine-700/30 blur-3xl" />
-      {/* Grid tech sutil */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '44px 44px',
-          maskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
-          WebkitMaskImage: 'radial-gradient(70% 60% at 50% 40%, black, transparent)',
-        }}
-      />
+    <div className="min-h-screen min-h-dvh flex flex-col justify-center items-center px-4 py-20 select-none relative overflow-hidden bg-[#0d0a0b]">
+      <LoginVideoBackground />
 
-      <div className="max-w-md w-full z-10 animate-fade-up">
+      {/* A entrada anima cada bloco, não o wrapper: opacidade animada num ancestral
+          impede o backdrop-filter do vidro de enxergar o vídeo. */}
+      <div className="max-w-md w-full z-10">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-6">
-          <LumeLogo variant="light" className="h-12 text-white mb-5" />
-          <h2 className="text-h2 font-semibold text-white tracking-tight">
-            {mode === 'manager' ? 'Acesso do Gerente' : 'Bem-vinda de volta'}
-          </h2>
-          <p className="text-caption text-white/55 mt-1.5">
-            {mode === 'manager' ? 'Gerencie as contas das suas funcionárias'
-              : 'Acesse seu painel de agenda profissional'}
-          </p>
+        <div className="stagger-item flex justify-center mb-8" style={{ ['--i' as string]: 0 }}>
+          <h1 className="sr-only">Entrar na Lume</h1>
+          <LumeLogo variant="light" className="h-9" />
         </div>
 
-        {/* Seletor de tipo de acesso */}
-        <div className="grid grid-cols-2 gap-1 bg-white/[0.06] border border-white/10 ring-hairline rounded-2xl p-1 mb-5 max-w-sm mx-auto backdrop-blur-md">
-          {([
-            { k: 'pro', label: 'Profissional', icon: User },
-            { k: 'manager', label: 'Gerente', icon: Store },
-          ] as const).map(({ k, label, icon: Icon }) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setMode(k)}
-              className={`tap flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-caption font-bold transition-ui ${
-                mode === k ? 'bg-white text-wine-700 shadow-md' : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" /> {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Instalar como app no celular (PWA) */}
-        <div className="mb-5">
-          <InstallApp />
-        </div>
-
-        {/* Card de Login */}
-        <div className="card-elevated glow-wine p-7 md:p-9">
+        {/* Card de Login — vidro fosco sobre o vídeo */}
+        <div style={{ ['--i' as string]: 1 }} className="stagger-item glass-panel rounded-[28px] p-7 md:p-9">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
-                Endereço de E-mail
-              </label>
+              {/* Sem rótulo visível: o nome do campo fica no placeholder; o
+                  <label> segue para leitor de tela. */}
+              <label htmlFor="login-email" className="sr-only">E-mail</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-n-600" />
+                  <Mail className="h-4 w-4 text-white/50" />
                 </div>
                 <input
+                  id="login-email"
                   type="email"
                   required
-                  placeholder="voce@suamarca.com"
+                  placeholder="E-mail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
+                  className="block w-full pl-10 pr-3 py-3 glass-field rounded-2xl text-label"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-caption font-bold text-n-600 uppercase tracking-wider mb-2">
-                Senha de Acesso
-              </label>
+              <label htmlFor="login-senha" className="sr-only">Senha</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-n-600" />
+                  <Lock className="h-4 w-4 text-white/50" />
                 </div>
                 <input
+                  id="login-senha"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="Senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 bg-n-50 border border-n-200 rounded-2xl text-label placeholder-n-600/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700 transition-ui"
+                  className="block w-full pl-10 pr-10 py-3 glass-field rounded-2xl text-label"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-n-600 hover:text-wine-700"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/50 hover:text-white"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -173,7 +125,7 @@ export default function LoginPage() {
               <div className="flex justify-end mt-2">
                 <Link
                   href="/redefinir-senha"
-                  className="text-caption font-semibold text-wine-700 hover:text-wine-800 hover:underline transition-colors"
+                  className="text-caption font-semibold text-white/75 hover:text-white hover:underline transition-colors"
                 >
                   Esqueci a senha
                 </Link>
@@ -181,44 +133,44 @@ export default function LoginPage() {
             </div>
 
             {/* Widget Cloudflare Turnstile (Proteção Anti-Bot) */}
-            <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
+            <TurnstileWidget theme="dark" appearance="interaction-only" size="flexible" onVerify={(token) => setTurnstileToken(token)} />
 
+            {/* Principal: branco cheio, a mesma altura dos campos. A seta
+                avança meio passo no hover — o gesto de "entrar". */}
             <button
               type="submit"
               disabled={isLoading}
-              className="tap flex items-center justify-center gap-2 w-full py-4 surface-wine hover:opacity-95 text-white text-label font-bold rounded-2xl shadow-soft transition-ui cursor-pointer disabled:opacity-60"
+              className="group tap flex items-center justify-center gap-2 w-full h-12 bg-white hover:bg-white/95 text-wine-700 text-label font-semibold rounded-2xl shadow-[0_10px_28px_-14px_rgba(0,0,0,0.75)] transition-ui cursor-pointer disabled:opacity-60"
             >
-              <LogIn className="h-4 w-4" />
-              <span>{isLoading ? 'Autenticando...' : 'Acessar Painel'}</span>
+              <span>{isLoading ? 'Entrando…' : 'Acessar Painel'}</span>
+              {!isLoading && (
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              )}
             </button>
           </form>
 
-          {/* Separador + login com Google */}
-          <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-n-200" />
-            <span className="text-caption font-bold text-n-400 uppercase tracking-wider">ou</span>
-            <span className="h-px flex-1 bg-n-200" />
-          </div>
-          <GoogleButton label="Entrar com Google" />
+          {/* Alternativa: o "ou" sozinho, sem fio dos lados */}
+          <p className="my-3 text-center text-caption text-white/45">ou</p>
+          <GoogleButton label="Entrar com Google" variant="glass" />
 
-          {/* Nova sessão de Registro */}
-          <div className="mt-6 pt-5 border-t border-n-200 text-center">
-            <p className="text-label font-bold text-n-900 mb-3">Ainda não usa o Lume?</p>
-            <Link 
+          {/* Cadastro: separado só por espaço, sem linha */}
+          <div className="mt-8 text-center">
+            <p className="text-body-sm text-white/70 mb-3">Ainda não usa o Lume?</p>
+            <Link
               href="/register"
-              className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-n-25 border-2 border-wine-700 text-wine-700 text-label font-bold rounded-2xl hover:bg-wine-50 transition-ui"
+              className="tap flex flex-col items-center justify-center w-full py-2.5 rounded-2xl border border-white/25 hover:border-white/40 hover:bg-white/[0.06] transition-ui"
             >
-              <UserPlus className="h-4 w-4" />
-              <span>Comece seus 7 dias grátis</span>
+              <span className="text-label font-semibold text-white">Teste por 7 dias grátis</span>
+              <span className="text-caption text-white/60">sem precisar colocar cartão</span>
             </Link>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="mt-5 text-center">
             <button
               type="button"
               onClick={handleDemo}
               disabled={demoLoading}
-              className="text-caption font-semibold text-n-500 hover:text-wine-700 underline underline-offset-2"
+              className="text-caption text-white/55 hover:text-white underline underline-offset-4 decoration-white/30 transition-colors"
             >
               {demoLoading ? 'Abrindo demo...' : 'Apenas testar a plataforma na conta de exemplo'}
             </button>

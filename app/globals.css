@@ -59,8 +59,8 @@ body {
   background-color: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  /* `cv11` abre o desenho do "l"/"1" da Plus Jakarta; `ss01` entrega o
-     "a" de terminal reto, que é o desenho geométrico das referências. */
+  /* Na Inter: `cv11` é o "a" de um andar só e `ss01` são os dígitos
+     abertos — o desenho mais limpo da família. A LP herda isto também. */
   font-feature-settings: 'cv11' 1, 'ss01' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -338,6 +338,101 @@ svg.lucide {
 
 /* Borda luminosa fina, para uso sobre superfície escura */
 .ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+
+/* Vidro — só sobre fundo com imagem ou vídeo (login). Desfoque LEVE: o
+   fundo continua reconhecível atrás do vidro, só amaciado; desfoque forte
+   com saturação alta virava uma placa vermelha. A borda especular acende
+   no alto e apaga embaixo, como luz vinda de cima; o grão tira a cara de
+   acrílico liso. Nenhum ancestral pode ter opacity ou filter (nem
+   animados): isso corta o backdrop-filter. */
+.glass-panel {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 70% at 0% 0%, rgb(255 255 255 / 0.10) 0%, transparent 60%),
+    linear-gradient(160deg, rgb(255 255 255 / 0.07) 0%, rgb(255 255 255 / 0.02) 100%);
+  -webkit-backdrop-filter: blur(4px) saturate(115%);
+  backdrop-filter: blur(4px) saturate(115%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    0 40px 90px -30px rgb(0 0 0 / 0.75);
+}
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(170deg,
+    rgb(255 255 255 / 0.42) 0%,
+    rgb(255 255 255 / 0.10) 28%,
+    rgb(255 255 255 / 0.04) 70%,
+    rgb(255 255 255 / 0.14) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Campo dentro do vidro: um poço escuro, rebaixado — o texto branco
+   ganha contraste sem precisar de fundo sólido. */
+.glass-field {
+  background: rgb(0 0 0 / 0.28);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
+  color: #fff;
+  transition: background-color var(--dur-base) var(--ease-out),
+              border-color var(--dur-base) var(--ease-out);
+}
+.glass-field::placeholder { color: rgb(255 255 255 / 0.55); }
+/* Foco: o poço escurece e a borda clareia. Anula o anel vinho global
+   (campo de texto é :focus-visible até no toque) e o raio que ele troca. */
+.glass-field:focus,
+.glass-field:focus-visible {
+  outline: none;
+  border-radius: var(--radius-2xl);
+  background: rgb(0 0 0 / 0.38);
+  border-color: rgb(255 255 255 / 0.32);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 4px rgb(255 255 255 / 0.06);
+}
+/* Anel de teclado claro dentro do vidro: vinho sobre escuro some. */
+.glass-panel :focus-visible { outline-color: rgb(255 255 255 / 0.7); }
+
+/* Vídeo de fundo decorativo: nenhum controle nativo, nunca. O iPhone desenha
+   um botão de play quando bloqueia o autoplay (modo de pouca energia); aqui
+   ele some e fica o primeiro quadro. Uma regra por pseudo-elemento: numa
+   lista, o navegador que não conhece um deles descarta a regra inteira. */
+.bg-video::-webkit-media-controls { display: none !important; }
+.bg-video::-webkit-media-controls-panel { display: none !important; }
+.bg-video::-webkit-media-controls-play-button { display: none !important; }
+.bg-video::-webkit-media-controls-overlay-play-button { display: none !important; }
+.bg-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg-video { display: none; }
+}
+/* Nos controles novos do WebKit as regras acima não alcançam o botão de
+   play. Então o primeiro quadro cobre o vídeo enquanto ele está pausado.
+   :paused só existe no Safari — onde o botão aparece; os outros navegadores
+   descartam a regra e a capa fica invisível. O vídeo em si nunca é
+   escondido: o WebKit não dá autoplay a vídeo invisível. */
+.bg-video-cover {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.bg-video:paused + .bg-video-cover { opacity: 1; }
 
 /* ── CARTÃO ────────────────────────────────────────────────
    Branco, raio 20, sombra difusa e NENHUMA borda.
@@ -725,6 +820,39 @@ select.field-input { padding-right: 34px; }
 }
 [data-theme='dark'] .rail-row[data-active='true'] { color: var(--color-wine-950); }
 
+/* Rail VINHO (painel da profissional). Os discos e as linhas trocam de
+   paleta: inativo em branco translúcido, ativo em branco cheio com o ícone
+   em vinho — o inverso do rail claro do admin. Disco de 40px: com todos os
+   destinos à vista, os 4px a menos por item é o que faz a coluna caber num
+   notebook sem rolar. */
+.rail-wine .rail-item { height: 40px; width: 40px; color: rgb(255 255 255 / 0.72); }
+.rail-wine .rail-row { color: rgb(255 255 255 / 0.8); }
+@media (hover: hover) and (pointer: fine) {
+  .rail-wine .rail-item:hover,
+  .rail-wine .rail-row:hover { background: rgb(255 255 255 / 0.12); color: #fff; }
+}
+.rail-wine .rail-item[data-active='true'],
+.rail-wine .rail-row[data-active='true'] {
+  background: #fff;
+  color: var(--color-wine-700);
+}
+.rail-wine .rail-tooltip { background: #fff; color: var(--color-wine-800); }
+
+/* AGENDA no celular: a grade do dia é a tela — sem cartão nem rolagem
+   interna, como num app de calendário. Os blocos ficam sólidos na cor do
+   status, com texto branco: no celular não dá para ler uma barra de 3px. */
+@media (max-width: 1023px) {
+  .agenda-day { box-shadow: none; border-radius: 0; margin-left: -1rem; margin-right: -1rem; }
+  .agenda-day__scroll { max-height: none !important; overflow: visible; padding-top: 10px; }
+  .agenda-day .appt-block { border-color: transparent; border-radius: 8px; color: #fff; }
+  .agenda-day .appt-block span { color: inherit; }
+  .agenda-day .appt-block[data-status='confirmed'] { background: var(--color-success); }
+  .agenda-day .appt-block[data-status='pending']   { background: var(--color-warning); }
+  .agenda-day .appt-block[data-status='completed'] { background: var(--color-info); }
+  .agenda-day .appt-block[data-status='no_show']   { background: var(--color-danger); }
+  .agenda-day .appt-block[data-status='cancelled'] { background: var(--color-n-200); color: var(--color-n-600); }
+}
+
 /* Tooltip do rail: 400ms de atraso na ENTRADA e saída imediata. Sem o
    atraso ele pisca a cada passagem de mouse rumo ao conteúdo. */
 .rail-tooltip {
@@ -911,20 +1039,20 @@ select.field-input { padding-right: 34px; }
    ABERTURA DO APP · a cortina de marca
    ---------------------------------------------------------
    Marcação em components/ui/AppSplash. É a primeira coisa que
-   a profissional vê ao tocar no ícone do app instalado, então
-   vale uma regra só: NADA que atrase o primeiro quadro. Sem
-   backdrop-filter, sem sombra, sem fonte externa, sem imagem
-   de rede — cor, máscara e gradiente, que o compositor resolve
-   sozinho.
+   a profissional vê ao entrar, então NADA que atrase o
+   primeiro quadro: cor chapada, uma máscara e dois movimentos.
+
+   O gesto é um só: a marca surge e um fio de luz se abre sob
+   ela. Sem halo, sem varredura, sem filme — o que dá o tom é
+   o tempo (curto) e o som (lib/ui/appChime).
 
    A saída é `animation` com fill-mode `both`, não JS: se a
    hidratação engasgar, a cortina some no tempo certo do mesmo
-   jeito. O atributo `data-splash` no <html> é o único
-   acoplamento com o script — 'off' remove, 'skip' abrevia
-   quando ela toca na tela.
+   jeito. `data-splash` no <html> é o único acoplamento com o
+   script — 'off' remove, 'skip' abrevia quando ela toca.
 
-   Os tempos aqui e o SPLASH_MS de SplashRunner.tsx são o mesmo
-   relógio: mudou um, mude o outro.
+   Relógio: 640ms de cena + 260ms de saída = 900ms. O
+   SPLASH_MS de SplashRunner.tsx é o mesmo número.
    ========================================================= */
 #lume-splash {
   position: fixed;
@@ -933,50 +1061,18 @@ select.field-input { padding-right: 34px; }
   display: grid;
   place-items: center;
   overflow: hidden;
-  /* Mesma família do ícone do app e do background_color do manifesto: a
-     splash nativa do Android emenda nesta sem piscar de cor. */
-  background: radial-gradient(120% 90% at 50% 38%, #7C1B2C 0%, #4E101E 44%, #240610 100%);
-  animation: lume-splash-out 480ms var(--ease-in) 1180ms both;
+  /* O tom do fundo do login (o vídeo de cetim sob a camada escura): a
+     abertura continua a tela de onde a profissional veio. Um centro um
+     pouco mais claro, como a luz do vídeo. O tom médio (#43121f) é o
+     background_color do manifesto, para a splash nativa do Android emendar
+     nesta sem piscar. */
+  background: radial-gradient(120% 90% at 50% 42%, #4a1424 0%, #3b0c1b 55%, #2e0813 100%);
+  animation: lume-splash-out 260ms var(--ease-in) 640ms both;
   touch-action: none;
   overscroll-behavior: contain;
 }
 html[data-splash='off'] #lume-splash { display: none; }
-html[data-splash='skip'] #lume-splash { animation: lume-splash-out 200ms linear both; }
-
-/* CELULAR · o filme da marca (public/splash-mobile-v1.mp4).
-   Entra POR CIMA da animação de CSS, opaco e cobrindo a tela inteira: quando
-   começa a tocar, é ele que se vê. A animação de baixo não é desperdício — é
-   o piso garantido. Na primeira abertura (arquivo ainda fora do cache do
-   navegador) ou com o autoplay barrado, o filme não entra e a marca acende do
-   mesmo jeito, na hora.
-
-   `object-fit: cover`: o filme é 9:16 e a tela nunca é exatamente isso. O
-   wordmark está no centro, então o corte cai na margem. */
-.lume-splash__video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 200ms var(--ease-out);
-  pointer-events: none;
-}
-
-/* A marca de "o filme está no ar" fica no PRÓPRIO overlay, não no <html>:
-   os estados do <html> valem também para a abertura sem filme, e ali o
-   <video> não tem um único quadro pintado — apareceria como um retângulo
-   preto por cima do vinho. */
-#lume-splash[data-video] .lume-splash__video { opacity: 1; }
-
-/* Com o filme no ar, a cortina de CSS deixa de se apagar sozinha: quem manda
-   no relógio passa a ser o vídeo, que dura mais que os 1,7 s dela. Sem isto,
-   a marca sumiria no meio do filme e a tela piscaria.
-   `saindo` é o fim natural do filme; `skip` (acima) é o toque para pular. */
-html[data-splash='video'] #lume-splash,
-html[data-splash='video'] .lume-splash__stage { animation: none; opacity: 1; }
-html[data-splash='saindo'] #lume-splash { animation: lume-splash-out 450ms var(--ease-in) both; }
-html[data-splash='saindo'] .lume-splash__stage { animation: none; }
+html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear both; }
 
 /* A visibilidade no último quadro é o que impede a cortina invisível de
    continuar comendo os toques do painel enquanto o JS não a remove. */
@@ -989,51 +1085,21 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
 .lume-splash__stage {
   display: grid;
   justify-items: center;
-  gap: clamp(14px, 3.5vw, 20px);
-  /* A saída "avança" um passo: a marca cresce meio ponto enquanto some, e a
-     sensação é de entrar no app, não de uma tela que apagou. */
-  animation: lume-splash-zoom 480ms var(--ease-in) 1180ms both;
+  gap: clamp(16px, 3.5vw, 22px);
+  /* Na saída a marca avança meio passo: a sensação é de entrar no app,
+     não de uma tela que apagou. */
+  animation: lume-splash-zoom 260ms var(--ease-in) 640ms both;
 }
 @keyframes lume-splash-zoom {
   from { transform: scale(1); }
-  to   { transform: scale(1.05); }
+  to   { transform: scale(1.03); }
 }
 
-.lume-splash__wordmark {
-  position: relative;
-  width: min(58vw, 268px);
-  aspect-ratio: 1125 / 398;   /* proporção real do wordmark */
-}
-
-/* Halo — a luz acendendo por trás do traço. */
-.lume-splash__glow {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  translate: -50% -50%;   /* propriedade separada de propósito: o bloco
-                             global de reduced-motion zera `transform`, e a
-                             centralização não pode ir junto */
-  width: 300%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side,
-    rgba(255, 233, 205, 0.30) 0%,
-    rgba(255, 190, 150, 0.11) 46%,
-    rgba(255, 170, 130, 0) 72%);
-  animation: lume-splash-glow 1660ms var(--ease-out) both;
-}
-@keyframes lume-splash-glow {
-  0%   { opacity: 0; scale: 0.5; }
-  40%  { opacity: 1; scale: 1; }
-  100% { opacity: 0.55; scale: 1.16; }
-}
-
-/* O wordmark é MÁSCARA, não imagem: o preenchimento é um gradiente que
-   desliza, então a luz atravessa o traço por dentro em vez de passar um
-   brilho por cima da caixa retangular. A arte chega em --lume-mark. */
+/* O wordmark é MÁSCARA (arte só-alfa em --lume-mark) preenchida de creme. */
 .lume-splash__mark {
-  position: absolute;
-  inset: 0;
+  width: min(48vw, 200px);
+  aspect-ratio: 577 / 206;   /* proporção real do wordmark */
+  background: #fff;
   -webkit-mask-image: var(--lume-mark);
           mask-image: var(--lume-mark);
   -webkit-mask-repeat: no-repeat;
@@ -1042,66 +1108,24 @@ html[data-splash='saindo'] .lume-splash__stage { animation: none; }
           mask-size: contain;
   -webkit-mask-position: center;
           mask-position: center;
-  background-image: linear-gradient(100deg,
-    rgba(253, 247, 236, 0.52) 0%,
-    rgba(253, 247, 236, 0.92) 33%,
-    #FFFCF4 46%,
-    rgba(253, 247, 236, 0.92) 59%,
-    rgba(253, 247, 236, 0.52) 100%);
-  /* repeat-x + as duas pontas do gradiente na MESMA cor = ladrilho sem
-     emenda. Com `no-repeat` (como estava) o gradiente media 260% do
-     elemento e a posição animada o empurrava para fora da caixa: sobrava
-     letra sem fundo nenhum, e o wordmark aparecia comido nas pontas —
-     pior no fim, quando o brilho já tinha passado. Era o "bugzinho". */
-  background-size: 200% 100%;
-  background-repeat: repeat-x;
-  animation:
-    lume-splash-mark 760ms var(--ease-out) 60ms both,
-    lume-splash-sweep 1150ms var(--ease-inout) 240ms both;
+  animation: lume-splash-mark 400ms var(--ease-out) 40ms both;
 }
 @keyframes lume-splash-mark {
-  from { opacity: 0; transform: translateY(10px) scale(0.965); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-/* Uma volta EXATA do ladrilho (200% de largura) — o brilho atravessa uma vez
-   só e o último quadro é idêntico ao primeiro, sem salto de cor. */
-@keyframes lume-splash-sweep {
-  from { background-position: 150% 0; }
-  to   { background-position: -50% 0; }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* A estrelinha que já existe no logo, entre o "m" e o "e", piscando quando
-   a luz passa por ela. As coordenadas são as da arte — mexeu no logo,
-   confira aqui. */
-.lume-splash__spark {
-  position: absolute;
-  left: 56%;
-  top: 72%;
-  translate: -50% -50%;
-  width: 30%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(255, 236, 205, 0.34) 34%,
-    rgba(255, 220, 180, 0) 68%);
-  animation: lume-splash-spark 900ms var(--ease-out) 600ms both;
-}
-@keyframes lume-splash-spark {
-  0%   { opacity: 0; scale: 0.25; }
-  35%  { opacity: 1; scale: 1; }
-  100% { opacity: 0; scale: 1.7; }
-}
-
-/* Fio de luz que se abre sob a marca — o mesmo gesto da hairline da LP. */
+/* Fio de luz que se abre do centro sob a marca — o mesmo gesto da hairline
+   da LP. */
 .lume-splash__line {
-  width: min(44vw, 200px);
+  width: min(40vw, 168px);
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(253, 247, 236, 0.62), transparent);
-  animation: lume-splash-line 820ms var(--ease-out) 420ms both;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform-origin: center;
+  animation: lume-splash-line 420ms var(--ease-out) 160ms both;
 }
 @keyframes lume-splash-line {
-  from { opacity: 0; transform: scaleX(0); }
+  from { opacity: 0; transform: scaleX(0.2); }
   to   { opacity: 1; transform: scaleX(1); }
 }
 

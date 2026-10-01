@@ -15,8 +15,17 @@ function GoogleIcon() {
   );
 }
 
-/** Botão "Continuar com Google" — inicia o OAuth do Supabase e volta em /auth/callback. */
-export function GoogleButton({ label = 'Continuar com Google' }: { label?: string }) {
+/** Botão "Continuar com Google" — inicia o OAuth do Supabase e volta em /auth/callback.
+ *  `glass`: versão discreta para fundo escuro (login), translúcida, sem o
+ *  bloco branco competindo com o botão principal. O "G" fica nas cores
+ *  oficiais, como pede a marca do Google. */
+export function GoogleButton({
+  label = 'Continuar com Google',
+  variant = 'solid',
+}: {
+  label?: string;
+  variant?: 'solid' | 'glass';
+}) {
   const { error } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -50,7 +59,11 @@ export function GoogleButton({ label = 'Continuar com Google' }: { label?: strin
       type="button"
       onClick={handleGoogle}
       disabled={loading}
-      className="tap flex items-center justify-center gap-2.5 w-full py-3.5 bg-white border border-n-200 text-n-700 text-label font-bold rounded-2xl hover:bg-n-50 transition-ui disabled:opacity-60"
+      className={`tap flex items-center justify-center gap-2.5 w-full text-label rounded-2xl transition-ui disabled:opacity-60 ${
+        variant === 'glass'
+          ? 'h-12 bg-white/[0.06] border border-white/15 text-white/90 font-medium hover:bg-white/10 hover:border-white/25'
+          : 'py-3.5 bg-white border border-n-200 text-n-700 font-bold hover:bg-n-50'
+      }`}
     >
       <GoogleIcon />
       <span>{loading ? 'Abrindo…' : label}</span>

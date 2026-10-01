@@ -134,7 +134,7 @@ export function StyleguideClient() {
       <Section
         n="02"
         title="Tipografia"
-        note="UMA família: Plus Jakarta Sans, do micro-rótulo ao display. Eram três (Manrope, Instrument Sans e JetBrains Mono) e o resultado era uma tela em que o nome da cliente, o horário e o valor tinham esqueletos de letra diferentes. Hierarquia se faz com peso, tamanho e cor — nunca trocando de família. Número usa tabular-nums, que era a única coisa que a monoespaçada entregava de útil."
+        note="DUAS famílias com papel fixo: Hanken Grotesk nos títulos, Inter em todo o resto. Fora disso, hierarquia se faz com peso, tamanho e cor — nunca trocando de família. Número usa tabular-nums."
       >
         <Card className="divide-y divide-line">
           {[

@@ -37,7 +37,7 @@ export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adic
 
   return (
     <Portal>
-      <div className="fixed right-4 lg:right-6 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] lg:bottom-[5.75rem] z-40 flex flex-col items-end gap-2.5 no-print">
+      <div className="fixed right-4 lg:right-6 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] lg:bottom-[5.75rem] z-40 flex flex-col items-end gap-2.5 no-print">
         {!single && open && actions.map(({ label: l, icon: Icon, onClick }) => (
           <button key={l} onClick={() => { setOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
             <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-caption font-bold shadow-md whitespace-nowrap">{l}</span>
