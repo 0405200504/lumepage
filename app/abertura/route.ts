@@ -28,10 +28,20 @@ import {
  * Quem não está logada (ou pediu menos movimento) não vê a cena aqui: o
  * documento mostra só o cetim parado — igual à tela de abertura do iPhone —
  * e segue direto, porque o destino vai ser o login.
+ *
+ * ALTURA NO IPHONE: este documento pinta enquanto o app ainda está abrindo, e
+ * nesse instante o iOS dá à página uma altura menor que a tela — tira a
+ * barra de status (59 pt num iPhone 15), mas a página começa no topo mesmo
+ * assim. Resultado medido em vídeo: o cetim acabava 59 pt antes do fim, com
+ * uma faixa lisa embaixo, e a marca (a 47% da altura) ficava 28 pt acima de
+ * onde o painel a desenha, pulando na troca. O painel, que chega depois, já
+ * recebe a tela inteira. Por isso, no app instalado do iPhone a cena aqui é
+ * medida pela tela (screen.height), não pela janela — e fica do tamanho
+ * exato da do painel.
  */
 export const dynamic = 'force-static';
 
-const LAUNCH_SCRIPT = `(function(){var d=document.documentElement,alvo=/^\\/dashboard(\\/|$)/.test(location.pathname)?location.href:'/dashboard',ir=function(){location.replace(alvo)},logada=false,calma=false;try{logada=localStorage.getItem(${JSON.stringify(
+const LAUNCH_SCRIPT = `(function(){var d=document.documentElement;try{if(navigator.standalone&&Math.abs(innerWidth-screen.width)<2&&screen.height>screen.width){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}}catch(e){}var alvo=/^\\/dashboard(\\/|$)/.test(location.pathname)?location.href:'/dashboard',ir=function(){location.replace(alvo)},logada=false,calma=false;try{logada=localStorage.getItem(${JSON.stringify(
   PANEL_FLAG_KEY,
 )})==='1'}catch(e){}try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}if(!logada||calma){d.dataset.splash='still';ir();return}d.dataset.splash='launch';var t0=Date.now(),marca=function(){try{sessionStorage.setItem(${JSON.stringify(
   SPLASH_HANDOFF_KEY,
@@ -41,14 +51,14 @@ const LAUNCH_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#4a0e22">
 <meta name="robots" content="noindex">
 <title>Lume</title>
 <script>${LAUNCH_SCRIPT}</script>
-<style>html,body{margin:0;height:100%;background:#4a0e22;overflow:hidden}${SPLASH_CSS}</style>
+<style>html,body{margin:0;height:100%;background:#4a0e22;overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
 </head>
 <body>
 <div id="lume-splash" aria-hidden="true">${SPLASH_MARKUP}</div>
