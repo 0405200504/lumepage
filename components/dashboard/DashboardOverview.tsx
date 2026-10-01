@@ -66,7 +66,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   appointments,
   services,
 }) => {
-  const [period, setPeriod] = useState<Period>('mes');
+  // Abre sempre no dia: é o número que a profissional quer ver ao entrar.
+  const [period, setPeriod] = useState<Period>('hoje');
 
   const today = useMemo(() => new Date(), []);
   const todayIso = toISO(today);
@@ -241,7 +242,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* O hero é o único elemento vinho da tela: raio 28, superfície com
             dois centros de luz e o faturamento em `display`. É o objeto que
             ancora o Início — tudo o mais na página é branco sobre cinza. */}
-        <Card hero pad="p-6 sm:p-8" data-tour="home-hero" className="lg:col-span-7 flex flex-col">
+        <Card hero pad="p-6 sm:p-8" data-tour="home-hero" className="surface-satin lg:col-span-7 flex flex-col">
           <span className="mono-micro !text-wine-200">Faturamento {PERIOD_NOUN[period]}</span>
           <p className="num text-display font-bold mt-2">
             <CountUp value={revenue} format={brl} />

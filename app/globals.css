@@ -343,6 +343,16 @@ svg.lucide {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Cetim — só o hero do Início (faturamento). A foto do tecido substitui o
+   degradê; o vinho escuro fica por baixo enquanto a imagem carrega. A foto
+   já traz grão próprio, então o grão da .surface-wine sai. */
+.surface-satin {
+  background:
+    url('/textures/cetim-hero.webp') center / cover no-repeat,
+    var(--color-wine-950);
+}
+.surface-satin::before { display: none; }
+
 /* Borda luminosa fina, para uso sobre superfície escura */
 .ring-hairline { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
 
