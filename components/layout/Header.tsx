@@ -107,15 +107,16 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
  * gramática de botão de ícone das referências, e ela resolve o problema de
  * ter dois botões retangulares de tamanhos diferentes lado a lado no canto.
  *
- * A logo da Lume fica pequena no meio da faixa. No computador, uma grade
- * de três colunas iguais (1fr · logo · 1fr) a mantém no centro exato sem
- * deixar o título passar por baixo dela: o título ocupa a coluna da
- * esquerda e trunca antes de chegar na logo.
+ * A logo da Lume fica pequena no centro exato da faixa, no computador e no
+ * celular. Quem garante é a grade de três colunas iguais (1fr · logo ·
+ * 1fr): o título mora na coluna da esquerda e trunca antes de chegar na
+ * logo, em vez de empurrá-la para o lado.
  *
- * No celular a grade de colunas iguais deixaria uns 75px para o título, e
- * até "Agenda" cortaria. Lá a logo fica centrada no espaço que sobra entre
- * o título e o "?": título curto, ela cai perto do meio da tela; título
- * longo, ele trunca e a logo continua inteira.
+ * No celular ela já ficou centrada no espaço entre o título e o "?", e
+ * mudava de lugar a cada tela; o pedido foi o meio da tela, sempre. Com a
+ * logo travada no meio sobram ~89px para o título num iPhone de 390px, por
+ * isso lá ele desce para 18px (o tamanho de título da barra do iOS): metade
+ * das telas cabe inteira, o resto trunca com reticências.
  */
 export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, avatarUrl, role }) => {
   const pathname = usePathname();
@@ -139,70 +140,70 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
       className="sticky top-0 z-30 select-none pt-safe transition-ui bg-surface border-b border-line shadow-xs"
     >
       <div
-        className="flex items-center gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:content-center
+        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] content-center items-center gap-3
           px-4 lg:px-8 max-w-[1400px] mx-auto w-full
           h-[84px] data-[scrolled]:h-[60px] lg:h-20 lg:data-[scrolled]:h-[68px]
           transition-[height] duration-[var(--dur-base)] ease-[var(--ease-out)]"
         data-scrolled={scrolled || undefined}
       >
-        {/* O menu completo abre AQUI, no topo — em todas as áreas, inclusive
-            no painel da profissional.
+        <div className="flex items-center gap-3 min-w-0">
+          {/* O menu completo abre AQUI, no topo — em todas as áreas, inclusive
+              no painel da profissional.
 
-            Ele já morou aqui, saiu para o item "Mais" do dock inferior (o
-            polegar alcança o rodapé melhor do que o canto superior esquerdo)
-            e voltou a pedido: o ícone de grade no meio de uma cápsula escura
-            não se anunciava como "menu", e a gaveta lateral — que é onde
-            moram os dezoito destinos — simplesmente não era encontrada.
-            Hambúrguer no topo é o gesto que todo mundo já procura primeiro.
+              Ele já morou aqui, saiu para o item "Mais" do dock inferior (o
+              polegar alcança o rodapé melhor do que o canto superior esquerdo)
+              e voltou a pedido: o ícone de grade no meio de uma cápsula escura
+              não se anunciava como "menu", e a gaveta lateral — que é onde
+              moram os dezoito destinos — simplesmente não era encontrada.
+              Hambúrguer no topo é o gesto que todo mundo já procura primeiro.
 
-            O dock do rodapé continua existindo com os quatro atalhos do dia
-            a dia; o que saiu de lá foi só o botão de abrir.
+              O dock do rodapé continua existindo com os quatro atalhos do dia
+              a dia; o que saiu de lá foi só o botão de abrir.
 
-            No computador ele não existe: lá a barra lateral abre sozinha com o
-            mouse em cima. O lg:hidden fica no invólucro, não no botão — o
-            .icon-chip mora fora de @layer e venceria o lg:hidden nele. */}
-        <div className="lg:hidden -ml-1.5 shrink-0">
-          <button
-            type="button"
-            className="icon-chip h-11 w-11
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-            aria-label="Abrir menu de navegação"
-            onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
-          >
-            <Menu className="h-5 w-5" aria-hidden />
-          </button>
+              No computador ele não existe: lá a barra lateral abre sozinha com o
+              mouse em cima. O lg:hidden fica no invólucro, não no botão — o
+              .icon-chip mora fora de @layer e venceria o lg:hidden nele. */}
+          <div className="lg:hidden -ml-1.5 shrink-0">
+            <button
+              type="button"
+              className="icon-chip h-11 w-11
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+              aria-label="Abrir menu de navegação"
+              onClick={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}
+            >
+              <Menu className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+
+          <div className="min-w-0" data-tour="page-header">
+            {crumb && (
+              <p className="hidden lg:flex items-center gap-1 text-caption font-medium text-n-500 mb-1">
+                <Link href="/dashboard" className="hover:text-heading transition-ui">Painel</Link>
+                <ChevronRight className="h-3.5 w-3.5 text-n-300" aria-hidden />
+                <span>{crumb}</span>
+              </p>
+            )}
+            <h1 className="text-h3 lg:text-h2 text-heading truncate">{resolvedTitle}</h1>
+            {resolvedSubtitle && !scrolled && (
+              <p className="hidden lg:block text-caption text-n-500 mt-1 max-w-2xl truncate">
+                {resolvedSubtitle}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1" data-tour="page-header">
-          {crumb && (
-            <p className="hidden lg:flex items-center gap-1 text-caption font-medium text-n-500 mb-1">
-              <Link href="/dashboard" className="hover:text-heading transition-ui">Painel</Link>
-              <ChevronRight className="h-3.5 w-3.5 text-n-300" aria-hidden />
-              <span>{crumb}</span>
-            </p>
-          )}
-          <h1 className="text-h2 text-heading truncate">{resolvedTitle}</h1>
-          {resolvedSubtitle && !scrolled && (
-            <p className="hidden lg:block text-caption text-n-500 mt-1 max-w-2xl truncate">
-              {resolvedSubtitle}
-            </p>
-          )}
-        </div>
-
-        <div className="flex-1 flex justify-center lg:col-start-2 lg:row-start-1">
-          <Link
-            href="/dashboard"
-            aria-label="Lume — ir para o Início"
-            className="shrink-0 rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-          >
-            <LumeLogo variant="wine" className="h-6 max-w-none" />
-          </Link>
-        </div>
+        <Link
+          href="/dashboard"
+          aria-label="Lume — ir para o Início"
+          className="rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+        >
+          <LumeLogo variant="wine" className="h-6 max-w-none" />
+        </Link>
 
         {/* Ações em disco, sem rótulo disputando com o título. O botão de
             atualizar os dados saiu daqui: as telas já se atualizam sozinhas
             depois de cada ação, e ele só tirava espaço da logo. */}
-        <div className="flex items-center gap-2 shrink-0 lg:col-start-3 lg:row-start-1 lg:justify-self-end">
+        <div className="flex items-center gap-2 justify-self-end">
           {role === 'professional' && (
             <button
               type="button"
