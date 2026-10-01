@@ -10,6 +10,8 @@ import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { isDemo } from '@/lib/demo';
 import { sendWhatsAppText } from '@/lib/uazapi';
 import { fillTemplate, formatDateBR, formatPriceBRL, normalizeWhatsapp } from '@/lib/whatsapp';
+import { pushToProfessional } from '@/lib/push/send';
+import { newBookingPush } from '@/lib/push/messages';
 
 /**
  * Busca dados da profissional e serviços pelo slug para a página pública.
@@ -283,17 +285,6 @@ export async function createManualAppointmentAction(input: {
   }
 }
 
-import webpush from 'web-push';
-
-// Configuração do Web Push
-if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    'mailto:contato@lumepremium.com', // Coloque um email de contato válido
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
-}
-
 interface CreateAppointmentInput {
   professionalId: string;
   serviceId: string;
@@ -307,6 +298,7 @@ interface CreateAppointmentInput {
   clientBirthday?: string;
   paymentMethod?: string;
   captchaToken?: string; // token do Turnstile (só exigido se o captcha estiver configurado)
+  fromAssistant?: boolean; // marcado pela Ana (só vale em chamada interna): sem notificação
 }
 
 /**
@@ -444,41 +436,14 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
       console.error('Falha ao aplicar confirmação automática:', e);
     }
 
-    // 5. Enviar notificação Web Push
-    try {
-      const subs = await dbService.getPushSubscriptionsByProfessional(professionalId);
-      if (subs && subs.length > 0 && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-        const payload = JSON.stringify({
-          title: 'Novo Agendamento! 🎉',
-          body: `${clientName} marcou ${formatServiceNames(activeServices)} para ${date.split('-').reverse().join('/')} às ${startTime}.`,
-          url: '/dashboard'
-        });
-
-        // Enviar para todas as inscrições (celular, desktop, etc)
-        const pushPromises = subs.map(async (sub) => {
-          try {
-            await webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: {
-                auth: sub.auth,
-                p256dh: sub.p256dh
-              }
-            }, payload);
-          } catch (err: any) {
-            // Se o token expirou ou foi removido (Status 410 / 404), remover do BD
-            if (err.statusCode === 404 || err.statusCode === 410) {
-              await dbService.removePushSubscription(sub.endpoint);
-            } else {
-              console.error('Erro ao enviar push notification:', err);
-            }
-          }
-        });
-
-        await Promise.allSettled(pushPromises);
-      }
-    } catch (pushErr) {
-      console.error('Falha geral no disparo de Web Push:', pushErr);
-      // Não bloqueamos o agendamento em caso de erro no Push
+    // 5. Notificação no aparelho da profissional ("Novo agendamento!").
+    // Quem marcou pela Ana foi a própria profissional: não precisa avisar.
+    if (!(isInternalCall && input.fromAssistant)) {
+      await pushToProfessional(professionalId, newBookingPush({
+        priceCents: sumPriceCents(activeServices),
+        serviceNames: activeServices.map(s => s.name),
+        date,
+      }));
     }
 
     // 6. Enviar confirmação via WhatsApp automaticamente (best-effort, não bloqueia)

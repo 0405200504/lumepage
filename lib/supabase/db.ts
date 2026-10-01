@@ -1495,6 +1495,54 @@ export const dbService = {
     return mockDb.removePushSubscription(endpoint);
   },
 
+  /** Profissionais com pelo menos um aparelho inscrito (resumo do fim do dia). */
+  getProfessionalIdsWithPush: async (): Promise<string[]> => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error } = await getDb().from('push_subscriptions').select('professional_id');
+    if (error) { if (isMissingTable(error)) return []; throw error; }
+    return [...new Set<string>((data || []).map((r: { professional_id: string }) => r.professional_id))];
+  },
+
+  /** Resumos de faturamento já enviados no dia, como "profId:kind". null = falta a migração v44. */
+  getPushDigestsSent: async (period: string): Promise<Set<string> | null> => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await getDb().from('push_digests').select('professional_id, kind').eq('period', period);
+    if (error) {
+      if (isMissingTable(error)) { console.warn('[push_digests] Tabela ausente — rode supabase/migration_v44_push_digests.sql.'); return null; }
+      throw error;
+    }
+    return new Set((data || []).map((r: { professional_id: string; kind: string }) => `${r.professional_id}:${r.kind}`));
+  },
+
+  /** Reserva o envio de um resumo. true = esta chamada ganhou e deve enviar. */
+  claimPushDigest: async (professionalId: string, kind: 'day' | 'week', period: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) return false;
+    const { data, error } = await getDb()
+      .from('push_digests')
+      .upsert({ professional_id: professionalId, kind, period }, { onConflict: 'professional_id,kind,period', ignoreDuplicates: true })
+      .select('professional_id');
+    if (error) { if (isMissingTable(error)) return false; throw error; }
+    return (data || []).length > 0;
+  },
+
+  /** Atendimentos que entram no faturamento (confirmados + concluídos) de um intervalo. */
+  getBillableAppointmentsInRange: async (profId: string, startDate: string, endDate: string): Promise<Appointment[]> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await getDb()
+        .from('appointments')
+        .select('id, date, status, service_id, service_ids, service:services(*)')
+        .eq('professional_id', profId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .is('deleted_at', null)
+        .in('status', ['confirmed', 'completed']);
+      if (error) throw error;
+      return (data || []) as unknown as Appointment[];
+    }
+    return mockDb.getAppointmentsByProfessional(profId)
+      .filter(a => a.date >= startDate && a.date <= endDate && (a.status === 'confirmed' || a.status === 'completed'));
+  },
+
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
 
   getAllWhatsAppSettingsForCron: async (): Promise<WhatsAppSettings[]> => {

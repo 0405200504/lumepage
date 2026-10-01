@@ -151,6 +151,7 @@ export function buildAssistantTools({ professionalId, todayISO }: Pick<Assistant
           startTime: start_time,
           notes,
           captchaToken: process.env.INTERNAL_BOOKING_TOKEN, // chamada interna confiável (pula captcha)
+          fromAssistant: true, // é a própria profissional marcando: sem "Novo agendamento!"
         });
         return res;
       },
