@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { isChimeEnabled, playAppChime } from '@/lib/ui/appChime';
 import {
   PANEL_FLAG_KEY,
+  SPLASH_DIAG_KEY,
   SPLASH_EXIT_MS,
   SPLASH_HANDOFF_KEY,
   SPLASH_SCENE_MS,
@@ -36,6 +37,25 @@ export function SplashRunner() {
       sessionStorage.removeItem(SPLASH_HANDOFF_KEY);
     } catch {
       /* storage bloqueado: a abertura instantânea só não toca a cena */
+    }
+
+    // Diagnóstico da abertura no iPhone (temporário): a tela de abertura e a
+    // porteira anotaram as medidas da janela; vai uma vez e some.
+    try {
+      const diag = sessionStorage.getItem(SPLASH_DIAG_KEY);
+      if (diag) {
+        sessionStorage.removeItem(SPLASH_DIAG_KEY);
+        const dados = JSON.parse(diag);
+        dados.montado = { j: [window.innerWidth, window.innerHeight], c: html.clientHeight };
+        void fetch('/api/diag/abertura', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      /* diagnóstico nunca atrapalha a abertura */
     }
 
     // Porteira já decidiu que esta sessão não vê abertura (recarregou a

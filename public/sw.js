@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v9'; // v9: tela de abertura com a altura certa no iPhone — troca a guardada
+const CACHE = 'lume-shell-v10'; // v10: tela de abertura se recria até o iOS acertar a janela
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png'];
 
 // Tela de abertura instantânea (app/abertura/route.ts): um HTML avulso que
@@ -135,6 +135,12 @@ self.addEventListener('fetch', (event) => {
       resposta.then(() => soltar(), () => soltar());
       event.respondWith(resposta);
       event.waitUntil(trabalho.catch(() => {}));
+    } else if (url.pathname === ABERTURA) {
+      // A tela de abertura se recriando (ela nasceu com a janela curta do
+      // iOS): do cache, na hora — cada ida à rede seria tempo de tela parada.
+      event.respondWith(
+        caches.open(CACHE).then((c) => c.match(ABERTURA)).then((hit) => hit || fetch(req))
+      );
     } else {
       event.respondWith(redeComFallback(req));
     }

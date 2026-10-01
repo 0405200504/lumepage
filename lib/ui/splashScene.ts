@@ -65,6 +65,33 @@ export const SPLASH_HANDOFF_TTL_MS = 20000;
  *  vai para o login, e uma estrela antes do formulário seria uma emenda. */
 export const PANEL_FLAG_KEY = 'lume:painel';
 
+/**
+ * O BUG DO iOS 26 NO APP INSTALADO: a página criada no instante em que o app
+ * está abrindo nasce com a janela mais curta que a tela — falta exatamente a
+ * altura da barra de status — e fica assim até morrer. Nada que ela desenhe
+ * aparece na faixa de baixo (zona morta). Páginas criadas depois que o app
+ * terminou de abrir nascem certas (medido nos vídeos do iPhone: o painel,
+ * chegando 2 s depois do toque, sempre ocupou a tela inteira).
+ *
+ * Por isso a tela de abertura confere a própria janela: se nasceu curta,
+ * mostra o cetim parado (= tela de abertura do iPhone) e se recria
+ * (/abertura, servida do cache pelo service worker) até nascer certa — e só
+ * então toca a cena. Este é o marco de quando começou a esperar.
+ */
+export const SPLASH_WAIT_KEY = 'lume:abertura-espera';
+/** Quanto tempo, no máximo, se espera o iOS acertar a janela antes de tocar
+ *  a cena mesmo assim. */
+export const SPLASH_WAIT_MAX_MS = 1500;
+/** Intervalo entre uma tentativa e outra de recriar a página. */
+export const SPLASH_RETRY_MS = 50;
+
+/** Diagnóstico temporário da abertura no iPhone (sessionStorage → painel →
+ *  /api/diag/abertura). Só medidas de tela, nada pessoal. */
+export const SPLASH_DIAG_KEY = 'lume:abertura-diag';
+/** Versão da tela de abertura — o diagnóstico diz qual o aparelho rodou
+ *  (a guardada no cache pode estar atrasada). */
+export const SPLASH_LAUNCH_VERSION = 'v10';
+
 /** Cena até a saída. Tem de casar com os 2350ms do CSS abaixo. */
 export const SPLASH_SCENE_MS = 2350;
 /** Duração da saída (a cortina se dissolve). */
@@ -122,6 +149,10 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear 
    painel, que assume daqui. */
 html[data-splash='launch'] #lume-splash,
 html[data-splash='launch'] .lume-splash__lockup { animation: none; }
+/* App do iPhone: a cortina mede a TELA, não a janela (o iOS 26 às vezes dá
+   uma janela mais curta — ver SPLASH_WAIT_KEY). A tela de abertura ainda
+   troca para position: absolute (app/abertura/route.ts). */
+html[data-tela] #lume-splash { bottom: auto; height: var(--lume-tela); }
 /* Só o cetim parado: o primeiro quadro, igual à tela de abertura do iPhone. */
 html[data-splash='still'] .lume-splash__lockup { display: none; }
 html[data-splash='still'] #lume-splash,

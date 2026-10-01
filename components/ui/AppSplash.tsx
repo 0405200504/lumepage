@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   SPLASH_CSS,
+  SPLASH_DIAG_KEY,
   SPLASH_HANDOFF_KEY,
   SPLASH_HANDOFF_TTL_MS,
   SPLASH_MARKUP,
@@ -58,13 +59,22 @@ export const AppSplash: React.FC = () => {
   // Continuação: e = quanto da cena a tela de abertura já tocou. Os atrasos
   // do CSS descontam --lume-t, e a saída começa no que faltar até 2350ms
   // (ou já, se a cena acabou e a marca estava parada esperando o painel).
-  const gate = `try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
+  // No fim, se a tela de abertura deixou diagnóstico (app do iPhone), anota
+  // a janela que o painel recebeu — o SplashRunner manda.
+  // Antes de tudo, no app do iPhone em pé a cortina é medida pela tela, como
+  // na tela de abertura (app/abertura/route.ts): se o iOS der ao painel a
+  // janela curta do bug do iOS 26, a marca continua no mesmo ponto.
+  const gate = `try{var o=screen.orientation&&screen.orientation.type||'';if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width){document.documentElement.style.setProperty('--lume-tela',screen.height+'px');document.documentElement.dataset.tela='cheia'}}catch(x){}try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
     SPLASH_HANDOFF_KEY,
   )})),e=Date.now()-h;s.removeItem(${JSON.stringify(SPLASH_HANDOFF_KEY)});if(h&&e>=0&&e<${SPLASH_HANDOFF_TTL_MS}){s.setItem(${JSON.stringify(
     SPLASH_SESSION_KEY,
   )},'1');d.dataset.splash='handoff';d.style.setProperty('--lume-t',e+'ms');d.style.setProperty('--lume-exit',Math.max(0,${SPLASH_SCENE_MS}-e)+'ms')}else if(s.getItem(${JSON.stringify(
     SPLASH_SESSION_KEY,
-  )})==='1'){d.dataset.splash='off'}else{s.setItem(${JSON.stringify(SPLASH_SESSION_KEY)},'1')}}catch(x){}`;
+  )})==='1'){d.dataset.splash='off'}else{s.setItem(${JSON.stringify(SPLASH_SESSION_KEY)},'1')}var g=JSON.parse(s.getItem(${JSON.stringify(
+    SPLASH_DIAG_KEY,
+  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,e:h?e:null};s.setItem(${JSON.stringify(
+    SPLASH_DIAG_KEY,
+  )},JSON.stringify(g))}}catch(x){}`;
 
   return (
     <>
