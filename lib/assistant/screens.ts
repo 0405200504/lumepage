@@ -11,8 +11,12 @@ export const SCREENS = {
   tarefas: '/dashboard/tasks',
   contatos: '/dashboard/clients',
   financeiro: '/dashboard/finance',
+  vendas: '/dashboard/sales',
   servicos: '/dashboard/services',
   disponibilidade: '/dashboard/availability',
+  bloqueios: '/dashboard/blocks',
+  fichas: '/dashboard/anamnese',
+  minha_pagina: '/dashboard/site',
   configuracoes: '/dashboard/settings',
 } as const;
 

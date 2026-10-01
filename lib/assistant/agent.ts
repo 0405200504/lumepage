@@ -2,14 +2,16 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { dbService } from '@/lib/supabase/db';
 import { createAppointmentAction, getSlotsAction } from '@/app/actions/booking';
+import { buildPanelTools } from './panel-data';
 
 /**
- * A assistente da profissional — usada pelo chat de texto (/api/chat) e pela
- * conversa por voz (/api/voice/*). Um prompt e um conjunto de ferramentas só:
- * o que ela sabe fazer e o que ela pode tocar é igual nos dois canais.
+ * A Ana, assistente da profissional — usada pelo chat de texto (/api/chat) e
+ * pela conversa por voz (/api/voice/*). Um prompt e um conjunto de ferramentas
+ * só: o que ela sabe fazer e o que ela pode tocar é igual nos dois canais.
  *
  * Toda ferramenta age como a profissional LOGADA (o professionalId vem da
- * sessão no servidor, nunca do cliente).
+ * sessão no servidor, nunca do cliente). O que ela LÊ do painel mora em
+ * ./panel-data; aqui ficam o prompt e as ações.
  */
 
 export interface AssistantContext {
@@ -36,10 +38,10 @@ export async function buildAssistantContext(professionalId: string): Promise<Ass
   const weekday = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
 
   // System prompt: persona + escopo restrito ao sistema Lume
-  const systemPrompt = `Você é a "Lume", a assistente virtual integrada EXCLUSIVAMENTE ao sistema de gestão Lume.
-Você ajuda a profissional de beleza (dona da agenda) a administrar o próprio negócio DENTRO do Lume.
+  const systemPrompt = `Você é a Ana, a assistente virtual da Lume. Você trabalha EXCLUSIVAMENTE dentro do sistema Lume, ajudando a profissional de beleza (dona da agenda) a cuidar do próprio negócio.
+Se perguntarem quem você é, diga que é a Ana, a assistente da Lume.
 
-Hoje é ${weekday}, ${todayISO} (horário de São Paulo). Use isso para entender datas relativas como "hoje", "amanhã", "sexta", "semana que vem".
+Hoje é ${weekday}, ${todayISO} (horário de São Paulo). Use isso para entender datas relativas como "hoje", "amanhã", "sexta", "semana que vem", "mês passado".
 
 O ID da profissional logada é: ${professionalId}
 
@@ -47,11 +49,25 @@ Serviços cadastrados (use estes IDs ao agendar):
 ${servicesList}
 
 == ESCOPO (muito importante) ==
-- Você SÓ trata da gestão do salão desta profissional no Lume: agenda, agendamentos, clientes, serviços, tarefas/notas e finanças.
+- Você SÓ trata do negócio desta profissional no Lume: faturamento e finanças, agenda e agendamentos, clientes, serviços, disponibilidade, bloqueios, lista de espera, tarefas e a conta dela.
 - Se perguntarem algo fora desse escopo (conhecimento geral, outros assuntos, outros sistemas, opiniões etc.), recuse com educação e ofereça ajuda com o que você sabe fazer no Lume.
-- NUNCA invente dados. SEMPRE use as ferramentas para ler os dados reais antes de afirmar qualquer coisa (agendamentos, clientes, horários etc.).
+- NUNCA invente dados. SEMPRE use as ferramentas para ler os dados reais antes de afirmar qualquer coisa.
 - Responda sempre em português do Brasil, de forma curta, clara e amigável.
-- IMPORTANTE: responda em TEXTO SIMPLES, SEM Markdown. Nunca use asteriscos (*), sublinhados (_), cerquilhas (#) ou crases (\`). Não use **negrito** nem listas com "*". Se precisar listar, use traço "-" no início da linha ou apenas quebras de linha.
+- IMPORTANTE: responda em TEXTO SIMPLES, SEM Markdown. Nunca use asteriscos (*), sublinhados (_), cerquilhas (#) ou crases (\`). Não use **negrito**, listas com "*" nem links com colchetes: escreva só o endereço. Se precisar listar, use traço "-" no início da linha ou apenas quebras de linha.
+- Repita datas, horários e valores EXATAMENTE como vieram das ferramentas. Nunca ajuste uma data: se algo está atrasado, diga que está atrasado.
+
+== O QUE VOCÊ CONSULTA (tudo o que está no painel dela) ==
+Busque SÓ na aba da pergunta: use apenas a ferramenta que responde ao que ela pediu, com o recorte pedido (só o período, só a cliente, só o mês). Não consulte outras abas "por garantia".
+- Faturamento (hoje, ontem, semana, mês, ano, total, mês a mês ou outro intervalo): getRevenue, pedindo só os períodos da pergunta.
+- Financeiro de um mês ou período (entradas, saídas, lucro, margem, formas de pagamento, despesas): getFinanceReport. Saldo, contas a receber e projeção do mês: getFinanceReport com include_current_status. Lançamentos e contas fixas: listFinanceEntries.
+- Vendas (serviços mais vendidos, clientes que mais gastaram, recorrência): getSalesReport.
+- Agenda, agendamentos e histórico: getAppointments. Horários livres de um dia: checkAvailability.
+- Contatos (busca, aniversariantes, sumidas, mais frequentes, que mais gastaram): listClients. Tudo de uma cliente (histórico, gasto, faltas, fichas): getClientDetails.
+- Serviços: listServices. Dias e horários de atendimento e regras de agendamento: getAvailability. Bloqueios: listTimeBlocks. Lista de espera: listWaitlist. Tarefas: listTasks. Plano, links, Minha Página e WhatsApp: getAccountInfo.
+- Faturamento segue a regra do painel: atendimentos confirmados + concluídos, pela data do atendimento. Diga de que período está falando.
+- Os valores das ferramentas estão em reais. Escreva assim: R$ 1.234,50.
+- Para comparações e análises ("qual foi meu melhor mês?", "quanto falta pra bater 10 mil?"), busque os dados e faça a conta você mesma.
+- Se uma ferramenta disser que o recurso é de outro plano, explique isso com simplicidade.
 
 == AÇÕES QUE VOCÊ EXECUTA ==
 Você pode realizar ações de verdade pela profissional. Antes de executar, confira se tem os dados necessários (pergunte o que faltar); depois de executar, confirme o resultado de forma simples.
@@ -75,83 +91,8 @@ Se uma ação falhar, explique o motivo de forma simples e sugira o próximo pas
 /** As ferramentas da assistente, presas à profissional da sessão. */
 export function buildAssistantTools({ professionalId, todayISO }: Pick<AssistantContext, 'professionalId' | 'todayISO'>) {
   return {
-    // ===== LEITURA (sempre baseada em dados reais do sistema) =====
-    getAppointments: tool({
-      description:
-        'Lista os agendamentos da profissional num período (from/to) e, se quiser, de uma cliente. ' +
-        'Sem período, traz dos últimos 30 dias até os próximos 60. Para "hoje", "amanhã", "este mês" etc., passe from/to.',
-      parameters: z.object({
-        from: z.string().optional().describe('Data inicial, YYYY-MM-DD'),
-        to: z.string().optional().describe('Data final, YYYY-MM-DD'),
-        client: z.string().optional().describe('Parte do nome da cliente (opcional)'),
-      }),
-      execute: async ({ from, to, client }) => {
-        const all = await dbService.getAppointmentsByProfessional(professionalId);
-        const start = from || addDaysISO(todayISO, -30);
-        const end = to || addDaysISO(todayISO, 60);
-        const q = client?.trim().toLowerCase();
-        const rows = all
-          .filter(a => a.date >= start && a.date <= end && (!q || (a.client_name || '').toLowerCase().includes(q)))
-          .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
-        // A agenda inteira chegava a 800+ itens: lento e caro, sobretudo por voz.
-        const LIMIT = 60;
-        return {
-          from: start,
-          to: end,
-          total: rows.length,
-          truncated: rows.length > LIMIT,
-          appointments: rows.slice(0, LIMIT).map(app => ({
-            id: app.id,
-            date: app.date,
-            time: `${app.start_time.slice(0, 5)} - ${app.end_time.slice(0, 5)}`,
-            client: app.client_name,
-            status: app.status,
-          })),
-        };
-      },
-    }),
-    listClients: tool({
-      description: 'Lista as clientes cadastradas da profissional (nome, WhatsApp, total de atendimentos).',
-      parameters: z.object({}),
-      execute: async () => {
-        const clients = await dbService.getClientsByProfessional(professionalId);
-        return clients.map(c => ({
-          id: c.id,
-          name: c.name,
-          whatsapp: c.whatsapp,
-          email: c.email,
-          total_appointments: c.total_appointments,
-        }));
-      },
-    }),
-    listServices: tool({
-      description: 'Lista os serviços cadastrados, com duração e preço.',
-      parameters: z.object({}),
-      execute: async () => {
-        const svcs = await dbService.getServicesByProfessional(professionalId);
-        return svcs.map(s => ({
-          id: s.id,
-          name: s.name,
-          duration_minutes: s.duration_minutes,
-          price_cents: s.price_cents,
-          is_active: s.is_active,
-        }));
-      },
-    }),
-    listTasks: tool({
-      description: 'Lista as tarefas e notas da profissional.',
-      parameters: z.object({}),
-      execute: async () => {
-        const tasks = await dbService.getTasksByProfessional(professionalId);
-        return tasks.map(t => ({
-          id: t.id,
-          content: t.content,
-          done: t.done,
-          due_date: t.due_date ?? null,
-          due_time: t.due_time ?? null,
-        }));
-      },
-    }),
+    // ===== LEITURA: tudo o que está no painel (./panel-data) =====
+    ...buildPanelTools({ professionalId, todayISO }),
     checkAvailability: tool({
       description: 'Verifica os horários livres para um serviço em uma data específica. Use antes de agendar.',
       parameters: z.object({
@@ -346,13 +287,6 @@ export function buildAssistantTools({ professionalId, todayISO }: Pick<Assistant
 }
 
 export type AssistantTools = ReturnType<typeof buildAssistantTools>;
-
-/** Soma dias a uma data YYYY-MM-DD (meio-dia UTC: sem tropeço de fuso). */
-function addDaysISO(iso: string, days: number) {
-  const d = new Date(`${iso}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 /** Ferramentas que MUDAM dados: depois delas a tela aberta precisa recarregar. */
 export const WRITE_TOOLS = new Set([

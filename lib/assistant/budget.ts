@@ -152,7 +152,7 @@ export async function addAiCost(professionalId: string, micros: number, voiceSec
 }
 
 /** Mensagem única para quem chegou ao teto. */
-export const BUDGET_REACHED_MSG = 'Você usou todo o limite da assistente de IA deste mês. Ele renova no dia 1º.';
+export const BUDGET_REACHED_MSG = 'Você usou todo o limite da Ana deste mês. Ele renova no dia 1º.';
 
 /** Minutos de voz que o saldo ainda paga, no custo típico (só para mostrar). */
 export const typicalVoiceMinutes = (micros: number) => Math.max(0, Math.floor(micros / (VOICE_TYPICAL_USD_PER_MIN * 1e6)));
