@@ -1,6 +1,6 @@
 import React from 'react';
 import { LumeLogo } from '@/components/ui/LumeLogo';
-import cetim from './ana-cetim.webp';
+import { ANA_SATIN } from '@/lib/ui/anaSatinData';
 
 /**
  * A identidade visual da Ana: a estrela prateada da Lume sobre o cetim bordô
@@ -8,12 +8,12 @@ import cetim from './ana-cetim.webp';
  * a assistente "veste" a marca em vez de usar um ícone genérico de IA.
  *
  * O cetim é uma faixa recortada do próprio icon-maskable-512.png (a parte de
- * cima, sem a estrela). Importado estaticamente: o Next serve com hash e cache
- * longo, e o bordô de fundo segura a cor se a imagem demorar.
+ * cima, sem a estrela), embutida no bundle (lib/ui/anaSatinData.ts) como a
+ * logo. O bordô de fundo segura a cor enquanto a imagem decodifica.
  */
 export const ANA_SATIN_STYLE: React.CSSProperties = {
   backgroundColor: '#5a1020',
-  backgroundImage: `url(${cetim.src})`,
+  backgroundImage: `url(${ANA_SATIN})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
 };
