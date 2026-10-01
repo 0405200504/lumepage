@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v6'; // v6: ícone do app em cetim (os ícones são cache-first)
+const CACHE = 'lume-shell-v7'; // v7: ícone novo (estrela) — os ícones são cache-first
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
