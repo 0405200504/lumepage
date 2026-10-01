@@ -411,16 +411,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
         <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Menu de navegação">
           <div className="sheet-backdrop absolute inset-0" onClick={() => setDrawerOpen(false)} />
           <aside className="rail-wine surface-wine text-white relative w-[88%] max-w-xs h-full shadow-[var(--shadow-lg)] flex flex-col animate-slide-right rounded-r-hero overflow-hidden">
-            <div className="shrink-0 flex items-center justify-between h-16 px-5 pt-safe">
-              <LumeLogo variant="light" className="h-5" />
-              <button
-                type="button"
-                aria-label="Fechar menu"
-                onClick={() => setDrawerOpen(false)}
-                className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
+            <div className="shrink-0 pt-safe">
+              <div className="flex items-center justify-between h-16 px-5">
+                <LumeLogo variant="light" className="h-5" />
+                <button
+                  type="button"
+                  aria-label="Fechar menu"
+                  onClick={() => setDrawerOpen(false)}
+                  className="group rail-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             <NavBody pathname={pathname} showLabel lockedFor={lockedFor} badgeFor={badgeFor} onNavigate={() => setDrawerOpen(false)} />
 
