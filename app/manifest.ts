@@ -12,9 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
     // Vinho, e não creme: este é o fundo da splash NATIVA do Android (a que
     // mostra o ícone antes do app carregar). Com o creme antigo, a sequência
     // era clarão → cortina vinho → painel. Agora emenda na abertura da marca
-    // (components/ui/AppSplash) sem piscar de cor.
-    background_color: '#43121f',
-    theme_color: '#43121f',
+    // (components/ui/AppSplash) sem piscar de cor: é o tom médio do cetim
+    // da cortina (#lume-splash em app/globals.css).
+    background_color: '#4a0e22',
+    theme_color: '#4a0e22',
     lang: 'pt-BR',
     categories: ['business', 'productivity', 'lifestyle'],
     icons: [
