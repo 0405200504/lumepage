@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, MicOff, X, Minimize2, Maximize2, Keyboard, PhoneOff } from 'lucide-react';
 import { VoiceOrb, type OrbState } from './VoiceOrb';
+import { AnaStar } from './AnaBrand';
 import { screenHref } from '@/lib/assistant/screens';
 
 /**
@@ -93,13 +94,15 @@ function levelOf(an: AnalyserNode | null, buf: Float32Array<ArrayBuffer> | null)
 }
 
 export const VoiceMode: React.FC<{
+  /** Começa já na pílula do rodapé (aberta pelo botão da Ana, sem o chat). */
+  startMini?: boolean;
   onClose: () => void;
   /** Troca para o chat de texto. */
   onSwitchToText: () => void;
-}> = ({ onClose, onSwitchToText }) => {
+}> = ({ startMini = false, onClose, onSwitchToText }) => {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('connecting');
-  const [mini, setMini] = useState(false);
+  const [mini, setMini] = useState(startMini);
   const [muted, setMuted] = useState(false);
   const [caption, setCaption] = useState<{ who: 'user' | 'assistant'; text: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -351,6 +354,8 @@ export const VoiceMode: React.FC<{
             : e instanceof Error && e.message ? e.message : 'Não foi possível abrir a conversa por voz.',
         );
         setPh('error');
+        // Aberta já na pílula, a mensagem não caberia nela: mostra em tela cheia.
+        setMini(false);
       }
     };
     void start();
@@ -362,8 +367,8 @@ export const VoiceMode: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Com a pílula no rodapé, os botões flutuantes da tela (o "+" da agenda,
-  // a assistente da Início) sobem a altura dela em vez de ficar por baixo.
+  // Com a pílula no rodapé, os botões flutuantes da tela (o "+" da agenda)
+  // sobem a altura dela em vez de ficar por baixo. O botão da Ana some.
   useEffect(() => {
     const root = document.documentElement;
     if (mini) root.style.setProperty('--voice-pill-h', '4.5rem');
@@ -436,7 +441,9 @@ export const VoiceMode: React.FC<{
             <Minimize2 className="h-5 w-5" />
           </button>
           <div className="text-center">
-            <p className="text-label font-semibold text-white/80">Ana</p>
+            <p className="inline-flex items-center gap-1.5 text-label font-semibold text-white/80">
+              <AnaStar className="h-4" /> Ana
+            </p>
             {minutesLeft !== null && phase !== 'error' && (
               <p className="text-micro text-white/45 mt-0.5">cerca de {minutesLeft} min de voz neste mês</p>
             )}

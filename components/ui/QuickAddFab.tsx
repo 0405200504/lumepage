@@ -19,15 +19,14 @@ interface QuickAddFabProps {
 
 /**
  * Botão flutuante padrão de "adicionar" (+), presente em todos os módulos.
- * Fica fixo no canto inferior direito, LOGO ACIMA do botão do chat da Lume, com o
+ * Fica fixo no canto inferior direito, LOGO ACIMA do botão da Ana, com o
  * MESMO alinhamento à direita (right-4 / lg:right-6) e uma folga pequena e uniforme.
  *
- * A posição é derivada da do chat (AIAgentChat):
- *   chat.bottom = 1.5rem · altura h-14 = 3.5rem
- *   +.bottom    = chat.bottom + 3.5rem (altura) + 0.75rem (folga) = 5.75rem
+ * A posição é derivada da do botão da Ana (components/ai/AnaButton):
+ *   celular:     Ana.bottom 1.25rem + altura 3.5rem + folga 0.75rem = 5.5rem
+ *   computador:  Ana.bottom 1.5rem  + altura 3rem   + folga 0.75rem = 5.25rem
+ * Mudou a altura ou o bottom da Ana? Mude aqui também.
  *
- * Antes o celular somava mais 4rem para desviar da barra fixa do rodapé.
- * A barra saiu — a navegação virou gaveta no topo — e a pilha desceu junto.
  * z-40 mantém o chat (z-50) acessível.
  */
 export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adicionar' }) => {
@@ -37,7 +36,7 @@ export const QuickAddFab: React.FC<QuickAddFabProps> = ({ actions, label = 'Adic
 
   return (
     <Portal>
-      <div className="fixed right-4 lg:right-6 bottom-[calc(1.25rem+env(safe-area-inset-bottom)+var(--voice-pill-h,0px))] lg:bottom-[calc(5.75rem+var(--voice-pill-h,0px))] z-40 flex flex-col items-end gap-2.5 no-print">
+      <div className="fixed right-4 lg:right-6 bottom-[calc(5.5rem+env(safe-area-inset-bottom)+var(--voice-pill-h,0px)+var(--bottom-bar-h,0px))] lg:bottom-[calc(5.25rem+var(--voice-pill-h,0px)+var(--bottom-bar-h,0px))] z-40 flex flex-col items-end gap-2.5 no-print">
         {!single && open && actions.map(({ label: l, icon: Icon, onClick }) => (
           <button key={l} onClick={() => { setOpen(false); onClick(); }} className="flex items-center gap-2.5 animate-slide-up">
             <span className="px-3 py-1.5 rounded-xl bg-ink text-white text-caption font-bold shadow-md whitespace-nowrap">{l}</span>

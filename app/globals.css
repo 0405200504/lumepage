@@ -37,6 +37,13 @@ html {
   text-size-adjust: 100%;
 }
 
+/* Tela com barra fixa no rodapé (ex.: os passos da Minha Página): no
+   celular a barra ocupa a largura toda, então o botão da Ana e o "+" sobem
+   a altura dela. No computador a barra é centralizada e não chega no canto. */
+@media (width < 64rem) {
+  html[data-bottom-bar] { --bottom-bar-h: 5.25rem; }
+}
+
 /* Respeita usuários que pedem menos movimento e elimina jank de animação */
 /* Bloco GLOBAL (não por componente): quem pede menos movimento recebe
    mudanças de opacidade e nada mais — transform, deslize e escala saem. */

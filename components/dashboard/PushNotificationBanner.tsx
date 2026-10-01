@@ -115,14 +115,15 @@ export function PushNotificationBanner() {
   /* Toast dispensável, NÃO faixa no fluxo.
      Como faixa, ela empurrava o conteúdo principal para baixo toda vez que
      aparecia — a profissional abria o painel e o faturamento tinha mudado de
-     lugar. Aqui ela flutua: acima da tab bar no celular, no canto inferior
-     direito no desktop, e não desloca um pixel do que está atrás. */
+     lugar. Aqui ela flutua no canto inferior direito, LOGO ACIMA do botão da
+     Ana (mesma conta do QuickAddFab), e não desloca um pixel do que está
+     atrás nem cobre a Ana. */
   return (
     <div
       role="status"
       className="fixed z-45 no-print toast-in
-        left-4 right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]
-        lg:left-auto lg:right-6 lg:bottom-6 lg:w-[380px]"
+        left-4 right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
+        lg:left-auto lg:right-6 lg:bottom-[5.25rem] lg:w-[380px]"
     >
       <div className="card p-4 flex items-start gap-3">
         <span className="icon-chip" data-accent="true" aria-hidden>
