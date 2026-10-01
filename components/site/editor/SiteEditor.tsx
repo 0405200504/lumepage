@@ -17,15 +17,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import {
   Palette, LayoutTemplate, UserRound, Type, Sparkles, Images, GitCompareArrows,
-  MessageSquareQuote, HelpCircle, ListOrdered, Link2, Smartphone, Monitor,
-  ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, ArrowRight, FlaskConical,
-  Wand2, RotateCcw, Pencil, Info, ChevronDown,
+  MessageSquareQuote, HelpCircle, ListOrdered, Link2, List, Smartphone, Monitor,
+  ExternalLink, Copy, Check, Loader2, Rocket, EyeOff, AlertTriangle, FlaskConical,
+  Wand2, RotateCcw, Pencil, Info, ChevronDown, Home,
 } from 'lucide-react';
 import type { SiteConfig, SiteStatus } from '@/types/site';
 import type { PublicService } from '../types';
 import { getTemplateMeta } from '@/lib/site/templates';
 import { getFontPair } from '@/lib/site/fonts';
-import { matchLook, SITE_LOOKS, type ResolvedLook } from '@/lib/site/looks';
+import { matchLook, type ResolvedLook } from '@/lib/site/looks';
 import { buildChecklist } from '@/lib/site/checklist';
 import { normalizeSlug, validateSlug, SLUG_MAX } from '@/lib/site/slug';
 import { LIMITS } from '@/lib/site/config';
@@ -41,6 +41,9 @@ import { ProgressChecklist } from './ProgressChecklist';
 import { StepByStepWizardModal } from './StepByStepWizardModal';
 import { QuickImageModal } from './QuickImageModal';
 import { ResetModal } from './ResetModal';
+import { SimpleSetup, type SetupResult } from './SimpleSetup';
+import { SimpleHome } from './SimpleHome';
+import { LinksPanel } from './LinksPanel';
 import type { VisualElementPayload } from './VisualEditorContext';
 import { FieldGroup, TextField, TextArea, ImageField } from './fields';
 import {
@@ -50,7 +53,10 @@ import {
 
 type TabId =
   | 'template' | 'identity' | 'theme' | 'content' | 'services'
-  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address';
+  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address' | 'links';
+
+/** Qual tela está aberta: criação (3 passos), início simples ou edição avançada. */
+type View = 'setup' | 'home' | 'advanced';
 
 /**
  * A ordem aqui é o roteiro que a profissional segue: primeiro o visual (que é
@@ -81,6 +87,7 @@ const TAB_GROUPS: { label: string; tabs: { id: TabId; label: string; icon: React
   {
     label: '3 · Ajustes',
     tabs: [
+      { id: 'links', label: 'Formato e links', icon: List },
       { id: 'sections', label: 'Seções', icon: ListOrdered },
       { id: 'address', label: 'Endereço e SEO', icon: Link2 },
     ],
@@ -99,11 +106,13 @@ interface SiteEditorProps {
   appUrl: string;
   /** Conta teste: o editor funciona, mas nada é salvo nem vai ao ar. */
   isDemo?: boolean;
+  /** O rascunho gravado já difere do que está publicado. */
+  initialHasUnpublished?: boolean;
 }
 
 export function SiteEditor({
   professionalId, initialSlug, initialTemplateId, initialConfig, initialStatus,
-  exists, services, appUrl, isDemo,
+  exists, services, appUrl, isDemo, initialHasUnpublished = false,
 }: SiteEditorProps) {
   const { success, error: toastError } = useToast();
 
@@ -113,7 +122,9 @@ export function SiteEditor({
   const [slug, setSlug] = useState(initialSlug);
   const [slugDraft, setSlugDraft] = useState(initialSlug);
 
-  const [onboarding, setOnboarding] = useState(!exists);
+  const [view, setView] = useState<View>(exists ? 'home' : 'setup');
+  /** Mudou algo desde a última publicação? Alimenta o botão "Publicar mudanças". */
+  const [changed, setChanged] = useState(initialHasUnpublished);
   const [tab, setTab] = useState<TabId>('identity');
   const [device, setDevice] = useState<PreviewDevice>('mobile');
 
@@ -158,6 +169,7 @@ export function SiteEditor({
       return next;
     });
     dirty.current = true;
+    setChanged(true);
   }, []);
 
   /**
@@ -173,6 +185,7 @@ export function SiteEditor({
       return next;
     });
     dirty.current = true;
+    setChanged(true);
     success(`Modelo "${resolved.look.name}" aplicado`, 'Seus textos e fotos continuam onde estavam.');
   }, [success]);
 
@@ -262,7 +275,8 @@ export function SiteEditor({
     setConfig(newConfig);
     setTemplateId(newTemplateId);
     dirty.current = true;
-    setOnboarding(false);
+    setChanged(true);
+    setView('advanced');
     setTab('content');
     const ok = await save(newConfig, newTemplateId, { silent: false });
     if (ok) {
@@ -274,6 +288,7 @@ export function SiteEditor({
   const handleConfirmReset = useCallback(async (newConfig: SiteConfig) => {
     setConfig(newConfig);
     dirty.current = true;
+    setChanged(true);
     const ok = await save(newConfig, templateId, { silent: false });
     if (ok) {
       success('Modelo resetado com sucesso! 🔄', 'Sua página foi restaurada para o rascunho limpo.');
@@ -282,11 +297,11 @@ export function SiteEditor({
 
   // Autosave do RASCUNHO: 2s parada de digitação. Nunca mexe no que está no ar.
   useEffect(() => {
-    if (onboarding) return;
+    if (view === 'setup') return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => { if (dirty.current) save(config, templateId, { silent: true }); }, 2000);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [config, templateId, onboarding, save]);
+  }, [config, templateId, view, save]);
 
   // Avisa antes de fechar a aba com alteração ainda não gravada.
   useEffect(() => {
@@ -304,6 +319,7 @@ export function SiteEditor({
       setStatus('published');
       setSavedAt(Date.now());
       setBlocker(null);
+      setChanged(false);
       // Publicar com pendência essencial é permitido — a página é dela. Mas
       // dizer só "está no ar" esconderia que ela subiu sem foto ou sem serviço.
       if (checklist.missingEssential.length > 0) {
@@ -361,121 +377,73 @@ export function SiteEditor({
     <SiteRenderer slug={slug} templateId={templateId} config={config} services={services} preview />
   ), [slug, templateId, config, services]);
 
-  // ── Onboarding: escolher o modelo ou usar o assistente ───────────────────
-  if (onboarding) {
+  /**
+   * Fim da criação em 3 passos: grava o rascunho e, se pedido, publica. O
+   * SimpleSetup só desenha; quem fala com o servidor é o editor.
+   */
+  const finishSetup = async (cfg: SiteConfig, tpl: string, publish: boolean): Promise<SetupResult> => {
+    setConfig(cfg);
+    setTemplateId(tpl);
+    dirty.current = true;
+    const ok = await save(cfg, tpl, { silent: true });
+    if (!ok) return { ok: false, published: false, error: 'Não foi possível salvar sua página. Tente de novo.' };
+    if (!publish) return { ok: true, published: false };
+    if (isDemo) return { ok: true, published: false, error: 'Na conta teste a página não vai ao ar. Entre com a sua conta da Lume para publicar.' };
+
+    setPublishing(true);
+    const res = await publishSiteAction(professionalId, { config: cfg, templateId: tpl });
+    setPublishing(false);
+    if (res.success) {
+      dirty.current = false;
+      setStatus('published');
+      setSavedAt(Date.now());
+      setBlocker(null);
+      setChanged(false);
+      return { ok: true, published: true };
+    }
+    setBlocker(res.error);
+    return { ok: true, published: false, error: res.error };
+  };
+
+  // ── Criação em 3 passos ───────────────────────────────────────────────────
+  if (view === 'setup') {
     return (
-      <div className="space-y-6 select-none">
-        <header className="text-center max-w-2xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-wine-700 bg-accent-soft border border-accent-soft-border px-3 py-1.5 rounded-full">
-            <Rocket className="h-3 w-3" /> Seu negócio inteiro em um único link
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-heading tracking-tight mt-4">
-            Como você prefere criar sua página?
-          </h1>
-          <p className="text-sm text-n-600 mt-2 leading-relaxed">
-            Os dois caminhos terminam no mesmo editor, com tudo ainda editável. A diferença é
-            só por onde você começa: <b>com os textos já escritos</b> para a sua profissão, ou
-            <b> escolhendo o visual</b> primeiro.
-          </p>
-        </header>
+      <SimpleSetup
+        professionalId={professionalId}
+        initialConfig={config}
+        initialTemplateId={templateId}
+        publicUrl={publicUrl}
+        isDemo={isDemo}
+        onFinish={finishSetup}
+        onDone={() => setView('home')}
+        onError={msg => toastError('Ops', msg)}
+      />
+    );
+  }
 
-        {isDemo && <DemoBanner />}
-
-        {/* Card em Destaque: Assistente Rápido */}
-        <div className="max-w-2xl mx-auto rounded-3xl border-2 border-wine-700/20 bg-gradient-to-b from-accent-soft/60 to-accent-soft/20 p-6 sm:p-7 shadow-sm text-center space-y-4">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-wine-700 text-white shadow-md mx-auto">
-            <Wand2 className="h-6 w-6" />
-          </div>
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-wine-800 bg-white/80 border border-wine-200 px-2.5 py-0.5 rounded-full">
-              ✨ Recomendado · Leva 2 minutos
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-heading">
-              Assistente de Criação Rápida por Nicho
-            </h3>
-            <p className="text-xs sm:text-sm text-n-600 max-w-md mx-auto leading-relaxed">
-              Oito perguntas curtas (nome, cidade, WhatsApp, foto) e a página sai pronta:
-              títulos, texto de &ldquo;sobre mim&rdquo;, perguntas frequentes e o visual mais
-              indicado para a sua profissão. Você ajusta o que quiser depois.
-            </p>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setIsWizardOpen(true)}
-              className="inline-flex items-center gap-2 px-7 h-12 bg-wine-700 hover:bg-wine-800 text-white text-sm font-bold rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-            >
-              <Sparkles className="h-4 w-4" />
-              Criar Minha Página Pronta Agora
-            </button>
-          </div>
-        </div>
-
-        <div className="relative max-w-2xl mx-auto my-8">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-n-200" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-n-50 px-3 text-n-400 font-medium uppercase tracking-wider text-[10px]">
-Ou comece escolhendo o visual
-            </span>
-          </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto space-y-3">
-          <p className="text-[12px] text-n-600 text-center leading-relaxed max-w-xl mx-auto">
-            São {SITE_LOOKS.length} modelos prontos: cada um já vem com <b>layout, paleta de
-            cores, fontes e cantos</b> combinados. Clique para ver como fica — trocar de modelo
-            nunca apaga o que você escreveu.
-          </p>
-          <LookPicker
-            templateId={templateId}
-            theme={config.theme}
-            onSelect={applyLook}
-          />
-        </div>
-
-        {/* A lista tem 22 cards: sem esta barra colada no rodapé, o botão de
-            continuar ficaria a uma rolagem inteira de distância do modelo que
-            ela acabou de escolher. */}
-        <div className="sticky bottom-3 z-10 max-w-2xl mx-auto">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-n-200 bg-white/95 backdrop-blur px-4 py-3 shadow-lg">
-            <span className="text-[12px] text-n-600 min-w-0">
-              Escolhido: <b className="text-heading">{currentLook?.name || meta.name}</b>
-            </span>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={async () => {
-                const ok = await save(config, templateId, { silent: true });
-                if (ok) { setOnboarding(false); setTab('identity'); }
-              }}
-              className="inline-flex items-center gap-2 px-5 h-11 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-bold rounded-chip transition-ui cursor-pointer disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-              Continuar e preencher
-            </button>
-          </div>
-        </div>
-
-        {blocker && (
-          <div className="max-w-2xl mx-auto flex items-start gap-2.5 border-l-2 border-warning pl-3 py-1">
-            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-            <p className="text-[12px] text-warning leading-relaxed">{blocker}</p>
-          </div>
-        )}
-
-        {/* Modal do Assistente durante Onboarding */}
-        <StepByStepWizardModal
-          isOpen={isWizardOpen}
-          onClose={() => setIsWizardOpen(false)}
-          professionalId={professionalId}
-          onComplete={handleCompleteWizard}
-          initialTemplateId={templateId}
-          initialConfig={config}
-        />
-      </div>
+  // ── Tela inicial simples ──────────────────────────────────────────────────
+  if (view === 'home') {
+    return (
+      <SimpleHome
+        config={config}
+        templateId={templateId}
+        status={status}
+        publicUrl={publicUrl}
+        services={services}
+        professionalId={professionalId}
+        isDemo={isDemo}
+        saving={saving}
+        publishing={publishing}
+        hasUnpublished={changed}
+        blocker={blocker}
+        checklist={checklist}
+        set={set}
+        applyLook={applyLook}
+        onPublish={publish}
+        onUnpublish={unpublish}
+        onOpenAdvanced={() => { setView('advanced'); setTab('identity'); }}
+        onError={msg => toastError('Ops', msg)}
+      />
     );
   }
 
@@ -497,6 +465,14 @@ Ou comece escolhendo o visual
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView('home')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-xl border border-n-200 text-n-600 hover:bg-n-50 transition-colors cursor-pointer"
+            >
+              <Home className="h-3.5 w-3.5" /> Modo simples
+            </button>
+
             {/* Ações de facilitação: Assistente Rápido e Reset */}
             <button
               type="button"
@@ -645,7 +621,7 @@ Ou comece escolhendo o visual
                   <div className="p-3.5 border-t border-n-100">
                     <TemplatePicker
                       selected={templateId}
-                      onSelect={id => { setTemplateId(id); dirty.current = true; }}
+                      onSelect={id => { setTemplateId(id); dirty.current = true; setChanged(true); }}
                     />
                   </div>
                 </details>
@@ -659,6 +635,7 @@ Ou comece escolhendo o visual
             {tab === 'beforeAfter' && <BeforeAfterPanel {...panelProps} />}
             {tab === 'testimonials' && <TestimonialsPanel {...panelProps} />}
             {tab === 'extras' && <ExtrasPanel {...panelProps} />}
+            {tab === 'links' && <LinksPanel config={config} set={set} />}
             {tab === 'sections' && <SectionsPanel {...panelProps} templateId={templateId} />}
             {tab === 'address' && (
               <div className="space-y-7">

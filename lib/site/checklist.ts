@@ -19,7 +19,7 @@ import type { SiteConfig } from '@/types/site';
 /** Ids das abas do editor — repetidos aqui para o arquivo continuar puro. */
 export type ChecklistTab =
   | 'template' | 'identity' | 'theme' | 'content' | 'services'
-  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address';
+  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address' | 'links';
 
 export interface ChecklistItem {
   id: string;
@@ -50,6 +50,68 @@ const has = (v: string | undefined | null) => !!(v && v.trim().length > 0);
 export function buildChecklist(config: SiteConfig, serviceCount: number): ChecklistResult {
   const i = config.identity;
   const c = config.content;
+
+  // Página "só links" é mais curta de propósito: a lista de pendências também.
+  if (config.links.mode === 'links') {
+    return finish([
+      {
+        id: 'name',
+        label: 'Nome do estúdio ou seu nome',
+        why: 'É o que aparece embaixo da foto e na aba do navegador.',
+        done: has(i.studioName) || has(i.professionalName),
+        tab: 'identity',
+        essential: true,
+      },
+      {
+        id: 'photo',
+        label: 'Sua foto',
+        why: 'Página de links sem foto parece perfil falso.',
+        done: has(i.photoUrl),
+        tab: 'identity',
+        essential: true,
+      },
+      {
+        id: 'role',
+        label: 'Sua profissão',
+        why: 'Em duas palavras a cliente entende o que você faz.',
+        done: has(i.role),
+        tab: 'identity',
+        essential: true,
+      },
+      {
+        id: 'contact',
+        label: 'WhatsApp ou Instagram',
+        why: 'São os botões que a cliente mais toca.',
+        done: has(i.whatsapp) || has(i.instagram),
+        tab: 'identity',
+        essential: true,
+      },
+      {
+        id: 'services',
+        label: 'Serviços cadastrados',
+        why: 'Sem serviço o botão "Agendar" não tem o que oferecer.',
+        done: serviceCount > 0,
+        tab: 'services',
+        essential: true,
+      },
+      {
+        id: 'bio',
+        label: 'Frase curta embaixo do nome',
+        why: 'Diz o que você faz e onde, antes do primeiro toque.',
+        done: has(config.links.bio),
+        tab: 'links',
+        essential: false,
+      },
+      {
+        id: 'location',
+        label: 'Endereço',
+        why: 'Faz o botão "Como chegar" aparecer.',
+        done: has(i.address),
+        tab: 'identity',
+        essential: false,
+      },
+    ]);
+  }
 
   const items: ChecklistItem[] = [
     {
@@ -150,6 +212,10 @@ export function buildChecklist(config: SiteConfig, serviceCount: number): Checkl
     },
   ];
 
+  return finish(items);
+}
+
+function finish(items: ChecklistItem[]): ChecklistResult {
   const essential = items.filter(x => x.essential);
   const extras = items.filter(x => !x.essential);
 

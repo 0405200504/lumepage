@@ -72,6 +72,27 @@ export const SITE_PALETTES: SitePalette[] = [
     colors: { primary: '#1a1a1a', secondary: '#8a8a8a', background: '#ffffff', foreground: '#141414' },
   },
 
+  {
+    id: 'perola-grafite',
+    name: 'Pérola & Grafite',
+    group: 'nude',
+    bestFor: 'Quem quer o visual mais sóbrio e profissional possível, sem cor forte',
+    colors: { primary: '#3a3a3a', secondary: '#b9ada0', background: '#f6f3ee', foreground: '#262626' },
+  },
+  {
+    id: 'caramelo',
+    name: 'Caramelo & Off-white',
+    group: 'nude',
+    bestFor: 'Cabelo, bronzeamento e estúdios de clima quente e discreto',
+    colors: { primary: '#8a5a2e', secondary: '#d9b991', background: '#fbf8f3', foreground: '#2a241f' },
+  },
+  {
+    id: 'bordo-marfim',
+    name: 'Bordô & Marfim',
+    group: 'nude',
+    bestFor: 'Unhas e estúdios que querem ar de grife clássica',
+    colors: { primary: '#5a1c2c', secondary: '#a88d6d', background: '#fcfaf6', foreground: '#2a2224' },
+  },
   // ── Quentes ───────────────────────────────────────────────────────────────
   {
     id: 'terracota',
@@ -102,6 +123,20 @@ export const SITE_PALETTES: SitePalette[] = [
     colors: { primary: '#c1533f', secondary: '#e8a598', background: '#fff8f4', foreground: '#2e211d' },
   },
 
+  {
+    id: 'chocolate-pessego',
+    name: 'Chocolate & Pêssego',
+    group: 'quente',
+    bestFor: 'Maquiagem, sobrancelha e quem gosta de tom de pele quente',
+    colors: { primary: '#4a2c22', secondary: '#e3a98f', background: '#fbf5f0', foreground: '#2b1f1a' },
+  },
+  {
+    id: 'ambar-linho',
+    name: 'Âmbar & Linho',
+    group: 'quente',
+    bestFor: 'Spa, massagem e terapias com clima de luz de fim de tarde',
+    colors: { primary: '#8f5f1e', secondary: '#cdb48e', background: '#faf6ef', foreground: '#2d2619' },
+  },
   // ── Frias ─────────────────────────────────────────────────────────────────
   {
     id: 'sage',
@@ -139,6 +174,27 @@ export const SITE_PALETTES: SitePalette[] = [
     colors: { primary: '#46505a', secondary: '#9aa7b4', background: '#f6f8fa', foreground: '#1f262c' },
   },
 
+  {
+    id: 'marinho-latao',
+    name: 'Marinho & Latão',
+    group: 'fria',
+    bestFor: 'Clínicas, barbearias e quem quer parecer sério e caro',
+    colors: { primary: '#1f2f4a', secondary: '#b0905a', background: '#f7f7f4', foreground: '#1b2130' },
+  },
+  {
+    id: 'floresta-creme',
+    name: 'Verde Floresta & Creme',
+    group: 'fria',
+    bestFor: 'Estética natural, terapias e produtos veganos',
+    colors: { primary: '#2f4a3a', secondary: '#b7a989', background: '#f8f6f1', foreground: '#1f2a24' },
+  },
+  {
+    id: 'ardosia-rosa',
+    name: 'Ardósia & Rosa Pálido',
+    group: 'fria',
+    bestFor: 'Moderno e calmo, para quem acha o rosa tradicional demais',
+    colors: { primary: '#454d5a', secondary: '#d9b8b4', background: '#f6f5f3', foreground: '#262a31' },
+  },
   // ── Escuras ───────────────────────────────────────────────────────────────
   {
     id: 'noite-ouro',
@@ -169,6 +225,27 @@ export const SITE_PALETTES: SitePalette[] = [
     colors: { primary: '#c9ccd1', secondary: '#6b7480', background: '#16181c', foreground: '#eceef1' },
   },
 
+  {
+    id: 'chocolate-noturno',
+    name: 'Chocolate Noturno',
+    group: 'escura',
+    bestFor: 'Cabelo, barbearia e estúdios de ar aconchegante à noite',
+    colors: { primary: '#d9b48f', secondary: '#8a6a4f', background: '#1f1612', foreground: '#f4ebe2' },
+  },
+  {
+    id: 'preto-rose',
+    name: 'Preto & Rosé',
+    group: 'escura',
+    bestFor: 'Lash, nails e makeup com visual de boutique noturna',
+    colors: { primary: '#e0aeae', secondary: '#8c5e5e', background: '#141214', foreground: '#f5efef' },
+  },
+  {
+    id: 'marinho-noturno',
+    name: 'Marinho Noturno',
+    group: 'escura',
+    bestFor: 'Clínicas e profissionais que querem autoridade e sofisticação',
+    colors: { primary: '#d4bd85', secondary: '#6c7a95', background: '#10172a', foreground: '#eef0f5' },
+  },
   // ── Vibrantes ─────────────────────────────────────────────────────────────
   {
     id: 'rosa-moderno',
@@ -190,6 +267,20 @@ export const SITE_PALETTES: SitePalette[] = [
     group: 'vibrante',
     bestFor: 'Estética corporal e serviços com clima de verão',
     colors: { primary: '#12776f', secondary: '#8fd4cb', background: '#f3fbfa', foreground: '#122522' },
+  },
+  {
+    id: 'violeta-creme',
+    name: 'Violeta & Creme',
+    group: 'vibrante',
+    bestFor: 'Estética, bem-estar e marcas com personalidade',
+    colors: { primary: '#5b3a8e', secondary: '#c7b5e3', background: '#faf8fd', foreground: '#241b33' },
+  },
+  {
+    id: 'terra-mostarda',
+    name: 'Terra & Mostarda',
+    group: 'vibrante',
+    bestFor: 'Tranças, cachos e estúdios com energia e cor',
+    colors: { primary: '#a4522a', secondary: '#d9a24a', background: '#fcf8f1', foreground: '#2c2219' },
   },
 ];
 

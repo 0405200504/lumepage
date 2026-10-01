@@ -672,6 +672,128 @@ for (const look of SITE_LOOKS) {
 }
 
 // ============================================================================
+// 9c. Página de links (modo bio) — contrato, saneamento e renderização
+// ============================================================================
+
+group('9c. Página de links — formato "só links"');
+
+const { resolveLinks, LINK_KIND_LABEL } = cfgMod;
+
+const semLinks = normalizeConfig({ identity: { studioName: 'Studio X' } }, 'editorial-nude');
+check('config antiga (sem `links`) ganha o bloco completo com modo "site"',
+  semLinks.links.mode === 'site' && semLinks.links.items.length === 4 && semLinks.links.style === 'pill');
+check('modo inválido cai em "site"',
+  normalizeConfig({ links: { mode: 'hacker' } }, 'editorial-nude').links.mode === 'site');
+check('modo "links" é preservado',
+  normalizeConfig({ links: { mode: 'links' } }, 'editorial-nude').links.mode === 'links');
+
+const linksHostis = normalizeConfig({
+  links: {
+    mode: 'links', style: 'neon',
+    bio: '<script>x</script>Nail designer',
+    items: [
+      { id: 'a', kind: 'custom', label: 'Catálogo', url: 'javascript:alert(1)', enabled: true },
+      { id: 'b', kind: 'custom', label: '<b>Pinterest</b>', url: 'https://pinterest.com/x', enabled: true },
+      { id: 'c', kind: 'book', label: '', enabled: true },
+      { id: 'd', kind: 'book', label: 'Agendar de novo', enabled: true },
+      { id: 'e', kind: 'whatsapp', enabled: 'sim' },
+      ...Array.from({ length: 30 }, (_, i) => ({ id: `x${i}`, kind: 'custom', label: `L${i}`, url: `https://ok.com/${i}`, enabled: true })),
+    ],
+  },
+}, 'editorial-nude');
+check('link livre com javascript: é descartado (não vira botão morto nem perigoso)',
+  !linksHostis.links.items.some(i => i.url.includes('javascript')));
+check('rótulo de link é limpo de HTML',
+  linksHostis.links.items.find(i => i.url === 'https://pinterest.com/x')?.label === 'Pinterest');
+check('rótulo vazio de botão inteligente cai no padrão',
+  linksHostis.links.items.find(i => i.kind === 'book')?.label === LINK_KIND_LABEL.book);
+check('botão inteligente duplicado é colapsado em um só',
+  linksHostis.links.items.filter(i => i.kind === 'book').length === 1);
+check('estilo inválido cai no padrão', linksHostis.links.style === 'pill');
+check('frase curta é limpa de HTML', !/[<>]/.test(linksHostis.links.bio) && linksHostis.links.bio.includes('Nail designer'));
+check(`lista é cortada em ${LIMITS.maxLinks} botões`, linksHostis.links.items.length <= LIMITS.maxLinks,
+  String(linksHostis.links.items.length));
+check('booleano com lixo no botão cai em ligado',
+  linksHostis.links.items.find(i => i.kind === 'whatsapp')?.enabled === true);
+
+// resolveLinks: destino real de cada botão
+const cfgLinks = normalizeConfig({ ...cheio, links: { ...cheio.links, mode: 'links' } }, 'editorial-nude');
+const resolvidos = resolveLinks(cfgLinks);
+check('WhatsApp vira wa.me com o número da profissional',
+  resolvidos.find(l => l.kind === 'whatsapp')?.href?.startsWith('https://wa.me/5511999990000') === true);
+check('Instagram vira instagram.com/<handle>',
+  resolvidos.find(l => l.kind === 'instagram')?.href === 'https://instagram.com/marinanails');
+check('botão de agendar não tem href (abre o agendamento)',
+  resolvidos.find(l => l.kind === 'book')?.href === null);
+check('com cidade, o botão "Como chegar" aparece (mesma regra dos templates)',
+  resolvidos.some(l => l.kind === 'maps'));
+const semLugar = normalizeConfig({ ...cfgLinks, identity: { ...cfgLinks.identity, address: '', city: '' } }, 'editorial-nude');
+check('sem endereço nem cidade, o botão "Como chegar" some sozinho',
+  !resolveLinks(semLugar).some(l => l.kind === 'maps'));
+const semZap = normalizeConfig({ ...cfgLinks, identity: { ...cfgLinks.identity, whatsapp: '' } }, 'editorial-nude');
+check('sem WhatsApp, o botão de WhatsApp some sozinho',
+  !resolveLinks(semZap).some(l => l.kind === 'whatsapp'));
+const comIgDesligado = normalizeConfig({
+  ...cfgLinks,
+  links: { ...cfgLinks.links, items: cfgLinks.links.items.map(i => i.kind === 'instagram' ? { ...i, enabled: false } : i) },
+}, 'editorial-nude');
+check('botão desligado não aparece', !resolveLinks(comIgDesligado).some(l => l.kind === 'instagram'));
+
+// Renderização real
+{
+  let html = '';
+  let erro = '';
+  try {
+    const mod = await jiti.import<{ default: (p: unknown) => React.ReactElement }>('./components/site/templates/LinksPage.tsx');
+    const cfg = normalizeConfig({
+      ...cheio,
+      identity: { ...cheio.identity, photoUrl: 'https://ok.com/foto.webp', address: 'Rua A, 10' },
+      links: {
+        ...cheio.links, mode: 'links', style: 'card', bio: 'Nail designer em SP',
+        items: [...cheio.links.items, { id: 'cat', kind: 'custom', label: 'Meu catálogo', url: 'https://catalogo.exemplo.com', enabled: true }],
+      },
+    }, 'editorial-nude');
+    html = renderToStaticMarkup(
+      React.createElement(mod.default, { config: cfg, services: servicosDemo, onBook: () => {}, preview: false }),
+    );
+  } catch (e) {
+    erro = e instanceof Error ? e.message : String(e);
+  }
+  check('página de links: renderiza sem erro', !!html && !erro, erro);
+  if (html) {
+    check('página de links: tem exatamente um <h1>', (html.match(/<h1/g) || []).length === 1);
+    check('página de links: mostra o nome do estúdio', html.includes('Marina Nails'));
+    check('página de links: mostra a frase curta', html.includes('Nail designer em SP'));
+    check('página de links: botão de WhatsApp aponta para o número', html.includes('wa.me/5511999990000'));
+    check('página de links: botão "Como chegar" aparece com endereço', html.includes('google.com/maps'));
+    check('página de links: link livre aparece', html.includes('catalogo.exemplo.com') && html.includes('Meu catálogo'));
+    check('página de links: lista serviços com preço', html.includes('Alongamento em gel') && /R\$\s?150/.test(html));
+    check('página de links: NÃO vaza custo interno', !html.includes('4237') && !html.includes('1911'));
+    check('página de links: aplica o estilo escolhido', html.includes('data-style="card"'));
+    check('página de links: define variáveis de tema', html.includes('--lume-primary'));
+    check('página de links: todas as imagens têm alt',
+      (html.match(/<img/g) || []).length === (html.match(/alt="/g) || []).length);
+    check('página de links: links externos usam rel="noopener noreferrer"',
+      (html.match(/target="_blank"/g) || []).length <= (html.match(/noopener noreferrer/g) || []).length);
+  }
+}
+
+// Checklist muda de roteiro no modo links
+const clLinks = buildChecklist(cfgLinks, 2);
+check('checklist no modo links não cobra galeria nem headline',
+  !clLinks.items.some(i => i.id === 'gallery' || i.id === 'headline'));
+check('checklist no modo links cobra foto e contato',
+  clLinks.items.some(i => i.id === 'photo') && clLinks.items.some(i => i.id === 'contact'));
+
+// Catálogo cresceu: mínimos novos
+check('há pelo menos 30 paletas prontas', SITE_PALETTES.length >= 30, String(SITE_PALETTES.length));
+check('há pelo menos 15 duplas de fontes', SITE_FONT_PAIRS.length >= 15, String(SITE_FONT_PAIRS.length));
+check('há pelo menos 34 modelos prontos', SITE_LOOKS.length >= 34, String(SITE_LOOKS.length));
+check('nenhuma família nova ficou fora da folha de amostra do editor',
+  SITE_FONT_PAIRS.every(f => FONT_SAMPLE_HREF.includes(encodeURIComponent(f.titleFamily).replace(/%20/g, '+'))
+    && FONT_SAMPLE_HREF.includes(encodeURIComponent(f.bodyFamily).replace(/%20/g, '+'))));
+
+// ============================================================================
 // 10. Concorrência de agendamento (migração v31) — precisa escrever no banco
 // ============================================================================
 

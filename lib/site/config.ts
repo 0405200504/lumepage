@@ -20,6 +20,7 @@ import type {
   SiteConfig, SiteContent, SiteIdentity, SiteSectionId, SiteSections,
   SiteTheme, SiteSeo, SiteGalleryItem, SiteBeforeAfterItem,
   SiteTestimonialItem, SiteFaqItem, SiteStatItem,
+  SiteLinks, SiteLinkItem, SiteLinkKind, SiteLinkStyle,
 } from '@/types/site';
 import { SITE_SECTION_IDS, SITE_REQUIRED_SECTIONS } from '@/types/site';
 import { getTemplateMeta } from './templates';
@@ -51,6 +52,9 @@ export const LIMITS = {
   maxTestimonials: 24,
   maxFaq: 20,
   maxStats: 4,
+  linkLabel: 40,
+  bio: 160,
+  maxLinks: 12,
 } as const;
 
 // ============================================================================
@@ -254,6 +258,38 @@ function defaultSections(): SiteSections {
   return { order: [...SITE_SECTION_IDS], enabled };
 }
 
+/**
+ * Links padrão da página "só links". Os quatro botões inteligentes já nascem
+ * ligados — mas só APARECEM se a identidade tiver o dado (sem WhatsApp, o
+ * botão de WhatsApp não é desenhado; ver `resolveLinks`).
+ */
+export const LINK_KIND_LABEL: Record<SiteLinkKind, string> = {
+  book: 'Agendar horário',
+  whatsapp: 'Falar no WhatsApp',
+  instagram: 'Me seguir no Instagram',
+  maps: 'Como chegar',
+  custom: 'Link',
+};
+
+export function defaultLinkItems(): SiteLinkItem[] {
+  return [
+    { id: 'link-book', kind: 'book', label: LINK_KIND_LABEL.book, url: '', enabled: true },
+    { id: 'link-whatsapp', kind: 'whatsapp', label: LINK_KIND_LABEL.whatsapp, url: '', enabled: true },
+    { id: 'link-instagram', kind: 'instagram', label: LINK_KIND_LABEL.instagram, url: '', enabled: true },
+    { id: 'link-maps', kind: 'maps', label: LINK_KIND_LABEL.maps, url: '', enabled: true },
+  ];
+}
+
+export function defaultLinks(prof?: SiteSeedProfessional): SiteLinks {
+  return {
+    mode: 'site',
+    bio: cleanText(prof?.public_bio || prof?.description, LIMITS.bio),
+    style: 'pill',
+    showServices: true,
+    items: defaultLinkItems(),
+  };
+}
+
 function defaultSeo(prof?: SiteSeedProfessional): SiteSeo {
   const brand = cleanText(prof?.brand_name || prof?.name, LIMITS.title);
   return {
@@ -279,6 +315,7 @@ export function defaultSiteConfig(templateId: string, prof?: SiteSeedProfessiona
     theme,
     content: defaultContent(prof),
     sections: defaultSections(),
+    links: defaultLinks(prof),
     seo: defaultSeo(prof),
   };
 }
@@ -381,6 +418,50 @@ function normalizeSections(raw: unknown, fallback: SiteSections): SiteSections {
   for (const id of SITE_REQUIRED_SECTIONS) enabled[id] = true;
 
   return { order, enabled };
+}
+
+const LINK_KINDS: SiteLinkKind[] = ['book', 'whatsapp', 'instagram', 'maps', 'custom'];
+const LINK_STYLES: SiteLinkStyle[] = ['pill', 'card', 'outline'];
+
+function normalizeLinks(raw: unknown, fallback: SiteLinks): SiteLinks {
+  const l = obj(raw);
+  const mode = l.mode === 'links' ? 'links' : 'site';
+  const style = LINK_STYLES.includes(l.style as SiteLinkStyle) ? (l.style as SiteLinkStyle) : fallback.style;
+
+  const items: SiteLinkItem[] = [];
+  const seenSmart = new Set<SiteLinkKind>();
+  for (const rawItem of arr(l.items).slice(0, LIMITS.maxLinks * 2)) {
+    const it = obj(rawItem);
+    const kind = LINK_KINDS.includes(it.kind as SiteLinkKind) ? (it.kind as SiteLinkKind) : 'custom';
+    // Botão inteligente só existe uma vez — dois "Agendar" seriam confusos.
+    if (kind !== 'custom') {
+      if (seenSmart.has(kind)) continue;
+      seenSmart.add(kind);
+    }
+    const url = kind === 'custom' ? cleanUrl(it.url) : '';
+    // Link livre sem destino válido não vai para a página (seria um botão morto).
+    if (kind === 'custom' && !url) continue;
+    items.push({
+      id: cleanId(it.id, 'link'),
+      kind,
+      label: cleanText(it.label, LIMITS.linkLabel) || LINK_KIND_LABEL[kind],
+      url,
+      enabled: bool(it.enabled, true),
+    });
+    if (items.length >= LIMITS.maxLinks) break;
+  }
+
+  // Config antiga (sem `items`) ou lista apagada: volta aos quatro padrão.
+  // Mas se a profissional desligou alguns de propósito, respeitamos a lista dela.
+  const finalItems = Array.isArray(l.items) ? items : fallback.items;
+
+  return {
+    mode,
+    bio: str(l.bio, fallback.bio, LIMITS.bio),
+    style,
+    showServices: bool(l.showServices, fallback.showServices),
+    items: finalItems,
+  };
 }
 
 function normalizeTheme(raw: unknown, fallback: SiteTheme): SiteTheme {
@@ -512,6 +593,7 @@ export function normalizeConfig(
       footer: { note: str(footer.note, B.footer.note, LIMITS.short) },
     },
     sections: normalizeSections(c.sections, base.sections),
+    links: normalizeLinks(c.links, base.links),
     seo: {
       title: str(seo.title, base.seo.title, LIMITS.title),
       description: str(seo.description, base.seo.description, 160),
@@ -545,4 +627,57 @@ export function resolveVisibleSections(
       default: return true;
     }
   });
+}
+
+
+// ============================================================================
+// Página de links — destino real de cada botão
+// ============================================================================
+
+export interface ResolvedLink {
+  id: string;
+  kind: SiteLinkKind;
+  label: string;
+  /** null = abre o agendamento (não é navegação). */
+  href: string | null;
+  external: boolean;
+}
+
+/**
+ * Transforma a lista configurada nos botões que REALMENTE aparecem: ligados e
+ * com destino. O WhatsApp sem número e o mapa sem endereço somem sozinhos — a
+ * profissional não precisa lembrar de desligar o que não tem.
+ */
+export function resolveLinks(config: SiteConfig): ResolvedLink[] {
+  const i = config.identity;
+  const digits = (i.whatsapp || '').replace(/\D/g, '');
+  const wa = digits.length >= 10
+    ? `https://wa.me/${digits.startsWith('55') ? digits : `55${digits}`}?text=${encodeURIComponent(`Olá! Vim pela sua página e gostaria de falar com ${i.studioName || 'você'}.`)}`
+    : null;
+  const ig = i.instagram ? `https://instagram.com/${i.instagram.replace(/^@/, '')}` : null;
+  const mapsQuery = [i.address, i.city].filter(Boolean).join(', ');
+  const maps = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}` : null;
+
+  const out: ResolvedLink[] = [];
+  for (const item of config.links.items) {
+    if (!item.enabled) continue;
+    switch (item.kind) {
+      case 'book':
+        out.push({ id: item.id, kind: 'book', label: item.label, href: null, external: false });
+        break;
+      case 'whatsapp':
+        if (wa) out.push({ id: item.id, kind: 'whatsapp', label: item.label, href: wa, external: true });
+        break;
+      case 'instagram':
+        if (ig) out.push({ id: item.id, kind: 'instagram', label: item.label, href: ig, external: true });
+        break;
+      case 'maps':
+        if (maps) out.push({ id: item.id, kind: 'maps', label: item.label, href: maps, external: true });
+        break;
+      case 'custom':
+        if (item.url) out.push({ id: item.id, kind: 'custom', label: item.label, href: item.url, external: true });
+        break;
+    }
+  }
+  return out;
 }

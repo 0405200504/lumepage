@@ -59,6 +59,14 @@ export default async function MinhaPaginaPage() {
     ? normalizeConfig(site.draft_config, templateId, professional ?? undefined)
     : defaultSiteConfig(templateId, professional ?? undefined);
 
+  // "Publicar mudanças" só aparece quando o rascunho realmente difere do que
+  // está no ar. Compara as duas versões normalizadas (mesma função, mesmo
+  // template) para que um campo novo com default não conte como mudança.
+  const hasUnpublished = !!site && site.status === 'published' && !!site.published_config
+    && JSON.stringify(config) !== JSON.stringify(
+      normalizeConfig(site.published_config, templateId, professional ?? undefined),
+    );
+
   return (
     <SiteEditor
       professionalId={professionalId}
@@ -70,6 +78,7 @@ export default async function MinhaPaginaPage() {
       services={services}
       appUrl={base}
       isDemo={isDemo(professionalId)}
+      initialHasUnpublished={hasUnpublished}
     />
   );
 }

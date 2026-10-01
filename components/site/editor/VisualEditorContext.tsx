@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type EditableTabId =
   | 'template' | 'identity' | 'theme' | 'content' | 'services'
-  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address';
+  | 'gallery' | 'beforeAfter' | 'testimonials' | 'extras' | 'sections' | 'address' | 'links';
 
 export interface VisualElementPayload {
   tab: EditableTabId;

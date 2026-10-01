@@ -33,6 +33,7 @@ import Terracota from './templates/Terracota';
 import ClinicSage from './templates/ClinicSage';
 import EditorialBronze from './templates/EditorialBronze';
 import RoseChampagne from './templates/RoseChampagne';
+import LinksPage from './templates/LinksPage';
 
 /**
  * Único ponto de ligação entre o id do template (banco) e o componente (código).
@@ -78,9 +79,15 @@ export function SiteRenderer({ slug, templateId, config, services, preview }: Si
     setBooking({ open: true, serviceIds: serviceId ? [serviceId] : undefined });
   }, [preview]);
 
+  // Formato "só links": mesma config, mesma paleta, mesmo agendamento — outro
+  // desenho. A escolha mora em `config.links.mode`, não no template.
+  const isLinks = safeConfig.links.mode === 'links';
+
   return (
     <>
-      <Template config={safeConfig} services={services} sections={sections} onBook={onBook} preview={preview} />
+      {isLinks
+        ? <LinksPage config={safeConfig} services={services} onBook={onBook} preview={preview} />
+        : <Template config={safeConfig} services={services} sections={sections} onBook={onBook} preview={preview} />}
 
       {!preview && (
         <BookingModal

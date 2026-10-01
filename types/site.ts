@@ -206,6 +206,47 @@ export interface SiteContent {
 }
 
 // ============================================================================
+// Links da bio (modo "só links", estilo Linktree)
+// ============================================================================
+
+/**
+ * Formato da página pública. `site` é a página completa (capa, serviços,
+ * galeria…). `links` é a página de links: foto, nome e uma lista de botões
+ * para a cliente escolher o que quer — agendar, WhatsApp, Instagram, mapa e
+ * links livres. Trocar o formato não apaga nada: os dois leem o mesmo config.
+ */
+export type SitePageMode = 'site' | 'links';
+
+/**
+ * Tipos de botão. Os quatro primeiros são "inteligentes": pegam o destino da
+ * identidade (WhatsApp, Instagram, endereço) ou abrem o agendamento real da
+ * Lume. `custom` é um link livre (Pinterest, cardápio, catálogo, PIX…).
+ */
+export type SiteLinkKind = 'book' | 'whatsapp' | 'instagram' | 'maps' | 'custom';
+
+export interface SiteLinkItem {
+  id: string;
+  kind: SiteLinkKind;
+  /** Texto do botão. */
+  label: string;
+  /** Só para `custom`; nos demais o destino é derivado da identidade. */
+  url: string;
+  enabled: boolean;
+}
+
+export type SiteLinkStyle = 'pill' | 'card' | 'outline';
+
+export interface SiteLinks {
+  mode: SitePageMode;
+  /** Frase curta embaixo do nome (ex.: "Nail designer em Moema · Agende online"). */
+  bio: string;
+  style: SiteLinkStyle;
+  /** Lista os serviços com preço e botão de agendar, abaixo dos links. */
+  showServices: boolean;
+  items: SiteLinkItem[];
+}
+
+// ============================================================================
 // SEO
 // ============================================================================
 
@@ -233,6 +274,8 @@ export interface SiteConfig {
   theme: SiteTheme;
   content: SiteContent;
   sections: SiteSections;
+  /** Página de links (modo bio). Configs antigas não têm: normalizeConfig completa. */
+  links: SiteLinks;
   seo: SiteSeo;
 }
 

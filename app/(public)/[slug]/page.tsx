@@ -94,6 +94,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = config.seo.title || [brand, role, city].filter(Boolean).join(' — ');
   const description =
     config.seo.description ||
+    (config.links.mode === 'links' ? config.links.bio : '') ||
     config.content.hero.subheadline ||
     `Conheça o trabalho de ${brand} e agende seu horário online, em poucos toques.`;
 

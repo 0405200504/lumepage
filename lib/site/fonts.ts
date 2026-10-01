@@ -172,6 +172,66 @@ export const SITE_FONT_PAIRS: SiteFontPair[] = [
     titleTracking: '-0.01em',
     href: 'https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap',
   },
+  {
+    id: 'lora-worksans',
+    name: 'Clássica Moderna',
+    mood: 'Serifa calma e legível com sans honesta. Profissional sem esforço.',
+    titleFamily: 'Lora',
+    bodyFamily: 'Work Sans',
+    titleStack: "'Lora', Georgia, 'Times New Roman', serif",
+    bodyStack: "'Work Sans', ui-sans-serif, system-ui, sans-serif",
+    titleWeight: 500,
+    titleTracking: '-0.01em',
+    href: 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Work+Sans:wght@300;400;500;600;700&display=swap',
+  },
+  {
+    id: 'ebgaramond-raleway',
+    name: 'Tradição Elegante',
+    mood: 'Garamond de livro com sans fina e aberta. Cara de marca consolidada.',
+    titleFamily: 'EB Garamond',
+    bodyFamily: 'Raleway',
+    titleStack: "'EB Garamond', Garamond, Georgia, serif",
+    bodyStack: "'Raleway', ui-sans-serif, system-ui, sans-serif",
+    titleWeight: 500,
+    titleTracking: 'normal',
+    href: 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Raleway:wght@300;400;500;600;700&display=swap',
+  },
+  {
+    id: 'librebaskerville-sourcesans',
+    name: 'Confiável e Clara',
+    mood: 'Serifa firme, de jornal, com corpo muito legível. Transmite seriedade.',
+    titleFamily: 'Libre Baskerville',
+    bodyFamily: 'Source Sans 3',
+    titleStack: "'Libre Baskerville', Baskerville, Georgia, serif",
+    bodyStack: "'Source Sans 3', ui-sans-serif, system-ui, sans-serif",
+    titleWeight: 400,
+    titleTracking: '-0.01em',
+    href: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600;700&display=swap',
+  },
+  {
+    id: 'spectral-manrope',
+    name: 'Editorial Atual',
+    mood: 'Serifa de revista contemporânea com sans geométrica. Sofisticada e jovem.',
+    titleFamily: 'Spectral',
+    bodyFamily: 'Manrope',
+    titleStack: "'Spectral', Georgia, serif",
+    bodyStack: "'Manrope', ui-sans-serif, system-ui, sans-serif",
+    titleWeight: 500,
+    titleTracking: '-0.01em',
+    href: 'https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Manrope:wght@300;400;500;600;700&display=swap',
+  },
+  {
+    id: 'josefin-lato',
+    name: 'Geométrica Retrô',
+    mood: 'Título geométrico de boutique dos anos 30 com corpo neutro. Charmosa.',
+    titleFamily: 'Josefin Sans',
+    bodyFamily: 'Lato',
+    titleStack: "'Josefin Sans', ui-sans-serif, system-ui, sans-serif",
+    bodyStack: "'Lato', ui-sans-serif, system-ui, sans-serif",
+    titleWeight: 600,
+    titleTracking: '0.02em',
+    href: 'https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Lato:wght@300;400;700&display=swap',
+  },
 ];
 
 export const DEFAULT_FONT_PAIR_ID = 'playfair-inter';
@@ -199,10 +259,16 @@ export const FONT_SAMPLE_HREF =
   + '&family=Cormorant+Garamond:wght@300;400;500;600'
   + '&family=DM+Sans'
   + '&family=DM+Serif+Display'
+  + '&family=EB+Garamond:wght@400;500;600'
   + '&family=Fraunces:wght@400;500;600'
   + '&family=Inter:wght@400;500;600'
+  + '&family=Josefin+Sans:wght@400;500;600'
   + '&family=Jost:wght@400;500;600'
   + '&family=Karla:wght@400;500;600'
+  + '&family=Lato:wght@400;700'
+  + '&family=Libre+Baskerville:wght@400;700'
+  + '&family=Lora:wght@400;500;600'
+  + '&family=Manrope:wght@400;500;600'
   + '&family=Marcellus'
   + '&family=Montserrat:wght@400;500;600'
   + '&family=Nunito:wght@400;500;600'
@@ -211,4 +277,8 @@ export const FONT_SAMPLE_HREF =
   + '&family=Playfair+Display:wght@400;500;600'
   + '&family=Poppins:wght@400;500;600'
   + '&family=Quicksand:wght@400;500;600'
+  + '&family=Raleway:wght@400;500;600'
+  + '&family=Source+Sans+3:wght@400;500;600'
+  + '&family=Spectral:wght@400;500;600'
+  + '&family=Work+Sans:wght@400;500;600'
   + '&display=swap';

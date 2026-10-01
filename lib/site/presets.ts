@@ -10,7 +10,7 @@
 import type { SiteConfig, SiteContent, SiteSectionId, SiteSections, SiteTheme } from '@/types/site';
 import { SITE_SECTION_IDS } from '@/types/site';
 import { getTemplateMeta, DEFAULT_TEMPLATE_ID } from './templates';
-import { cleanText, cleanUrl, cleanDigits, cleanHandle, cleanEmail, LIMITS, type SiteSeedProfessional } from './config';
+import { cleanText, cleanUrl, cleanDigits, cleanHandle, cleanEmail, defaultLinks, LIMITS, type SiteSeedProfessional } from './config';
 import { safeHex } from './theme';
 
 export type NicheId =
@@ -597,6 +597,7 @@ export function buildNicheConfig(
       footer: { note: '' },
     },
     sections,
+    links: defaultLinks(prof),
     seo: {
       title: `${brand} — ${role}`,
       description: preset.content.hero.subheadline,
@@ -714,6 +715,7 @@ export function buildBlankConfig(
         contact: true,
       },
     },
+    links: defaultLinks(prof),
     seo: {
       title: brand,
       description: '',

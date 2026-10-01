@@ -19,10 +19,11 @@
 export const RESERVED_SLUGS = new Set<string>([
   // Rotas reais de app/ hoje
   'admin', 'admin-login', 'login', 'register', 'dashboard', 'agendar', 'ficha',
+  'bem-vinda', 'esqueci-senha', 'redefinir-senha', 'acesso',
   'lp', 'privacidade', 'termos', 'auth', 'salon', 'api', 'embed',
   // Arquivos estáticos servidos de public/
   'sw', 'manifest', 'favicon', 'robots', 'sitemap', 'icon-192', 'icon-512',
-  'apple-touch-icon', 'embed-exemplo',
+  'icon-maskable-512', 'apple-touch-icon', 'embed-exemplo', 'splash',
   // Reservas de futuro / marca / genéricos perigosos
   'lume', 'app', 'www', 'blog', 'ajuda', 'suporte', 'contato', 'sobre',
   'planos', 'precos', 'checkout', 'pagamento', 'conta', 'perfil', 'config',
