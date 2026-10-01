@@ -38,10 +38,18 @@ import {
  * recebe a tela inteira. Por isso, no app instalado do iPhone a cena aqui é
  * medida pela tela (screen.height), não pela janela — e fica do tamanho
  * exato da do painel.
+ *
+ * A detecção não pode olhar a janela (innerWidth/innerHeight): é justamente
+ * ela que o iOS ainda não acertou nesse instante. Olha só se é o app
+ * instalado do iPhone (navigator.standalone) e se a tela está em pé (pela
+ * orientação da tela, não pelas medidas da janela). E o fundo da página é a
+ * cor da borda de baixo do cetim já com a vinheta (#2d0614): se o iOS
+ * mesmo assim deixar alguma sobra embaixo, ela some no tecido em vez de
+ * virar uma faixa clara.
  */
 export const dynamic = 'force-static';
 
-const LAUNCH_SCRIPT = `(function(){var d=document.documentElement;try{if(navigator.standalone&&Math.abs(innerWidth-screen.width)<2&&screen.height>screen.width){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}}catch(e){}var alvo=/^\\/dashboard(\\/|$)/.test(location.pathname)?location.href:'/dashboard',ir=function(){location.replace(alvo)},logada=false,calma=false;try{logada=localStorage.getItem(${JSON.stringify(
+const LAUNCH_SCRIPT = `(function(){var d=document.documentElement;try{var o=screen.orientation&&screen.orientation.type||'',deitado=/landscape/.test(o)||Math.abs(window.orientation||0)===90;if(navigator.standalone===true&&!deitado&&screen.height>screen.width){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}}catch(e){}var alvo=/^\\/dashboard(\\/|$)/.test(location.pathname)?location.href:'/dashboard',ir=function(){location.replace(alvo)},logada=false,calma=false;try{logada=localStorage.getItem(${JSON.stringify(
   PANEL_FLAG_KEY,
 )})==='1'}catch(e){}try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}if(!logada||calma){d.dataset.splash='still';ir();return}d.dataset.splash='launch';var t0=Date.now(),marca=function(){try{sessionStorage.setItem(${JSON.stringify(
   SPLASH_HANDOFF_KEY,
@@ -58,7 +66,7 @@ const LAUNCH_HTML = `<!DOCTYPE html>
 <meta name="robots" content="noindex">
 <title>Lume</title>
 <script>${LAUNCH_SCRIPT}</script>
-<style>html,body{margin:0;height:100%;background:#4a0e22;overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
+<style>html,body{margin:0;height:100%;background:#2d0614;overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
 </head>
 <body>
 <div id="lume-splash" aria-hidden="true">${SPLASH_MARKUP}</div>

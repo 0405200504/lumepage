@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v8'; // v8: tela de abertura instantânea (/abertura)
+const CACHE = 'lume-shell-v9'; // v9: tela de abertura com a altura certa no iPhone — troca a guardada
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png'];
 
 // Tela de abertura instantânea (app/abertura/route.ts): um HTML avulso que
@@ -54,9 +54,14 @@ function redeComFallback(req) {
   }).catch(() => caches.match(req).then((hit) => hit || caches.match('/dashboard')));
 }
 
-async function navegarPainel(event) {
-  const req = event.request;
-
+/**
+ * `fundo` recebe o trabalho que continua depois da resposta (buscar o painel,
+ * renovar a tela de abertura guardada). Quem segura o worker vivo por ele é o
+ * waitUntil chamado NA HORA do evento, lá embaixo: depois de um await o
+ * Safari pode recusar o waitUntil — e aí o iPhone matava o worker antes de
+ * renovar a tela guardada, ficando para sempre com a versão antiga.
+ */
+async function navegarPainel(req, fundo) {
   // 1) A tela de abertura chamando o painel: entrega o que já foi buscado.
   //    (Se a busca falhou, segue pelo caminho normal.)
   if (antecipado && antecipado.url === req.url && Date.now() - antecipado.at < ANTECIPADO_TTL) {
@@ -80,11 +85,7 @@ async function navegarPainel(event) {
       antecipado = { url: req.url, at: Date.now(), res };
       // Atualiza a tela de abertura guardada para a próxima vez (deploy novo).
       const renovada = cache.add(ABERTURA).catch(() => {});
-      // Segura o worker vivo até a busca terminar. Num navegador que recuse
-      // o waitUntil depois de um await, a abertura não pode cair por isso.
-      try {
-        event.waitUntil(Promise.all([res, renovada]));
-      } catch (e) {}
+      fundo(Promise.all([res, renovada]));
       return abertura;
     }
   }
@@ -126,7 +127,17 @@ self.addEventListener('fetch', (event) => {
   // Só navegações de documento (HTML): network-first com fallback offline.
   // As do painel passam antes pela abertura instantânea (acima).
   if (req.mode === 'navigate') {
-    event.respondWith(ehPainel(url) ? navegarPainel(event) : redeComFallback(req));
+    if (ehPainel(url)) {
+      let soltar;
+      const trabalho = new Promise((r) => { soltar = r; });
+      const resposta = navegarPainel(req, soltar);
+      // Sem trabalho de fundo (ou se der erro), solta junto com a resposta.
+      resposta.then(() => soltar(), () => soltar());
+      event.respondWith(resposta);
+      event.waitUntil(trabalho.catch(() => {}));
+    } else {
+      event.respondWith(redeComFallback(req));
+    }
     return;
   }
 
