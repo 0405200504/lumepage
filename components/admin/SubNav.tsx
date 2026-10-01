@@ -87,6 +87,7 @@ export const INICIO_NAV: SubNavItem[] = [
 export const FINANCEIRO_NAV: SubNavItem[] = [
   { href: '/admin/finance', label: 'Receita' },
   { href: '/admin/subscriptions', label: 'Assinaturas' },
+  { href: '/admin/subscriptions/orphans', label: 'Compras órfãs' },
   { href: '/admin/reports', label: 'Relatórios' },
   { href: '/admin/plans', label: 'Planos' },
 ];

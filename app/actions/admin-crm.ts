@@ -4,12 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { assertAdmin, adminActionError } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/audit';
 import { getSupabaseAdmin, supabase } from '@/lib/supabase/client';
-import { isMissingTable, MIGRATION_CRM, HublaEventRow } from '@/lib/admin/crm';
-import { parseHublaEvent, matchPlan, intentOf, accessEndsAt } from '@/lib/subscription/hubla';
+import { isMissingTable, MIGRATION_CRM } from '@/lib/admin/crm';
+import { PLAN_LABEL, resolvePlan } from '@/lib/subscription/entitlements';
+import {
+  getOrphanPurchase, claimOrphanPurchase, dismissOrphanPurchase, resendOrphanWelcome,
+} from '@/lib/subscription/orphans';
 
 /**
  * Ações do CRM do admin: metadados por conta, notas, tarefas, alertas adiados,
- * conciliação de pagamentos da Hubla e criação de administradores.
+ * compras órfãs da Hubla e criação de administradores.
  * Toda action começa por assertAdmin() e termina em logAdminAction().
  */
 
@@ -172,72 +175,62 @@ export async function snoozeAlertAction(key: string, days: number): Promise<Resu
   }
 }
 
-// ───────────────────────────── Conciliação da Hubla ─────────────────────────────
+// ───────────────────────────── Compras órfãs da Hubla ─────────────────────────────
+
+function revalidateOrphans(professionalId?: string | null) {
+  revalidate(professionalId);
+  revalidatePath('/admin/subscriptions');
+  revalidatePath('/admin/subscriptions/orphans');
+}
 
 /**
- * Liga um pagamento sem dona a uma conta e, se for um evento de liberação,
- * aplica o plano do mesmo jeito que o webhook faria. Fica na auditoria.
+ * Liga uma compra órfã (todos os avisos da mesma compradora) a uma conta e, se
+ * o pagamento vale, aplica o plano — mesmo caminho do webhook e do cadastro.
  */
-export async function linkHublaEventAction(idempotencyKey: string, professionalId: string): Promise<Result & { applied?: string }> {
+export async function linkOrphanPurchaseAction(key: string, professionalId: string): Promise<Result & { applied?: string }> {
   try {
     const admin = await assertAdmin();
-    const { data: evData, error: evErr } = await db().from('hubla_webhook_events').select('*').eq('idempotency_key', idempotencyKey).maybeSingle();
-    if (evErr) return fail(evErr);
-    const ev = evData as HublaEventRow | null;
-    if (!ev) return { success: false, error: 'Evento não encontrado.' };
+    if (!professionalId) return { success: false, error: 'Escolha a conta.' };
+    const before = await getOrphanPurchase(key);
+    if (!before) return { success: false, error: 'Essa compra não está mais pendente — atualize a página.' };
 
-    const { data: profData } = await db().from('professionals')
-      .select('id, subscription_plan, subscription_status, subscription_ends_at, hubla_subscription_id')
-      .eq('id', professionalId).maybeSingle();
-    if (!profData) return { success: false, error: 'Conta não encontrada.' };
-    const prof = profData as { id: string; subscription_plan: string | null; subscription_status: string | null; subscription_ends_at: string | null };
+    const r = await claimOrphanPurchase({ key, professionalId, via: 'manual', linkedBy: admin.email });
+    const applied = r ? `${PLAN_LABEL[resolvePlan(r.plan)]} ativo · ${r.months === 12 ? 'anual' : `${r.months} mês(es)`}` : 'vinculada sem ativar (pagamento não vale mais)';
 
-    const event = parseHublaEvent(ev.payload);
-    const intent = intentOf(event.type);
-    let applied = 'vinculado';
-
-    if (intent === 'activate') {
-      const match = matchPlan(event.offerIds);
-      const months = event.billingCycleMonths || match?.months || 1;
-      const plan = (match?.plan ?? prof.subscription_plan ?? 'start') as string;
-      const endsAt = accessEndsAt(months);
-      const patch: Record<string, unknown> = { subscription_status: 'active', subscription_plan: plan, subscription_ends_at: endsAt };
-      if (event.subscriptionId) patch.hubla_subscription_id = event.subscriptionId;
-      const { error } = await db().from('professionals').update(patch).eq('id', prof.id);
-      if (error) return { success: false, error: error.message };
-      await db().from('subscription_events').insert({
-        professional_id: prof.id, plan_key: plan, status: 'active', current_period_end: endsAt,
-        note: `Hubla · ${event.type} · conciliado manualmente por ${admin.email}`, changed_by: admin.email,
-      });
-      applied = `ativado · ${plan} · ${months} mês(es)`;
-    }
-
-    const { error: upErr } = await db().from('hubla_webhook_events')
-      .update({ professional_id: prof.id, result: intent === 'activate' ? 'activated_manual' : 'linked_manual', processed_at: new Date().toISOString() })
-      .eq('idempotency_key', idempotencyKey);
-    if (upErr) return { success: false, error: upErr.message };
-
-    await logAdminAction({ action: 'hubla.event.link', entityType: 'professional', entityId: prof.id, before: { result: ev.result }, after: { idempotencyKey, applied } });
-    revalidate(prof.id);
-    revalidatePath('/admin/subscriptions');
+    await logAdminAction({
+      action: 'hubla.orphan.link', entityType: 'professional', entityId: professionalId,
+      before: { key, status: before.status, events: before.events.length }, after: { applied },
+    });
+    revalidateOrphans(professionalId);
     return { success: true, applied };
   } catch (e) {
-    return adminActionError(e, 'Erro ao conciliar o pagamento.');
+    return adminActionError(e, 'Erro ao vincular a compra.');
   }
 }
 
-export async function dismissHublaEventAction(idempotencyKey: string): Promise<Result> {
+export async function dismissOrphanPurchaseAction(key: string): Promise<Result> {
   try {
     await assertAdmin();
-    const { error } = await db().from('hubla_webhook_events')
-      .update({ result: 'dismissed', processed_at: new Date().toISOString() }).eq('idempotency_key', idempotencyKey);
-    if (error) return fail(error);
-    await logAdminAction({ action: 'hubla.event.dismiss', entityType: 'hubla_event', entityId: idempotencyKey });
-    revalidatePath('/admin/subscriptions');
-    revalidatePath('/admin');
+    const n = await dismissOrphanPurchase(key);
+    if (!n) return { success: false, error: 'Essa compra não está mais pendente — atualize a página.' };
+    await logAdminAction({ action: 'hubla.orphan.dismiss', entityType: 'hubla_event', entityId: key, after: { events: n } });
+    revalidateOrphans();
     return { success: true };
   } catch (e) {
-    return adminActionError(e, 'Erro ao descartar o evento.');
+    return adminActionError(e, 'Erro ao descartar a compra.');
+  }
+}
+
+export async function resendOrphanWelcomeAction(key: string): Promise<Result> {
+  try {
+    const admin = await assertAdmin();
+    const error = await resendOrphanWelcome(key, admin.email);
+    if (error) return { success: false, error };
+    await logAdminAction({ action: 'hubla.orphan.welcome', entityType: 'hubla_event', entityId: key });
+    revalidatePath('/admin/subscriptions/orphans');
+    return { success: true };
+  } catch (e) {
+    return adminActionError(e, 'Erro ao reenviar o e-mail.');
   }
 }
 

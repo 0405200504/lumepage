@@ -146,11 +146,60 @@ function layout(opts: {
 </html>`;
 }
 
-/** Conta criada — os 7 dias de teste começaram. */
-export function welcomeEmail(p: { name?: string | null; email: string; trialEndsAt?: string | null }): EmailContent {
+/**
+ * Conta criada — os 7 dias de teste começaram. Com `paid`, a conta nasceu já
+ * ligada a uma compra da Hubla (compra órfã vinculada no cadastro): nada de
+ * "teste grátis" para quem acabou de pagar.
+ */
+export function welcomeEmail(p: {
+  name?: string | null;
+  email: string;
+  trialEndsAt?: string | null;
+  paid?: { plan: PlanType; endsAt?: string | null; months?: number | null } | null;
+}): EmailContent {
   const url = appUrl();
   const vence = dataBR(p.trialEndsAt);
   const oi = primeiroNome(p.name);
+
+  if (p.paid) {
+    const plano = PLAN_LABEL[p.paid.plan];
+    const ate = dataBR(p.paid.endsAt);
+    const ciclo = p.paid.months === 12 ? 'anual' : p.paid.months === 1 ? 'mensal' : null;
+    return {
+      subject: `Sua conta na Lume está pronta — plano ${plano} ativo`,
+      text: [
+        `Oi, ${oi}!`,
+        '',
+        `Sua conta na Lume está criada e o plano ${plano} já está ativo.`,
+        '',
+        `E-mail de acesso: ${p.email}`,
+        `Plano: ${plano}${ciclo ? ` (${ciclo})` : ''}`,
+        ...(ate ? [`Acesso garantido até: ${ate}`] : []),
+        `Painel: ${url}/login`,
+        '',
+        'A senha é a que você escolheu no cadastro. Se não lembrar, use "Esqueci minha senha" na tela de login.',
+        '',
+        'Uma dica pra começar: cadastre seus serviços e horários primeiro. Em poucos minutos seu link de agendamento já está pronto pra ir na bio.',
+        '',
+        'Qualquer dúvida, é só responder este e-mail.',
+        'Equipe Lume',
+      ].join('\n'),
+      html: layout({
+        titulo: `Oi, ${escape(oi)}! Sua conta está pronta.`,
+        intro: `O pagamento já está ligado à sua conta e o plano <strong>${escape(plano)}</strong> está ativo.`,
+        destaque: [
+          { rotulo: 'E-mail de acesso', valor: p.email },
+          { rotulo: 'Plano', valor: `${plano}${ciclo ? ` (${ciclo})` : ''}` },
+          ...(ate ? [{ rotulo: 'Acesso garantido até', valor: ate }] : []),
+        ],
+        corpo: [
+          'A senha é a que você escolheu no cadastro. Se não lembrar, use <strong>Esqueci minha senha</strong> na tela de login.',
+          'Uma dica pra começar: cadastre seus serviços e horários primeiro. Em poucos minutos seu link de agendamento já está pronto pra ir na bio.',
+        ],
+        botao: { texto: 'Entrar no painel', url: `${url}/login` },
+      }),
+    };
+  }
 
   return {
     subject: 'Sua conta na Lume está pronta — 7 dias liberados',
@@ -182,6 +231,54 @@ export function welcomeEmail(p: { name?: string | null; email: string; trialEnds
         'Uma dica pra começar: cadastre seus serviços e horários primeiro. Em poucos minutos seu link de agendamento já está pronto pra ir na bio.',
       ],
       botao: { texto: 'Entrar no painel', url: `${url}/login` },
+    }),
+  };
+}
+
+/**
+ * Pagou na Hubla e ainda não tem conta (compra órfã). O link já leva o e-mail
+ * da compra preenchido: é esse e-mail que liga o pagamento à conta nova.
+ */
+export function orphanWelcomeEmail(p: {
+  name?: string | null;
+  email: string;
+  plan: PlanType | null;
+  months?: number | null;
+  signupUrl: string;
+}): EmailContent {
+  const oi = primeiroNome(p.name);
+  const plano = p.plan ? PLAN_LABEL[p.plan] : null;
+  const ciclo = p.months === 12 ? 'anual' : p.months === 1 ? 'mensal' : null;
+  const oQue = plano ? `o plano ${plano}` : 'a sua assinatura';
+
+  return {
+    subject: 'Pagamento aprovado! Falta só criar sua conta na Lume',
+    text: [
+      `Oi, ${oi}! Seu pagamento foi aprovado.`,
+      '',
+      `Falta um passo: criar sua conta na Lume. Assim que você criar, ${oQue} ativa na hora.`,
+      '',
+      `Criar minha conta: ${p.signupUrl}`,
+      '',
+      `Use este mesmo e-mail no cadastro: ${p.email}`,
+      'É ele que liga o pagamento à sua conta.',
+      '',
+      'Já criou a conta com outro e-mail? Responda esta mensagem dizendo qual, que a gente liga o pagamento pra você.',
+      '',
+      'Equipe Lume',
+    ].join('\n'),
+    html: layout({
+      titulo: `Pagamento aprovado, ${escape(oi)}! Falta só criar sua conta.`,
+      intro: `Assim que você criar sua conta na Lume, ${escape(oQue)} ativa na hora. Leva um minuto.`,
+      destaque: [
+        { rotulo: 'E-mail da compra', valor: p.email },
+        ...(plano ? [{ rotulo: 'Plano', valor: `${plano}${ciclo ? ` (${ciclo})` : ''}` }] : []),
+      ],
+      corpo: [
+        'Use <strong>este mesmo e-mail</strong> no cadastro: é ele que liga o pagamento à sua conta. O botão abaixo já abre o cadastro com ele preenchido.',
+        'Já criou a conta com outro e-mail? Responda esta mensagem dizendo qual, que a gente liga o pagamento pra você.',
+      ],
+      botao: { texto: 'Criar minha conta', url: p.signupUrl },
     }),
   };
 }

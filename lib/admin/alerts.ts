@@ -3,6 +3,7 @@ import { DEMO_PROFESSIONAL_ID } from '@/lib/demo';
 import { daysAgoISO } from './queries';
 import { accountState } from './account-state';
 import { getSnoozes, isMissingTable } from './crm';
+import { orphanKeyOf } from '@/lib/subscription/orphans';
 
 /**
  * ALERTAS PROATIVOS
@@ -41,7 +42,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
       .eq('bot_paused', true).not('client_phone', 'like', '_debug_%').limit(2000),
     db().from('whatsapp_settings').select('professional_id, uazapi_url, uazapi_token'),
     getSnoozes(),
-    db().from('hubla_webhook_events').select('idempotency_key, email').eq('result', 'unmatched').limit(50),
+    db().from('hubla_webhook_events').select('idempotency_key, email, subscription_id').eq('result', 'unmatched').limit(200),
     db().from('admin_tasks').select('id, title, due_date').is('done_at', null).lte('due_date', toISO(new Date())).limit(50),
     db().from('admin_account_meta').select('professional_id, next_follow_up').lte('next_follow_up', toISO(new Date())).limit(50),
   ]);
@@ -55,13 +56,15 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
   const alerts: AdminAlert[] = [];
 
   // Pagamento que chegou pela Hubla sem conta correspondente = dinheiro na mesa.
-  const unmatched = unmatchedRes.error && !isMissingTable(unmatchedRes.error) ? [] : ((unmatchedRes.data || []) as { idempotency_key: string; email: string | null }[]);
+  // Uma venda chega em até três avisos; o alerta conta compradoras, não avisos.
+  const unmatchedRows = unmatchedRes.error && !isMissingTable(unmatchedRes.error) ? [] : ((unmatchedRes.data || []) as { idempotency_key: string; email: string | null; subscription_id: string | null }[]);
+  const unmatched = [...new Map(unmatchedRows.map(u => [orphanKeyOf(u), u])).values()];
   if (unmatched.length) {
     alerts.push({
       id: 'hubla-unmatched', level: 'bad', count: unmatched.length,
-      title: `${unmatched.length} pagamento(s) sem conta vinculada`,
+      title: `${unmatched.length} compra(s) paga(s) sem conta na Lume`,
       detail: unmatched.slice(0, 4).map(u => u.email ?? 'sem e-mail').join(', '),
-      href: '/admin/subscriptions#sem-dona',
+      href: '/admin/subscriptions/orphans',
     });
   }
 

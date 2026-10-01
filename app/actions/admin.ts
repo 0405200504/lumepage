@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { dbService } from '@/lib/supabase/db';
 import { isAdminSession } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/audit';
+import { claimOrphanOnSignup } from '@/lib/subscription/orphans';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { ProfessionalStatus, Professional, Profile } from '@/types/database';
 
@@ -156,18 +157,22 @@ export async function createProfessionalAction(input: CreateProfessionalInput) {
       });
     }
 
+    // Conta criada para quem já pagou na Hubla com este e-mail: ativa o plano.
+    const paid = isSupabase ? await claimOrphanOnSignup(cleanEmail, finalProfId, 'admin') : null;
+
     await logAdminAction({
       action: 'professional.create',
       entityType: 'professional',
       entityId: finalProfId,
-      after: { name, brand_name: brandName, slug: slugLower, email: cleanEmail },
+      after: { name, brand_name: brandName, slug: slugLower, email: cleanEmail, ...(paid ? { hubla_plan: paid.plan } : {}) },
     });
     revalidateAdmin();
 
     return { 
       success: true, 
       professional: newProf,
-      tempPassword
+      tempPassword,
+      plan: paid?.plan ?? null,
     };
   } catch (e: any) {
     console.error('Erro ao cadastrar profissional:', e);
