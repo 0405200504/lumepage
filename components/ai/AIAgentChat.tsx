@@ -21,6 +21,7 @@ function stripMarkdown(text: string): string {
     .replace(/__(.*?)__/g, '$1')        // __negrito__
     .replace(/\*(.*?)\*/g, '$1')        // *itálico*
     .replace(/`([^`]+)`/g, '$1')        // `código`
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, txt: string, url: string) => (txt === url ? url : `${txt}: ${url}`)) // [link](url)
     .replace(/^\s*[*+]\s+/gm, '- ')     // listas "* item" -> "- item"
     .replace(/^#{1,6}\s+/gm, '');       // títulos "# "
 }
@@ -69,21 +70,42 @@ const relativeTime = (ts: number): string => {
 
 // Sugestões da tela vazia
 const QUICK_PROMPTS = [
+  'Quanto faturei este mês?',
   'Quais agendamentos eu tenho hoje?',
+  'Quem são minhas melhores clientes?',
   'Marcar um horário para amanhã',
-  'Cadastrar uma cliente nova',
-  'Anotar uma tarefa',
 ];
 
 const TOOL_LABEL: Record<string, string> = {
+  getRevenue: 'Faturamento consultado',
+  getFinanceReport: 'Financeiro consultado',
+  listFinanceEntries: 'Lançamentos consultados',
+  getSalesReport: 'Vendas consultadas',
+  getAppointments: 'Agenda consultada',
+  checkAvailability: 'Horários livres consultados',
+  listClients: 'Contatos consultados',
+  getClientDetails: 'Ficha da cliente consultada',
+  listServices: 'Serviços consultados',
+  getAvailability: 'Disponibilidade consultada',
+  listTimeBlocks: 'Bloqueios consultados',
+  listWaitlist: 'Lista de espera consultada',
+  listTasks: 'Tarefas consultadas',
+  getAccountInfo: 'Conta consultada',
   createAppointment: 'Agendamento marcado',
   createClient: 'Cliente cadastrada',
   createTask: 'Tarefa anotada',
-  getAppointments: 'Agenda consultada',
+  cancelAppointment: 'Agendamento cancelado',
+  completeAppointment: 'Atendimento concluído',
+  rescheduleAppointment: 'Agendamento remarcado',
+  markTaskDone: 'Tarefa atualizada',
+  addTransaction: 'Lançado no financeiro',
 };
 
+/** Consultas (get/list/check) só leem o painel; o resto muda dados. */
+const isReadTool = (name: string) => /^(get|list|check)/.test(name);
+
 /**
- * Assistente de IA.
+ * A Ana, assistente de IA.
  *
  * O desenho é o de um chat de IA de referência (ChatGPT, Claude): a
  * conversa é o conteúdo. A resposta da assistente é texto corrido, sem
@@ -284,10 +306,10 @@ export function AIAgentChat() {
           data-tour="ai-chat"
           onClick={() => setIsOpen(true)}
           className="hidden lg:flex fixed bottom-6 right-6 h-11 items-center gap-2 px-5 bg-surface shadow-[var(--shadow-md)] rounded-full text-body-sm font-semibold text-wine-700 hover:bg-wine-50 transition-ui z-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-          aria-label="Abrir Assistente IA"
+          aria-label="Abrir a Ana, sua assistente"
         >
           <Sparkles className="h-[18px] w-[18px]" aria-hidden />
-          Assistente
+          Ana
         </button>
       )}
 
@@ -302,7 +324,7 @@ export function AIAgentChat() {
       {isOpen && (
         <div
           role="dialog"
-          aria-label="Assistente IA"
+          aria-label="Ana, sua assistente"
           className="fixed inset-0 lg:inset-auto lg:bottom-6 lg:right-6 lg:w-[420px] lg:h-[680px] lg:max-h-[calc(100vh-3rem)] bg-surface lg:border lg:border-line z-50 flex flex-col lg:rounded-hero lg:shadow-[var(--shadow-lg)] overflow-hidden animate-slide-up"
         >
           {/* Topo: fino e neutro — a conversa é o conteúdo. */}
@@ -316,12 +338,12 @@ export function AIAgentChat() {
                 <ChevronLeft className="h-5 w-5" />
               </button>
             ) : (
-              <button type="button" onClick={() => setIsOpen(false)} aria-label="Fechar o assistente" className={iconBtn}>
+              <button type="button" onClick={() => setIsOpen(false)} aria-label="Fechar a Ana" className={iconBtn}>
                 <X className="h-5 w-5" />
               </button>
             )}
             <p className="flex-1 text-center text-label font-semibold text-heading truncate">
-              {showHistory ? 'Conversas' : 'Assistente'}
+              {showHistory ? 'Conversas' : 'Ana'}
             </p>
             <button type="button" onClick={startNewChat} aria-label="Nova conversa" title="Nova conversa" className={iconBtn}>
               <Plus className="h-5 w-5" />
@@ -386,9 +408,9 @@ export function AIAgentChat() {
                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-wine-50 text-wine-700 mb-5">
                     <Sparkles className="h-6 w-6" aria-hidden />
                   </span>
-                  <h2 className="text-h3 text-heading">Como posso ajudar hoje?</h2>
+                  <h2 className="text-h3 text-heading">Oi! Eu sou a Ana.</h2>
                   <p className="text-body-sm text-n-500 mt-1.5 max-w-xs">
-                    Marco horários, cadastro clientes, anoto tarefas e respondo sobre a sua agenda.
+                    Pergunte sobre faturamento, agenda, clientes e horários, ou peça pra eu marcar, cadastrar e anotar.
                   </p>
                   <button
                     type="button"
@@ -423,16 +445,23 @@ export function AIAgentChat() {
                       <div key={m.id} className="text-body text-heading leading-relaxed whitespace-pre-wrap break-words">
                         {stripMarkdown(m.content)}
 
-                        {/* Ações que a IA executou no sistema */}
+                        {/* O que a Ana consultou ou fez no sistema */}
                         {m.toolInvocations?.map((toolInvocation) => {
                           const { toolName, toolCallId, state } = toolInvocation;
-                          return state === 'result' ? (
+                          if (state !== 'result') {
+                            return (
+                              <div key={toolCallId} className="mt-2 flex items-center gap-1.5 text-caption text-n-500">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                {isReadTool(toolName) ? 'Consultando o painel…' : 'Fazendo isso no sistema…'}
+                              </div>
+                            );
+                          }
+                          // Ação que falhou não ganha "✓": a própria Ana explica o motivo no texto.
+                          const failed = (toolInvocation.result as { success?: boolean } | undefined)?.success === false;
+                          if (failed) return null;
+                          return (
                             <div key={toolCallId} className="mt-2 flex items-center gap-1.5 text-caption font-medium text-success">
                               <span aria-hidden>✓</span> {TOOL_LABEL[toolName] ?? 'Concluído'}
-                            </div>
-                          ) : (
-                            <div key={toolCallId} className="mt-2 flex items-center gap-1.5 text-caption text-n-500">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Fazendo isso no sistema…
                             </div>
                           );
                         })}

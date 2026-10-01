@@ -299,7 +299,7 @@ export const VoiceMode: React.FC<{
           // Ela fala primeiro, como quem atende: cumprimento curto pelo nome.
           reply({
             type: 'response.create',
-            response: { instructions: `Cumprimente ${firstName || 'a profissional'} pelo primeiro nome numa frase bem curta e pergunte em que pode ajudar.` },
+            response: { instructions: `Cumprimente ${firstName || 'a profissional'} pelo primeiro nome numa frase bem curta, diga que é a Ana e pergunte em que pode ajudar.` },
           });
         };
 
@@ -313,7 +313,7 @@ export const VoiceMode: React.FC<{
           headers: { 'Content-Type': 'application/sdp' },
         });
         const conn = await r.json().catch(() => ({}));
-        if (!r.ok || !conn.sdp) throw new Error(conn.error || 'Não foi possível conectar à assistente agora.');
+        if (!r.ok || !conn.sdp) throw new Error(conn.error || 'Não foi possível falar com a Ana agora.');
         run.callId = conn.callId;
         firstName = conn.firstName || '';
         if (typeof conn.minutesLeftMonth === 'number') setMinutesLeft(conn.minutesLeftMonth);
@@ -426,7 +426,7 @@ export const VoiceMode: React.FC<{
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Conversa por voz com a assistente"
+      aria-label="Conversa por voz com a Ana"
       className="fixed inset-0 z-50 flex flex-col text-white select-none animate-fade-up"
       style={{ background: 'radial-gradient(120% 80% at 50% 38%, #3b0c1b 0%, #22060f 55%, #120207 100%)' }}
     >
@@ -436,7 +436,7 @@ export const VoiceMode: React.FC<{
             <Minimize2 className="h-5 w-5" />
           </button>
           <div className="text-center">
-            <p className="text-label font-semibold text-white/80">Assistente Lume</p>
+            <p className="text-label font-semibold text-white/80">Ana</p>
             {minutesLeft !== null && phase !== 'error' && (
               <p className="text-micro text-white/45 mt-0.5">cerca de {minutesLeft} min de voz neste mês</p>
             )}
@@ -448,7 +448,7 @@ export const VoiceMode: React.FC<{
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
-        <button type="button" onClick={interrupt} aria-label={phase === 'speaking' ? 'Interromper a assistente' : 'Esfera da assistente'} className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/60">
+        <button type="button" onClick={interrupt} aria-label={phase === 'speaking' ? 'Interromper a Ana' : 'Ana'} className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/60">
           <VoiceOrb size={orbSize} state={orbState} getLevel={getLevel} />
         </button>
 

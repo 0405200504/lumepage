@@ -431,7 +431,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
                 tela de celular) e este bloco fica FIXO no rodapé da gaveta.
                 Sem uma linha separando os dois, o corte da rolagem cai no meio
                 da lista e o último título de grupo visível aparece encostado
-                em "Assistente IA", como se este pertencesse àquele grupo. */}
+                em "Ana, sua assistente", como se este pertencesse àquele grupo. */}
             <div className="shrink-0 border-t border-white/15 pt-2">
               <div className="px-3 pb-1">
                 <button
@@ -440,7 +440,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, name, brandName, slug, a
                   className="rail-row w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
                 >
                   <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
-                  <span className="flex-1 text-left truncate">Assistente IA</span>
+                  <span className="flex-1 text-left truncate">Ana, sua assistente</span>
                 </button>
               </div>
               <div className="safe-sheet">

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     // 0. Garante que a chave da OpenAI está configurada
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY não configurada no ambiente.');
-      return new Response('Assistente indisponível: chave da IA não configurada.', { status: 503 });
+      return new Response('A Ana está indisponível: chave da IA não configurada.', { status: 503 });
     }
 
     // 1. Obter a sessão e o ID da profissional autenticada
