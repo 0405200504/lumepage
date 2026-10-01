@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { ToastProvider } from '@/components/ui/Toast';
 import PwaRegister from '@/components/PwaRegister';
 import { fontVars } from '@/lib/fonts';
+import { APPLE_STARTUP_IMAGES } from '@/lib/ui/appleStartupImages';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,6 +14,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Lume',
+    // Tela de abertura do iPhone = primeiro quadro da cortina (AppSplash).
+    // Sem isto, abrir o app instalado dava um clarão branco antes dela.
+    startupImage: APPLE_STARTUP_IMAGES,
   },
   icons: {
     icon: '/favicon.ico',
@@ -20,6 +24,11 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'JfFJ7P7yrmYhivbsXtX6CZVnXApR6pOpBcyAtdxYIXw',
+  },
+  // O Next só emite `mobile-web-app-capable`; o Safari ainda olha a versão
+  // com prefixo para honrar as telas de abertura acima.
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
   },
 };
 
