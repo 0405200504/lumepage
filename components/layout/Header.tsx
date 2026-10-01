@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { RefreshCw, HelpCircle, ChevronRight, ShieldAlert, Menu } from 'lucide-react';
+import { HelpCircle, ChevronRight, ShieldAlert, Menu } from 'lucide-react';
 import { OPEN_ONBOARDING_EVENT } from '@/components/onboarding/OnboardingTour';
 import { OPEN_NAV_EVENT } from '@/components/layout/Sidebar';
 import { Avatar } from '@/components/ui/Avatar';
+import { LumeLogo } from '@/components/ui/LumeLogo';
 
 interface HeaderProps {
   /** Opcionais: se omitidos, o título vem da rota (app da profissional).
@@ -106,13 +107,18 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
  * gramática de botão de ícone das referências, e ela resolve o problema de
  * ter dois botões retangulares de tamanhos diferentes lado a lado no canto.
  *
- * No celular ela colapsa: em repouso mostra título e subtítulo; ao rolar,
- * encolhe e mantém só o título com as ações.
+ * A logo da Lume fica pequena no meio da faixa. No computador, uma grade
+ * de três colunas iguais (1fr · logo · 1fr) a mantém no centro exato sem
+ * deixar o título passar por baixo dela: o título ocupa a coluna da
+ * esquerda e trunca antes de chegar na logo.
+ *
+ * No celular a grade de colunas iguais deixaria uns 75px para o título, e
+ * até "Agenda" cortaria. Lá a logo fica centrada no espaço que sobra entre
+ * o título e o "?": título curto, ela cai perto do meio da tela; título
+ * longo, ele trunca e a logo continua inteira.
  */
 export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, avatarUrl, role }) => {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isRefreshing, startRefresh] = useTransition();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -133,7 +139,8 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
       className="sticky top-0 z-30 select-none pt-safe transition-ui bg-surface border-b border-line shadow-xs"
     >
       <div
-        className="flex items-center gap-3 px-4 lg:px-8 max-w-[1400px] mx-auto w-full
+        className="flex items-center gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:content-center
+          px-4 lg:px-8 max-w-[1400px] mx-auto w-full
           h-[84px] data-[scrolled]:h-[60px] lg:h-20 lg:data-[scrolled]:h-[68px]
           transition-[height] duration-[var(--dur-base)] ease-[var(--ease-out)]"
         data-scrolled={scrolled || undefined}
@@ -166,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
           </button>
         </div>
 
-        <div className="min-w-0 flex-1" data-tour="page-header">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1" data-tour="page-header">
           {crumb && (
             <p className="hidden lg:flex items-center gap-1 text-caption font-medium text-n-500 mb-1">
               <Link href="/dashboard" className="hover:text-heading transition-ui">Painel</Link>
@@ -182,9 +189,20 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
           )}
         </div>
 
-        {/* Ações em disco. Ajuda e atualizar são do mesmo peso — nenhuma das
-            duas merece um botão com rótulo disputando com o título ao lado. */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex-1 flex justify-center lg:col-start-2 lg:row-start-1">
+          <Link
+            href="/dashboard"
+            aria-label="Lume — ir para o Início"
+            className="shrink-0 rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
+          >
+            <LumeLogo variant="wine" className="h-6 max-w-none" />
+          </Link>
+        </div>
+
+        {/* Ações em disco, sem rótulo disputando com o título. O botão de
+            atualizar os dados saiu daqui: as telas já se atualizam sozinhas
+            depois de cada ação, e ele só tirava espaço da logo. */}
+        <div className="flex items-center gap-2 shrink-0 lg:col-start-3 lg:row-start-1 lg:justify-self-end">
           {role === 'professional' && (
             <button
               type="button"
@@ -196,17 +214,6 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
               <HelpCircle className="h-[18px] w-[18px]" aria-hidden />
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => startRefresh(() => router.refresh())}
-            disabled={isRefreshing}
-            aria-label="Atualizar os dados"
-            title="Atualizar os dados sem recarregar a página"
-            className="icon-chip h-10 w-10 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine-700"
-          >
-            <RefreshCw className={`h-[18px] w-[18px] ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden />
-          </button>
 
           {/* No celular o avatar é a porta das configurações (perfil, foto,
               regras da agenda): é o canto em que todo app guarda "sua conta". */}
