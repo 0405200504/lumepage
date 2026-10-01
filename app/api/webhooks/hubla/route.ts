@@ -9,14 +9,9 @@ import {
   subscriptionEndedEmail,
 } from '@/lib/mail-templates';
 import { resolvePlan } from '@/lib/subscription/entitlements';
-import {
-  parseHublaEvent,
-  matchPlan,
-  intentOf,
-  accessEndsAt,
-  digits,
-  type HublaEvent,
-} from '@/lib/subscription/hubla';
+import { parseHublaEvent, intentOf, digits, type HublaEvent } from '@/lib/subscription/hubla';
+import { applyActivation, recordSubscriptionEvent } from '@/lib/subscription/activation';
+import { welcomeOrphanBuyer } from '@/lib/subscription/orphans';
 
 /**
  * Webhook da Hubla — libera/corta o acesso conforme a compra.
@@ -112,57 +107,37 @@ export async function POST(req: NextRequest) {
   const prof = await findProfessional(db, event);
   if (!prof) {
     // Pagou, mas não achamos a conta (comprou com outro e-mail, ou ainda nem
-    // se cadastrou). Fica registrado como órfão pra conciliação manual no admin.
+    // se cadastrou). Vira compra órfã: fila no admin (/admin/subscriptions/orphans)
+    // e vínculo automático quando ela se cadastrar com este e-mail.
     console.warn(`[hubla] Sem conta correspondente para ${event.email ?? 'e-mail ausente'} (${event.type}).`);
     await closeLog(db, logId, { result: 'unmatched', professionalId: null });
+    // Pagamento aprovado e ninguém para receber: avisa a compradora com o link
+    // do cadastro. Best-effort — falha de e-mail não vira retentativa da Hubla.
+    if (intent === 'activate') {
+      await welcomeOrphanBuyer(db, event).catch((e) =>
+        console.warn('[hubla] Falha no aviso da compra órfã:', e instanceof Error ? e.message : e),
+      );
+    }
     return NextResponse.json({ received: true, matched: false, reason: 'conta não encontrada' });
   }
-
-  const match = matchPlan(event.offerIds);
 
   try {
     // ---------- 5. aplicar ----------
     if (intent === 'activate') {
-      // Ciclo real da assinatura tem prioridade sobre o do link (cobre upgrade,
-      // cupom e mudança de oferta feitas direto no painel da Hubla).
-      const months = event.billingCycleMonths || match?.months || 1;
-      // Sem de-para, NÃO inventamos plano: liberamos o acesso mantendo o que a
-      // conta já tinha (ou Start). Dar Premium por engano é pior que dar pouco.
-      const plan = (match?.plan ?? prof.subscription_plan ?? 'start') as string;
+      const { plan, months, endsAt, match, wasActive } = await applyActivation(db, prof, event, {
+        changedBy: 'hubla-webhook',
+      });
 
-      const patch: Record<string, unknown> = {
-        subscription_status: 'active',
-        subscription_plan: plan,
-        subscription_ends_at: accessEndsAt(months),
-      };
-      if (event.subscriptionId) patch.hubla_subscription_id = event.subscriptionId;
-
-      // Os três eventos de liberação (pagamento, assinatura ativada, acesso
-      // concedido) chegam pela MESMA compra. Sem esta checagem, a mesma venda
-      // renderia três e-mails de parabéns.
-      const jaEstavaAtiva =
-        prof.subscription_status === 'active' &&
-        prof.subscription_plan === plan &&
-        prof.hubla_subscription_id === event.subscriptionId;
-
-      const { error } = await db.from('professionals').update(patch).eq('id', prof.id);
-      if (error) throw error;
-
-      if (!jaEstavaAtiva) {
+      // Sem esta checagem, a mesma venda renderia três e-mails de parabéns.
+      if (!wasActive) {
         await notify(prof, subscriptionActivatedEmail({
           name: prof.name,
           plan: resolvePlan(plan),
-          endsAt: patch.subscription_ends_at as string,
+          endsAt,
           months,
         }));
       }
 
-      await history(db, prof.id, {
-        plan,
-        status: 'active',
-        endsAt: patch.subscription_ends_at as string,
-        note: `Hubla · ${event.type}${match ? ` · checkout ${match.checkoutId}` : ' · oferta não mapeada'} · ${months}m`,
-      });
       await closeLog(db, logId, { result: match ? 'activated' : 'activated_unmapped', professionalId: prof.id });
 
       console.log(`[hubla] Acesso liberado: ${prof.email} → ${plan} (${months}m).`);
@@ -191,11 +166,12 @@ export async function POST(req: NextRequest) {
 
       if (!jaEstavaCancelada) await notify(prof, subscriptionEndedEmail({ name: prof.name }));
 
-      await history(db, prof.id, {
+      await recordSubscriptionEvent(db, prof.id, {
         plan: prof.subscription_plan,
         status: 'canceled',
         endsAt: new Date().toISOString(),
         note: `Hubla · ${event.type}`,
+        changedBy: 'hubla-webhook',
       });
       await closeLog(db, logId, { result: 'revoked', professionalId: prof.id });
 
@@ -217,11 +193,12 @@ export async function POST(req: NextRequest) {
       await notify(prof, paymentFailedEmail({ name: prof.name, endsAt: prof.subscription_ends_at }));
     }
 
-    await history(db, prof.id, {
+    await recordSubscriptionEvent(db, prof.id, {
       plan: prof.subscription_plan,
       status: 'past_due',
       endsAt: null,
       note: `Hubla · ${event.type}`,
+      changedBy: 'hubla-webhook',
     });
     await closeLog(db, logId, { result: 'past_due', professionalId: prof.id });
 
@@ -353,23 +330,4 @@ async function closeLog(
     .update({ result, professional_id: professionalId, processed_at: new Date().toISOString() })
     .eq('idempotency_key', logId)
     .then(undefined, () => {});
-}
-
-/** Histórico que o admin já lê (migration v33). Best-effort. */
-async function history(
-  db: Db,
-  professionalId: string,
-  { plan, status, endsAt, note }: { plan: string | null; status: string; endsAt: string | null; note: string },
-) {
-  const { error } = await db.from('subscription_events').insert({
-    professional_id: professionalId,
-    plan_key: plan,
-    status,
-    current_period_end: endsAt,
-    note,
-    changed_by: 'hubla-webhook',
-  });
-  if (error && error.code !== '42P01') {
-    console.warn('[hubla] Histórico não registrado:', error.message);
-  }
 }

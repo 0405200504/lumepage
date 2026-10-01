@@ -12,6 +12,9 @@ import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { logAccessEvent } from '@/lib/access-tokens';
 import { sendMail } from '@/lib/mail';
 import { welcomeEmail } from '@/lib/mail-templates';
+import { claimOrphanOnSignup } from '@/lib/subscription/orphans';
+import { resolvePlan } from '@/lib/subscription/entitlements';
+import { slugLivre } from '@/lib/auth/onboarding';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
 import { validateSlug } from '@/lib/site/slug';
 
@@ -361,11 +364,18 @@ export async function loginAction(email: string, password?: string) {
  * O e-mail NÃO leva a senha: quem se cadastra escolhe a própria senha e já a
  * conhece. Mandar em texto num canal encaminhável só criaria risco.
  */
-async function enviarBoasVindas(email: string, nome: string) {
+async function enviarBoasVindas(email: string, nome: string, paid?: { plan: string; endsAt: string; months: number } | null) {
   try {
     // Mesmo prazo do DEFAULT de `trial_ends_at` (migration v26).
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const r = await sendMail({ to: email, ...welcomeEmail({ name: nome, email, trialEndsAt }) });
+    const r = await sendMail({
+      to: email,
+      ...welcomeEmail({
+        name: nome, email, trialEndsAt,
+        // Conta nascida de uma compra órfã: o e-mail fala do plano pago, não do teste.
+        paid: paid ? { plan: resolvePlan(paid.plan), endsAt: paid.endsAt, months: paid.months } : null,
+      }),
+    });
     if (r.sent) console.log(`[cadastro] Boas-vindas enviadas para ${email}.`);
   } catch (e) {
     console.warn('[cadastro] Falha ao enviar boas-vindas:', e instanceof Error ? e.message : e);
@@ -400,12 +410,9 @@ export async function registerProfessionalAction(data: {
       const professionalId = crypto.randomUUID();
       
       // 2. Criar profissional no banco de dados (regras e settings padrão são criados internamente em dbService.createProfessional)
-      const slug = data.brandName
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // remove acentos
-        .replace(/[^a-z0-9]+/g, "-") // substitui caracteres especiais por -
-        .replace(/(^-|-$)+/g, ""); // remove traços no início/fim
+      // Slug LIVRE: o endereço é único no banco, e dois "Studio Bella" faziam o
+      // segundo cadastro morrer num erro de chave duplicada.
+      const slug = await slugLivre(data.brandName, professionalId);
 
       await dbService.createProfessional({
         id: professionalId,
@@ -462,8 +469,10 @@ export async function registerProfessionalAction(data: {
           }
         }
 
-        await enviarBoasVindas(cleanEmail, data.name);
-        return { success: true, user: authData.user };
+        // Pagou na Hubla antes de ter conta? O plano ativa agora.
+        const paid = await claimOrphanOnSignup(cleanEmail, professionalId, 'signup');
+        await enviarBoasVindas(cleanEmail, data.name, paid);
+        return { success: true, user: authData.user, plan: paid?.plan ?? null };
       }
 
       // Caminho preferencial: API Admin (sem email, sem rate limit, já confirmado)
@@ -494,8 +503,10 @@ export async function registerProfessionalAction(data: {
         }
       }
 
-      await enviarBoasVindas(cleanEmail, data.name);
-      return { success: true, user: authData.user };
+      // Pagou na Hubla antes de ter conta? O plano ativa agora.
+      const paid = await claimOrphanOnSignup(cleanEmail, professionalId, 'signup');
+      await enviarBoasVindas(cleanEmail, data.name, paid);
+      return { success: true, user: authData.user, plan: paid?.plan ?? null };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao realizar cadastro.' };
     }

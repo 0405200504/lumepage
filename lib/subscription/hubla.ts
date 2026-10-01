@@ -48,6 +48,10 @@ export type HublaEvent = {
   billingCycleMonths: number | null;
   /** `?sck=` do link de checkout — usamos pra carimbar o id da profissional */
   sck: string | null;
+  /** valor cobrado, em centavos (fatura ou parcelamento) */
+  amountCents: number | null;
+  /** nome legível da oferta comprada, ex: "START MENSAL" */
+  offerName: string | null;
 };
 
 /**
@@ -137,6 +141,10 @@ export function parseHublaEvent(payload: unknown): HublaEvent {
   const singular = str(obj(ev.product).id);
   if (singular) offerIds.push(singular);
 
+  const firstOffer = products.flatMap((p) => arr(p.offers).map(obj))[0] ?? {};
+  const offerName = str(firstOffer.name) || str(obj(ev.product).name) || str(products[0]?.name);
+  const total = obj(invoice.amount).totalCents ?? obj(obj(ev.smartInstallment).amount).totalCents;
+
   const fullName =
     str(user.fullName) ||
     [str(user.firstName), str(user.lastName)].filter(Boolean).join(' ').trim() ||
@@ -163,6 +171,8 @@ export function parseHublaEvent(payload: unknown): HublaEvent {
     subscriptionStatus: str(subscription.status),
     billingCycleMonths: typeof cycle === 'number' ? cycle : null,
     sck: str(obj(session.params).sck) || sckFromUrl(str(session.url)),
+    amountCents: typeof total === 'number' ? total : null,
+    offerName: offerName || null,
   };
 }
 
