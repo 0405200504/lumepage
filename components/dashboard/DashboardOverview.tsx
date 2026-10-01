@@ -289,8 +289,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="mt-5 flex-1">
             {deHoje.length > 0 ? (
               <ol className="relative">
-                {/* conector vertical da linha do tempo */}
-                <span className="absolute left-[38px] top-2 bottom-2 w-px bg-n-200" aria-hidden />
                 {hojeVisiveis.map((app, i) => {
                   const m = statusMeta(app.status);
                   return (
@@ -304,9 +302,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                         </span>
                         {/* Ponto de 6px na cor do STATUS — o marcador da
                             linha do tempo era vinho para todos, e vinho é a
-                            marca, não um estado. O anel de 4px que o
-                            destacava do conector some junto. */}
-                        <span className={`relative shrink-0 mt-3.5 h-1.5 w-1.5 rounded-full ring-[3px] ring-surface ${m.dot}`} aria-hidden />
+                            marca, não um estado. Sem conector vertical: ele
+                            cortava a coluna dos horários. */}
+                        <span className={`shrink-0 mt-3.5 h-1.5 w-1.5 rounded-full ${m.dot}`} aria-hidden />
                         <span className="min-w-0 flex-1 pb-1">
                           <span className="flex items-center gap-2 justify-between">
                             <span className="text-body-sm font-semibold text-heading truncate">{app.client_name}</span>
