@@ -65,6 +65,13 @@ export async function sweepExpiredVoiceCalls(professionalId?: string) {
   return (data ?? []).length;
 }
 
+/** Segredo que o job da guarda manda (gerado pela migração v43; só o service_role lê). */
+export async function getVoiceGuardToken() {
+  const { data, error } = await db().from('ai_voice_guard').select('token').eq('id', 1).maybeSingle();
+  if (error) throw new BudgetUnavailable();
+  return (data?.token as string | undefined) || null;
+}
+
 /** A chamada, se for desta profissional. */
 export async function getOwnVoiceCall(callId: string, professionalId: string) {
   const { data, error } = await db()

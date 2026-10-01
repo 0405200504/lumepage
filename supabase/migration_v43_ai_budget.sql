@@ -10,9 +10,9 @@
 -- Sem esta migração a conversa por voz fica DESLIGADA (o teto não teria
 -- onde ser contado). O chat de texto continua funcionando.
 --
--- ⚠️ ANTES DE RODAR, troque no fim do arquivo:
---    - 'https://SEU_DOMINIO' pelo domínio real do app (o mesmo NEXT_PUBLIC_APP_URL)
---    - 'COLE_AQUI_O_CRON_SECRET' pelo valor real do CRON_SECRET
+-- ⚠️ ANTES DE RODAR, troque no fim do arquivo 'https://SEU_DOMINIO' pelo
+-- domínio real do app (o mesmo NEXT_PUBLIC_APP_URL). Não precisa de
+-- CRON_SECRET: a guarda usa um segredo próprio, gerado aqui no banco.
 -- Rode UMA vez no SQL Editor do Supabase. Idempotente.
 -- =====================================================================
 
@@ -108,26 +108,39 @@ $$;
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
+-- Segredo da guarda. Fica só aqui no banco: o job abaixo manda, a rota
+-- /api/cron/voice-guard confere lendo desta tabela (só o service_role lê).
+-- Não depende do CRON_SECRET, que na Vercel é "sensível" e ninguém consegue
+-- ler de volta para copiar.
+create table if not exists public.ai_voice_guard (
+  id smallint primary key default 1 check (id = 1),
+  token text not null
+);
+alter table public.ai_voice_guard enable row level security;
+insert into public.ai_voice_guard (id, token)
+values (1, replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''))
+on conflict (id) do nothing;
+
 do $$
+declare
+  t text;
 begin
+  select token into t from public.ai_voice_guard where id = 1;
   if exists (select 1 from cron.job where jobname = 'lume-voice-guard') then
     perform cron.unschedule('lume-voice-guard');
   end if;
-end $$;
-
-select cron.schedule(
-  'lume-voice-guard',
-  '* * * * *',
-  $$
-    select net.http_get(
-      url := 'https://SEU_DOMINIO/api/cron/voice-guard',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || 'COLE_AQUI_O_CRON_SECRET'
-      )
+  perform cron.schedule(
+    'lume-voice-guard',
+    '* * * * *',
+    format(
+      $cmd$select net.http_get(url := %L, headers := jsonb_build_object('Authorization', %L))$cmd$,
+      'https://SEU_DOMINIO/api/cron/voice-guard',
+      'Bearer ' || t
     )
-  $$
-);
+  );
+end $$;
 
 -- Conferência (opcional):
 -- select * from public.ai_usage_monthly order by updated_at desc limit 20;
 -- select jobid, jobname, schedule, active from cron.job where jobname = 'lume-voice-guard';
+-- select status_code, content, created from net._http_response order by created desc limit 5;
