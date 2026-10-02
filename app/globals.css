@@ -1885,3 +1885,280 @@ body:has(.lp-page) {
 @media (prefers-reduced-motion: reduce) {
   [data-field-flash='true'] { animation: none; box-shadow: 0 0 0 3px rgba(110, 34, 51, 0.2); }
 }
+
+/* =========================================================
+   WHATSAPP · caixa de entrada (components/dashboard/WhatsAppInbox.tsx)
+   A estrutura é a do WhatsApp Web (lista à esquerda, conversa à direita,
+   bolhas com rabinho, "tiques", selos de dia) com as cores do produto.
+   As variáveis --wa-* ficam no .wa-shell para o tema trocar num lugar só;
+   data-wa-theme="whatsapp" liga as cores originais (verde) se quisermos.
+   ========================================================= */
+@layer components {
+  .wa-shell {
+    --wa-wall:        #F3F0EE;
+    --wa-wall-ink:    #000000;
+    --wa-wall-alpha:  0.045;
+    --wa-in-bg:       var(--color-surface);
+    --wa-in-ink:      var(--color-ink);
+    --wa-out-bg:      var(--color-wine-100);
+    --wa-out-ink:     var(--color-n-900);
+    --wa-meta:        var(--color-n-500);
+    --wa-tick:        var(--color-n-400);
+    --wa-tick-read:   #4FB6E8;
+    --wa-badge:       var(--color-wine-600);
+    --wa-badge-ink:   #FFFFFF;
+    --wa-accent:      var(--color-wine-700);
+    --wa-accent-ink:  #FFFFFF;
+    --wa-side-active: var(--color-surface-2);
+
+    height: calc(100dvh - 11.5rem);
+    min-height: 30rem;
+  }
+  @media (min-width: 1024px) { .wa-shell { height: calc(100dvh - 8.75rem); } }
+
+  .wa-shell[data-wa-theme='whatsapp'] {
+    --wa-wall:        #EFEAE2;
+    --wa-out-bg:      #D9FDD3;
+    --wa-out-ink:     #111B21;
+    --wa-badge:       #25D366;
+    --wa-accent:      #00A884;
+    --wa-tick-read:   #53BDEB;
+  }
+
+  [data-theme='dark'] .wa-shell {
+    --wa-wall:        #151213;
+    --wa-wall-ink:    #FFFFFF;
+    --wa-wall-alpha:  0.035;
+    --wa-in-bg:       #262223;
+    --wa-out-bg:      #3F1B27;
+    --wa-out-ink:     #F5F3F3;
+    --wa-meta:        rgba(255, 255, 255, 0.55);
+    --wa-tick:        rgba(255, 255, 255, 0.45);
+    --wa-badge:       var(--color-wine-300);
+    --wa-badge-ink:   #1C191A;
+    --wa-side-active: #262223;
+  }
+  [data-theme='dark'] .wa-shell[data-wa-theme='whatsapp'] {
+    --wa-wall:        #0B141A;
+    --wa-in-bg:       #202C33;
+    --wa-out-bg:      #005C4B;
+    --wa-out-ink:     #E9EDEF;
+    --wa-badge:       #00A884;
+    --wa-badge-ink:   #111B21;
+    --wa-accent:      #00A884;
+  }
+
+  /* ── Coluna da esquerda ── */
+  .wa-side { border-right: 1px solid var(--color-line); background: var(--color-surface); }
+  .wa-search {
+    display: flex; align-items: center; gap: 10px;
+    height: 38px; padding: 0 12px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-2);
+    transition: background .15s ease;
+  }
+  .wa-search:focus-within { background: var(--color-surface-3); }
+  .wa-search input {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+    font-size: var(--text-body-sm); color: var(--color-heading);
+  }
+  .wa-search input::placeholder { color: var(--color-n-400); }
+
+  .wa-chip {
+    height: 28px; padding: 0 12px;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-caption); font-weight: 600;
+    color: var(--color-n-600); background: var(--color-surface-2);
+    transition: background .15s ease, color .15s ease;
+  }
+  .wa-chip:hover { background: var(--color-surface-3); color: var(--color-heading); }
+  .wa-chip[data-active='true'] { background: var(--wa-accent); color: var(--wa-accent-ink); }
+
+  .wa-row {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; padding: 10px 12px 10px 14px;
+    text-align: left; cursor: pointer;
+    transition: background .12s ease;
+  }
+  .wa-row:hover { background: var(--color-surface-2); }
+  .wa-row[data-active='true'] { background: var(--wa-side-active); }
+  .wa-row-body { flex: 1; min-width: 0; padding: 2px 0; }
+  /* Divisória recuada, como no WhatsApp: começa depois do avatar. */
+  .wa-row + .wa-row .wa-row-body { position: relative; }
+  .wa-row + .wa-row .wa-row-body::before {
+    content: ''; position: absolute; left: 0; right: -12px; top: -11px; height: 1px; background: var(--color-line);
+  }
+  .wa-time-unread { color: var(--wa-badge); }
+
+  .wa-avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 9999px; font-weight: 700;
+    background: var(--color-surface-3); color: var(--color-n-600);
+  }
+  .wa-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px;
+    border-radius: 9999px;
+    background: var(--wa-badge); color: var(--wa-badge-ink);
+    font-size: 11.5px; font-weight: 700; line-height: 1;
+  }
+
+  /* ── Conversa ── */
+  .wa-main { background: var(--color-surface); }
+  .wa-header, .wa-chatsearch { border-bottom: 1px solid var(--color-line); background: var(--color-surface); }
+  .wa-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+    min-width: 220px; padding: 6px;
+    border-radius: var(--radius-control);
+    background: var(--color-surface); border: 1px solid var(--color-line);
+    box-shadow: var(--shadow-md, 0 8px 24px rgba(16, 14, 15, .12));
+  }
+  .wa-menu > * {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border-radius: 8px;
+    font-size: var(--text-body-sm); color: var(--color-ink); text-align: left;
+  }
+  .wa-menu > *:hover { background: var(--color-surface-2); color: var(--color-heading); }
+
+  .wa-wall {
+    position: relative;
+    background-color: var(--wa-wall);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180' fill='none' stroke='%23000' stroke-opacity='.06' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M30 24c-4-7-14-5-14 3 0 6 8 11 14 16 6-5 14-10 14-16 0-8-10-10-14-3z'/><path d='M96 18v14M89 25h14'/><circle cx='150' cy='32' r='7'/><path d='M150 20v4M150 40v4M138 32h4M158 32h4'/><path d='M22 92c6 0 10-4 10-10 0 6 4 10 10 10-6 0-10 4-10 10 0-6-4-10-10-10z'/><path d='M84 84l20 20M104 84l-20 20'/><circle cx='150' cy='96' r='10'/><circle cx='150' cy='96' r='3'/><path d='M34 150c0-8 6-14 14-14 2 0 4 1 6 2 2-1 4-2 6-2 8 0 14 6 14 14H34z'/><path d='M100 140l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2z'/><path d='M148 148c-6 0-10 5-10 10 0 7 10 12 10 12s10-5 10-12c0-5-4-10-10-10z'/></svg>");
+    background-size: 180px 180px;
+    overscroll-behavior: contain;
+  }
+  [data-theme='dark'] .wa-wall {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180' fill='none' stroke='%23fff' stroke-opacity='.045' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M30 24c-4-7-14-5-14 3 0 6 8 11 14 16 6-5 14-10 14-16 0-8-10-10-14-3z'/><path d='M96 18v14M89 25h14'/><circle cx='150' cy='32' r='7'/><path d='M150 20v4M150 40v4M138 32h4M158 32h4'/><path d='M22 92c6 0 10-4 10-10 0 6 4 10 10 10-6 0-10 4-10 10 0-6-4-10-10-10z'/><path d='M84 84l20 20M104 84l-20 20'/><circle cx='150' cy='96' r='10'/><circle cx='150' cy='96' r='3'/><path d='M34 150c0-8 6-14 14-14 2 0 4 1 6 2 2-1 4-2 6-2 8 0 14 6 14 14H34z'/><path d='M100 140l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2z'/><path d='M148 148c-6 0-10 5-10 10 0 7 10 12 10 12s10-5 10-12c0-5-4-10-10-10z'/></svg>");
+  }
+
+  .wa-pill {
+    display: inline-flex; align-items: center;
+    padding: 5px 12px; border-radius: 8px;
+    background: var(--color-surface); color: var(--color-n-600);
+    font-size: 12px; font-weight: 600; letter-spacing: .01em;
+    box-shadow: var(--shadow-xs);
+  }
+  .wa-pill-unread { color: var(--wa-badge); background: var(--color-surface); width: 100%; justify-content: center; border-radius: 6px; }
+
+  /* Linhas: 2px entre bolhas da mesma pessoa, 10px quando muda quem fala. */
+  .wa-line { display: flex; margin-top: 2px; }
+  .wa-line-first { margin-top: 10px; }
+  .wa-line-in { justify-content: flex-start; }
+  .wa-line-out { justify-content: flex-end; }
+
+  .wa-bubble {
+    position: relative;
+    max-width: min(85%, 520px);
+    padding: 6px 7px 8px 9px;
+    border-radius: 8px;
+    font-size: var(--text-body-sm); line-height: 1.45;
+    box-shadow: 0 1px 0.5px rgba(16, 14, 15, 0.12);
+    overflow-wrap: anywhere;
+  }
+  @media (min-width: 768px) { .wa-bubble { max-width: min(65%, 560px); } }
+  .wa-in  { background: var(--wa-in-bg); color: var(--wa-in-ink); }
+  .wa-out { background: var(--wa-out-bg); color: var(--wa-out-ink); }
+  .wa-line-first .wa-in  { border-top-left-radius: 0; }
+  .wa-line-first .wa-out { border-top-right-radius: 0; }
+  .wa-sticker { background: transparent; box-shadow: none; padding: 0; }
+  .wa-sticker .wa-media-img img { width: 160px; height: 160px; object-fit: contain; border-radius: 0; }
+  .wa-sticker .wa-meta-overlay { right: 0; bottom: -18px; background: transparent; color: var(--wa-meta); text-shadow: none; }
+
+  .wa-tail { position: absolute; top: 0; }
+  .wa-tail-in  { left: -8px;  fill: var(--wa-in-bg); }
+  .wa-tail-out { right: -8px; fill: var(--wa-out-bg); }
+  .wa-sender { margin-bottom: 2px; font-size: 12.5px; font-weight: 700; color: var(--color-wine-600); }
+  [data-theme='dark'] .wa-sender { color: var(--color-wine-300); }
+
+  .wa-text { white-space: pre-wrap; }
+  /* Hora + tique "flutuam" no fim da última linha, como no WhatsApp. */
+  .wa-meta {
+    float: right;
+    display: inline-flex; align-items: center; gap: 3px;
+    margin: 7px -2px -5px 10px;
+    font-size: 11px; line-height: 1; color: var(--wa-meta);
+    white-space: nowrap;
+  }
+  .wa-meta-overlay {
+    float: none; position: absolute; right: 8px; bottom: 8px; margin: 0;
+    padding: 2px 6px; border-radius: 6px;
+    background: rgba(0, 0, 0, .35); color: #fff;
+  }
+  .wa-tick { width: 15px; height: 15px; color: var(--wa-tick); }
+  .wa-tick-read { color: var(--wa-tick-read); }
+  .wa-tick-clock { width: 12px; height: 12px; }
+  .wa-tick-failed { color: var(--color-danger, #C62828); }
+  .wa-meta-overlay .wa-tick { color: rgba(255, 255, 255, .85); }
+  .wa-meta-overlay .wa-tick-read { color: var(--wa-tick-read); }
+
+  .wa-has-media { padding: 4px; }
+  .wa-has-media .wa-text { display: block; padding: 6px 5px 2px; }
+  .wa-has-media .wa-meta:not(.wa-meta-overlay) { margin-right: 4px; margin-bottom: -2px; }
+  .wa-media-img { display: block; max-width: 100%; }
+  .wa-media-img img {
+    display: block; width: 100%; max-width: 330px; max-height: 360px;
+    object-fit: cover; border-radius: 6px; background: var(--color-surface-2);
+    min-width: 120px; min-height: 90px;
+  }
+  .wa-media-video { display: block; width: 100%; max-width: 330px; max-height: 360px; border-radius: 6px; background: #000; }
+  .wa-media-audio { display: flex; align-items: center; gap: 8px; min-width: 240px; padding: 2px 0 4px; }
+  .wa-media-audio audio { height: 36px; flex: 1; min-width: 0; max-width: 260px; }
+  .wa-media-audio-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 9999px; flex-shrink: 0;
+    background: var(--wa-accent); color: var(--wa-accent-ink);
+  }
+  .wa-media-doc {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 220px; padding: 10px 10px; margin-bottom: 2px;
+    border-radius: 6px; background: rgba(0, 0, 0, .05);
+    font-size: var(--text-body-sm); font-weight: 600; color: inherit;
+  }
+  [data-theme='dark'] .wa-media-doc { background: rgba(255, 255, 255, .06); }
+  .wa-media-missing {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 230px; max-width: 300px; padding: 10px;
+    border-radius: 6px; border: 1px dashed var(--color-line-strong);
+    color: var(--color-n-600); background: rgba(0, 0, 0, .03);
+  }
+  [data-theme='dark'] .wa-media-missing { background: rgba(255, 255, 255, .04); }
+
+  /* ── Composer ── */
+  .wa-composer { border-top: 1px solid var(--color-line); background: var(--color-surface); }
+  .wa-input {
+    min-height: 44px; padding: 6px 14px;
+    border-radius: 22px; background: var(--color-surface-2);
+    transition: background .15s ease;
+  }
+  .wa-input:focus-within { background: var(--color-surface-3); }
+  .wa-input textarea {
+    width: 100%; min-height: 32px; max-height: 140px; padding: 6px 0;
+    resize: none; background: transparent; border: 0; outline: 0;
+    font-size: var(--text-body); line-height: 1.4; color: var(--color-heading);
+  }
+  .wa-input textarea::placeholder { color: var(--color-n-400); }
+  .wa-send {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 9999px;
+    background: var(--wa-accent); color: var(--wa-accent-ink);
+    box-shadow: var(--shadow-soft);
+    transition: filter .15s ease, opacity .15s ease;
+  }
+  .wa-send:hover { filter: brightness(1.08); }
+  .wa-send:disabled { opacity: .45; box-shadow: none; }
+
+  /* ── Lightbox ── */
+  .wa-lightbox {
+    position: fixed; inset: 0; z-index: 80;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(0, 0, 0, .88);
+  }
+  .wa-lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .wa-lightbox-close {
+    position: absolute; top: 16px; right: 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 9999px;
+    background: rgba(255,255,255,.12); color: #fff;
+  }
+  .wa-lightbox-close:hover { background: rgba(255,255,255,.22); }
+}
