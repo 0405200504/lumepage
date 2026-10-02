@@ -34,11 +34,12 @@ import {
  * direto, porque o destino vai ser o login.
  *
  * No app do iPhone a janela nasce mais curta que a tela e pode ficar assim a
- * abertura inteira (SPLASH_SCREEN_FIT_JS em lib/ui/splashScene). O fundo
- * chapado esconde a faixa; a cena é medida pela tela, igual no painel, para
- * a estrela não pular na troca. Diagnóstico (temporário, só no app do
- * iPhone): as medidas da janela vão em sessionStorage; o painel manda para
- * /api/diag/abertura.
+ * abertura inteira, e o zoom de página pode entrar depois do primeiro script
+ * (SPLASH_SCREEN_FIT_JS em lib/ui/splashScene). O fundo chapado esconde a
+ * faixa; a cena é medida pela tela em vw, igual no painel, para a estrela
+ * não pular na troca. Diagnóstico (temporário, só no app do iPhone): a
+ * janela, o zoom e a posição da estrela são amostrados ao longo da cena em
+ * sessionStorage; o painel manda para /api/diag/abertura.
  */
 export const dynamic = 'force-static';
 
@@ -53,9 +54,14 @@ var logada=false,calma=false;
 try{logada=localStorage.getItem(${JSON.stringify(PANEL_FLAG_KEY)})==='1'}catch(e){}
 try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
 if(!logada||calma){d.dataset.splash='still';ir();return}
-if(d.dataset.tela){try{var vv=window.visualViewport;s.setItem(${JSON.stringify(SPLASH_DIAG_KEY)},JSON.stringify({v:${JSON.stringify(
+var amostra=function(t){try{var vv=window.visualViewport,st=document.querySelector('.lume-splash__star-wrap'),r=st&&st.getBoundingClientRect(),g=JSON.parse(s.getItem(${JSON.stringify(
+  SPLASH_DIAG_KEY,
+)})||'null');if(!g)return;g.pg.push({t:t,j:[innerWidth,innerHeight],c:d.clientHeight,dpr:devicePixelRatio,vv:vv?[Math.round(vv.width),Math.round(vv.height),vv.scale]:null,estrela:r?[Math.round(r.top),Math.round(r.height)]:null});s.setItem(${JSON.stringify(
+  SPLASH_DIAG_KEY,
+)},JSON.stringify(g))}catch(e){}};
+if(d.dataset.tela){try{s.setItem(${JSON.stringify(SPLASH_DIAG_KEY)},JSON.stringify({v:${JSON.stringify(
   SPLASH_LAUNCH_VERSION,
-)},ua:navigator.userAgent,tela:[screen.width,screen.height],dpr:devicePixelRatio,dm:matchMedia('(display-mode: standalone)').matches,pg:[{t:0,j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,fit:d.style.getPropertyValue('--lume-tela')}]}))}catch(e){}}
+)},ua:navigator.userAgent,tela:[screen.width,screen.height],ratio:d.style.getPropertyValue('--lume-ratio'),dm:matchMedia('(display-mode: standalone)').matches,pg:[]}))}catch(e){}amostra(0);requestAnimationFrame(function(){amostra(1)});setTimeout(function(){amostra(150)},150);setTimeout(function(){amostra(400)},400);setTimeout(function(){amostra(900)},900);setTimeout(function(){amostra(1400)},1400)}
 d.dataset.splash='launch';
 var t0=Date.now(),marca=function(){try{s.setItem(${JSON.stringify(SPLASH_HANDOFF_KEY)},String(t0))}catch(e){}};
 marca();
@@ -74,7 +80,7 @@ const LAUNCH_HTML = `<!DOCTYPE html>
 <meta name="robots" content="noindex">
 <title>Lume</title>
 <script>${LAUNCH_SCRIPT}</script>
-<style>html,body{margin:0;height:100%;background:${SPLASH_BG};overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
+<style>html,body{margin:0;height:100%;background:${SPLASH_BG};overflow:hidden}html[data-tela],html[data-tela] body{height:calc(100vw * var(--lume-ratio, 2.1667))}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;left:0}</style>
 </head>
 <body>
 <div id="lume-splash" aria-hidden="true">${SPLASH_MARKUP}</div>

@@ -71,7 +71,7 @@ export const AppSplash: React.FC = () => {
     SPLASH_SESSION_KEY,
   )})==='1'){d.dataset.splash='off'}else{s.setItem(${JSON.stringify(SPLASH_SESSION_KEY)},'1')}var g=JSON.parse(s.getItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
-  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,fit:d.style.getPropertyValue('--lume-tela'),e:h?e:null};s.setItem(${JSON.stringify(
+  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,dpr:devicePixelRatio,vv:vv?[Math.round(vv.width),Math.round(vv.height),vv.scale]:null,ratio:d.style.getPropertyValue('--lume-ratio'),e:h?e:null};s.setItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
   )},JSON.stringify(g))}}catch(x){}`;
 
