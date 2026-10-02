@@ -20,6 +20,8 @@ import {
 import { createAppointmentAction } from '@/app/actions/booking';
 import type { Appointment } from '@/types/database';
 import { rateLimit } from '@/lib/rate-limit';
+import { recordInboxEvent, type InboxWebhookBody } from '@/lib/whatsapp/inbox-ingest';
+import { simplifyMessageType } from '@/lib/whatsapp/inbox-shared';
 
 export const maxDuration = 60;
 
@@ -33,7 +35,7 @@ async function generateWithModel(params: Omit<Parameters<typeof generateText>[0]
 // não tem `event`/`data`, e sim `EventType`/`message`, com o texto em
 // `message.text` (não `message.body`) e o telefone em `message.chatid`
 // (não `message.from`). Confirmado inspecionando o payload bruto recebido.
-interface UazapiMessagePayload {
+interface UazapiMessagePayload extends InboxWebhookBody {
   EventType?: string;
   instanceName?: string;
   message?: {
@@ -44,8 +46,10 @@ interface UazapiMessagePayload {
     isGroup?: boolean;
     text?: string;
     type?: string;
+    messageType?: string;
     senderName?: string;
     messageTimestamp?: number;
+    [key: string]: unknown;
   };
 }
 
@@ -76,7 +80,10 @@ export async function POST(req: NextRequest) {
   // Rate limit por instância (pid): teto de chamadas processadas por minuto. Corta
   // enxurrada de webhooks que dispararia muitas chamadas de IA. O secret ainda é
   // validado dentro de processMessage; isto é uma barreira adicional barata.
-  const rl = await rateLimit(`wh:${pid}`, 40, 60 * 1000);
+  // Com os recibos (messages_update) e os lotes de histórico assinados, o
+  // volume por minuto subiu — o teto da IA continua sendo o bot, que só roda
+  // para texto recebido com o bot ligado.
+  const rl = await rateLimit(`wh:${pid}`, 240, 60 * 1000);
   if (!rl.ok) {
     console.warn('[WhatsApp Webhook] rate limit atingido para pid', pid);
     return NextResponse.json({ ok: true });
@@ -189,29 +196,36 @@ async function buildAgendaText(professionalId: string, shortestDuration: number)
 
 async function processMessage(professionalId: string, secret: string | null, body: UazapiMessagePayload) {
   try {
-    const msg = body.message;
-
-    if (!msg) { console.log('[Bot] sem message no payload'); return; }
-    if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
-    if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
-    if (msg.type && msg.type !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type); return; }
-
-    // Atendimento por IA desligado no produto — as mensagens automáticas
-    // (lembretes e confirmações) saem pelo cron e não passam por aqui.
-    if (!AI_ATTENDANCE_ENABLED) { console.log('[Bot] atendimento por IA desligado'); return; }
-
     const waSettings = await dbService.getWhatsAppSettings(professionalId);
-    if (!waSettings) { console.warn('[Bot] sem configurações no banco'); return; }
-    if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
-    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
-    // Fail-closed: exige webhook_secret configurado E igual ao recebido. Sem secret
-    // configurado, ninguém consegue acionar o bot desta profissional.
-    if (!waSettings.webhook_secret || waSettings.webhook_secret !== secret) { console.warn('[Bot] secret inválido ou não configurado'); return; }
+    if (!waSettings) { console.warn('[Webhook] sem configurações no banco'); return; }
+    // Fail-closed, para TODO evento: exige webhook_secret configurado E igual ao
+    // recebido. Sem secret configurado, ninguém grava nem aciona nada desta conta.
+    if (!waSettings.webhook_secret || waSettings.webhook_secret !== secret) { console.warn('[Webhook] secret inválido ou não configurado'); return; }
+
+    // ── Caixa de entrada ──────────────────────────────────────────────────
+    // Guarda o que chegou ANTES de qualquer regra do bot: mensagens recebidas
+    // e enviadas (de qualquer tipo), recibos de leitura e lotes de histórico.
+    // A uazapi apaga tudo em 7 dias; o histórico do painel vive no nosso banco.
+    const inbox = await recordInboxEvent(professionalId, waSettings, body);
+    if (inbox === 'done') return; // recibo/histórico/conexão: não há bot a acionar
+
+    const msg = body.message;
+    if (!msg) { console.log('[Bot] sem message no payload'); return; }
 
     // Diagnóstico: registra a chamada DEPOIS de validar o secret (escrita autenticada).
     await dbService.upsertWhatsAppConversation(professionalId, '_debug_last_call', [
       { role: 'user' as const, content: JSON.stringify({ EventType: body.EventType, fromMe: body.message?.fromMe, isGroup: body.message?.isGroup, type: body.message?.type, chatid: body.message?.chatid }), at: Date.now() }
     ]).catch(() => {});
+
+    if (msg.fromMe) { console.log('[Bot] ignorando — fromMe=true'); return; }
+    if (msg.isGroup) { console.log('[Bot] ignorando — grupo'); return; }
+    if (simplifyMessageType(msg.messageType, msg.type) !== 'text') { console.log('[Bot] ignorando — tipo:', msg.type || msg.messageType); return; }
+
+    // Atendimento por IA desligado no produto — as mensagens automáticas
+    // (lembretes e confirmações) saem pelo cron e não passam por aqui.
+    if (!AI_ATTENDANCE_ENABLED) { console.log('[Bot] atendimento por IA desligado'); return; }
+    if (!waSettings.bot_enabled) { console.log('[Bot] bot desativado'); return; }
+    if (!waSettings.uazapi_url || !waSettings.uazapi_token) { console.warn('[Bot] credenciais incompletas'); return; }
 
     const clientPhone = phoneFromJid(msg.chatid || '');
     if (!clientPhone) { console.warn('[Bot] número inválido:', msg.chatid); return; }

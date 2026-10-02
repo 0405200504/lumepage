@@ -1,3 +1,8 @@
+import {
+  simplifyMessageType, kindHasMedia, normalizeStatus, senderIsOwner, mimetypeFromContent,
+  type InboxKind, type InboxStatus,
+} from '@/lib/whatsapp/inbox-shared';
+
 /**
  * Envia indicador "digitando..." no WhatsApp e aguarda o delay antes de retornar.
  * Best-effort: engole erros para não quebrar o bot se o endpoint não existir.
@@ -124,7 +129,10 @@ export async function configureUazapiWebhook(
     enabled: true,
     addUrlEvents: true,
     addUrlTypesMessages: true,
-    events: ['messages', 'message'],
+    // 'messages_update' traz os recibos de entrega/leitura e 'history' os
+    // lotes de mensagens antigas (pareamento e /message/history-sync) — os
+    // dois alimentam a caixa de entrada do painel.
+    events: ['messages', 'message', 'messages_update', 'history'],
     excludeMessages: [],
   };
 
@@ -367,13 +375,16 @@ export async function deleteUazapiInstance(baseUrl: string, token: string): Prom
 // ═══════════════════════════════════════════════════════════════════════════
 // Caixa de entrada (o "WhatsApp Web" dentro do Lume)
 //
-// A uazapi já guarda chats e mensagens do lado dela — inclusive foto do
-// contato, não-lidas e URL do arquivo. Então o Lume não replica nada: lê sob
-// demanda e mostra. Endpoints (spec OpenAPI da uazapi):
-//   POST /chat/find         → { chats: [...], pagination }
-//   POST /message/find      → { messages: [...], hasMore, nextOffset }
-//   POST /chat/read         → marca lido/não lido
-//   POST /message/download  → baixa a mídia de uma mensagem
+// A uazapi guarda chats e mensagens do lado dela — mas só por 7 DIAS (e as
+// mídias por 2). O Lume lê sob demanda daqui e, em paralelo, guarda tudo que
+// chega pelo webhook em whatsapp_inbox_messages (lib/whatsapp/inbox-store.ts)
+// para a conversa mostrar 30+ dias. Endpoints (spec OpenAPI 2.4.3 da uazapi):
+//   POST /chat/find             → { chats: [...], pagination }
+//   POST /message/find          → { messages: [...], hasMore, nextOffset }
+//   POST /chat/read             → marca lido/não lido
+//   POST /message/download      → { fileURL, mimetype } (URL pública por 2 dias)
+//   POST /message/history-sync  → pede ao celular mensagens mais antigas
+//   POST /chat/avatar           → { url } da foto do contato
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Uma conversa como o painel precisa dela — o resto do payload da uazapi é ignorado. */
@@ -385,6 +396,8 @@ export interface InboxChat {
   lastMessageAt: number | null;
   lastPreview: string;
   lastMessageType: string | null;
+  /** A última mensagem foi da profissional (então ela já leu a conversa). */
+  lastFromMe: boolean;
   unread: number;
   isGroup: boolean;
   pinned: boolean;
@@ -393,56 +406,84 @@ export interface InboxChat {
 
 /** Uma mensagem já normalizada para a bolha da tela. */
 export interface InboxMessage {
+  /** id do WhatsApp — é a chave em tudo (banco, mídia, recibos). */
   id: string;
-  messageid: string;
+  /** id interno da uazapi (r + hex) — só para o download de mídia. */
+  uazapiId: string;
+  chatid: string;
   fromMe: boolean;
-  type: string;
+  kind: InboxKind;
+  /** messageType original da uazapi, para diagnóstico. */
+  rawType: string;
   text: string;
   timestamp: number;
-  status: string | null;
+  status: InboxStatus | null;
   senderName: string | null;
   hasMedia: boolean;
   mimetype: string | null;
+  /** true quando a mídia já tem cópia no nosso Storage (abre mesmo depois de 7 dias). */
+  mediaCached: boolean;
+  /** Preenchido quando a última tentativa de baixar a mídia falhou. */
+  mediaError: string | null;
+  quotedId: string | null;
 }
 
 const num = (v: unknown): number | null => (typeof v === 'number' && v > 0 ? v : null);
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 
+/** Timestamps da uazapi vêm em ms; se algum vier em segundos, corrige. */
+export const toMs = (v: unknown): number | null => {
+  const n = num(v);
+  if (n === null) return null;
+  return n < 1e12 ? n * 1000 : n;
+};
+
 function normalizeChat(raw: Record<string, unknown>): InboxChat {
   const chatid = str(raw.wa_chatid) || str(raw.id);
   // A uazapi devolve três nomes possíveis; o da agenda ganha do "push name".
   const name = str(raw.wa_contactName) || str(raw.name) || str(raw.wa_name) || str(raw.phone) || chatid.split('@')[0];
+  const isGroup = raw.wa_isGroup === true;
+  const lastFromMe = !isGroup && senderIsOwner(str(raw.wa_lastMessageSender), str(raw.owner), chatid, str(raw.wa_chatlid) || null);
+  const unread = typeof raw.wa_unreadCount === 'number' ? raw.wa_unreadCount : 0;
   return {
     chatid,
     name,
     phone: str(raw.phone) || chatid.split('@')[0],
     image: str(raw.imagePreview) || str(raw.image) || null,
-    lastMessageAt: num(raw.wa_lastMsgTimestamp),
+    lastMessageAt: toMs(raw.wa_lastMsgTimestamp),
     lastPreview: str(raw.wa_lastMessageTextVote),
     lastMessageType: str(raw.wa_lastMessageType) || null,
-    unread: typeof raw.wa_unreadCount === 'number' ? raw.wa_unreadCount : 0,
-    isGroup: raw.wa_isGroup === true,
+    lastFromMe,
+    // Se quem falou por último foi ela, não há nada "não lido" — a uazapi só
+    // não zera o contador quando a resposta sai pelo celular.
+    unread: lastFromMe ? 0 : unread,
+    isGroup,
     pinned: raw.wa_isPinned === true,
     archived: raw.wa_archived === true,
   };
 }
 
-/** Tipos que carregam arquivo — definem se a bolha renderiza mídia. */
-const MEDIA_TYPES = ['image', 'video', 'audio', 'ptt', 'document', 'sticker', 'ptv', 'myaudio'];
-
-function normalizeMessage(raw: Record<string, unknown>): InboxMessage {
-  const type = (str(raw.messageType) || 'text').toLowerCase().replace(/message$/, '');
+/** Normaliza uma mensagem vinda de /message/find OU do webhook (mesmo formato). */
+export function normalizeMessage(raw: Record<string, unknown>): InboxMessage {
+  const rawType = str(raw.messageType) || str(raw.type) || 'text';
+  const kind = simplifyMessageType(str(raw.messageType), str(raw.type));
+  const messageid = str(raw.messageid) || str(raw.id);
   return {
-    id: str(raw.id),
-    messageid: str(raw.messageid),
+    id: messageid,
+    uazapiId: str(raw.id),
+    chatid: str(raw.chatid),
     fromMe: raw.fromMe === true,
-    type,
+    kind,
+    rawType,
     text: str(raw.text),
-    timestamp: num(raw.messageTimestamp) ?? 0,
-    status: str(raw.status) || null,
+    timestamp: toMs(raw.messageTimestamp) ?? 0,
+    status: normalizeStatus(str(raw.status)),
     senderName: str(raw.senderName) || null,
-    hasMedia: MEDIA_TYPES.some(t => type.includes(t)),
-    mimetype: null,
+    hasMedia: kindHasMedia(kind),
+    mimetype: str(raw.mimetype) || mimetypeFromContent(raw.content),
+    mediaCached: false,
+    mediaError: null,
+    quotedId: str(raw.quoted) || null,
   };
 }
 
@@ -485,31 +526,33 @@ export async function findUazapiChats(
   }
 }
 
-/** Mensagens de um chat. offset=0 traz as mais recentes. */
+/** Mensagens de um chat. offset=0 traz as mais recentes (a uazapi aceita até 100 por página). */
 export async function findUazapiMessages(
   baseUrl: string,
   token: string,
   chatid: string,
   opts: { limit?: number; offset?: number } = {}
-): Promise<{ success: boolean; messages: InboxMessage[]; hasMore: boolean; error?: string }> {
+): Promise<{ success: boolean; messages: InboxMessage[]; hasMore: boolean; nextOffset: number; error?: string }> {
   try {
+    const limit = Math.min(Math.max(opts.limit ?? 100, 1), 100);
     const res = await fetch(`${baseUrl}/message/find`, {
       method: 'POST',
       headers: { token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatid, limit: opts.limit ?? 50, offset: opts.offset ?? 0 }),
+      body: JSON.stringify({ chatid, limit, offset: opts.offset ?? 0 }),
       signal: AbortSignal.timeout(15000),
     });
     const text = await res.text();
-    if (!res.ok) return { success: false, messages: [], hasMore: false, error: `uazapi retornou ${res.status}` };
+    if (!res.ok) return { success: false, messages: [], hasMore: false, nextOffset: 0, error: `uazapi retornou ${res.status}` };
 
-    const data = JSON.parse(text) as { messages?: unknown[]; hasMore?: boolean };
+    const data = JSON.parse(text) as { messages?: unknown[]; hasMore?: boolean; nextOffset?: number };
     const messages = (data.messages ?? [])
       .map(m => normalizeMessage(m as Record<string, unknown>))
-      .filter(m => m.timestamp > 0)
+      .filter(m => m.id && m.timestamp > 0 && m.kind !== 'skip')
       .sort((a, b) => a.timestamp - b.timestamp); // antigas em cima, como no WhatsApp
-    return { success: true, messages, hasMore: data.hasMore === true };
+    const nextOffset = typeof data.nextOffset === 'number' ? data.nextOffset : (opts.offset ?? 0) + limit;
+    return { success: true, messages, hasMore: data.hasMore === true, nextOffset };
   } catch (e) {
-    return { success: false, messages: [], hasMore: false, error: e instanceof Error ? e.message : 'Erro de rede.' };
+    return { success: false, messages: [], hasMore: false, nextOffset: 0, error: e instanceof Error ? e.message : 'Erro de rede.' };
   }
 }
 
@@ -534,30 +577,89 @@ export async function markUazapiChatRead(
 }
 
 /**
- * Baixa a mídia de uma mensagem. Pede base64 porque o arquivo é servido pelo
- * proxy do Lume (a URL da uazapi exige token e não pode ir para o <img>).
+ * Pede o arquivo de uma mensagem. Sem base64: a uazapi devolve `fileURL`
+ * (pública por 2 dias) e quem chama copia para o nosso Storage.
  */
 export async function downloadUazapiMedia(
   baseUrl: string,
   token: string,
   messageId: string
-): Promise<{ success: boolean; base64?: string; mimetype?: string; error?: string }> {
+): Promise<{ success: boolean; fileURL?: string; base64?: string; mimetype?: string; error?: string }> {
   try {
     const res = await fetch(`${baseUrl}/message/download`, {
       method: 'POST',
       headers: { token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: messageId, return_base64: true, generate_mp3: true }),
+      body: JSON.stringify({ id: messageId, return_base64: false, return_link: true, generate_mp3: true }),
       signal: AbortSignal.timeout(30000),
     });
     const text = await res.text();
-    if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}` };
+    if (!res.ok) {
+      let detail = '';
+      try { detail = String((JSON.parse(text) as { error?: string }).error || ''); } catch { /* texto solto */ }
+      return { success: false, error: `uazapi retornou ${res.status}${detail ? `: ${detail.slice(0, 120)}` : ''}` };
+    }
 
-    const data = JSON.parse(text) as { base64Data?: string; base64?: string; mimetype?: string; fileURL?: string };
+    const data = JSON.parse(text) as { base64Data?: string; base64?: string; mimetype?: string; fileURL?: string; fileUrl?: string };
+    const fileURL = data.fileURL || data.fileUrl;
     const base64 = data.base64Data || data.base64;
-    if (!base64) return { success: false, error: 'A uazapi não devolveu o arquivo.' };
-    return { success: true, base64, mimetype: data.mimetype || 'application/octet-stream' };
+    if (!fileURL && !base64) return { success: false, error: 'A uazapi não devolveu o arquivo.' };
+    return { success: true, fileURL, base64, mimetype: data.mimetype || undefined };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro de rede.' };
+  }
+}
+
+/**
+ * Pede ao WhatsApp do celular mensagens mais antigas de um chat. O retorno
+ * NÃO é imediato: elas chegam depois pelo evento `history` do webhook (e vão
+ * para o nosso banco). O celular precisa estar com internet e o WhatsApp
+ * aberto ou em segundo plano.
+ */
+export async function requestUazapiHistorySync(
+  baseUrl: string,
+  token: string,
+  chatid: string,
+  opts: { anchorMessageId?: string | null; count?: number } = {}
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const body: Record<string, unknown> = {
+      number: chatid,
+      mode: 'history',
+      count: Math.min(Math.max(opts.count ?? 100, 1), 100),
+    };
+    if (opts.anchorMessageId) body.messageid = opts.anchorMessageId;
+    const res = await fetch(`${baseUrl}/message/history-sync`, {
+      method: 'POST',
+      headers: { token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let detail = '';
+      try { detail = String((JSON.parse(text) as { error?: string }).error || ''); } catch { /* ignore */ }
+      return { success: false, error: `uazapi retornou ${res.status}${detail ? `: ${detail.slice(0, 160)}` : ''}` };
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro de rede.' };
+  }
+}
+
+/** Foto do contato (miniatura). URL temporária; string vazia = sem foto. */
+export async function getUazapiChatAvatar(baseUrl: string, token: string, chatid: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${baseUrl}/chat/avatar`, {
+      method: 'POST',
+      headers: { token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: chatid, preview: true }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { url?: string };
+    return typeof data.url === 'string' && data.url.startsWith('http') ? data.url : null;
+  } catch {
+    return null;
   }
 }
 

@@ -1,5 +1,6 @@
 import { dbService } from '@/lib/supabase/db';
 import { checkUazapiStatus, configureUazapiWebhook } from '@/lib/uazapi';
+import { purgeOldInboxMessages } from '@/lib/whatsapp/inbox-store';
 import type { WhatsAppSettings } from '@/types/database';
 import webpush from 'web-push';
 
@@ -43,16 +44,17 @@ export async function runWhatsAppHealthCheck(): Promise<HealthResult[]> {
     return results;
   }
 
+  // Faxina do histórico da caixa de entrada (90 dias), aproveitando a cadência.
+  try {
+    const purged = await purgeOldInboxMessages();
+    if (purged) console.log('[whatsapp/health] mensagens antigas apagadas:', purged);
+  } catch { /* best-effort */ }
+
   for (const s of allSettings) {
-    // Monitora quem tem alguma automação ligada (ou a IA, quando voltar):
-    // é a conexão que faz os disparos chegarem na cliente.
-    const usesWhatsApp = s.bot_enabled
-      || s.automation_booking_enabled
-      || s.automation_day_before_enabled
-      || s.automation_day_of_enabled
-      || s.automation_5days_enabled
-      || s.automation_followup_enabled;
-    if (!usesWhatsApp) continue;
+    // Monitora toda instância com credenciais: além das automações, a aba
+    // WhatsApp depende do webhook para guardar as conversas (histórico de 30+
+    // dias, fotos). Sem o webhook no ar, a caixa de entrada fica cega.
+    if (!s.uazapi_url || !s.uazapi_token) continue;
     const pid = s.professional_id;
     try {
       const state = await loadState(pid);
@@ -119,7 +121,9 @@ async function isWebhookHealthy(s: WhatsAppSettings): Promise<boolean> {
       return w?.enabled === true
         && url.includes(`pid=${s.professional_id}`)
         && url.includes(`secret=${s.webhook_secret}`)
-        && events.includes('messages');
+        && events.includes('messages')
+        // Recibos de leitura: sem eles o "tique azul" e o "não lida" ficam velhos.
+        && events.includes('messages_update');
     });
   } catch {
     return false;
