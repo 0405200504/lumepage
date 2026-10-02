@@ -135,12 +135,6 @@ self.addEventListener('fetch', (event) => {
       resposta.then(() => soltar(), () => soltar());
       event.respondWith(resposta);
       event.waitUntil(trabalho.catch(() => {}));
-    } else if (url.pathname === ABERTURA) {
-      // A tela de abertura se recriando (ela nasceu com a janela curta do
-      // iOS): do cache, na hora — cada ida à rede seria tempo de tela parada.
-      event.respondWith(
-        caches.open(CACHE).then((c) => c.match(ABERTURA)).then((hit) => hit || fetch(req))
-      );
     } else {
       event.respondWith(redeComFallback(req));
     }

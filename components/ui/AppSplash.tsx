@@ -2,6 +2,7 @@ import React from 'react';
 import {
   SPLASH_CSS,
   SPLASH_DIAG_KEY,
+  SPLASH_SCREEN_FIT_JS,
   SPLASH_HANDOFF_KEY,
   SPLASH_HANDOFF_TTL_MS,
   SPLASH_MARKUP,
@@ -59,10 +60,10 @@ export const AppSplash: React.FC = () => {
   // (ou já, se a cena acabou e a marca estava parada esperando o painel).
   // No fim, se a tela de abertura deixou diagnóstico (app do iPhone), anota
   // a janela que o painel recebeu — o SplashRunner manda.
-  // Antes de tudo, no app do iPhone em pé a cortina é medida pela tela, como
-  // na tela de abertura (app/abertura/route.ts): se o iOS der ao painel a
-  // janela curta do bug do iOS 26, a marca continua no mesmo ponto.
-  const gate = `try{var o=screen.orientation&&screen.orientation.type||'';if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width){document.documentElement.style.setProperty('--lume-tela',screen.height+'px');document.documentElement.dataset.tela='cheia'}}catch(x){}try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
+  // Antes de tudo, no app do iPhone em pé a cortina é medida pela tela
+  // (SPLASH_SCREEN_FIT_JS), como na tela de abertura: o iOS dá ao painel a
+  // mesma janela curta, e a estrela tem de ficar no mesmo ponto.
+  const gate = `${SPLASH_SCREEN_FIT_JS}try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
     SPLASH_HANDOFF_KEY,
   )})),e=Date.now()-h;s.removeItem(${JSON.stringify(SPLASH_HANDOFF_KEY)});if(h&&e>=0&&e<${SPLASH_HANDOFF_TTL_MS}){s.setItem(${JSON.stringify(
     SPLASH_SESSION_KEY,
@@ -70,7 +71,7 @@ export const AppSplash: React.FC = () => {
     SPLASH_SESSION_KEY,
   )})==='1'){d.dataset.splash='off'}else{s.setItem(${JSON.stringify(SPLASH_SESSION_KEY)},'1')}var g=JSON.parse(s.getItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
-  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,e:h?e:null};s.setItem(${JSON.stringify(
+  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,fit:d.style.getPropertyValue('--lume-tela'),e:h?e:null};s.setItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
   )},JSON.stringify(g))}}catch(x){}`;
 

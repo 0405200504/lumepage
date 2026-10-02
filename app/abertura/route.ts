@@ -7,9 +7,7 @@ import {
   SPLASH_HANDOFF_KEY,
   SPLASH_LAUNCH_VERSION,
   SPLASH_MARKUP,
-  SPLASH_RETRY_MS,
-  SPLASH_WAIT_KEY,
-  SPLASH_WAIT_MAX_MS,
+  SPLASH_SCREEN_FIT_JS,
 } from '@/lib/ui/splashScene';
 
 /**
@@ -23,10 +21,10 @@ import {
  * no cache e entrega NA HORA quando o app abre do zero, no lugar do /dashboard
  * pedido. Ele já é a cena (lib/ui/splashScene): pinta no primeiro quadro,
  * sem esperar ninguém. Enquanto ela toca, o service worker já foi buscar o
- * painel de verdade. Aos 1,9 s — o "lume" acabou de aparecer e daqui em
- * diante só o cetim se mexe — este documento chama o painel, que continua a
- * cena do mesmo ponto (components/ui/AppSplash, modo 'handoff') e se dissolve.
- * Se o painel atrasar, a marca fica parada no cetim esperando por ele.
+ * painel de verdade. Aos 1,5 s — o reflexo acabou e daqui em diante nada se
+ * mexe — este documento chama o painel, que continua a cena do mesmo ponto
+ * (components/ui/AppSplash, modo 'handoff') e se dissolve. Se o painel
+ * atrasar, a estrela fica parada esperando por ele.
  *
  * Tudo inline, nada de CSS/JS do Next: depois de um deploy, um HTML guardado
  * que apontasse para arquivos de build antigos pintaria sem estilo.
@@ -35,51 +33,29 @@ import {
  * documento mostra só o bordô — igual à tela de abertura do iPhone — e segue
  * direto, porque o destino vai ser o login.
  *
- * O BUG DO iOS 26 (ver SPLASH_WAIT_KEY em lib/ui/splashScene): a página
- * criada enquanto o app ainda abre nasce com a janela curta — falta a altura
- * da barra de status, a faixa de baixo vira zona morta e nada desenhado ali
- * aparece. Não há CSS que resolva dentro dessa página. Então:
- *   · se a janela nasceu mais curta que a tela (só no app do iPhone, em pé),
- *     a página mostra só o bordô e se recria em /abertura, a cada
- *     SPLASH_RETRY_MS, até nascer certa — e só então toca a cena;
- *   · passando de SPLASH_WAIT_MAX_MS, toca do jeito que estiver. Para esse
- *     caso a cena é medida pela tela (screen.height) — a estrela fica no
- *     mesmo ponto da do painel — e, como o fundo da página é o mesmo bordô
- *     chapado da cena, a zona morta do iOS fica invisível.
- *
- * Diagnóstico (temporário, só no app do iPhone): cada página anota as medidas
- * da janela em sessionStorage; o painel manda tudo para /api/diag/abertura.
+ * No app do iPhone a janela nasce mais curta que a tela e pode ficar assim a
+ * abertura inteira (SPLASH_SCREEN_FIT_JS em lib/ui/splashScene). O fundo
+ * chapado esconde a faixa; a cena é medida pela tela, igual no painel, para
+ * a estrela não pular na troca. Diagnóstico (temporário, só no app do
+ * iPhone): as medidas da janela vão em sessionStorage; o painel manda para
+ * /api/diag/abertura.
  */
 export const dynamic = 'force-static';
 
 const LAUNCH_SCRIPT = `(function(){
-var d=document.documentElement,agora=Date.now(),s=null;
+var d=document.documentElement,s=null;
 try{s=sessionStorage}catch(e){}
-var noPainel=/^\\/dashboard(\\/|$)/.test(location.pathname),para=null,n=0;
-try{var q=new URLSearchParams(location.search);para=q.get('para');n=Number(q.get('n'))||0}catch(e){}
-var caminho=noPainel?location.pathname+location.search:(para&&/^\\/dashboard(\\/|\\?|$)/.test(para)?para:'/dashboard');
+var noPainel=/^\\/dashboard(\\/|$)/.test(location.pathname);
+var caminho=noPainel?location.pathname+location.search:'/dashboard';
 var ir=function(){location.replace(caminho)};
-var o='',deitado=false;
-try{o=screen.orientation&&screen.orientation.type||'';deitado=/landscape/.test(o)||Math.abs(window.orientation||0)===90}catch(e){}
-var ios=navigator.standalone===true&&!deitado&&screen.height>screen.width;
-if(ios){d.style.setProperty('--lume-tela',screen.height+'px');d.dataset.tela='cheia'}
+${SPLASH_SCREEN_FIT_JS}
 var logada=false,calma=false;
 try{logada=localStorage.getItem(${JSON.stringify(PANEL_FLAG_KEY)})==='1'}catch(e){}
 try{calma=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
 if(!logada||calma){d.dataset.splash='still';ir();return}
-var curta=ios&&innerHeight>0&&innerHeight<screen.height-2;
-var inicio=agora;
-try{if(noPainel){s.setItem(${JSON.stringify(SPLASH_WAIT_KEY)},String(agora))}else{inicio=Number(s.getItem(${JSON.stringify(SPLASH_WAIT_KEY)}))||agora}}catch(e){}
-var esperando=curta&&agora-inicio<${SPLASH_WAIT_MAX_MS}&&n<40;
-if(ios){try{
-var dg=noPainel?{v:${JSON.stringify(SPLASH_LAUNCH_VERSION)},ua:navigator.userAgent,tela:[screen.width,screen.height],dpr:devicePixelRatio,dm:matchMedia('(display-mode: standalone)').matches,pg:[]}:JSON.parse(s.getItem(${JSON.stringify(SPLASH_DIAG_KEY)})||'null');
-if(dg&&dg.pg.length<60){var vv=window.visualViewport;dg.pg.push({t:agora-inicio,j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,curta:curta,acao:esperando?'recria':'cena'});s.setItem(${JSON.stringify(SPLASH_DIAG_KEY)},JSON.stringify(dg))}
-}catch(e){}}
-if(esperando){
-d.dataset.splash='still';
-setTimeout(function(){location.replace('/abertura?para='+encodeURIComponent(caminho)+'&n='+(n+1))},${SPLASH_RETRY_MS});
-return}
-try{s.removeItem(${JSON.stringify(SPLASH_WAIT_KEY)})}catch(e){}
+if(d.dataset.tela){try{var vv=window.visualViewport;s.setItem(${JSON.stringify(SPLASH_DIAG_KEY)},JSON.stringify({v:${JSON.stringify(
+  SPLASH_LAUNCH_VERSION,
+)},ua:navigator.userAgent,tela:[screen.width,screen.height],dpr:devicePixelRatio,dm:matchMedia('(display-mode: standalone)').matches,pg:[{t:0,j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,fit:d.style.getPropertyValue('--lume-tela')}]}))}catch(e){}}
 d.dataset.splash='launch';
 var t0=Date.now(),marca=function(){try{s.setItem(${JSON.stringify(SPLASH_HANDOFF_KEY)},String(t0))}catch(e){}};
 marca();

@@ -19,15 +19,15 @@ import { SPLASH_BG } from './splashBg';
  * nome e sem textura:
  *   0,0–1,3   ignição: um ponto de luz acende e as duas metades da estrela
  *             chegam de cantos opostos, girando até se encaixar
- *   0,6–1,45  reflexo: um clarão horizontal e um brilho cromado atravessam a
- *             estrela (o som toca aqui)
+ *   0,7–1,45  reflexo: um brilho cromado atravessa a estrela (o som toca
+ *             no encaixe das metades)
  *   1,45–1,8  pausa: a estrela parada, o halo assentado
  *   1,8–2,25  entrada: a estrela avança meio passo e a cortina se dissolve
  *             sobre o painel
  *
  * Por que chapado: além de mais limpo, o fundo liso é o que fecha o bug do
- * iOS 26 descrito em SPLASH_WAIT_KEY — a faixa que o iOS deixa embaixo ganha
- * a cor de fundo da página, e com tudo da mesma cor ela some. Também é a cor
+ * iOS descrito em SPLASH_SCREEN_FIT_JS — a faixa que o iOS deixa embaixo
+ * ganha a cor de fundo da página, e com tudo da mesma cor ela some. Também é a cor
  * da tela de abertura nativa do Android (background_color do manifesto) e das
  * telas de abertura do iPhone (public/splash): emenda invisível dos dois lados.
  *
@@ -69,25 +69,29 @@ export const SPLASH_HANDOFF_TTL_MS = 20000;
 export const PANEL_FLAG_KEY = 'lume:painel';
 
 /**
- * O BUG DO iOS 26 NO APP INSTALADO: a página criada no instante em que o app
- * está abrindo nasce com a janela mais curta que a tela — falta exatamente a
- * altura da barra de status — e fica assim até morrer. Nada que ela desenhe
- * aparece na faixa de baixo (zona morta); a faixa fica com a cor de fundo da
- * página. Páginas criadas depois que o app terminou de abrir nascem certas
- * (medido nos vídeos do iPhone: o painel, chegando 2 s depois do toque,
- * sempre ocupou a tela inteira).
+ * O BUG DO iOS NO APP INSTALADO (medido no iPhone do usuário, 01–02/10/2026):
+ * a página criada no instante em que o app está abrindo nasce com a janela
+ * mais curta que a tela — falta a altura da barra de status — e pode ficar
+ * assim a abertura inteira: num iPhone 428×926 a janela ficou em 879 por
+ * mais de 1,5 s, e até o painel chegou curto (só cresceu para 926 depois de
+ * montado). Nada que a página desenhe aparece na faixa de baixo (zona
+ * morta); a faixa fica com a cor de fundo da página — por isso o fundo
+ * chapado (SPLASH_BG) a esconde.
  *
- * Por isso a tela de abertura confere a própria janela: se nasceu curta,
- * mostra só o bordô (= tela de abertura do iPhone) e se recria (/abertura,
- * servida do cache pelo service worker) até nascer certa — e só então toca a
- * cena. Este é o marco de quando começou a esperar.
+ * O que sobra é posicionar a estrela pela TELA, não pela janela, nas duas
+ * páginas, para ela não pular na troca. Este trecho roda nas duas (a tela de
+ * abertura e a porteira do painel): no app do iPhone em pé, mede a altura da
+ * tela em pixels CSS e põe em --lume-tela; o CSS da cena usa isso no lugar
+ * de inset: 0. A correção pelo zoom é necessária: com o zoom de página do
+ * Safari (o outro iPhone do usuário está em 85%), a janela vem em pixels
+ * CSS maiores que a tela em pontos, e screen.height sozinho ficaria curto.
+ * innerWidth é confiável nesse instante (só a altura vem errada), então
+ * tela em px CSS = screen.height × innerWidth / screen.width.
  */
-export const SPLASH_WAIT_KEY = 'lume:abertura-espera';
-/** Quanto tempo, no máximo, se espera o iOS acertar a janela antes de tocar
- *  a cena mesmo assim. */
-export const SPLASH_WAIT_MAX_MS = 1500;
-/** Intervalo entre uma tentativa e outra de recriar a página. */
-export const SPLASH_RETRY_MS = 50;
+export const SPLASH_SCREEN_FIT_JS =
+  "try{var o=screen.orientation&&screen.orientation.type||'';" +
+  "if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width&&innerWidth>0){" +
+  "var fd=document.documentElement;fd.style.setProperty('--lume-tela',Math.round(screen.height*innerWidth/screen.width)+'px');fd.dataset.tela='cheia'}}catch(x){}";
 
 /** Diagnóstico temporário da abertura no iPhone (sessionStorage → painel →
  *  /api/diag/abertura). Só medidas de tela, nada pessoal. */
@@ -140,9 +144,9 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear 
    painel, que assume daqui. */
 html[data-splash='launch'] #lume-splash,
 html[data-splash='launch'] .lume-splash__star-wrap { animation: none; }
-/* App do iPhone: a cortina mede a TELA, não a janela (o iOS 26 às vezes dá
-   uma janela mais curta — ver SPLASH_WAIT_KEY). A tela de abertura ainda
-   troca para position: absolute (app/abertura/route.ts). */
+/* App do iPhone: a cortina mede a TELA, não a janela (o iOS dá uma janela
+   mais curta na abertura — ver SPLASH_SCREEN_FIT_JS). A tela de abertura
+   ainda troca para position: absolute (app/abertura/route.ts). */
 html[data-tela] #lume-splash { bottom: auto; height: var(--lume-tela); }
 /* Só o bordô: o primeiro quadro, igual à tela de abertura do iPhone. */
 html[data-splash='still'] .lume-splash__star-wrap { display: none; }
@@ -231,25 +235,6 @@ html[data-splash='still'] #lume-splash * { animation: none; }
   30%  { opacity: 1; }
   100% { opacity: 0.26; transform: translate(-50%, -50%) scale(1); }
 }
-/* Clarão horizontal no encaixe das metades (o eixo da estrela está a 50,6%). */
-.lume-splash__flare {
-  position: absolute;
-  left: 50%;
-  top: 50.6%;
-  width: 300%;
-  height: 2px;
-  mix-blend-mode: screen;
-  opacity: 0;
-  transform: translate(-50%, -50%) scaleX(0.1);
-  box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.35);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 50%, transparent);
-  animation: lume-splash-flare 650ms var(--lume-ease-out) ${at(640)} both;
-}
-@keyframes lume-splash-flare {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scaleX(0.08); }
-  25%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1); }
-}
 `;
 
 /** Uma metade da estrela, com o metal cromado e o filete claro na borda. */
@@ -267,7 +252,6 @@ const half = (cls: string, d: string) =>
 export const SPLASH_MARKUP =
   `<div class="lume-splash__star-wrap">` +
   `<div class="lume-splash__bloom"></div>` +
-  `<div class="lume-splash__flare"></div>` +
   `<svg class="lume-splash__star" viewBox="0 0 237 220" focusable="false">` +
   `<defs>` +
   `<linearGradient id="lume-splash-chrome" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="237" y2="220">` +

@@ -46,7 +46,7 @@ export function SplashRunner() {
       if (diag) {
         sessionStorage.removeItem(SPLASH_DIAG_KEY);
         const dados = JSON.parse(diag);
-        dados.montado = { j: [window.innerWidth, window.innerHeight], c: html.clientHeight };
+        dados.montado = { j: [window.innerWidth, window.innerHeight], c: html.clientHeight, fit: html.style.getPropertyValue('--lume-tela') };
         void fetch('/api/diag/abertura', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
