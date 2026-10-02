@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await requestPasswordResetAction(email, await captcha.waitForToken());
+      const res = await requestPasswordResetAction(email, await captcha.takeToken());
       if (res.success) {
         setSent(true);
       } else {
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {/* Widget Cloudflare Turnstile */}
-              <TurnstileWidget onVerify={captcha.onVerify} />
+              <TurnstileWidget onVerify={captcha.onVerify} resetKey={captcha.resetKey} />
 
               <button
                 type="submit"

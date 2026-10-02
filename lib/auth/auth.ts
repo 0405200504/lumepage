@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '../supabase/client';
+import { isSupabaseConfigured, getSupabaseAdmin, freshAuthClient } from '../supabase/client';
 import { dbService } from '../supabase/db';
 import { Profile } from '@/types/database';
 import { DEMO_PROFESSIONAL_ID, DEMO_PROFILE_ID, DEMO_EMAIL, DEMO_NAME } from '@/lib/demo';
@@ -10,6 +10,9 @@ import { claimOrphanOnSignup } from '../subscription/orphans';
 import { resolvePlan } from '../subscription/entitlements';
 import { sendMail } from '../mail';
 import { welcomeEmail } from '../mail-templates';
+import { needsEmailConfirmation, createdAfterConfirmationCutoff } from './email-confirm';
+
+const EMAIL_NOT_CONFIRMED_MSG = 'Confirme seu e-mail antes de entrar. Procure a mensagem da Lume na sua caixa de entrada (e no spam).';
 
 /**
  * ESCOPOS DE SESSÃO
@@ -90,19 +93,29 @@ function buildSession(profile: Profile, authUserId: string | null): SessionData 
 
 export const authService = {
   // Login
-  login: async (email: string, password?: string): Promise<{ success: boolean; profile?: Profile; error?: string }> => {
+  login: async (email: string, password?: string): Promise<{ success: boolean; profile?: Profile; error?: string; needsConfirmation?: boolean }> => {
     const cleanEmail = email.trim().toLowerCase();
 
     if (isSupabaseConfigured) {
       try {
-        // 1. Tentar login no Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        // 1. Confere a senha num cliente DESCARTÁVEL (ver freshAuthClient): o
+        //    cliente compartilhado guardava a sessão na memória do servidor.
+        const { data: authData, error: authError } = await freshAuthClient().auth.signInWithPassword({
           email: cleanEmail,
           password: password || '',
         });
 
         if (authError) {
-          return { success: false, error: 'Credenciais inválidas no Supabase.' };
+          // Com "Confirm email" ligado no Supabase, o próprio GoTrue recusa assim.
+          if (authError.code === 'email_not_confirmed' || /not confirmed/i.test(authError.message)) {
+            return { success: false, needsConfirmation: true, error: EMAIL_NOT_CONFIRMED_MSG };
+          }
+          return { success: false, error: 'E-mail ou senha incorretos.' };
+        }
+
+        // E com ele desligado, quem barra somos nós.
+        if (authData.user && needsEmailConfirmation(authData.user)) {
+          return { success: false, needsConfirmation: true, error: EMAIL_NOT_CONFIRMED_MSG };
         }
 
         if (authData.user) {
@@ -117,6 +130,18 @@ export const authService = {
           const sessionData: SessionData = buildSession(profile, authData.user.id);
 
           await writeSessionCookie(sessionData);
+
+          // Compra órfã da Hubla: antes era vinculada no cadastro, o que deixava
+          // quem soubesse o e-mail de quem pagou criar a conta e ficar com o plano.
+          // Agora só depois de provar o e-mail (este login só passa confirmado).
+          // Uma consulta, só para contas novas; nas seguintes não acha nada.
+          if (profile.role === 'professional' && profile.professional_id && createdAfterConfirmationCutoff(authData.user.created_at)) {
+            const paid = await claimOrphanOnSignup(cleanEmail, profile.professional_id, 'signup');
+            if (paid) {
+              await sendMail({ to: cleanEmail, ...welcomeEmail({ name: profile.name, email: cleanEmail, paid: { plan: resolvePlan(paid.plan), endsAt: paid.endsAt, months: paid.months } }) })
+                .catch(() => undefined);
+            }
+          }
 
           return { success: true, profile };
         }
@@ -269,10 +294,7 @@ export const authService = {
       if (!scope || scope === 'admin') cookieStore.delete(ADMIN_COOKIE_NAME);
       if (!scope || scope === 'pro') cookieStore.delete(PRO_COOKIE_NAME);
       if (!scope) cookieStore.delete(LEGACY_COOKIE_NAME);
-
-      if (isSupabaseConfigured && scope !== 'admin') {
-        await supabase.auth.signOut();
-      }
+      // A sessão é só o nosso cookie: não há sessão do Supabase no servidor a encerrar.
       return true;
     } catch (e) {
       console.error('Erro ao realizar logout:', e);
@@ -313,18 +335,11 @@ export const authService = {
     try {
       if (scope) return readScope(scope);
 
-      const session = readScope('pro') ?? readScope('admin');
-      if (session) return session;
-
-      // Sem cookie nenhum: com Supabase configurado, tenta a sessão dele.
-      if (isSupabaseConfigured) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const profile = await dbService.getProfileByAuthUserId(user.id);
-          if (profile) return buildSession(profile, user.id);
-        }
-      }
-      return null;
+      // Sem cookie = sem sessão. Antes havia um "plano B" que perguntava ao
+      // cliente do Supabase compartilhado quem estava logada — no servidor ele
+      // devolvia a ÚLTIMA pessoa que entrou naquela instância, e uma requisição
+      // sem cookie nenhum (chat da Ana, voz, push) agia em nome dela.
+      return readScope('pro') ?? readScope('admin');
     } catch (e: any) {
       if (e.digest === 'DYNAMIC_SERVER_USAGE' || (e.message && e.message.includes('Dynamic server usage'))) {
         throw e;

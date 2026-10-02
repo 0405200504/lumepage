@@ -1,6 +1,6 @@
 'use server';
 
-import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getSupabaseAdmin, supabase, isSupabaseConfigured, freshAuthClient } from '@/lib/supabase/client';
 import { redeemAccessToken, createAccessToken, logAccessEvent, requestMeta } from '@/lib/access-tokens';
 import { authService } from '@/lib/auth/auth';
 import { rateLimit } from '@/lib/rate-limit';
@@ -61,7 +61,10 @@ export async function resetPasswordWithTokenAction(token: string, password: stri
   const pf = profile as { id: string; auth_user_id: string | null; email: string } | null;
   if (!pf?.auth_user_id) return { success: false, error: 'Conta sem usuário de autenticação. Fale com o suporte.' };
 
-  const { error } = await client.auth.admin.updateUserById(pf.auth_user_id, { password });
+  // O link de redefinição chegou no e-mail da conta: isso prova que o e-mail é
+  // dela. Confirma junto — é o caminho de quem perdeu o e-mail de confirmação,
+  // ou de quem teve o e-mail usado num cadastro feito por outra pessoa.
+  const { error } = await client.auth.admin.updateUserById(pf.auth_user_id, { password, email_confirm: true });
   if (error) return { success: false, error: error.message };
 
   const { error: pfErr } = await db().from('profiles')
@@ -89,8 +92,10 @@ export async function changeOwnPasswordAction(currentPassword: string, newPasswo
   if (invalid) return { success: false, error: invalid };
   if (currentPassword === newPassword) return { success: false, error: 'A nova senha precisa ser diferente da atual.' };
 
-  // Confere a senha atual pelo caminho normal de login (comparação de hash no GoTrue).
-  const { error: checkErr } = await supabase.auth.signInWithPassword({ email: session.email, password: currentPassword });
+  // Confere a senha atual pelo caminho normal de login (comparação de hash no
+  // GoTrue), num cliente descartável: o compartilhado guardaria a sessão na
+  // memória do servidor.
+  const { error: checkErr } = await freshAuthClient().auth.signInWithPassword({ email: session.email, password: currentPassword });
   if (checkErr) return { success: false, error: 'A senha atual não confere.' };
 
   const client = getSupabaseAdmin();

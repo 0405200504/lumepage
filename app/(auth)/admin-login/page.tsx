@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await loginAction(email, password, await captcha.waitForToken());
+      const res = await loginAction(email, password, await captcha.takeToken());
       if (res.success && res.profile) {
         if (res.profile.role === 'super_admin') {
           success('Bem-vindo!', `Olá, Administrador. Acessando painel...`);
@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
             </div>
 
             {/* Anti-bot (Turnstile): invisível, só aparece se a Cloudflare pedir um desafio */}
-            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
+            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} resetKey={captcha.resetKey} />
 
             <button
               type="submit"

@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Store, LogIn, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
-import { registerProfessionalAction } from '@/app/actions/professional';
+import { registerProfessionalAction, resendConfirmationAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import InstallApp from '@/components/pwa/InstallApp';
 import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
-import { PLAN_LABEL, resolvePlan, type PlanType } from '@/lib/subscription/entitlements';
+import { PLAN_LABEL, type PlanType } from '@/lib/subscription/entitlements';
 
 /**
  * Cadastro. Quem chega pelo e-mail de "pagamento aprovado" (compra órfã da
@@ -46,6 +46,23 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
   // Anti-bot: o cadastro cria conta e dispara e-mail — sem isto o único freio
   // era um rate limit em memória, que zera a cada instância da Vercel.
   const captcha = useTurnstileToken();
+  // Conta criada e esperando o clique no link do e-mail (lib/auth/email-confirm.ts).
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const handleResend = async () => {
+    if (!confirmEmail) return;
+    setResending(true);
+    try {
+      const r = await resendConfirmationAction(confirmEmail);
+      if ('error' in r && r.error) error('Atenção', r.error);
+      else success('E-mail reenviado', 'message' in r ? r.message : 'Confira sua caixa de entrada.');
+    } catch {
+      error('Erro', 'Não foi possível reenviar agora. Tente de novo em instantes.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,11 +78,14 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
 
     setIsLoading(true);
     try {
-      const res = await registerProfessionalAction({ ...formData, captchaToken: await captcha.waitForToken() });
-      if (res.success) {
-        const plan = 'plan' in res && res.plan ? PLAN_LABEL[resolvePlan(res.plan)] : null;
-        if (plan) success('Conta criada!', `Seu plano ${plan} já está ativo. Faça login para entrar.`);
-        else if (paidFlow) success('Conta criada!', 'Assim que a Hubla confirmar o pagamento, o plano ativa sozinho. Faça login para entrar.');
+      const res = await registerProfessionalAction({ ...formData, captchaToken: await captcha.takeToken() });
+      if (res.success && 'needsConfirmation' in res && res.needsConfirmation) {
+        // Não manda para o login: sem clicar no link, o login recusa.
+        setConfirmEmail(formData.email.trim().toLowerCase());
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (res.success) {
+        // A compra órfã da Hubla é ligada no primeiro login, não aqui.
+        if (paidFlow) success('Conta criada!', 'O plano que você pagou ativa quando você entrar. Faça login.');
         else success('Conta criada com sucesso!', 'Seus 7 dias grátis começaram. Faça login para acessar.');
         router.push('/login');
       } else {
@@ -109,11 +129,13 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
         <div className="flex flex-col items-center mb-6">
           <LumeLogo variant="light" className="h-20 mb-5" />
           <h2 className="text-h2 font-semibold text-white tracking-tight text-center">
-            {alreadyLinked ? 'Você já tem conta na Lume' : paidFlow ? 'Falta só criar sua conta' : 'Crie sua conta grátis'}
+            {confirmEmail ? 'Confira seu e-mail' : alreadyLinked ? 'Você já tem conta na Lume' : paidFlow ? 'Falta só criar sua conta' : 'Crie sua conta grátis'}
           </h2>
           <p className="text-caption text-white/70 mt-1.5 text-center max-w-sm">
             <CheckCircle2 className="inline h-3.5 w-3.5 -mt-0.5 mr-1.5 text-wine-500" aria-hidden />
-            {alreadyLinked
+            {confirmEmail
+              ? `Mandamos um link para ${confirmEmail}.`
+              : alreadyLinked
               ? 'Esse pagamento já está ligado à sua conta. É só entrar.'
               : purchase?.state === 'pending'
                 ? `Pagamento aprovado. ${planName ? `O plano ${planName}` : 'Seu plano'} ativa assim que a conta for criada.`
@@ -122,6 +144,31 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
                   : 'Teste o Lume por 7 dias sem compromisso.'}
           </p>
         </div>
+
+        {confirmEmail && (
+          <div className="card-elevated glow-wine p-7 md:p-9 text-center">
+            <Mail className="mx-auto h-8 w-8 text-wine-700" aria-hidden />
+            <p className="text-label text-n-600 mt-4">
+              Abra o e-mail da Lume e toque em <strong>Confirmar meu e-mail</strong>. Depois é só entrar com a senha que você criou.
+              {paidFlow ? ' O plano que você pagou ativa no primeiro acesso.' : ' Seus 7 dias grátis já estão reservados.'}
+            </p>
+            <p className="text-caption text-n-500 mt-3">Não chegou? Olhe no spam e na aba Promoções.</p>
+            <Link
+              href="/login"
+              className="tap flex items-center justify-center gap-2 w-full py-4 mt-6 surface-wine hover:opacity-95 text-white text-label font-bold rounded-2xl shadow-soft transition-ui"
+            >
+              <LogIn className="h-4 w-4" aria-hidden /> Já confirmei, quero entrar
+            </Link>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="mt-4 text-caption font-bold text-wine-700 hover:underline disabled:opacity-60"
+            >
+              {resending ? 'Enviando…' : 'Reenviar e-mail de confirmação'}
+            </button>
+          </div>
+        )}
 
         {alreadyLinked && (
           <div className="card-elevated glow-wine p-7 md:p-9 text-center">
@@ -142,7 +189,7 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
         </div>
 
         {/* Card de Cadastro */}
-        <div className={`card-elevated glow-wine p-7 md:p-9 ${alreadyLinked ? 'hidden' : ''}`}>
+        <div className={`card-elevated glow-wine p-7 md:p-9 ${alreadyLinked || confirmEmail ? 'hidden' : ''}`}>
           <form onSubmit={handleSubmit} className="space-y-4">
             
             <div className="grid grid-cols-2 gap-4">
@@ -236,7 +283,7 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
               </div>
             </div>
 
-            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
+            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} resetKey={captcha.resetKey} />
 
             <button
               type="submit"

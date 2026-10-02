@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
-import { loginAction, loginDemoAction } from '@/app/actions/professional';
+import { loginAction, loginDemoAction, resendConfirmationAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
@@ -41,6 +41,37 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Conta criada que ainda não clicou no link de confirmação do e-mail.
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  // Volta do link de confirmação (/confirmar-email) ou de um link de acesso que
+  // falhou (/acesso): o recado vem na URL. Uma vez só, e some da barra de
+  // endereço para não repetir ao recarregar.
+  const urlNoticeShown = useRef(false);
+  useEffect(() => {
+    if (urlNoticeShown.current) return;
+    urlNoticeShown.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const erroUrl = params.get('erro');
+    if (params.get('confirmado') === '1') success('E-mail confirmado!', 'Agora é só entrar com seu e-mail e senha.');
+    else if (erroUrl) error('Atenção', erroUrl.slice(0, 200));
+    if (params.has('confirmado') || erroUrl) window.history.replaceState(null, '', window.location.pathname);
+  }, [success, error]);
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const r = await resendConfirmationAction(email);
+      if ('error' in r && r.error) error('Atenção', r.error);
+      else success('E-mail reenviado', 'message' in r ? r.message : 'Confira sua caixa de entrada.');
+    } catch {
+      error('Erro', 'Não foi possível reenviar agora. Tente de novo em instantes.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleDemo = async () => {
     setDemoLoading(true);
     try {
@@ -62,7 +93,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await loginAction(email, password, await captcha.waitForToken());
+      const res = await loginAction(email, password, await captcha.takeToken());
       if (res.success && res.profile) {
         if (res.profile.role === 'super_admin') {
           success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
@@ -76,7 +107,8 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
       } else {
-        error('Falha no Login', res.error || 'Credenciais incorretas.');
+        setUnconfirmed(!!res.needsConfirmation);
+        error(res.needsConfirmation ? 'Confirme seu e-mail' : 'Falha no Login', res.error || 'Credenciais incorretas.');
       }
     } catch (e) {
       error('Erro', 'Ocorreu um erro ao processar a autenticação.');
@@ -157,7 +189,23 @@ export default function LoginPage() {
             </div>
 
             {/* Widget Cloudflare Turnstile (Proteção Anti-Bot) */}
-            <TurnstileWidget theme="dark" appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
+            <TurnstileWidget theme="dark" appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} resetKey={captcha.resetKey} />
+
+            {unconfirmed && (
+              <div className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 py-3 text-center">
+                <p className="text-caption text-white/80">
+                  Falta confirmar seu e-mail. Abra a mensagem da Lume e toque em &quot;Confirmar meu e-mail&quot;.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="mt-2 text-caption font-semibold text-white underline underline-offset-4 disabled:opacity-60"
+                >
+                  {resending ? 'Enviando…' : 'Reenviar e-mail de confirmação'}
+                </button>
+              </div>
+            )}
 
             {/* Principal: branco cheio, a mesma altura dos campos. A seta
                 avança meio passo no hover — o gesto de "entrar". */}
