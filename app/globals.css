@@ -1078,41 +1078,17 @@ select.field-input { padding-right: 34px; }
    avulso, sem este arquivo. Um lugar só = as duas nunca descasam.
    ========================================================= */
 
-/* O cetim da cortina do login reproduz o primeiro quadro da cena: a mesma
-   folga de 6% e a mesma vinheta de .lume-splash__satin / __vignette. */
-.login-curtain__satin {
-  position: absolute;
-  inset: -6%;
-  display: block;
-}
-.login-curtain__satin img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-@media (min-aspect-ratio: 1/1) {
-  .login-curtain__satin img { filter: contrast(1.07) saturate(1.05); }
-}
-.login-curtain__vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(90% 72% at 50% 46%, transparent 38%, rgba(14, 2, 8, 0.58) 100%);
-}
-
 /* ---- cortina do login --------------------------------------------- */
 /* Sobe no clique de "Acessar Painel" (components/auth/LoginCurtain): o mesmo
-   cetim e a mesma vinheta do primeiro quadro de #lume-splash, para a abertura
-   continuar exatamente de onde o login parou — sem o formulário sumindo nem
-   o esqueleto do painel piscarem no meio. */
+   bordô chapado do primeiro quadro de #lume-splash (a cor vem de SPLASH_BG,
+   inline no componente), para a abertura continuar exatamente de onde o
+   login parou — sem o formulário sumindo nem o esqueleto do painel piscarem
+   no meio. */
 .login-curtain {
   position: fixed;
   inset: 0;
   z-index: 300;
   overflow: hidden;
-  background: #4a0e22;
   animation: login-curtain-in 380ms cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 @keyframes login-curtain-in {

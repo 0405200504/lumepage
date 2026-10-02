@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SPLASH_BG } from '@/lib/ui/splashScene';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -9,13 +10,11 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    // Vinho, e não creme: este é o fundo da splash NATIVA do Android (a que
-    // mostra o ícone antes do app carregar). Com o creme antigo, a sequência
-    // era clarão → cortina vinho → painel. Agora emenda na abertura da marca
-    // (components/ui/AppSplash) sem piscar de cor: é o tom médio do cetim
-    // da cortina (#lume-splash em lib/ui/splashScene.ts).
-    background_color: '#4a0e22',
-    theme_color: '#4a0e22',
+    // Bordô, e não creme: este é o fundo da splash NATIVA do Android (a que
+    // mostra o ícone antes do app carregar). É exatamente a cor da cortina
+    // de abertura (lib/ui/splashScene), então a emenda não pisca de cor.
+    background_color: SPLASH_BG,
+    theme_color: SPLASH_BG,
     lang: 'pt-BR',
     categories: ['business', 'productivity', 'lifestyle'],
     icons: [

@@ -2,6 +2,7 @@ import React from 'react';
 import {
   SPLASH_CSS,
   SPLASH_DIAG_KEY,
+  SPLASH_SCREEN_FIT_JS,
   SPLASH_HANDOFF_KEY,
   SPLASH_HANDOFF_TTL_MS,
   SPLASH_MARKUP,
@@ -13,27 +14,25 @@ import { SplashRunner } from './SplashRunner';
 /**
  * ABERTURA DO APP — a cortina de marca entre o login e o painel.
  *
- * A cena, em 2,8 s (coreografia, estilos e relógio em lib/ui/splashScene):
- * sobre o cetim do login, um ponto de luz acende; as duas metades da estrela
+ * A cena, em 2,25 s (coreografia, estilos e relógio em lib/ui/splashScene):
+ * sobre bordô chapado, um ponto de luz acende; as duas metades da estrela
  * chegam de cantos opostos, girando, e se encaixam com um clarão e um reflexo
- * cromado; a estrela encolhe e desliza para a esquerda enquanto o "lume" se
- * revela; a cortina se dissolve sobre o painel. Junto, duas notas de vidro
- * (lib/ui/appChime) no instante do encaixe.
+ * cromado; a estrela assenta e a cortina se dissolve sobre o painel. Junto,
+ * duas notas de vidro (lib/ui/appChime) no instante do encaixe.
  *
  * SEM PISCAR — o que garante que nenhum quadro estranho apareça antes dela:
  *   · no toque do ícone, quem pinta a cena é a tela de abertura que o
  *     service worker serve do cache (app/abertura/route.ts), sem esperar o
  *     servidor montar o painel. Ela grava quando a cena começou; a porteira
  *     abaixo lê e este componente continua do mesmo quadro (modo 'handoff');
- *   · o cetim é um <img> embutido (data URI) com decoding="sync": pinta no
- *     mesmo quadro que a cortina, sem rede, sem cache, sem decodificação
- *     tardia — um fundo de CSS podia aparecer um quadro depois da cor chapada;
- *   · a marca é SVG inline, não máscara nem imagem; o CSS vai inline também;
+ *   · o fundo é uma cor chapada (SPLASH_BG): nada a decodificar, e no iPhone
+ *     a faixa que o iOS 26 deixa embaixo ganha essa mesma cor e some;
+ *   · a estrela é SVG inline, não máscara nem imagem; o CSS vai inline também;
  *   · vindo do login, a cortina de lá (components/auth/LoginCurtain) já
  *     mostra este mesmo primeiro quadro enquanto o painel carrega;
  *   · no iPhone instalado, as telas de abertura (public/splash) são este
  *     mesmo quadro, geradas por scripts/gerar-splash-ios.mts;
- *   · no Android, o background_color do manifesto é o tom médio do cetim.
+ *   · no Android, o background_color do manifesto é esta mesma cor.
  *
  * POR QUE ISTO É SERVER COMPONENT (e não um `useEffect` que monta um portal):
  * a cortina precisa estar no HTML do primeiro paint. Componente cliente só
@@ -61,10 +60,10 @@ export const AppSplash: React.FC = () => {
   // (ou já, se a cena acabou e a marca estava parada esperando o painel).
   // No fim, se a tela de abertura deixou diagnóstico (app do iPhone), anota
   // a janela que o painel recebeu — o SplashRunner manda.
-  // Antes de tudo, no app do iPhone em pé a cortina é medida pela tela, como
-  // na tela de abertura (app/abertura/route.ts): se o iOS der ao painel a
-  // janela curta do bug do iOS 26, a marca continua no mesmo ponto.
-  const gate = `try{var o=screen.orientation&&screen.orientation.type||'';if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width){document.documentElement.style.setProperty('--lume-tela',screen.height+'px');document.documentElement.dataset.tela='cheia'}}catch(x){}try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
+  // Antes de tudo, no app do iPhone em pé a cortina é medida pela tela
+  // (SPLASH_SCREEN_FIT_JS), como na tela de abertura: o iOS dá ao painel a
+  // mesma janela curta, e a estrela tem de ficar no mesmo ponto.
+  const gate = `${SPLASH_SCREEN_FIT_JS}try{var d=document.documentElement,s=sessionStorage,h=Number(s.getItem(${JSON.stringify(
     SPLASH_HANDOFF_KEY,
   )})),e=Date.now()-h;s.removeItem(${JSON.stringify(SPLASH_HANDOFF_KEY)});if(h&&e>=0&&e<${SPLASH_HANDOFF_TTL_MS}){s.setItem(${JSON.stringify(
     SPLASH_SESSION_KEY,
@@ -72,7 +71,7 @@ export const AppSplash: React.FC = () => {
     SPLASH_SESSION_KEY,
   )})==='1'){d.dataset.splash='off'}else{s.setItem(${JSON.stringify(SPLASH_SESSION_KEY)},'1')}var g=JSON.parse(s.getItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
-  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,e:h?e:null};s.setItem(${JSON.stringify(
+  )})||'null');if(g){var vv=window.visualViewport;g.painel={j:[innerWidth,innerHeight],c:d.clientHeight,vv:vv?Math.round(vv.height):null,fit:d.style.getPropertyValue('--lume-tela'),e:h?e:null};s.setItem(${JSON.stringify(
     SPLASH_DIAG_KEY,
   )},JSON.stringify(g))}}catch(x){}`;
 

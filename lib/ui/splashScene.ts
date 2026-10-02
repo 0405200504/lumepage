@@ -1,10 +1,5 @@
-import {
-  LUME_SATIN_DESKTOP,
-  LUME_SATIN_MOBILE,
-  LUME_STAR_A,
-  LUME_STAR_B,
-  LUME_WORD,
-} from './lumeSplashData';
+import { LUME_STAR_A, LUME_STAR_B } from './lumeSplashData';
+import { SPLASH_BG } from './splashBg';
 
 /**
  * A CENA DA ABERTURA — marcação, estilos e relógio num lugar só.
@@ -17,20 +12,24 @@ import {
  *     servidor, e que passa a cena para o painel no meio do caminho.
  *
  * Por isso nada aqui depende do globals.css nem de arquivo externo: o CSS vai
- * num <style> inline e a marcação é HTML puro (o cetim e a marca são dados
+ * num <style> inline e a marcação é HTML puro (a estrela são caminhos SVG
  * embutidos, lib/ui/lumeSplashData).
  *
- * A cena, em 2,8 s:
- *   0,0–1,1   ignição: um ponto de luz acende e as duas metades da estrela
+ * A cena, em 2,25 s, sobre bordô chapado (SPLASH_BG) — só a estrela, sem o
+ * nome e sem textura:
+ *   0,0–1,3   ignição: um ponto de luz acende e as duas metades da estrela
  *             chegam de cantos opostos, girando até se encaixar
- *   0,6–1,4   reflexo: um clarão horizontal e um brilho cromado atravessam a
- *             estrela (o som toca aqui)
- *   1,0–1,9   assinatura: a estrela encolhe e desliza para a esquerda; o
- *             "lume" se revela da esquerda para a direita, com um fio de luz
- *             na borda
- *   1,9–2,3   pausa: o cetim respira, um brilho cruza o tecido
- *   2,35–2,8  entrada: a marca avança meio passo e a cortina se dissolve
+ *   0,7–1,45  reflexo: um brilho cromado atravessa a estrela (o som toca
+ *             no encaixe das metades)
+ *   1,45–1,8  pausa: a estrela parada, o halo assentado
+ *   1,8–2,25  entrada: a estrela avança meio passo e a cortina se dissolve
  *             sobre o painel
+ *
+ * Por que chapado: além de mais limpo, o fundo liso é o que fecha o bug do
+ * iOS descrito em SPLASH_SCREEN_FIT_JS — a faixa que o iOS deixa embaixo
+ * ganha a cor de fundo da página, e com tudo da mesma cor ela some. Também é a cor
+ * da tela de abertura nativa do Android (background_color do manifesto) e das
+ * telas de abertura do iPhone (public/splash): emenda invisível dos dois lados.
  *
  * O RELÓGIO É COMPARTILHADO. Todo atraso de animação desconta --lume-t (o
  * tempo de cena que já passou em outra página), e a saída começa em
@@ -41,12 +40,16 @@ import {
  * Modos (data-splash no <html>):
  *   (nenhum)   cena inteira, com saída
  *   handoff    continua a cena da tela de abertura (--lume-t / --lume-exit)
- *   launch     tela de abertura: toca a cena e segura a marca, sem saída,
+ *   launch     tela de abertura: toca a cena e segura a estrela, sem saída,
  *              até o painel assumir
- *   still      só o cetim parado (= tela de abertura do iPhone), sem marca
+ *   still      só o bordô (= tela de abertura do iPhone), sem estrela
  *   skip       abrevia a saída (tocou na tela)
  *   off        não existe
  */
+
+/** O bordô da cortina (lib/ui/splashBg): reexportado daqui para quem monta a
+ *  cena não precisar saber que ele mora num módulo à parte. */
+export { SPLASH_BG };
 
 /** Marca "esta sessão já viu a abertura". Some quando o app é fechado de
  *  verdade — que é justamente quando a abertura deve voltar a acontecer. */
@@ -66,44 +69,49 @@ export const SPLASH_HANDOFF_TTL_MS = 20000;
 export const PANEL_FLAG_KEY = 'lume:painel';
 
 /**
- * O BUG DO iOS 26 NO APP INSTALADO: a página criada no instante em que o app
- * está abrindo nasce com a janela mais curta que a tela — falta exatamente a
- * altura da barra de status — e fica assim até morrer. Nada que ela desenhe
- * aparece na faixa de baixo (zona morta). Páginas criadas depois que o app
- * terminou de abrir nascem certas (medido nos vídeos do iPhone: o painel,
- * chegando 2 s depois do toque, sempre ocupou a tela inteira).
+ * O BUG DO iOS NO APP INSTALADO (medido no iPhone do usuário, 01–02/10/2026):
+ * a página criada no instante em que o app está abrindo nasce com a janela
+ * mais curta que a tela — falta a altura da barra de status — e pode ficar
+ * assim a abertura inteira: num iPhone 428×926 a janela ficou em 879 por
+ * mais de 1,5 s, e até o painel chegou curto (só cresceu para 926 depois de
+ * montado). Nada que a página desenhe aparece na faixa de baixo (zona
+ * morta); a faixa fica com a cor de fundo da página — por isso o fundo
+ * chapado (SPLASH_BG) a esconde.
  *
- * Por isso a tela de abertura confere a própria janela: se nasceu curta,
- * mostra o cetim parado (= tela de abertura do iPhone) e se recria
- * (/abertura, servida do cache pelo service worker) até nascer certa — e só
- * então toca a cena. Este é o marco de quando começou a esperar.
+ * O que sobra é posicionar a estrela pela TELA, não pela janela, nas duas
+ * páginas, para ela não pular na troca. Este trecho roda nas duas (a tela de
+ * abertura e a porteira do painel): no app do iPhone em pé, mede a altura da
+ * tela em pixels CSS e põe em --lume-tela; o CSS da cena usa isso no lugar
+ * de inset: 0. A correção pelo zoom é necessária: com o zoom de página do
+ * Safari (o outro iPhone do usuário está em 85%), a janela vem em pixels
+ * CSS maiores que a tela em pontos, e screen.height sozinho ficaria curto.
+ * innerWidth é confiável nesse instante (só a altura vem errada), então
+ * tela em px CSS = screen.height × innerWidth / screen.width.
  */
-export const SPLASH_WAIT_KEY = 'lume:abertura-espera';
-/** Quanto tempo, no máximo, se espera o iOS acertar a janela antes de tocar
- *  a cena mesmo assim. */
-export const SPLASH_WAIT_MAX_MS = 1500;
-/** Intervalo entre uma tentativa e outra de recriar a página. */
-export const SPLASH_RETRY_MS = 50;
+export const SPLASH_SCREEN_FIT_JS =
+  "try{var o=screen.orientation&&screen.orientation.type||'';" +
+  "if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width&&innerWidth>0){" +
+  "var fd=document.documentElement;fd.style.setProperty('--lume-tela',Math.round(screen.height*innerWidth/screen.width)+'px');fd.dataset.tela='cheia'}}catch(x){}";
 
 /** Diagnóstico temporário da abertura no iPhone (sessionStorage → painel →
  *  /api/diag/abertura). Só medidas de tela, nada pessoal. */
 export const SPLASH_DIAG_KEY = 'lume:abertura-diag';
 /** Versão da tela de abertura — o diagnóstico diz qual o aparelho rodou
  *  (a guardada no cache pode estar atrasada). */
-export const SPLASH_LAUNCH_VERSION = 'v10';
+export const SPLASH_LAUNCH_VERSION = 'v11';
 
-/** Cena até a saída. Tem de casar com os 2350ms do CSS abaixo. */
-export const SPLASH_SCENE_MS = 2350;
+/** Cena até a saída. Tem de casar com o relógio do CSS abaixo. */
+export const SPLASH_SCENE_MS = 1800;
 /** Duração da saída (a cortina se dissolve). */
 export const SPLASH_EXIT_MS = 450;
-/** Quando a tela de abertura chama o painel: logo depois de o "lume"
- *  terminar de aparecer (1,88 s). Daqui em diante só o cetim se mexe, e
- *  devagar — um quadro parado durante a troca de página não se nota. */
-export const SPLASH_HANDOFF_AT_MS = 1900;
+/** Quando a tela de abertura chama o painel: logo depois de o reflexo
+ *  cromado terminar (1,44 s). Daqui em diante nada se mexe até a saída, então
+ *  um quadro parado durante a troca de página não se nota. */
+export const SPLASH_HANDOFF_AT_MS = 1500;
 
 /** Atraso de animação descontando o tempo de cena já corrido. */
 const at = (ms: number) => `calc(${ms}ms - var(--lume-t, 0ms))`;
-/** Início da saída: 2350ms na cena normal; na continuação, o que faltar. */
+/** Início da saída: 1800ms na cena normal; na continuação, o que faltar. */
 const EXIT_AT = `var(--lume-exit, ${SPLASH_SCENE_MS}ms)`;
 
 export const SPLASH_CSS = `
@@ -112,49 +120,36 @@ export const SPLASH_CSS = `
   inset: 0;
   z-index: 300;
   overflow: hidden;
-  /* Tom médio do cetim: é o background_color do manifesto (splash nativa
-     do Android) e o que cobre o quadro se o JPEG ainda não pintou. */
-  background: #4a0e22;
+  background: ${SPLASH_BG};
   touch-action: none;
   overscroll-behavior: contain;
 
-  /* Geometria da marca: a caixa da arte oficial (673 × 227) alargada em
-     --lume-gap unidades, para abrir o respiro entre a estrela e o nome.
-     --lume-ignite é o quanto a estrela nasce maior antes de encolher. */
-  --lume-lockup-w: min(52vw, 250px);
-  --lume-gap: 100;
-  --lume-w: 773;
-  --lume-ignite: 1.7;
+  /* Tamanho da estrela: a caixa da arte oficial (237 × 220). */
+  --lume-star-w: min(28vw, 110px);
 
   --lume-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --lume-ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --lume-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
   --lume-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --lume-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   animation: lume-splash-out ${SPLASH_EXIT_MS}ms var(--lume-ease-in) ${EXIT_AT} both;
 }
-/* Desktop (e qualquer tela deitada): marca maior, respiro menor. */
+/* Desktop (e qualquer tela deitada): estrela maior. */
 @media (min-aspect-ratio: 1/1) {
-  #lume-splash {
-    --lume-lockup-w: clamp(270px, 21vw, 340px);
-    --lume-gap: 70;
-    --lume-w: 743;
-    --lume-ignite: 1.55;
-  }
+  #lume-splash { --lume-star-w: clamp(120px, 9vw, 150px); }
 }
 html[data-splash='off'] #lume-splash { display: none; }
 html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear both; }
 /* Tela de abertura: a cena toca, mas a cortina não sai — quem sai é a do
    painel, que assume daqui. */
 html[data-splash='launch'] #lume-splash,
-html[data-splash='launch'] .lume-splash__lockup { animation: none; }
-/* App do iPhone: a cortina mede a TELA, não a janela (o iOS 26 às vezes dá
-   uma janela mais curta — ver SPLASH_WAIT_KEY). A tela de abertura ainda
-   troca para position: absolute (app/abertura/route.ts). */
+html[data-splash='launch'] .lume-splash__star-wrap { animation: none; }
+/* App do iPhone: a cortina mede a TELA, não a janela (o iOS dá uma janela
+   mais curta na abertura — ver SPLASH_SCREEN_FIT_JS). A tela de abertura
+   ainda troca para position: absolute (app/abertura/route.ts). */
 html[data-tela] #lume-splash { bottom: auto; height: var(--lume-tela); }
-/* Só o cetim parado: o primeiro quadro, igual à tela de abertura do iPhone. */
-html[data-splash='still'] .lume-splash__lockup { display: none; }
+/* Só o bordô: o primeiro quadro, igual à tela de abertura do iPhone. */
+html[data-splash='still'] .lume-splash__star-wrap { display: none; }
 html[data-splash='still'] #lume-splash,
 html[data-splash='still'] #lume-splash * { animation: none; }
 
@@ -166,90 +161,21 @@ html[data-splash='still'] #lume-splash * { animation: none; }
   100% { opacity: 0; visibility: hidden; }
 }
 
-/* ---- o cetim ------------------------------------------------------ */
-/* 6% de folga em volta porque o tecido "respira" (zoom lento). A cortina do
-   login (.login-curtain) e as telas do iPhone reproduzem esta mesma folga. */
-.lume-splash__satin {
-  position: absolute;
-  inset: -6%;
-  display: block;
-  animation: lume-splash-breathe 3000ms var(--lume-ease-in-out) ${at(0)} both;
-}
-.lume-splash__satin img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-@media (min-aspect-ratio: 1/1) {
-  .lume-splash__satin img { filter: contrast(1.07) saturate(1.05); }
-}
-@keyframes lume-splash-breathe {
-  from { transform: scale(1); }
-  to   { transform: scale(1.07); }
-}
-/* Brilho que cruza o tecido. A faixa anda por background-position num
-   elemento do tamanho da tela — nada de camada gigante na GPU do celular.
-   Nasce apagada e acende devagar: parada no ponto de partida ela já risca o
-   tecido, e o primeiro quadro tem de ser idêntico à tela de abertura do
-   iPhone (public/splash), que é só o cetim. */
-.lume-splash__sheen {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background-image: linear-gradient(335deg, transparent 40%, rgba(255, 215, 225, 0.035) 46%, rgba(255, 255, 255, 0.11) 50%, rgba(255, 215, 225, 0.035) 54%, transparent 60%);
-  background-size: 260% 100%;
-  background-position: 100% 0;
-  animation: lume-splash-sheen 2500ms var(--lume-ease-in-out) ${at(200)} both;
-}
-@keyframes lume-splash-sheen {
-  0%   { background-position: 100% 0; opacity: 0; }
-  20%  { opacity: 1; }
-  100% { background-position: 0% 0; opacity: 1; }
-}
-.lume-splash__vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(90% 72% at 50% 46%, transparent 38%, rgba(14, 2, 8, 0.58) 100%);
-}
-
-/* ---- a marca ------------------------------------------------------ */
-.lume-splash__lockup {
+/* ---- a estrela ---------------------------------------------------- */
+.lume-splash__star-wrap {
   position: absolute;
   left: 50%;
   top: 47%;
-  width: var(--lume-lockup-w);
-  aspect-ratio: var(--lume-w) / 227;
+  width: var(--lume-star-w);
+  aspect-ratio: 237 / 220;
   transform: translate(-50%, -50%);
-  /* Na saída a marca avança meio passo: a sensação é de entrar no app, não
-     de uma tela que apagou. */
+  /* Na saída a estrela avança meio passo: a sensação é de entrar no app,
+     não de uma tela que apagou. */
   animation: lume-splash-exit ${SPLASH_EXIT_MS}ms var(--lume-ease-in) ${EXIT_AT} both;
 }
 @keyframes lume-splash-exit {
   from { transform: translate(-50%, -50%) scale(1); }
   to   { transform: translate(-50%, -50%) scale(1.04); }
-}
-
-/* Estrela: nasce no centro da tela, maior (--lume-ignite), e desliza para o
-   lugar dela na assinatura. --lume-cx é o deslocamento que leva o centro da
-   estrela (x = 3 + 237/2 na arte) ao centro da caixa. */
-.lume-splash__star-wrap {
-  position: absolute;
-  left: calc(3 / var(--lume-w) * 100%);
-  top: 1.3%;
-  width: calc(237 / var(--lume-w) * 100%);
-  height: 96.9%;
-  --lume-cx: calc((var(--lume-w) / 2 - 121.5) / 237 * 100%);
-  transform: translateX(var(--lume-cx)) scale(var(--lume-ignite));
-  transform-origin: 50% 50%;
-  animation: lume-splash-slide 760ms var(--lume-ease-out-expo) ${at(980)} both;
-}
-@keyframes lume-splash-slide {
-  from { transform: translateX(var(--lume-cx)) scale(var(--lume-ignite)); }
-  to   { transform: translateX(0) scale(1); }
 }
 .lume-splash__star {
   position: absolute;
@@ -257,8 +183,8 @@ html[data-splash='still'] #lume-splash * { animation: none; }
   width: 100%;
   height: 100%;
   overflow: visible;
-  /* assenta o metal no tecido */
-  filter: drop-shadow(0 0.5vmin 1.4vmin rgba(16, 0, 6, 0.55));
+  /* assenta o metal no fundo */
+  filter: drop-shadow(0 0.4vmin 1.2vmin rgba(16, 0, 6, 0.45));
 }
 /* As duas metades (dois "L") chegam de cantos opostos, girando, uma logo
    depois da outra. */
@@ -309,77 +235,6 @@ html[data-splash='still'] #lume-splash * { animation: none; }
   30%  { opacity: 1; }
   100% { opacity: 0.26; transform: translate(-50%, -50%) scale(1); }
 }
-/* Clarão horizontal no encaixe das metades (o eixo da estrela está a 50,6%). */
-.lume-splash__flare {
-  position: absolute;
-  left: 50%;
-  top: 50.6%;
-  width: 300%;
-  height: 2px;
-  mix-blend-mode: screen;
-  opacity: 0;
-  transform: translate(-50%, -50%) scaleX(0.1);
-  box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.35);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 50%, transparent);
-  animation: lume-splash-flare 650ms var(--lume-ease-out) ${at(640)} both;
-}
-@keyframes lume-splash-flare {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scaleX(0.08); }
-  25%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1); }
-}
-
-/* O "lume" se revela da esquerda para a direita por máscara, com um fio de
-   luz acompanhando a borda. --lume-wipe é registrada (e herdada, para o fio
-   seguir junto) para a máscara animar suave; onde @property não existe, o
-   nome aparece de uma vez no meio da animação — degrada sem quebrar. */
-@property --lume-wipe {
-  syntax: '<percentage>';
-  inherits: true;
-  initial-value: 0%;
-}
-.lume-splash__word-wrap {
-  position: absolute;
-  left: calc((276 + var(--lume-gap)) / var(--lume-w) * 100%);
-  top: 16.7%;
-  width: calc(393 / var(--lume-w) * 100%);
-  height: 62.1%;
-  --lume-wipe: 0%;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--lume-wipe) - 14%), transparent var(--lume-wipe));
-          mask-image: linear-gradient(90deg, #000 calc(var(--lume-wipe) - 14%), transparent var(--lume-wipe));
-  animation:
-    lume-splash-wipe 820ms var(--lume-ease-out-quint) ${at(1060)} both,
-    lume-splash-word-slide 820ms var(--lume-ease-out-quint) ${at(1060)} both;
-}
-.lume-splash__word {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.lume-splash__word-edge {
-  position: absolute;
-  top: -14%;
-  height: 128%;
-  width: 12%;
-  left: calc(var(--lume-wipe) - 9%);
-  mix-blend-mode: screen;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-  animation: lume-splash-edge 820ms linear ${at(1060)} both;
-}
-@keyframes lume-splash-wipe {
-  from { --lume-wipe: 0%; }
-  to   { --lume-wipe: 122%; }
-}
-@keyframes lume-splash-word-slide {
-  from { transform: translateX(-5%); }
-  to   { transform: translateX(0); }
-}
-@keyframes lume-splash-edge {
-  0%, 65% { opacity: 1; }
-  100%    { opacity: 0; }
-}
 `;
 
 /** Uma metade da estrela, com o metal cromado e o filete claro na borda. */
@@ -390,26 +245,13 @@ const half = (cls: string, d: string) =>
  * O miolo de #lume-splash. HTML e não JSX porque a tela de abertura é um
  * documento avulso, montado como texto (app/abertura/route.ts).
  *
- * · O cetim é o pôster do login, retrato ou paisagem pelo mesmo critério de
- *   lá. decoding="sync" = decodifica dentro do paint, sem quadro de cor
- *   chapada antes do tecido.
- * · A marca fica numa caixa com a proporção da arte oficial (alargada no CSS
- *   para abrir o respiro entre a estrela e o nome).
- * · Cromo: branco → cinza → branco na diagonal, no espaço da estrela inteira
- *   (as duas metades compartilham o mesmo reflexo). O reflexo é uma faixa de
- *   luz recortada pela própria estrela.
+ * Cromo: branco → cinza → branco na diagonal, no espaço da estrela inteira
+ * (as duas metades compartilham o mesmo reflexo). O reflexo é uma faixa de
+ * luz recortada pela própria estrela.
  */
 export const SPLASH_MARKUP =
-  `<picture class="lume-splash__satin">` +
-  `<source media="(min-aspect-ratio: 1/1)" srcset="${LUME_SATIN_DESKTOP}">` +
-  `<img src="${LUME_SATIN_MOBILE}" alt="" decoding="sync" draggable="false">` +
-  `</picture>` +
-  `<div class="lume-splash__sheen"></div>` +
-  `<div class="lume-splash__vignette"></div>` +
-  `<div class="lume-splash__lockup">` +
   `<div class="lume-splash__star-wrap">` +
   `<div class="lume-splash__bloom"></div>` +
-  `<div class="lume-splash__flare"></div>` +
   `<svg class="lume-splash__star" viewBox="0 0 237 220" focusable="false">` +
   `<defs>` +
   `<linearGradient id="lume-splash-chrome" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="237" y2="220">` +
@@ -432,11 +274,4 @@ export const SPLASH_MARKUP =
   `<rect class="lume-splash__sweep" x="0" y="-60" width="80" height="340" fill="url(#lume-splash-sweep)"/>` +
   `</g>` +
   `</svg>` +
-  `</div>` +
-  `<div class="lume-splash__word-wrap">` +
-  `<svg class="lume-splash__word" viewBox="0 0 393 141" focusable="false">` +
-  `<path d="${LUME_WORD}" fill="#ffffff" fill-rule="evenodd"/>` +
-  `</svg>` +
-  `<span class="lume-splash__word-edge"></span>` +
-  `</div>` +
   `</div>`;
