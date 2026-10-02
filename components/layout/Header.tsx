@@ -117,6 +117,14 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
  * logo travada no meio sobram ~89px para o título num iPhone de 390px, por
  * isso lá ele desce para 18px (o tamanho de título da barra do iOS): metade
  * das telas cabe inteira, o resto trunca com reticências.
+ *
+ * No computador a faixa vira um cartão de cantos arredondados, solto no
+ * cinza como a barra lateral vinho ao lado: mesmo recuo de 16px no topo,
+ * mesmo raio, e as bordas alinhadas com as do conteúdo (1440 − 2×32). O
+ * <header> continua ocupando a largura toda com o fundo cinza, e é ele que
+ * esconde o conteúdo rolando por trás dos cantos. No celular nada muda:
+ * faixa de ponta a ponta, 84/60px. O `lg:pt-4!` precisa do `!` porque o
+ * `.pt-safe` mora fora de @layer e venceria.
  */
 export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userEmail, avatarUrl, role }) => {
   const pathname = usePathname();
@@ -137,11 +145,13 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, userName, userE
   return (
     <header
       data-scrolled={scrolled || undefined}
-      className="sticky top-0 z-30 select-none pt-safe transition-ui bg-surface border-b border-line shadow-xs"
+      className="sticky top-0 z-30 select-none pt-safe transition-ui bg-surface border-b border-line shadow-xs
+        lg:pt-4! lg:pb-3 lg:px-8 lg:bg-bg lg:border-b-0 lg:shadow-none"
     >
       <div
         className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] content-center items-center gap-3
-          px-4 lg:px-8 max-w-[1400px] mx-auto w-full
+          px-4 lg:px-6 max-w-[1400px] lg:max-w-[1376px] mx-auto w-full
+          lg:bg-surface lg:rounded-hero lg:shadow-sm
           h-[84px] data-[scrolled]:h-[60px] lg:h-20 lg:data-[scrolled]:h-[68px]
           transition-[height] duration-[var(--dur-base)] ease-[var(--ease-out)]"
         data-scrolled={scrolled || undefined}

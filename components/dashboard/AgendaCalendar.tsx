@@ -368,7 +368,7 @@ export const AgendaCalendar: React.FC<AgendaCalendarProps> = ({
     <div className="select-none">
       <div className="flex gap-6 items-start">
         {/* Painel lateral (desktop) */}
-        <div className="hidden lg:block w-60 shrink-0 sticky top-20">{sidebar}</div>
+        <div className="hidden lg:block w-60 shrink-0 sticky top-24">{sidebar}</div>
 
         {/* Coluna principal */}
         <div className="flex-1 min-w-0 space-y-4">
