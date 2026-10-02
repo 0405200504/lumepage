@@ -9,6 +9,7 @@ import { registerProfessionalAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
 import InstallApp from '@/components/pwa/InstallApp';
+import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
 import { PLAN_LABEL, resolvePlan, type PlanType } from '@/lib/subscription/entitlements';
 
 /**
@@ -42,6 +43,9 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
   const leftPurchaseEmail = purchase?.state === 'pending' && !!initialEmail
     && formData.email.trim().toLowerCase() !== initialEmail;
   const [isLoading, setIsLoading] = useState(false);
+  // Anti-bot: o cadastro cria conta e dispara e-mail — sem isto o único freio
+  // era um rate limit em memória, que zera a cada instância da Vercel.
+  const captcha = useTurnstileToken();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +61,7 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
 
     setIsLoading(true);
     try {
-      const res = await registerProfessionalAction(formData);
+      const res = await registerProfessionalAction({ ...formData, captchaToken: await captcha.waitForToken() });
       if (res.success) {
         const plan = 'plan' in res && res.plan ? PLAN_LABEL[resolvePlan(res.plan)] : null;
         if (plan) success('Conta criada!', `Seu plano ${plan} já está ativo. Faça login para entrar.`);
@@ -67,7 +71,7 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
       } else {
         error('Falha no Cadastro', res.error || 'Não foi possível criar a conta.');
       }
-    } catch (e) {
+    } catch {
       error('Erro', 'Ocorreu um erro ao processar o cadastro.');
     } finally {
       setIsLoading(false);
@@ -231,6 +235,8 @@ export function RegisterForm({ initialEmail = '', purchase = null, planHint = nu
                 />
               </div>
             </div>
+
+            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
 
             <button
               type="submit"

@@ -1,10 +1,35 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAADpTBlyHh2xfwgge';
 
 export const turnstileConfigured = !!DEFAULT_SITE_KEY;
+
+/**
+ * Token do widget para mandar junto com o formulário.
+ *
+ * O token nasce logo depois da página carregar; quem clica em "Entrar" antes
+ * disso não pode ser barrada por um token vazio. `waitForToken` espera até
+ * ~2,5 s por ele e devolve o que tiver — o servidor decide (e só exige quando
+ * TURNSTILE_SECRET_KEY está configurada).
+ */
+export function useTurnstileToken() {
+  const ref = useRef('');
+  const [token, setToken] = useState('');
+  const onVerify = useCallback((t: string) => {
+    ref.current = t;
+    setToken(t);
+  }, []);
+  const waitForToken = useCallback(async (maxMs = 2500): Promise<string> => {
+    const until = Date.now() + maxMs;
+    while (!ref.current && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return ref.current;
+  }, []);
+  return { token, onVerify, waitForToken };
+}
 
 declare global {
   interface Window {

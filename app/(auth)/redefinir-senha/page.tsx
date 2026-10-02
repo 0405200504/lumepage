@@ -6,14 +6,14 @@ import { Mail, ArrowLeft, Send, CheckCircle2, Sparkles } from 'lucide-react';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { useToast } from '@/components/ui/Toast';
 import { requestPasswordResetAction } from '@/app/actions/access';
-import TurnstileWidget from '@/components/booking/TurnstileWidget';
+import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
 
 export default function ForgotPasswordPage() {
   const { error } = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState('');
+  const captcha = useTurnstileToken();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await requestPasswordResetAction(email);
+      const res = await requestPasswordResetAction(email, await captcha.waitForToken());
       if (res.success) {
         setSent(true);
       } else {
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {/* Widget Cloudflare Turnstile */}
-              <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
+              <TurnstileWidget onVerify={captcha.onVerify} />
 
               <button
                 type="submit"

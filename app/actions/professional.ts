@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { logAccessEvent } from '@/lib/access-tokens';
 import { sendMail } from '@/lib/mail';
 import { welcomeEmail } from '@/lib/mail-templates';
@@ -23,6 +24,16 @@ import { validateSlug } from '@/lib/site/slug';
  */
 /** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
 const authorizeAction = authorizeProfessional;
+
+const CAPTCHA_FAIL_MSG = 'Não foi possível confirmar que você não é um robô. Recarregue a página e tente de novo.';
+
+/** O GoTrue responde em inglês; a tela fala português. */
+function signupErrorMessage(message: string | undefined): string {
+  if (message && /already (been )?registered|already exists|duplicate key/i.test(message)) {
+    return 'Já existe uma conta com este e-mail. Entre, ou use "Esqueci a senha".';
+  }
+  return message || 'Erro ao realizar cadastro.';
+}
 
 /**
  * Marca o tutorial de boas-vindas como visto — na CONTA, não no aparelho.
@@ -331,12 +342,18 @@ export async function googleAuthAction(accessToken: string) {
 }
 
 // 8. Login no sistema
-export async function loginAction(email: string, password?: string) {
+export async function loginAction(email: string, password?: string, captchaToken?: string) {
   // Rate limit por IP: corta brute force de senha (best-effort por instância).
   const ip = ipFromHeaders(await headers());
   const rl = await rateLimit(`login:${ip}`, 10, 5 * 60 * 1000); // 10 tentativas / 5 min
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
+  }
+  // Captcha (Turnstile): o widget sempre esteve na tela de login, mas o token
+  // nunca chegava aqui — e o rate limit em memória zera a cada instância da
+  // Vercel. Só é exigido quando TURNSTILE_SECRET_KEY está configurada.
+  if (!await verifyTurnstile(captchaToken, ip)) {
+    return { success: false, error: CAPTCHA_FAIL_MSG };
   }
   // Não logar e-mail, senha nem o resultado do login (PII/credenciais nos logs da Vercel).
   const res = await authService.login(email, password);
@@ -388,6 +405,8 @@ export async function registerProfessionalAction(data: {
   email: string;
   whatsapp: string;
   password?: string;
+  /** token do Turnstile — exigido só com TURNSTILE_SECRET_KEY configurada */
+  captchaToken?: string;
 }) {
   const cleanEmail = data.email.trim().toLowerCase();
 
@@ -396,6 +415,12 @@ export async function registerProfessionalAction(data: {
   const rl = await rateLimit(`register:${ip}`, 5, 60 * 60 * 1000); // 5 cadastros / hora
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas de cadastro. Tente novamente em ${Math.ceil(rl.retryAfterSeconds / 60)} min.` };
+  }
+  if (!await verifyTurnstile(data.captchaToken, ip)) {
+    return { success: false, error: CAPTCHA_FAIL_MSG };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return { success: false, error: 'Informe um e-mail válido.' };
   }
 
   // Exige senha forte no cadastro — sem mais fallback fixo ('lume123456') que deixava
@@ -455,7 +480,7 @@ export async function registerProfessionalAction(data: {
 
         if (authError) {
           await supabase.from('professionals').delete().eq('id', professionalId);
-          return { success: false, error: authError.message };
+          return { success: false, error: signupErrorMessage(authError.message) };
         }
 
         if (authData.user) {
@@ -488,7 +513,7 @@ export async function registerProfessionalAction(data: {
 
       if (authError) {
         await clientAdmin.from('professionals').delete().eq('id', professionalId);
-        return { success: false, error: authError.message };
+        return { success: false, error: signupErrorMessage(authError.message) };
       }
 
       // Forçar atualização do perfil criado pela trigger para associar o professional_id

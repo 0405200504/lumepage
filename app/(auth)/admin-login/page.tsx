@@ -6,6 +6,7 @@ import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction } from '@/app/actions/professional';
+import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const captcha = useTurnstileToken();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ export default function AdminLoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await loginAction(email, password);
+      const res = await loginAction(email, password, await captcha.waitForToken());
       if (res.success && res.profile) {
         if (res.profile.role === 'super_admin') {
           success('Bem-vindo!', `Olá, Administrador. Acessando painel...`);
@@ -111,6 +113,9 @@ export default function AdminLoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Anti-bot (Turnstile): invisível, só aparece se a Cloudflare pedir um desafio */}
+            <TurnstileWidget appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
 
             <button
               type="submit"

@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { authService } from './auth';
 import { isAdminSession } from './require-admin';
 import { dbService } from '@/lib/supabase/db';
+import { accessBlockFor } from '@/lib/subscription/access-rules';
 
 /**
  * A ação está sendo disparada de DENTRO do painel da profissional?
@@ -58,12 +59,28 @@ export async function authorizeProfessional(professionalId: string): Promise<boo
   if (await isAdminSession()) return true;
 
   if (!session) return false;
-  if (session.professional_id === professionalId) return true;
+  if (session.professional_id === professionalId) return !(await accessBlocked(professionalId));
 
   if (session.is_salon_manager) {
     const prof = await dbService.getProfessionalById(professionalId);
-    return !!prof && (prof.salon_id ?? null) === (session.salon_id ?? null);
+    if (!prof || (prof.salon_id ?? null) !== (session.salon_id ?? null)) return false;
+    return accessBlockFor(prof) === null;
   }
 
   return false;
+}
+
+/**
+ * Conta com teste vencido, plano vencido, assinatura encerrada ou pausada pelo
+ * admin não age no painel — só o admin (checado acima) pode. Sem isto o paywall
+ * era só um pano na frente: bastava removê-lo no navegador e as actions
+ * continuavam obedecendo. Fail-open em erro de leitura (como guard.ts).
+ */
+async function accessBlocked(professionalId: string): Promise<boolean> {
+  try {
+    const prof = await dbService.getProfessionalById(professionalId);
+    return !!prof && accessBlockFor(prof) !== null;
+  } catch {
+    return false;
+  }
 }

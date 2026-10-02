@@ -15,7 +15,9 @@ import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
 import { AppSplash } from '@/components/ui/AppSplash';
 import { mustChangePassword } from '@/lib/auth/must-change-password';
 import { professionalPrecisaOnboarding } from '@/lib/auth/onboarding';
-import { planEnforced, isLegacyAccount } from '@/lib/subscription/entitlements';
+import { planEnforced } from '@/lib/subscription/entitlements';
+import { accessBlockFor, type AccessBlock } from '@/lib/subscription/access-rules';
+import { ContaIndisponivelOverlay } from '@/components/subscription/ContaIndisponivelOverlay';
 import type { CheckoutIdentity } from '@/lib/lp/site';
 
 /**
@@ -38,7 +40,9 @@ export default async function DashboardLayout({
   let avatarUrl: string | null = null;
   let slug = '';
   let pendingConversations = 0;
-  let isTrialExpired = false;
+  // Por que a conta está bloqueada (teste/plano vencido, assinatura encerrada,
+  // pausada/encerrada pelo admin) — ou null se pode usar o painel.
+  let accessBlock: AccessBlock | null = null;
   let subscriptionPlan: string | null = null;
   let subscriptionStatus: string | null = null;
   let enforcePlan = false;
@@ -74,23 +78,13 @@ export default async function DashboardLayout({
           phone: prof.whatsapp,
         };
 
-        const legacy = isLegacyAccount(prof.created_at);
-        // Contas legadas nunca são bloqueadas/limitadas por plano.
+        // Contas legadas nunca são limitadas por plano.
         enforcePlan = planEnforced({ createdAt: prof.created_at, status: prof.subscription_status });
 
-        // Verificação de Trial Expirado (só conta nova)
-        if (!legacy && prof.subscription_status === 'trialing' && prof.trial_ends_at) {
-          if (new Date() > new Date(prof.trial_ends_at)) {
-            isTrialExpired = true;
-          }
-        }
-
-        // Plano pago vencido (vencimento definido pelo admin) → paywall (só conta nova ativa)
-        if (!legacy && prof.subscription_status === 'active' && prof.subscription_ends_at) {
-          if (new Date() > new Date(prof.subscription_ends_at)) {
-            isTrialExpired = true;
-          }
-        }
+        // A MESMA regra que as actions e as rotas de IA usam
+        // (lib/subscription/access-rules.ts): o que ela vê e o que ela consegue
+        // fazer não podem divergir.
+        accessBlock = accessBlockFor(prof);
       }
       pendingConversations = paused.length;
     } catch (e) {
@@ -109,7 +103,12 @@ export default async function DashboardLayout({
           que são o que a profissional vê logo depois dela. */}
       <AppSplash />
 
-      {isTrialExpired && <PlanosOverlay identity={checkoutIdentity} />}
+      {(accessBlock === 'paused' || accessBlock === 'cancelled') && (
+        <ContaIndisponivelOverlay reason={accessBlock} />
+      )}
+      {(accessBlock === 'trial_ended' || accessBlock === 'plan_expired' || accessBlock === 'subscription_ended') && (
+        <PlanosOverlay identity={checkoutIdentity} reason={accessBlock} />
+      )}
       {forcePasswordChange && <ForcePasswordChange />}
 
       <Sidebar
@@ -164,7 +163,7 @@ export default async function DashboardLayout({
           NÃO monta enquanto houver um bloqueio na frente: com o paywall ou a
           troca de senha obrigatória abertos, o tour navegaria por baixo de uma
           tela que ela não consegue fechar. */}
-      {!isTrialExpired && !forcePasswordChange && (
+      {!accessBlock && !forcePasswordChange && (
         <OnboardingTour
           firstName={session.name?.split(' ')[0]}
           professionalId={session.professional_id ?? undefined}

@@ -4,6 +4,8 @@ import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase
 import { redeemAccessToken, createAccessToken, logAccessEvent, requestMeta } from '@/lib/access-tokens';
 import { authService } from '@/lib/auth/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
+import { escapeLike } from '@/lib/supabase/like';
 import { sendMail } from '@/lib/mail';
 import { passwordResetEmail } from '@/lib/mail-templates';
 
@@ -111,7 +113,7 @@ export async function changeOwnPasswordAction(currentPassword: string, newPasswo
  * Envia o e-mail via Resend se o e-mail existir no banco, mas sempre devolve resposta
  * neutra para impedir enumeração de contas (best-practice de segurança).
  */
-export async function requestPasswordResetAction(email: string): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function requestPasswordResetAction(email: string, captchaToken?: string): Promise<{ success: boolean; error?: string; message?: string }> {
   if (!isSupabaseConfigured) return { success: false, error: 'Serviço indisponível no momento.' };
 
   const cleanEmail = (email || '').trim().toLowerCase();
@@ -125,12 +127,16 @@ export async function requestPasswordResetAction(email: string): Promise<{ succe
   if (!rl.ok) {
     return { success: false, error: `Muitas solicitações. Aguarde ${rl.retryAfterSeconds}s para tentar novamente.` };
   }
+  // Captcha (Turnstile): o widget estava na tela, mas o token nunca era conferido.
+  if (!await verifyTurnstile(captchaToken, ip ?? undefined)) {
+    return { success: false, error: 'Não foi possível confirmar que você não é um robô. Recarregue a página e tente de novo.' };
+  }
 
   try {
     // Busca perfil associado ao e-mail
     const { data: profile } = await db().from('profiles')
       .select('id, professional_id, name, email')
-      .ilike('email', cleanEmail)
+      .ilike('email', escapeLike(cleanEmail))
       .limit(1)
       .maybeSingle();
 

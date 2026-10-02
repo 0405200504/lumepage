@@ -8,7 +8,7 @@ import { LumeLogo } from '@/components/ui/LumeLogo';
 import { loginAction, loginDemoAction } from '@/app/actions/professional';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import Link from 'next/link';
-import TurnstileWidget from '@/components/booking/TurnstileWidget';
+import TurnstileWidget, { useTurnstileToken } from '@/components/booking/TurnstileWidget';
 import { LoginVideoBackground } from '@/components/auth/LoginVideoBackground';
 import { LoginCurtain } from '@/components/auth/LoginCurtain';
 import { PANEL_FLAG_KEY, SPLASH_HANDOFF_KEY } from '@/lib/ui/splashScene';
@@ -21,7 +21,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState('');
+  // O token do Turnstile vai junto com o login — antes o widget rodava e o
+  // token ficava aqui, sem nunca ser conferido no servidor.
+  const captcha = useTurnstileToken();
   // Login deu certo e o destino é o painel: a cortina de cetim sobe aqui e a
   // abertura (components/ui/AppSplash) continua dela, sem piscar no meio.
   const [entering, setEntering] = useState(false);
@@ -60,7 +62,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await loginAction(email, password);
+      const res = await loginAction(email, password, await captcha.waitForToken());
       if (res.success && res.profile) {
         if (res.profile.role === 'super_admin') {
           success('Bem-vinda de volta!', `Olá, ${res.profile.name}. Acessando painel...`);
@@ -155,7 +157,7 @@ export default function LoginPage() {
             </div>
 
             {/* Widget Cloudflare Turnstile (Proteção Anti-Bot) */}
-            <TurnstileWidget theme="dark" appearance="interaction-only" size="flexible" onVerify={(token) => setTurnstileToken(token)} />
+            <TurnstileWidget theme="dark" appearance="interaction-only" size="flexible" onVerify={captcha.onVerify} />
 
             {/* Principal: branco cheio, a mesma altura dos campos. A seta
                 avança meio passo no hover — o gesto de "entrar". */}
