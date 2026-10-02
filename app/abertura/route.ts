@@ -1,5 +1,6 @@
 import {
   PANEL_FLAG_KEY,
+  SPLASH_BG,
   SPLASH_CSS,
   SPLASH_DIAG_KEY,
   SPLASH_HANDOFF_AT_MS,
@@ -31,20 +32,20 @@ import {
  * que apontasse para arquivos de build antigos pintaria sem estilo.
  *
  * Quem não está logada (ou pediu menos movimento) não vê a cena aqui: o
- * documento mostra só o cetim parado — igual à tela de abertura do iPhone —
- * e segue direto, porque o destino vai ser o login.
+ * documento mostra só o bordô — igual à tela de abertura do iPhone — e segue
+ * direto, porque o destino vai ser o login.
  *
  * O BUG DO iOS 26 (ver SPLASH_WAIT_KEY em lib/ui/splashScene): a página
  * criada enquanto o app ainda abre nasce com a janela curta — falta a altura
  * da barra de status, a faixa de baixo vira zona morta e nada desenhado ali
  * aparece. Não há CSS que resolva dentro dessa página. Então:
  *   · se a janela nasceu mais curta que a tela (só no app do iPhone, em pé),
- *     a página mostra o cetim parado e se recria em /abertura, a cada
+ *     a página mostra só o bordô e se recria em /abertura, a cada
  *     SPLASH_RETRY_MS, até nascer certa — e só então toca a cena;
  *   · passando de SPLASH_WAIT_MAX_MS, toca do jeito que estiver. Para esse
- *     caso a cena é medida pela tela (screen.height) — a marca fica no mesmo
- *     ponto da do painel — e o fundo é a cor da borda de baixo do cetim com
- *     a vinheta (#2d0614), para a zona morta sumir no tecido.
+ *     caso a cena é medida pela tela (screen.height) — a estrela fica no
+ *     mesmo ponto da do painel — e, como o fundo da página é o mesmo bordô
+ *     chapado da cena, a zona morta do iOS fica invisível.
  *
  * Diagnóstico (temporário, só no app do iPhone): cada página anota as medidas
  * da janela em sessionStorage; o painel manda tudo para /api/diag/abertura.
@@ -93,11 +94,11 @@ const LAUNCH_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#4a0e22">
+<meta name="theme-color" content="${SPLASH_BG}">
 <meta name="robots" content="noindex">
 <title>Lume</title>
 <script>${LAUNCH_SCRIPT}</script>
-<style>html,body{margin:0;height:100%;background:#2d0614;overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
+<style>html,body{margin:0;height:100%;background:${SPLASH_BG};overflow:hidden}html[data-tela],html[data-tela] body{height:var(--lume-tela)}${SPLASH_CSS}html[data-tela] #lume-splash{position:absolute;top:0;right:0;bottom:auto;left:0;height:var(--lume-tela)}</style>
 </head>
 <body>
 <div id="lume-splash" aria-hidden="true">${SPLASH_MARKUP}</div>

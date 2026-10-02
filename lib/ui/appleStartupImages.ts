@@ -5,9 +5,9 @@
  * ícone até a página pintar — e só então vem a cortina vinho da abertura
  * (components/ui/AppSplash). Era a "piscada" antes da animação.
  *
- * Cada PNG é o primeiro quadro da cortina: o cetim do login com a vinheta de
- * #lume-splash (lib/ui/splashScene.ts), sem a marca. O iPhone mostra o PNG, a
- * página pinta o mesmo quadro por cima e a estrela acende — sem emenda visível.
+ * Cada PNG é o primeiro quadro da cortina: o bordô chapado de #lume-splash
+ * (SPLASH_BG em lib/ui/splashScene), sem a estrela. O iPhone mostra o PNG, a
+ * página pinta a mesma cor por cima e a estrela acende — sem emenda visível.
  *
  * O iOS só usa a imagem se o tamanho bater EXATO com a tela, por isso uma
  * por aparelho. Gerar de novo (mudou o fundo da cortina, saiu iPhone novo):

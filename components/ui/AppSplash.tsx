@@ -13,27 +13,25 @@ import { SplashRunner } from './SplashRunner';
 /**
  * ABERTURA DO APP — a cortina de marca entre o login e o painel.
  *
- * A cena, em 2,8 s (coreografia, estilos e relógio em lib/ui/splashScene):
- * sobre o cetim do login, um ponto de luz acende; as duas metades da estrela
+ * A cena, em 2,25 s (coreografia, estilos e relógio em lib/ui/splashScene):
+ * sobre bordô chapado, um ponto de luz acende; as duas metades da estrela
  * chegam de cantos opostos, girando, e se encaixam com um clarão e um reflexo
- * cromado; a estrela encolhe e desliza para a esquerda enquanto o "lume" se
- * revela; a cortina se dissolve sobre o painel. Junto, duas notas de vidro
- * (lib/ui/appChime) no instante do encaixe.
+ * cromado; a estrela assenta e a cortina se dissolve sobre o painel. Junto,
+ * duas notas de vidro (lib/ui/appChime) no instante do encaixe.
  *
  * SEM PISCAR — o que garante que nenhum quadro estranho apareça antes dela:
  *   · no toque do ícone, quem pinta a cena é a tela de abertura que o
  *     service worker serve do cache (app/abertura/route.ts), sem esperar o
  *     servidor montar o painel. Ela grava quando a cena começou; a porteira
  *     abaixo lê e este componente continua do mesmo quadro (modo 'handoff');
- *   · o cetim é um <img> embutido (data URI) com decoding="sync": pinta no
- *     mesmo quadro que a cortina, sem rede, sem cache, sem decodificação
- *     tardia — um fundo de CSS podia aparecer um quadro depois da cor chapada;
- *   · a marca é SVG inline, não máscara nem imagem; o CSS vai inline também;
+ *   · o fundo é uma cor chapada (SPLASH_BG): nada a decodificar, e no iPhone
+ *     a faixa que o iOS 26 deixa embaixo ganha essa mesma cor e some;
+ *   · a estrela é SVG inline, não máscara nem imagem; o CSS vai inline também;
  *   · vindo do login, a cortina de lá (components/auth/LoginCurtain) já
  *     mostra este mesmo primeiro quadro enquanto o painel carrega;
  *   · no iPhone instalado, as telas de abertura (public/splash) são este
  *     mesmo quadro, geradas por scripts/gerar-splash-ios.mts;
- *   · no Android, o background_color do manifesto é o tom médio do cetim.
+ *   · no Android, o background_color do manifesto é esta mesma cor.
  *
  * POR QUE ISTO É SERVER COMPONENT (e não um `useEffect` que monta um portal):
  * a cortina precisa estar no HTML do primeiro paint. Componente cliente só

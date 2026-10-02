@@ -1,5 +1,5 @@
 // Lume · Service Worker (PWA)
-const CACHE = 'lume-shell-v10'; // v10: tela de abertura se recria até o iOS acertar a janela
+const CACHE = 'lume-shell-v11'; // v11: abertura só com a estrela sobre bordô chapado
 const SHELL = ['/dashboard', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png'];
 
 // Tela de abertura instantânea (app/abertura/route.ts): um HTML avulso que
