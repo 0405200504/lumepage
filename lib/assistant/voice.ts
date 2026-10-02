@@ -37,7 +37,10 @@ export function realtimeTools(tools: AssistantTools) {
   const server = Object.entries(tools).map(([name, t]) => {
     const schema = zodToJsonSchema(t.parameters, { target: 'jsonSchema7', $refStrategy: 'none' }) as Record<string, unknown>;
     delete schema.$schema;
-    return { type: 'function' as const, name, description: t.description ?? '', parameters: schema };
+    // `CoreTool` virou união em ai@3.4.33 (ferramenta de função | definida pelo
+    // provedor); só a de função tem `description`.
+    const description = 'description' in t && typeof t.description === 'string' ? t.description : '';
+    return { type: 'function' as const, name, description, parameters: schema };
   });
   return [...server, OPEN_SCREEN_TOOL];
 }
