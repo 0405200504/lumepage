@@ -14,8 +14,29 @@ const nextConfig: NextConfig = {
       static: 300,
     },
   },
+  // "x-powered-by: Next.js" só ajuda quem está mapeando o alvo.
+  poweredByHeader: false,
   async headers() {
     return [
+      {
+        // Cabeçalhos de segurança em TODA resposta. A Vercel não manda HSTS
+        // sozinha no domínio próprio.
+        source: "/:path*",
+        headers: [
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
+        // Nenhuma tela do app abre dentro de iframe de terceiros (clickjacking
+        // do login/painel). A exceção é /agendar, logo abaixo, que é um widget.
+        source: "/((?!agendar|embed\\.js).*)",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+        ],
+      },
       {
         // Permite incorporar a página de agendamento (iframe/widget) em QUALQUER site
         source: "/agendar/:path*",

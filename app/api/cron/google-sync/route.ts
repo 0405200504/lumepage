@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/client';
 import { syncFromGoogle, setupWatch } from '@/lib/google/calendar';
+import { safeEqual } from '@/lib/auth/safe-equal';
 
 /**
  * GET /api/cron/google-sync
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     console.error('[cron/google-sync] CRON_SECRET não configurado — endpoint desabilitado.');
     return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
   }
-  if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  if (!safeEqual(request.headers.get('authorization')?.replace('Bearer ', ''), cronSecret)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

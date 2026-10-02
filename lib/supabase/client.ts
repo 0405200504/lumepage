@@ -43,6 +43,22 @@ export function getSupabaseAdmin() {
   });
 }
 
+/**
+ * Cliente NOVO, sem guardar sessão, para conferir senha no servidor.
+ *
+ * O `supabase` exportado acima é um só para o processo inteiro. No servidor
+ * não existe localStorage, então ele guarda a sessão na MEMÓRIA do processo:
+ * depois de um `signInWithPassword`, a próxima requisição que chegasse sem
+ * cookie e perguntasse "quem está logada?" recebia a última pessoa que entrou
+ * naquela instância da Vercel. Todo login/conferência de senha no servidor usa
+ * este cliente descartável.
+ */
+export function freshAuthClient() {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 // Cliente admin do Supabase com privilégios de bypass de RLS (mantido para compatibilidade de exportação)
 export const supabaseAdmin = isSupabaseConfigured && !!supabaseServiceKey
   ? getSupabaseAdmin()

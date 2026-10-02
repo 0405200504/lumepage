@@ -12,6 +12,7 @@ import { resolvePlan } from '@/lib/subscription/entitlements';
 import { parseHublaEvent, intentOf, digits, type HublaEvent } from '@/lib/subscription/hubla';
 import { applyActivation, recordSubscriptionEvent } from '@/lib/subscription/activation';
 import { welcomeOrphanBuyer } from '@/lib/subscription/orphans';
+import { escapeLike } from '@/lib/supabase/like';
 
 /**
  * Webhook da Hubla — libera/corta o acesso conforme a compra.
@@ -267,8 +268,15 @@ async function findProfessional(db: Db, event: HublaEvent): Promise<Prof | null>
   }
 
   if (event.email) {
-    // ilike: e-mail digitado no checkout costuma vir com outra caixa.
-    const { data } = await db.from('professionals').select(COLS).ilike('email', event.email).limit(1);
+    // ilike: e-mail digitado no checkout costuma vir com outra caixa. Escapado,
+    // porque "_" é curinga no ilike e "jo_o@x.com" liberaria a conta de "joao@x.com".
+    // Conta na lixeira não recebe plano.
+    const { data } = await db
+      .from('professionals')
+      .select(COLS)
+      .ilike('email', escapeLike(event.email))
+      .is('deleted_at', null)
+      .limit(1);
     if (data?.length) return data[0] as Prof;
   }
 

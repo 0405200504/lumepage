@@ -9,6 +9,8 @@ import {
   monthKey, remainingMicros, typicalVoiceMinutes,
 } from '@/lib/assistant/budget';
 import { hangupRealtimeCall, sweepExpiredVoiceCalls } from '@/lib/assistant/voice-calls';
+import { accessBlockForProfessional } from '@/lib/subscription/access';
+import { ACCESS_BLOCK_MESSAGE } from '@/lib/subscription/access-rules';
 
 /**
  * Abre uma conversa por voz.
@@ -30,6 +32,10 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Não autorizado.' }, { status: 401 });
   }
   const professionalId = session.professional_id;
+
+  // Conta vencida/pausada não abre conversa por voz (é o que mais custa).
+  const block = await accessBlockForProfessional(professionalId);
+  if (block) return Response.json({ error: ACCESS_BLOCK_MESSAGE[block] }, { status: 402 });
 
   const rl = await rateLimit(`voice-session:${professionalId}`, 20, 10 * 60 * 1000);
   if (!rl.ok) {

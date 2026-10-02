@@ -1,10 +1,41 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAADpTBlyHh2xfwgge';
 
 export const turnstileConfigured = !!DEFAULT_SITE_KEY;
+
+/**
+ * Token do widget para mandar junto com o formulário.
+ *
+ * O token nasce logo depois da página carregar; quem clica em "Entrar" antes
+ * disso não pode ser barrada por um token vazio. `takeToken` espera até
+ * ~2,5 s por ele e devolve o que tiver — o servidor decide (e só exige quando
+ * TURNSTILE_SECRET_KEY está configurada).
+ *
+ * O token da Cloudflare é de USO ÚNICO: o servidor que o conferiu queima ele.
+ * Por isso `takeToken` já pede um novo ao widget (`resetKey`) — sem isso, quem
+ * errasse a senha seria barrada como robô na segunda tentativa.
+ */
+export function useTurnstileToken() {
+  const ref = useRef('');
+  const [resetKey, setResetKey] = useState(0);
+  const onVerify = useCallback((t: string) => {
+    ref.current = t;
+  }, []);
+  const takeToken = useCallback(async (maxMs = 2500): Promise<string> => {
+    const until = Date.now() + maxMs;
+    while (!ref.current && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    const token = ref.current;
+    ref.current = '';
+    setResetKey((k) => k + 1);
+    return token;
+  }, []);
+  return { onVerify, takeToken, resetKey };
+}
 
 declare global {
   interface Window {
@@ -59,6 +90,8 @@ interface TurnstileWidgetProps {
   /** 'flexible' = ocupa a largura do contêiner */
   size?: 'normal' | 'flexible' | 'compact';
   className?: string;
+  /** Mudou = o token anterior foi gasto; o widget gera outro (useTurnstileToken). */
+  resetKey?: number;
 }
 
 /**
@@ -73,6 +106,7 @@ export default function TurnstileWidget({
   appearance = 'always',
   size = 'normal',
   className = '',
+  resetKey = 0,
 }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -152,6 +186,16 @@ export default function TurnstileWidget({
       }
     };
   }, [mounted, siteKey, theme, action, appearance, size]);
+
+  // Token gasto (ver useTurnstileToken): pede um novo à Cloudflare.
+  useEffect(() => {
+    if (!resetKey || !widgetIdRef.current || !window.turnstile) return;
+    try {
+      window.turnstile.reset(widgetIdRef.current);
+    } catch {
+      /* widget já removido */
+    }
+  }, [resetKey]);
 
   if (!siteKey) return null;
 

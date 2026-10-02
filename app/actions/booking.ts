@@ -5,6 +5,7 @@ import { dbService, SlotTakenError } from '@/lib/supabase/db';
 import { getAvailableSlots, getDaysAvailability, timeToMinutes } from '@/lib/appointments/slots';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
 import { verifyTurnstile } from '@/lib/turnstile';
+import { safeEqual } from '@/lib/auth/safe-equal';
 import { sumDurationMinutes, sumPriceCents, formatServiceNames } from '@/lib/appointments/services';
 import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { isDemo } from '@/lib/demo';
@@ -325,9 +326,7 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
 
     // Captcha (Turnstile): exigido só quando configurado. Chamadas internas confiáveis
     // (bot do WhatsApp / assistente) passam o INTERNAL_BOOKING_TOKEN e pulam o captcha.
-    const isInternalCall = !!input.captchaToken
-      && !!process.env.INTERNAL_BOOKING_TOKEN
-      && input.captchaToken === process.env.INTERNAL_BOOKING_TOKEN;
+    const isInternalCall = safeEqual(input.captchaToken, process.env.INTERNAL_BOOKING_TOKEN);
     if (!isInternalCall) {
       const captchaOk = await verifyTurnstile(input.captchaToken, ip);
       if (!captchaOk) {

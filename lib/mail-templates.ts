@@ -394,6 +394,35 @@ export function subscriptionEndedEmail(p: { name?: string | null }): EmailConten
 }
 
 /** Solicitação de redefinição de senha. */
+/** Link de confirmação do cadastro (lib/auth/email-confirm.ts). */
+export function confirmEmailTemplate(p: { name?: string | null; confirmUrl: string }): EmailContent {
+  const oi = primeiroNome(p.name);
+  return {
+    subject: 'Confirme seu e-mail para entrar na Lume',
+    text: [
+      `Oi, ${oi}!`,
+      '',
+      'Sua conta na Lume foi criada. Falta só confirmar que este e-mail é seu:',
+      p.confirmUrl,
+      '',
+      'Depois de confirmar, é só entrar com o e-mail e a senha que você escolheu. O link vale por 3 dias.',
+      '',
+      'Se não foi você quem criou a conta, ignore esta mensagem: sem a confirmação ninguém entra.',
+      '',
+      'Equipe Lume',
+    ].join('\n'),
+    html: layout({
+      titulo: `Oi, ${escape(oi)}! Confirme seu e-mail.`,
+      intro: 'Sua conta na Lume foi criada. Falta só confirmar que este e-mail é seu.',
+      corpo: [
+        'Depois de confirmar, é só entrar com o e-mail e a senha que você escolheu. O link vale por <strong>3 dias</strong>.',
+        'Se não foi você quem criou a conta, ignore esta mensagem: sem a confirmação ninguém entra.',
+      ],
+      botao: { texto: 'Confirmar meu e-mail', url: p.confirmUrl },
+    }),
+  };
+}
+
 export function passwordResetEmail(p: {
   name?: string | null;
   resetUrl: string;

@@ -20,7 +20,17 @@ import { WHATSAPP_LINK, type CheckoutIdentity } from '@/lib/lp/site';
  * O `pt-0` anula o padding que a `.lp-page` reserva pra faixa fixa da LP, que
  * aqui não existe.
  */
-export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null }) {
+export type PaywallReason = 'trial_ended' | 'plan_expired' | 'subscription_ended';
+
+/** O título muda com o motivo: "teste acabou" para quem já pagava soa a erro. */
+const COPY: Record<PaywallReason, { label: string; title: string }> = {
+  trial_ended: { label: 'Seu teste grátis acabou', title: 'Assine e continue de onde parou.' },
+  plan_expired: { label: 'Seu plano venceu', title: 'Renove e continue de onde parou.' },
+  subscription_ended: { label: 'Sua assinatura foi encerrada', title: 'Assine de novo e continue de onde parou.' },
+};
+
+export function PlanosOverlay({ identity, reason = 'trial_ended' }: { identity?: CheckoutIdentity | null; reason?: PaywallReason }) {
+  const copy = COPY[reason];
   return (
     <div
       className={`lp-page fixed inset-0 z-[100] overflow-y-auto pt-0 select-none ${lpFontVars}`}
@@ -31,9 +41,9 @@ export function PlanosOverlay({ identity }: { identity?: CheckoutIdentity | null
         </div>
 
         <div className="mx-auto mt-6 max-w-2xl text-center">
-          <SectionLabel>Seu teste grátis acabou</SectionLabel>
+          <SectionLabel>{copy.label}</SectionLabel>
           <h1 className="mt-4 font-sora text-h1 font-semibold leading-tight text-grafite sm:text-display">
-            Assine e continue de onde parou.{' '}
+            {copy.title}{' '}
             <span className="accent text-bordo">Sem fidelidade.</span>
           </h1>
           <p className="mt-5 text-body leading-relaxed text-grafite/70 sm:text-h3">

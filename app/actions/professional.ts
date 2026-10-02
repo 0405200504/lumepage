@@ -6,13 +6,14 @@ import { authService } from '@/lib/auth/auth';
 import { authorizeProfessional } from '@/lib/auth/authorize-professional';
 import { AppointmentStatus, Service, AvailabilityRule, Professional, Setting, BlockType } from '@/types/database';
 import { revalidatePath } from 'next/cache';
-import { isSupabaseConfigured, supabase, getSupabaseAdmin } from '@/lib/supabase/client';
+import { isSupabaseConfigured, supabase, getSupabaseAdmin, freshAuthClient } from '@/lib/supabase/client';
+import { needsEmailConfirmation, sendConfirmationEmail } from '@/lib/auth/email-confirm';
 import { isDemo } from '@/lib/demo';
 import { rateLimit, ipFromHeaders } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { logAccessEvent } from '@/lib/access-tokens';
 import { sendMail } from '@/lib/mail';
 import { welcomeEmail } from '@/lib/mail-templates';
-import { claimOrphanOnSignup } from '@/lib/subscription/orphans';
 import { resolvePlan } from '@/lib/subscription/entitlements';
 import { slugLivre } from '@/lib/auth/onboarding';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
@@ -23,6 +24,16 @@ import { validateSlug } from '@/lib/site/slug';
  */
 /** Autorização compartilhada (admin, a própria profissional ou gerente do salão dela). */
 const authorizeAction = authorizeProfessional;
+
+const CAPTCHA_FAIL_MSG = 'Não foi possível confirmar que você não é um robô. Recarregue a página e tente de novo.';
+
+/** O GoTrue responde em inglês; a tela fala português. */
+function signupErrorMessage(message: string | undefined): string {
+  if (message && /already (been )?registered|already exists|duplicate key/i.test(message)) {
+    return 'Já existe uma conta com este e-mail. Entre, ou use "Esqueci a senha".';
+  }
+  return message || 'Erro ao realizar cadastro.';
+}
 
 /**
  * Marca o tutorial de boas-vindas como visto — na CONTA, não no aparelho.
@@ -331,12 +342,18 @@ export async function googleAuthAction(accessToken: string) {
 }
 
 // 8. Login no sistema
-export async function loginAction(email: string, password?: string) {
+export async function loginAction(email: string, password?: string, captchaToken?: string) {
   // Rate limit por IP: corta brute force de senha (best-effort por instância).
   const ip = ipFromHeaders(await headers());
   const rl = await rateLimit(`login:${ip}`, 10, 5 * 60 * 1000); // 10 tentativas / 5 min
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas. Tente novamente em ${rl.retryAfterSeconds}s.` };
+  }
+  // Captcha (Turnstile): o widget sempre esteve na tela de login, mas o token
+  // nunca chegava aqui — e o rate limit em memória zera a cada instância da
+  // Vercel. Só é exigido quando TURNSTILE_SECRET_KEY está configurada.
+  if (!await verifyTurnstile(captchaToken, ip)) {
+    return { success: false, error: CAPTCHA_FAIL_MSG };
   }
   // Não logar e-mail, senha nem o resultado do login (PII/credenciais nos logs da Vercel).
   const res = await authService.login(email, password);
@@ -388,6 +405,8 @@ export async function registerProfessionalAction(data: {
   email: string;
   whatsapp: string;
   password?: string;
+  /** token do Turnstile — exigido só com TURNSTILE_SECRET_KEY configurada */
+  captchaToken?: string;
 }) {
   const cleanEmail = data.email.trim().toLowerCase();
 
@@ -396,6 +415,12 @@ export async function registerProfessionalAction(data: {
   const rl = await rateLimit(`register:${ip}`, 5, 60 * 60 * 1000); // 5 cadastros / hora
   if (!rl.ok) {
     return { success: false, error: `Muitas tentativas de cadastro. Tente novamente em ${Math.ceil(rl.retryAfterSeconds / 60)} min.` };
+  }
+  if (!await verifyTurnstile(data.captchaToken, ip)) {
+    return { success: false, error: CAPTCHA_FAIL_MSG };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return { success: false, error: 'Informe um e-mail válido.' };
   }
 
   // Exige senha forte no cadastro — sem mais fallback fixo ('lume123456') que deixava
@@ -441,8 +466,9 @@ export async function registerProfessionalAction(data: {
       // 3. Cadastrar no Supabase Auth via API Admin (sem rate limit de email)
       const clientAdmin = getSupabaseAdmin();
       if (!clientAdmin) {
-        // Fallback: usar signUp normal se não tiver service_role key
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        // Fallback: usar signUp normal se não tiver service_role key. Cliente
+        // descartável: o compartilhado guardaria a sessão na memória do servidor.
+        const { data: authData, error: authError } = await freshAuthClient().auth.signUp({
           email: cleanEmail,
           password: data.password,
           options: {
@@ -455,7 +481,7 @@ export async function registerProfessionalAction(data: {
 
         if (authError) {
           await supabase.from('professionals').delete().eq('id', professionalId);
-          return { success: false, error: authError.message };
+          return { success: false, error: signupErrorMessage(authError.message) };
         }
 
         if (authData.user) {
@@ -469,26 +495,28 @@ export async function registerProfessionalAction(data: {
           }
         }
 
-        // Pagou na Hubla antes de ter conta? O plano ativa agora.
-        const paid = await claimOrphanOnSignup(cleanEmail, professionalId, 'signup');
-        await enviarBoasVindas(cleanEmail, data.name, paid);
-        return { success: true, user: authData.user, plan: paid?.plan ?? null };
+        // Compra órfã da Hubla: vinculada no primeiro login confirmado (lib/auth/auth.ts).
+        await enviarBoasVindas(cleanEmail, data.name);
+        // Sem sessão = o Supabase está exigindo confirmação e mandou o e-mail dele.
+        return { success: true, needsConfirmation: !authData.session, plan: null };
       }
 
-      // Caminho preferencial: API Admin (sem email, sem rate limit, já confirmado)
+      // Caminho preferencial: API Admin. A conta nasce SEM confirmação de e-mail
+      // e o link vai pelo nosso e-mail (lib/auth/email-confirm.ts). Antes nascia
+      // confirmada: dava para criar conta com o e-mail de outra pessoa.
       const { data: authData, error: authError } = await clientAdmin.auth.admin.createUser({
         email: cleanEmail,
         password: data.password,
-        email_confirm: true,
+        email_confirm: false,
         user_metadata: {
           name: data.name,
           professional_id: professionalId
         }
       });
 
-      if (authError) {
+      if (authError || !authData.user) {
         await clientAdmin.from('professionals').delete().eq('id', professionalId);
-        return { success: false, error: authError.message };
+        return { success: false, error: signupErrorMessage(authError?.message) };
       }
 
       // Forçar atualização do perfil criado pela trigger para associar o professional_id
@@ -503,10 +531,19 @@ export async function registerProfessionalAction(data: {
         }
       }
 
-      // Pagou na Hubla antes de ter conta? O plano ativa agora.
-      const paid = await claimOrphanOnSignup(cleanEmail, professionalId, 'signup');
-      await enviarBoasVindas(cleanEmail, data.name, paid);
-      return { success: true, user: authData.user, plan: paid?.plan ?? null };
+      // Compra órfã da Hubla: NÃO é vinculada aqui. Só no primeiro login, que
+      // só passa com o e-mail confirmado (lib/auth/auth.ts).
+      const sent = await sendConfirmationEmail({ userId: authData.user.id, email: cleanEmail, name: data.name });
+      if (!sent) {
+        // Sem provedor de e-mail (RESEND_API_KEY) ou envio recusado: ninguém
+        // fica trancado para fora. A conta é liberada já confirmada, como era
+        // antes, e o aviso fica no log para corrigir o envio.
+        console.warn('[cadastro] E-mail de confirmação não saiu; conta liberada sem confirmação.');
+        await clientAdmin.auth.admin.updateUserById(authData.user.id, { email_confirm: true });
+        await enviarBoasVindas(cleanEmail, data.name);
+        return { success: true, needsConfirmation: false, plan: null };
+      }
+      return { success: true, needsConfirmation: true, plan: null };
     } catch (e: any) {
       return { success: false, error: e.message || 'Erro ao realizar cadastro.' };
     }
@@ -554,6 +591,55 @@ export async function registerProfessionalAction(data: {
   }
 }
 
+
+/**
+ * Reenvia o link de confirmação do cadastro.
+ *
+ * Resposta sempre igual: não revela se o e-mail tem conta. Sem captcha de
+ * propósito — o token do Turnstile é de uso único e esta tela vem logo depois
+ * de outro envio. O freio é o limite por IP e por e-mail, e só sai mensagem
+ * para conta que existe e ainda não confirmou.
+ */
+export async function resendConfirmationAction(email: string) {
+  const generic = {
+    success: true,
+    message: 'Se houver uma conta esperando confirmação com este e-mail, mandamos um link novo. Confira também o spam.',
+  };
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return { success: false, error: 'Informe um e-mail válido.' };
+  }
+
+  const ip = ipFromHeaders(await headers());
+  const [byIp, byEmail] = await Promise.all([
+    rateLimit(`confirm-resend:${ip}`, 5, 10 * 60 * 1000),
+    rateLimit(`confirm-resend-email:${cleanEmail}`, 3, 60 * 60 * 1000),
+  ]);
+  if (!byIp.ok || !byEmail.ok) {
+    return { success: false, error: 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo.' };
+  }
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return generic;
+  try {
+    const { data: profile } = await admin.from('profiles')
+      .select('auth_user_id, name')
+      .eq('email', cleanEmail)
+      .limit(1)
+      .maybeSingle();
+    const pf = profile as { auth_user_id: string | null; name: string | null } | null;
+    if (!pf?.auth_user_id) return generic;
+
+    const { data: found } = await admin.auth.admin.getUserById(pf.auth_user_id);
+    const user = found?.user;
+    if (!user || !needsEmailConfirmation(user)) return generic;
+
+    await sendConfirmationEmail({ userId: user.id, email: cleanEmail, name: pf.name });
+  } catch (e) {
+    console.warn('[confirmação] Falha ao reenviar:', e instanceof Error ? e.message : e);
+  }
+  return generic;
+}
 
 // 12. Boas-vindas (/bem-vinda) — completa a conta criada com o Google
 /**

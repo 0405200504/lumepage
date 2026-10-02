@@ -14,6 +14,13 @@
  *   SCK                  id da profissional, pra testar o carimbo do checkout
  *   SUB_ID               fixa o id da assinatura (pra encadear ativação → cancelamento)
  *   IDEMPOTENCY          fixa o x-hubla-idempotency (pra testar a deduplicação)
+ *   PHONE                telefone da compradora (padrão: NENHUM)
+ *
+ * Por que o telefone não tem padrão: quando o e-mail não bate com nenhuma conta,
+ * o webhook procura a conta pelos 8 últimos dígitos do telefone. Este script
+ * mandava sempre o WhatsApp da Lume — contra produção, uma compra "órfã" de
+ * teste ativava plano na conta real ligada a esse número. Para testar o vínculo
+ * por telefone, passe PHONE com um número que só a conta de teste tenha.
  */
 
 import { randomUUID } from 'crypto';
@@ -81,7 +88,7 @@ const payload = {
       firstName: 'Teste',
       lastName: 'Lume',
       email,
-      phone: '+5515997507988',
+      ...(process.env.PHONE ? { phone: process.env.PHONE } : {}),
     },
   },
 };

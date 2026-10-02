@@ -5,6 +5,7 @@ import { fillTemplate, formatDateBR, formatPriceBRL } from '@/lib/whatsapp';
 import { runWhatsAppHealthCheck } from '@/lib/whatsapp/health';
 import { resolveAppointmentServices, formatServiceNames, sumPriceCents } from '@/lib/appointments/services';
 import { sendRevenueDigests } from '@/lib/push/digest';
+import { safeEqual } from '@/lib/auth/safe-equal';
 
 export const maxDuration = 60;
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
   }
   const auth = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (auth !== secret) {
+  if (!safeEqual(auth, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

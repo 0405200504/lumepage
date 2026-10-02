@@ -1,5 +1,7 @@
 import { requireProfessional } from '@/lib/auth/session';
 import { BudgetUnavailable, BUDGET_REACHED_MSG, addAiCost, remainingMicros, whisperCostMicros } from '@/lib/assistant/budget';
+import { accessBlockForProfessional } from '@/lib/subscription/access';
+import { ACCESS_BLOCK_MESSAGE } from '@/lib/subscription/access-rules';
 
 export const maxDuration = 30;
 
@@ -7,6 +9,10 @@ export async function POST(req: Request) {
   try {
     const session = await requireProfessional();
     const professionalId = session.professional_id!;
+
+    // Conta vencida/pausada não gasta IA — mesma regra do painel e das actions.
+    const block = await accessBlockForProfessional(professionalId);
+    if (block) return new Response(ACCESS_BLOCK_MESSAGE[block], { status: 402 });
 
     // Teto de IA do mês (migração v43); sem a migração, segue sem contar.
     let metered = true;

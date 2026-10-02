@@ -3,6 +3,8 @@ import { streamText } from 'ai';
 import { authService } from '@/lib/auth/auth';
 import { buildAssistantContext, buildAssistantTools } from '@/lib/assistant/agent';
 import { BudgetUnavailable, BUDGET_REACHED_MSG, addAiCost, chatCostMicros, remainingMicros } from '@/lib/assistant/budget';
+import { accessBlockForProfessional } from '@/lib/subscription/access';
+import { ACCESS_BLOCK_MESSAGE } from '@/lib/subscription/access-rules';
 
 // Permite tempo de resposta maior para funções complexas
 export const maxDuration = 30;
@@ -21,6 +23,10 @@ export async function POST(req: Request) {
       return new Response('Não autorizado', { status: 401 });
     }
     const professionalId = session.professional_id;
+
+    // 1b. Conta vencida/pausada não gasta IA — mesma regra do painel e das actions.
+    const block = await accessBlockForProfessional(professionalId);
+    if (block) return new Response(ACCESS_BLOCK_MESSAGE[block], { status: 402 });
 
     // 2. Teto de IA do mês (migração v43). Sem a migração o chat segue sem
     //    contar: custa frações de centavo por mensagem. A voz, essa sim, fica
