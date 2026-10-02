@@ -80,18 +80,24 @@ export const PANEL_FLAG_KEY = 'lume:painel';
  *
  * O que sobra é posicionar a estrela pela TELA, não pela janela, nas duas
  * páginas, para ela não pular na troca. Este trecho roda nas duas (a tela de
- * abertura e a porteira do painel): no app do iPhone em pé, mede a altura da
- * tela em pixels CSS e põe em --lume-tela; o CSS da cena usa isso no lugar
- * de inset: 0. A correção pelo zoom é necessária: com o zoom de página do
- * Safari (o outro iPhone do usuário está em 85%), a janela vem em pixels
- * CSS maiores que a tela em pontos, e screen.height sozinho ficaria curto.
- * innerWidth é confiável nesse instante (só a altura vem errada), então
- * tela em px CSS = screen.height × innerWidth / screen.width.
+ * abertura e a porteira do painel): no app do iPhone em pé, grava em
+ * --lume-ratio a proporção da tela (altura ÷ largura, que não muda com zoom
+ * nenhum) e marca data-tela; o CSS da cena então mede a cortina como
+ * `100vw × --lume-ratio` no lugar de inset: 0.
+ *
+ * Por que em vw e não em px medidos por JS: no iPhone 16 do usuário o app
+ * roda com zoom de página de 85% (a janela vem em px CSS maiores que a
+ * tela em pontos: 462 numa tela de 393). Esse zoom é aplicado DEPOIS do
+ * primeiro script da tela de abertura — ela media innerWidth = 393, fixava
+ * a altura em px e, zoomada em seguida, desenhava a estrela em 340 pt; o
+ * painel, já nascendo zoomado, desenhava em 400 pt: a estrela pulava 60 pt
+ * na troca (vídeo de 02/10, 14:11). Com `100vw` o navegador refaz a conta
+ * sozinho quando o zoom entra, nas duas páginas, sem JS.
  */
 export const SPLASH_SCREEN_FIT_JS =
   "try{var o=screen.orientation&&screen.orientation.type||'';" +
-  "if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width&&innerWidth>0){" +
-  "var fd=document.documentElement;fd.style.setProperty('--lume-tela',Math.round(screen.height*innerWidth/screen.width)+'px');fd.dataset.tela='cheia'}}catch(x){}";
+  "if(navigator.standalone===true&&!/landscape/.test(o)&&Math.abs(window.orientation||0)!==90&&screen.height>screen.width){" +
+  "var fd=document.documentElement;fd.style.setProperty('--lume-ratio',String(Math.round(screen.height/screen.width*10000)/10000));fd.dataset.tela='cheia'}}catch(x){}";
 
 /** Diagnóstico temporário da abertura no iPhone (sessionStorage → painel →
  *  /api/diag/abertura). Só medidas de tela, nada pessoal. */
@@ -145,9 +151,10 @@ html[data-splash='skip'] #lume-splash { animation: lume-splash-out 160ms linear 
 html[data-splash='launch'] #lume-splash,
 html[data-splash='launch'] .lume-splash__star-wrap { animation: none; }
 /* App do iPhone: a cortina mede a TELA, não a janela (o iOS dá uma janela
-   mais curta na abertura — ver SPLASH_SCREEN_FIT_JS). A tela de abertura
-   ainda troca para position: absolute (app/abertura/route.ts). */
-html[data-tela] #lume-splash { bottom: auto; height: var(--lume-tela); }
+   mais curta na abertura — ver SPLASH_SCREEN_FIT_JS). Em vw: acompanha o
+   zoom de página sozinha. A tela de abertura ainda troca para
+   position: absolute (app/abertura/route.ts). */
+html[data-tela] #lume-splash { --lume-tela: calc(100vw * var(--lume-ratio, 2.1667)); bottom: auto; height: var(--lume-tela); }
 /* Só o bordô: o primeiro quadro, igual à tela de abertura do iPhone. */
 html[data-splash='still'] .lume-splash__star-wrap { display: none; }
 html[data-splash='still'] #lume-splash,

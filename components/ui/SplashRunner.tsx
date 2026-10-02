@@ -46,7 +46,13 @@ export function SplashRunner() {
       if (diag) {
         sessionStorage.removeItem(SPLASH_DIAG_KEY);
         const dados = JSON.parse(diag);
-        dados.montado = { j: [window.innerWidth, window.innerHeight], c: html.clientHeight, fit: html.style.getPropertyValue('--lume-tela') };
+        const estrela = document.querySelector('.lume-splash__star-wrap')?.getBoundingClientRect();
+        dados.montado = {
+          j: [window.innerWidth, window.innerHeight],
+          c: html.clientHeight,
+          dpr: window.devicePixelRatio,
+          estrela: estrela ? [Math.round(estrela.top), Math.round(estrela.height)] : null,
+        };
         void fetch('/api/diag/abertura', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
