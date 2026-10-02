@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useTransition, useCallback } from 'react';
+import React, { useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import {
-  MessageCircle, Copy, Check, Settings2, RefreshCw, ChevronDown, ChevronUp, Smartphone,
-  XCircle, CheckCircle2, Loader2, AlertCircle, Plus, Trash2, Zap,
-  AlertTriangle, CalendarClock, BellRing, Sunrise, Mail,
+  RefreshCw, ChevronDown, ChevronUp, Smartphone, CheckCircle2, Loader2, AlertCircle,
+  Plus, Trash2, CalendarClock, BellRing, Sunrise, Mail,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { WhatsAppSettings } from '@/types/database';
@@ -14,10 +13,8 @@ import {
   saveWhatsAppSettingsAction,
   setupWebhookAction,
   checkWhatsAppStatusAction,
-  getWebhookUrlAction,
-  diagnoseWhatsAppAction,
-  sendTestMessageAction,
   connectWhatsAppAction,
+  disconnectWhatsAppAction,
 } from '@/app/actions/whatsapp';
 
 interface WhatsAppPanelProps {
@@ -34,22 +31,33 @@ const statusLabel: Record<ConnectionStatus, string> = {
   close:          'Desconectado',
   qr:             'Aguardando leitura do QR Code',
   error:          'Sem conexão',
-  not_configured: 'Não configurado',
+  not_configured: 'Não conectado',
   loading:        'Verificando…',
 };
 
+/** Com o QR na tela, confere a cada 3 s se o celular já leu. */
+const SCAN_POLL_MS = 3_000;
+/** O código do WhatsApp expira rápido; pede outro antes disso, sem piscar. */
+const QR_REFRESH_MS = 20_000;
+/** Conectado: confere de vez em quando para, se cair, já mostrar o QR. */
+const CONNECTED_POLL_MS = 30_000;
+
 /**
  * Painel do WhatsApp: conectar o número e configurar as mensagens automáticas.
+ *
+ * A profissional não configura nada. O servidor uazapi é um só para todas as
+ * contas (UAZAPI_SERVER_URL + UAZAPI_ADMIN_TOKEN) e a instância dela é criada
+ * na primeira conexão. Sempre que o número está desconectado, o QR Code
+ * aparece sozinho — sem botão, sem modal e sem "configurações avançadas".
+ * Diagnóstico, teste de envio e webhook continuam como actions do servidor,
+ * para uso do suporte.
+ *
  * O atendimento por IA está desligado nesta versão (ver lib/whatsapp/flags.ts) —
  * os campos da persona continuam no banco e são preservados a cada salvamento.
  */
 export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPanelProps) {
   const { success, error } = useToast();
   const [isPending, startTransition] = useTransition();
-
-  // ── Credenciais ───────────────────────────────────────────────────────────
-  const [uazapiUrl, setUazapiUrl] = useState(initialSettings?.uazapi_url || '');
-  const [uazapiToken, setUazapiToken] = useState(initialSettings?.uazapi_token || '');
 
   // ── Automações ────────────────────────────────────────────────────────────
   const [autoBookingEnabled, setAutoBookingEnabled] = useState(initialSettings?.automation_booking_enabled ?? false);
@@ -88,25 +96,19 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 
   // ── Conexão ───────────────────────────────────────────────────────────────
   const [status, setStatus] = useState<ConnectionStatus>('loading');
-  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [editingCredentials, setEditingCredentials] = useState(false);
+  // A instância desta conta já existe no servidor? Vira true na hora em que
+  // ela é criada — sem recarregar a página.
+  const [hasInstance, setHasInstance] = useState(!!(initialSettings?.uazapi_url && initialSettings?.uazapi_token));
+  const [confirmSwap, setConfirmSwap] = useState(false);
 
-  // ── Suporte (dentro de avançado) ──────────────────────────────────────────
-  const [diagnosing, setDiagnosing] = useState(false);
-  const [diagResult, setDiagResult] = useState<Awaited<ReturnType<typeof diagnoseWhatsAppAction>> | null>(null);
-  const [testPhone, setTestPhone] = useState('');
-  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
-
-  // ── QR ────────────────────────────────────────────────────────────────────
-  const [qrModalOpen, setQrModalOpen] = useState(false);
+  // ── QR Code (aparece sozinho sempre que o número está desconectado) ───────
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrRaw, setQrRaw] = useState<string | null>(null);
   const [qrPaircode, setQrPaircode] = useState<string | null>(null);
   const [qrAsyncImgSrc, setQrAsyncImgSrc] = useState<string | null>(null);
-  const [qrConnected, setQrConnected] = useState(false);
+  // Um pedido de QR por "queda": evita pedir dois ao mesmo tempo.
+  const qrRequested = useRef(false);
 
   const loadStatus = useCallback(() => {
     checkWhatsAppStatusAction()
@@ -122,10 +124,135 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
     loadStatus();
   }
 
+  useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const isConnected = status === 'open';
+  const canConnect = hasInstance || canAutoProvision;
+  // "connecting" também entra aqui: é como a uazapi chama a espera pela leitura do QR.
+  const needsScan = status !== 'open' && status !== 'loading';
+  const waitingScan = needsScan && canConnect;
+
+  const clearQr = useCallback(() => {
+    setQrRaw(null);
+    setQrPaircode(null);
+    setQrAsyncImgSrc(null);
+    setQrError(null);
+  }, []);
+
+  /** Pede (ou renova) o QR Code. `silent` troca o código sem piscar a tela. */
+  const fetchQr = useCallback(async (silent = false) => {
+    if (!silent) { setQrLoading(true); setQrError(null); }
+    const res = await connectWhatsAppAction().catch(() => null);
+    setQrLoading(false);
+
+    if (!res || !res.success) {
+      setQrRaw(null);
+      setQrPaircode(null);
+      setQrAsyncImgSrc(null);
+      setQrError(!res
+        ? 'Não conseguimos falar com o servidor do WhatsApp. Tente de novo em instantes.'
+        : 'limitReached' in res && res.limitReached
+          ? 'Não conseguimos preparar seu WhatsApp agora. Já avisamos a equipe — tente de novo em alguns minutos.'
+          : res.error || 'Não foi possível gerar o QR Code.');
+      return;
+    }
+
+    setHasInstance(true);
+    if (res.alreadyConnected) { setStatus('open'); clearQr(); return; }
+    setQrError(null);
+    if (res.qrcode) { setQrPaircode(null); setQrRaw(res.qrcode); return; }
+    if (res.paircode) { setQrRaw(null); setQrAsyncImgSrc(null); setQrPaircode(res.paircode); return; }
+    setQrRaw(null);
+    setQrPaircode(null);
+    setQrAsyncImgSrc(null);
+    setQrError('O servidor não devolveu um QR Code. Tente de novo.');
+  }, [clearQr]);
+
+  // Caiu (ou nunca conectou)? Pede o QR na hora — a profissional não clica em nada.
   useEffect(() => {
-    loadStatus();
-    getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null)).catch(() => {});
-  }, [loadStatus]);
+    if (!waitingScan) { qrRequested.current = false; return; }
+    if (qrRequested.current) return;
+    qrRequested.current = true;
+    void fetchQr();
+  }, [waitingScan, fetchQr]);
+
+  // Renova o código antes de expirar. Código de pareamento não precisa.
+  useEffect(() => {
+    if (!waitingScan || !qrRaw) return;
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      void fetchQr(true);
+    }, QR_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [waitingScan, qrRaw, fetchQr]);
+
+  // Com o QR na tela, confere se o celular já leu. Ao conectar, registra o
+  // webhook sozinho: a profissional não precisa saber que isso existe.
+  useEffect(() => {
+    if (!waitingScan) return;
+    const timer = setInterval(async () => {
+      if (document.hidden) return;
+      const r = await checkWhatsAppStatusAction().catch(() => null);
+      if (r?.status !== 'open') return;
+      setStatus('open');
+      clearQr();
+      success('Conectado!', 'Seu WhatsApp está pronto para enviar as mensagens.');
+      setupWebhookAction().catch(() => {});
+    }, SCAN_POLL_MS);
+    return () => clearInterval(timer);
+  }, [waitingScan, success, clearQr]);
+
+  // Conectado: confere de vez em quando (e ao voltar para a aba). Se cair, o
+  // status muda e o QR aparece sozinho.
+  useEffect(() => {
+    if (!isConnected) return;
+    const check = async () => {
+      if (document.hidden) return;
+      const first = await checkWhatsAppStatusAction().catch(() => null);
+      if (first?.status === 'open') return;
+      // Confirma antes de tirar o "conectado" da tela: um erro passageiro não
+      // pode fazer o QR piscar na frente dela.
+      await new Promise(r => setTimeout(r, 2000));
+      const again = await checkWhatsAppStatusAction().catch(() => null);
+      const val = (again?.status ?? 'error') as string;
+      if (val !== 'open') setStatus((val in statusLabel ? val : 'error') as ConnectionStatus);
+    };
+    const timer = setInterval(check, CONNECTED_POLL_MS);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [isConnected]);
+
+  const qrDirectImgSrc = !qrRaw ? null
+    : qrRaw.startsWith('data:image') ? qrRaw
+    : /^(iVBORw0KG|\/9j\/)/.test(qrRaw) ? `data:image/png;base64,${qrRaw}`
+    : null;
+
+  useEffect(() => {
+    if (!qrRaw || qrDirectImgSrc) return;
+    let cancelled = false;
+    QRCode.toDataURL(qrRaw, { width: 280, margin: 1 })
+      .then(src => { if (!cancelled) setQrAsyncImgSrc(src); })
+      .catch(() => { if (!cancelled) setQrError('Não foi possível mostrar o QR Code recebido.'); });
+    return () => { cancelled = true; };
+  }, [qrRaw, qrDirectImgSrc]);
+
+  const qrImgSrc = qrDirectImgSrc ?? qrAsyncImgSrc;
+
+  // Trocar número: desliga o atual; o status cai e o QR novo é pedido sozinho.
+  function handleSwapNumber() {
+    startTransition(async () => {
+      const res = await disconnectWhatsAppAction();
+      if (!res.success) {
+        error('Não deu para desconectar', res.error || 'Tente de novo.');
+        return;
+      }
+      setConfirmSwap(false);
+      setStatus('close');
+    });
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function buildPayload() {
@@ -133,8 +260,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
       varRows.filter(r => r.key.trim()).map(r => [r.key.trim(), r.value])
     );
     return {
-      uazapi_url: uazapiUrl,
-      uazapi_token: uazapiToken,
+      // Credenciais ficam com o servidor: o painel nunca mexe nelas.
       // Atendimento por IA desligado nesta versão — os valores já gravados são
       // preservados para quando o recurso voltar.
       bot_enabled: false,
@@ -171,114 +297,6 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
     });
   }
 
-  // Salva credenciais e já abre o QR Code — um passo só para a profissional.
-  function handleSaveCredentials(connectAfter: boolean) {
-    startTransition(async () => {
-      const res = await saveWhatsAppSettingsAction(buildPayload());
-      if (!res.success) {
-        error('Erro ao salvar', res.error || 'Verifique a URL e o token.');
-        return;
-      }
-      setEditingCredentials(false);
-      getWebhookUrlAction().then(r => setWebhookUrl(r.webhookUrl || null)).catch(() => {});
-      if (connectAfter) void handleOpenQrModal();
-      else success('Salvo!', 'Credenciais atualizadas.');
-    });
-  }
-
-  function handleCopy() {
-    if (!webhookUrl) return;
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  function handleSetupWebhook() {
-    startTransition(async () => {
-      const res = await setupWebhookAction();
-      if (res.success) {
-        success('Integração reativada', 'A uazapi voltou a falar com o Lume.');
-        if (res.webhookUrl) setWebhookUrl(res.webhookUrl);
-      } else {
-        error('Erro ao reativar', res.error || 'Verifique a URL e o token.');
-      }
-    });
-  }
-
-  const handleOpenQrModal = useCallback(async () => {
-    setQrModalOpen(true);
-    setQrLoading(true);
-    setQrError(null);
-    setQrRaw(null);
-    setQrPaircode(null);
-    setQrAsyncImgSrc(null);
-    setQrConnected(false);
-
-    const res = await connectWhatsAppAction();
-    setQrLoading(false);
-
-    if (!res.success) {
-      setQrError('limitReached' in res && res.limitReached
-        ? 'Não conseguimos preparar seu WhatsApp agora. Já avisamos a equipe — tente de novo em alguns minutos.'
-        : res.error || 'Erro ao gerar QR Code.');
-      return;
-    }
-    if (res.alreadyConnected) { setQrConnected(true); setStatus('open'); return; }
-    if (res.qrcode) { setQrRaw(res.qrcode); return; }
-    if (res.paircode) { setQrPaircode(res.paircode); return; }
-    setQrError('A uazapi não retornou QR Code nem código de pareamento.');
-  }, []);
-
-  const qrDirectImgSrc = !qrRaw ? null
-    : qrRaw.startsWith('data:image') ? qrRaw
-    : /^(iVBORw0KG|\/9j\/)/.test(qrRaw) ? `data:image/png;base64,${qrRaw}`
-    : null;
-
-  useEffect(() => {
-    if (!qrRaw || qrDirectImgSrc) return;
-    QRCode.toDataURL(qrRaw, { width: 280, margin: 1 })
-      .then(setQrAsyncImgSrc)
-      .catch(() => setQrError('Não foi possível renderizar o QR Code recebido.'));
-  }, [qrRaw, qrDirectImgSrc]);
-
-  const qrImgSrc = qrDirectImgSrc ?? qrAsyncImgSrc;
-
-  // Ao conectar, registra o webhook sozinho: a profissional não precisa saber
-  // que isso existe.
-  useEffect(() => {
-    if (!qrModalOpen || qrConnected || qrLoading) return;
-    const interval = setInterval(async () => {
-      const r = await checkWhatsAppStatusAction().catch(() => null);
-      if (r?.status === 'open') {
-        setQrConnected(true);
-        setStatus('open');
-        success('Conectado!', 'Seu WhatsApp está pronto para enviar as mensagens.');
-        setupWebhookAction()
-          .then(res => { if (res.success && res.webhookUrl) setWebhookUrl(res.webhookUrl); })
-          .catch(() => {});
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [qrModalOpen, qrConnected, qrLoading, success]);
-
-  async function handleTestMessage() {
-    setTestResult(null);
-    startTransition(async () => {
-      const res = await sendTestMessageAction(testPhone);
-      setTestResult(res.success
-        ? { ok: true, msg: 'Mensagem enviada. Se chegou no WhatsApp, está tudo certo.' }
-        : { ok: false, msg: `Falha: ${res.error}` });
-    });
-  }
-
-  async function handleDiagnose() {
-    setDiagnosing(true);
-    setDiagResult(null);
-    const result = await diagnoseWhatsAppAction().catch(() => ({ ok: false, steps: [], error: 'Erro ao verificar' }));
-    setDiagResult(result);
-    setDiagnosing(false);
-  }
-
   function addVarRow() { setVarRows(prev => [...prev, { key: '', value: '' }]); }
   function updateVarRow(index: number, field: 'key' | 'value', val: string) {
     setVarRows(prev => prev.map((r, i) =>
@@ -287,19 +305,19 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   }
   function removeVarRow(index: number) { setVarRows(prev => prev.filter((_, i) => i !== index)); }
 
-  const isConfigured = !!(uazapiUrl && uazapiToken);
-  const isConnected = status === 'open';
-  // Com provisionamento automático a profissional nunca vê URL nem token.
-  const showCredentialsForm = (!isConfigured && !canAutoProvision) || editingCredentials;
   const activeAutomations = [autoBookingEnabled, auto5daysEnabled, autoDayBeforeEnabled, autoDayOfEnabled, autoFollowupEnabled].filter(Boolean).length;
   const builtinVars = ['nome', 'servico', 'data', 'horario', 'profissional', 'preco', 'forma_pagamento'];
   const customVarNames = varRows.filter(r => r.key.trim()).map(r => r.key.trim());
 
-  // Campo dentro de um bloco cinza (bg-surface-2) x campo direto no cartão branco.
-  /* Um campo só. A distinção "campo sobre bloco cinza" × "campo sobre cartão
-     branco" deixou de existir junto com os blocos cinzas aninhados. */
-  const fieldOnTint = 'field-input';
-  const fieldOnCard = 'field-input';
+  // O que o cartão de conexão mostra. "scan" é o estado normal de desconectado:
+  // o QR já na tela. Com um código na tela, "verificando" não o esconde.
+  const hasQrOnScreen = !!(qrImgSrc || qrPaircode || qrLoading || qrError);
+  const view: 'checking' | 'connected' | 'support' | 'scan' =
+    isConnected ? 'connected'
+    : status === 'loading' && !hasQrOnScreen ? 'checking'
+    : !canConnect ? 'support'
+    : 'scan';
+  const everHadInstance = !!(initialSettings?.uazapi_url && initialSettings?.uazapi_token);
 
   return (
     <div className="space-y-5">
@@ -340,58 +358,15 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           </button>
         </div>
 
-        {/* Passo 1 — credenciais (só quando falta configurar ou ao editar) */}
-        {showCredentialsForm && (
-          <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
-            <div>
-              <p className="text-label font-bold text-heading">Credenciais da sua instância</p>
-              <p className="text-caption text-n-600 mt-0.5">
-                Você recebe esses dados junto com o acesso. Em caso de dúvida, fale com o suporte.
-              </p>
-            </div>
-            <input
-              type="url"
-              placeholder="URL da instância (ex.: https://meubot.uazapi.com)"
-              value={uazapiUrl}
-              onChange={e => setUazapiUrl(e.target.value)}
-              className={fieldOnTint}
-            />
-            <input
-              type="password"
-              placeholder="Token da instância"
-              value={uazapiToken}
-              onChange={e => setUazapiToken(e.target.value)}
-              className={fieldOnTint}
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={isPending || !uazapiUrl || !uazapiToken}
-                onClick={() => handleSaveCredentials(true)}
-                className="flex-1 py-3 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-colors disabled:opacity-60"
-              >
-                {isPending ? 'Salvando…' : 'Salvar e conectar'}
-              </button>
-              {editingCredentials && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUazapiUrl(initialSettings?.uazapi_url || '');
-                    setUazapiToken(initialSettings?.uazapi_token || '');
-                    setEditingCredentials(false);
-                  }}
-                  className="px-4 py-3 rounded-chip border border-line text-caption font-semibold text-n-600 hover:bg-surface transition-colors"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
+        {view === 'checking' && (
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3.5">
+            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-faint" aria-hidden />
+            <p className="text-caption text-n-600">Verificando sua conexão…</p>
           </div>
         )}
 
-        {/* Estado da conexão */}
-        {!showCredentialsForm && (
-          isConnected ? (
+        {view === 'connected' && (
+          <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-ok)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-ok)_8%,transparent)] px-4 py-3.5">
               <div className="flex items-center gap-3 min-w-0">
                 <CheckCircle2 className="h-5 w-5 text-ok shrink-0" />
@@ -407,164 +382,127 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
                 >
                   Abrir conversas
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleOpenQrModal}
-                  className="rounded-chip border border-line bg-surface px-3 py-2 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
-                >
-                  Trocar número
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-line bg-surface-2 p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-              <div className="flex items-start gap-3 min-w-0">
-                <Smartphone className="h-5 w-5 text-n-600 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-label font-bold text-heading">
-                    {isConfigured ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
-                  </p>
-                  <p className="text-caption text-n-600">
-                    {isConfigured
-                      ? 'Leia o QR Code com o celular para reconectar. Nenhuma mensagem é enviada enquanto isso.'
-                      : 'Leia um QR Code com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenQrModal}
-                className="shrink-0 px-5 py-3 bg-wine-700 hover:bg-wine-800 text-white text-body-sm font-semibold rounded-chip transition-colors"
-              >
-                Conectar WhatsApp
-              </button>
-            </div>
-          )
-        )}
-
-        {/* Avançado — credenciais, integração e testes (uso pontual/suporte) */}
-        {isConfigured && (
-          <div className="border-t border-line pt-3">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(v => !v)}
-              className="flex items-center gap-2 text-caption font-semibold text-n-600 hover:text-heading transition-colors"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              Configurações avançadas
-              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-
-            {showAdvanced && (
-              <div className="mt-4 space-y-5">
-                {!editingCredentials && (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-caption font-semibold text-heading">Credenciais</p>
-                      <p className="text-caption text-n-600 truncate">{uazapiUrl} · token ••••{uazapiToken.slice(-4)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setEditingCredentials(true); setShowAdvanced(false); }}
-                      className="shrink-0 rounded-chip border border-line px-3 py-2 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
-                    >
-                      Editar
-                    </button>
-                  </div>
+                {!confirmSwap && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmSwap(true)}
+                    className="rounded-chip border border-line bg-surface px-3 py-2 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors"
+                  >
+                    Trocar número
+                  </button>
                 )}
+              </div>
+            </div>
 
-                {/* Testar envio */}
-                <div className="space-y-2">
-                  <p className="text-caption font-semibold text-heading">Testar envio</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      placeholder="5511999999999"
-                      value={testPhone}
-                      onChange={e => setTestPhone(e.target.value)}
-                      className={fieldOnCard}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleTestMessage}
-                      disabled={isPending || !testPhone}
-                      className="shrink-0 px-4 py-2.5 rounded-chip border border-line text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
-                    >
-                      Enviar
-                    </button>
-                  </div>
-                  {testResult && (
-                    <p className={`flex items-center gap-1.5 text-caption font-medium ${testResult.ok ? 'text-success' : 'text-danger'}`}>
-                      {testResult.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden /> : <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />}
-                      {testResult.msg}
-                    </p>
-                  )}
-                </div>
-
-                {/* Diagnóstico */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-caption font-semibold text-heading">Verificar configuração</p>
-                    <button
-                      type="button"
-                      onClick={handleDiagnose}
-                      disabled={diagnosing}
-                      className="inline-flex items-center gap-1.5 rounded-chip border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
-                    >
-                      {diagnosing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                      {diagnosing ? 'Verificando…' : 'Verificar'}
-                    </button>
-                  </div>
-                  {diagResult && (
-                    <div className="space-y-1.5">
-                      {'error' in diagResult && diagResult.error && <p className="text-caption text-bad">{diagResult.error}</p>}
-                      {diagResult.steps?.map((step, i) => (
-                        <div key={i} className="flex items-start gap-2 text-caption">
-                          {step.ok && !step.warn
-                            ? <CheckCircle2 className="h-4 w-4 text-ok shrink-0 mt-0.5" />
-                            : step.warn
-                              ? <AlertCircle className="h-4 w-4 text-warn shrink-0 mt-0.5" />
-                              : <XCircle className="h-4 w-4 text-bad shrink-0 mt-0.5" />
-                          }
-                          <div>
-                            <span className="font-medium text-heading">{step.label}: </span>
-                            <span className={step.ok && !step.warn ? 'text-n-600' : step.warn ? 'text-warn' : 'text-bad'}>{step.detail}</span>
-                          </div>
-                        </div>
-                      ))}
-                      {diagResult.ok && <p className="text-caption font-medium text-ok mt-1">Tudo certo por aqui.</p>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Integração (webhook) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-caption font-semibold text-heading">Integração com a uazapi</p>
-                      <p className="text-caption text-n-600">É configurada sozinha ao conectar. Use se o suporte pedir.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSetupWebhook}
-                      disabled={isPending}
-                      className="shrink-0 inline-flex items-center gap-1.5 rounded-chip border border-line px-3 py-1.5 text-caption font-semibold text-n-600 hover:bg-surface-2 transition-colors disabled:opacity-60"
-                    >
-                      <Zap className="h-3.5 w-3.5" />
-                      Reconfigurar
-                    </button>
-                  </div>
-                  {webhookUrl && (
-                    <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2">
-                      <p className="flex-1 truncate font-mono text-caption text-n-600">{webhookUrl}</p>
-                      <button type="button" onClick={handleCopy} className="shrink-0 text-faint hover:text-heading transition-colors">
-                        {copied ? <Check className="h-4 w-4 text-ok" /> : <Copy className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  )}
+            {confirmSwap && (
+              <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-caption text-n-600">
+                  O número atual é desconectado e o QR Code aparece em seguida para você conectar o novo.
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSwapNumber}
+                    disabled={isPending}
+                    className="rounded-chip bg-wine-700 px-3 py-2 text-caption font-bold text-white transition-colors hover:bg-wine-800 disabled:opacity-60"
+                  >
+                    {isPending ? 'Desconectando…' : 'Desconectar e trocar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmSwap(false)}
+                    disabled={isPending}
+                    className="rounded-chip border border-line px-3 py-2 text-caption font-semibold text-n-600 transition-colors hover:bg-surface disabled:opacity-60"
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {view === 'support' && (
+          <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3.5">
+            <Smartphone className="h-5 w-5 text-n-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-label font-bold text-heading">Estamos preparando seu WhatsApp</p>
+              <p className="text-caption text-n-600">
+                A conexão ainda não foi liberada para a sua conta. Fale com o suporte do Lume que a gente resolve.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {view === 'scan' && (
+          <div className="rounded-xl border border-line bg-surface-2 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <Smartphone className="h-5 w-5 text-n-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-label font-bold text-heading">
+                  {everHadInstance ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
+                </p>
+                <p className="text-caption text-n-600">
+                  {everHadInstance
+                    ? 'Leia o QR Code abaixo para reconectar. Nenhuma mensagem é enviada enquanto isso.'
+                    : 'Leia o QR Code abaixo com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col items-center gap-3">
+              {qrLoading && (
+                <div className="flex h-64 w-64 flex-col items-center justify-center gap-2 rounded-xl border border-line bg-surface">
+                  <Loader2 className="h-6 w-6 animate-spin text-faint" aria-hidden />
+                  <p className="text-caption text-n-600">Preparando seu QR Code…</p>
+                </div>
+              )}
+
+              {qrError && !qrLoading && (
+                <div className="flex w-full max-w-sm flex-col items-center gap-3 py-4 text-center">
+                  <p className="flex items-start gap-2 text-caption text-bad">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+                    {qrError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void fetchQr()}
+                    className="rounded-chip bg-wine-700 px-4 py-2.5 text-caption font-bold text-white transition-colors hover:bg-wine-800"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+
+              {qrImgSrc && !qrLoading && !qrError && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrImgSrc} alt="QR Code do WhatsApp" className="h-64 w-64 rounded-xl border border-line bg-white" />
+                  <p className="max-w-sm text-center text-caption text-n-600">
+                    No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar um aparelho → aponte a câmera para este código.
+                  </p>
+                  <p className="flex items-center gap-1.5 text-caption text-faint">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    Aguardando leitura… o código se renova sozinho.
+                  </p>
+                </>
+              )}
+
+              {qrPaircode && !qrImgSrc && !qrLoading && !qrError && (
+                <>
+                  <p className="rounded-xl border border-line bg-surface px-4 py-3 font-mono text-h2 font-bold tracking-widest text-wine-700">
+                    {qrPaircode}
+                  </p>
+                  <p className="max-w-sm text-center text-caption text-n-600">
+                    No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar com número de telefone → digite este código.
+                  </p>
+                  <p className="flex items-center gap-1.5 text-caption text-faint">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    Aguardando confirmação…
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         )}
       </section>
@@ -585,7 +523,7 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           )}
         </div>
 
-        {isConfigured && !isConnected && (
+        {hasInstance && needsScan && (
           <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-warn)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-warn)_8%,transparent)] px-4 py-3">
             <AlertCircle className="h-4 w-4 text-warn shrink-0 mt-0.5" />
             <p className="text-caption text-warn">
@@ -748,72 +686,6 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           {isPending ? 'Salvando…' : 'Salvar mensagens'}
         </button>
       </section>
-
-      {/* Modal de QR Code */}
-      {qrModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setQrModalOpen(false)}>
-          <div className="w-full max-w-sm space-y-4 rounded-3xl bg-surface p-6 shadow-lg" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <p className="text-label font-bold text-heading">Conectar WhatsApp</p>
-              <button type="button" onClick={() => setQrModalOpen(false)} className="text-faint hover:text-heading transition-colors">
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            {qrLoading && (
-              <div className="flex flex-col items-center gap-2 py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-faint" />
-                <p className="text-caption text-n-600">Gerando QR Code…</p>
-              </div>
-            )}
-
-            {qrError && !qrLoading && (
-              <div className="space-y-3 py-2">
-                <p className="text-caption text-bad">{qrError}</p>
-                <button type="button" onClick={handleOpenQrModal} className="text-caption font-bold text-wine-700 underline">
-                  Tentar novamente
-                </button>
-              </div>
-            )}
-
-            {qrConnected && !qrLoading && (
-              <div className="flex flex-col items-center gap-2 py-10">
-                <CheckCircle2 className="h-10 w-10 text-ok" />
-                <p className="text-label font-bold text-heading">WhatsApp conectado!</p>
-              </div>
-            )}
-
-            {qrImgSrc && !qrConnected && !qrLoading && (
-              <div className="flex flex-col items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrImgSrc} alt="QR Code do WhatsApp" className="h-64 w-64 rounded-xl border border-line bg-white" />
-                <p className="text-center text-caption text-n-600">
-                  No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar um aparelho → aponte a câmera para este código.
-                </p>
-                <p className="flex items-center gap-1.5 text-caption text-faint">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Aguardando leitura…
-                </p>
-              </div>
-            )}
-
-            {qrPaircode && !qrConnected && !qrLoading && (
-              <div className="flex flex-col items-center gap-3">
-                <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 font-mono text-h2 font-bold tracking-widest text-wine-700">
-                  {qrPaircode}
-                </p>
-                <p className="text-center text-caption text-n-600">
-                  No celular: WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar com número de telefone → digite este código.
-                </p>
-                <p className="flex items-center gap-1.5 text-caption text-faint">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Aguardando confirmação…
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

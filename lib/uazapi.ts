@@ -325,6 +325,27 @@ export async function createUazapiInstance(
 }
 
 /**
+ * Desconecta o número da instância sem apagá-la (POST /instance/disconnect,
+ * autenticado com o token da própria instância). Depois disso,
+ * /instance/connect devolve um QR novo — é o "trocar número" do painel.
+ */
+export async function disconnectUazapiInstance(baseUrl: string, token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/instance/disconnect`, {
+      method: 'POST',
+      headers: { token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) console.error('[uazapi] disconnect falhou:', res.status, (await res.text()).slice(0, 200));
+    return res.ok;
+  } catch (e) {
+    console.error('[uazapi] Erro ao desconectar instância:', e);
+    return false;
+  }
+}
+
+/**
  * Apaga a instância no servidor, liberando o slot do plano. Autentica com o
  * token da própria instância (não com o admintoken) — é o que a spec pede.
  */
