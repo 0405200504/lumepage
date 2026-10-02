@@ -4,7 +4,7 @@ import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
 import {
   configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode,
-  createUazapiInstance, uazapiAdminConfigured,
+  createUazapiInstance, uazapiAdminConfigured, disconnectUazapiInstance,
 } from '@/lib/uazapi';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
 
@@ -23,8 +23,14 @@ async function getProfessionalId(mutating = true): Promise<string | null> {
 }
 
 export async function saveWhatsAppSettingsAction(input: {
-  uazapi_url: string;
-  uazapi_token: string;
+  /**
+   * O painel da profissional não mexe nas credenciais: o servidor uazapi é um
+   * só para todas as contas e a instância dela é criada na primeira conexão.
+   * Ausentes ou vazias, as credenciais já gravadas são mantidas — senão salvar
+   * as mensagens logo depois de conectar apagaria o token recém-criado.
+   */
+  uazapi_url?: string;
+  uazapi_token?: string;
   bot_enabled: boolean;
   confirmation_enabled: boolean;
   bot_persona?: string;
@@ -53,9 +59,10 @@ export async function saveWhatsAppSettingsAction(input: {
     const professionalId = await getProfessionalId();
     if (!professionalId) return { success: false, error: 'Sessão inválida. Faça login novamente.' };
 
+    const uazapiUrl = input.uazapi_url?.trim().replace(/\/$/, '') || '';
+    const uazapiToken = input.uazapi_token?.trim() || '';
     const settings = await dbService.upsertWhatsAppSettings(professionalId, {
-      uazapi_url: input.uazapi_url.trim().replace(/\/$/, ''),
-      uazapi_token: input.uazapi_token.trim(),
+      ...(uazapiUrl && uazapiToken ? { uazapi_url: uazapiUrl, uazapi_token: uazapiToken } : {}),
       bot_enabled: input.bot_enabled,
       confirmation_enabled: input.confirmation_enabled,
       bot_persona: input.bot_persona?.trim() || null,
@@ -204,6 +211,28 @@ export async function connectWhatsAppAction() {
     };
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao conectar o WhatsApp.' };
+  }
+}
+
+/**
+ * Desliga o número conectado sem apagar a instância ("trocar número"). O
+ * painel vê o status cair e mostra o QR Code novo sozinho.
+ */
+export async function disconnectWhatsAppAction() {
+  try {
+    const professionalId = await getProfessionalId();
+    if (!professionalId) return { success: false as const, error: 'Sessão inválida. Faça login novamente.' };
+
+    const waSettings = await dbService.getWhatsAppSettings(professionalId).catch(() => null);
+    if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) {
+      return { success: false as const, error: 'Nenhum número conectado.' };
+    }
+
+    const ok = await disconnectUazapiInstance(waSettings.uazapi_url, waSettings.uazapi_token);
+    if (!ok) return { success: false as const, error: 'Não foi possível desconectar agora. Tente de novo.' };
+    return { success: true as const };
+  } catch (e: unknown) {
+    return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao desconectar o WhatsApp.' };
   }
 }
 
