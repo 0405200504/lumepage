@@ -99,6 +99,17 @@ ALTER TABLE IF EXISTS public.waitlist_entries        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.whatsapp_settings       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.whatsapp_conversations  ENABLE ROW LEVEL SECURITY;
 
+-- get_db_stats (v21) é SECURITY DEFINER e o Postgres dá EXECUTE a todo mundo
+-- por padrão: qualquer visitante, com a anon key, via /rest/v1/rpc/get_db_stats,
+-- via o tamanho do banco e das tabelas. Só o /admin usa, pelo servidor.
+DO $$
+BEGIN
+  IF to_regprocedure('public.get_db_stats()') IS NOT NULL THEN
+    REVOKE EXECUTE ON FUNCTION public.get_db_stats() FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.get_db_stats() TO service_role;
+  END IF;
+END $$;
+
 -- Conferência depois de rodar — NENHUMA policy deve sobrar no schema public:
 --   SELECT tablename, policyname, roles, cmd FROM pg_policies WHERE schemaname = 'public' ORDER BY 1, 2;
 -- E o teste definitivo, com a ANON KEY (a do front), tem que devolver [] :
