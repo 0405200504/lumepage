@@ -1,14 +1,17 @@
-import React from 'react';
-import { RegisterForm } from '@/components/auth/RegisterForm';
+import type { Viewport } from 'next';
+import { AuthCard } from '@/components/auth/AuthCard';
 import { verifyOrphanSignupToken, orphanStateForSignup } from '@/lib/subscription/orphans';
 import { resolvePlan, type PlanType } from '@/lib/subscription/entitlements';
 
 export const dynamic = 'force-dynamic';
 
+// Mesmo preto do login (app/(auth)/login/page.tsx).
+export const viewport: Viewport = { themeColor: '#000000' };
+
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
 
 /**
- * Cadastro.
+ * Cadastro: o cartão de entrada aberto na aba "Criar conta".
  *
  *   /register                                → teste grátis de 7 dias
  *   /register?plano=start                    → veio do pós-compra da Hubla: texto de plano pago
@@ -35,5 +38,5 @@ export default async function RegisterPage({
     }
   }
 
-  return <RegisterForm initialEmail={email} purchase={purchase} planHint={planHint} />;
+  return <AuthCard initialTab="criar" register={{ initialEmail: email, purchase, planHint }} />;
 }

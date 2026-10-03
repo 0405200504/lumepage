@@ -39,8 +39,9 @@ function isAndroid(): boolean {
  * - Android/Chrome/Edge: dispara o prompt nativo de instalação ou mostra guia.
  * - iOS/Safari: abre um guia visual (Compartilhar → Adicionar à Tela de Início).
  * - Já instalado (standalone): não renderiza nada.
+ * `dark`: bloco grafite do cartão de entrada (.auth-btn-secondary).
  */
-export default function InstallApp() {
+export default function InstallApp({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
@@ -109,7 +110,11 @@ export default function InstallApp() {
       <button
         type="button"
         onClick={handleClick}
-        className="tap flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-wine-700/15 text-wine-700 text-label font-bold rounded-2xl shadow-soft hover:bg-wine-50 transition-ui"
+        className={
+          variant === 'dark'
+            ? 'auth-btn-secondary tap'
+            : 'tap flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-wine-700/15 text-wine-700 text-label font-bold rounded-2xl shadow-soft hover:bg-wine-50 transition-ui'
+        }
       >
         <Download className="h-4 w-4" />
         <span>Instalar app no celular</span>

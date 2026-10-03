@@ -1,1 +1,1 @@
-export { default } from '../redefinir-senha/page';
+export { default, viewport } from '../redefinir-senha/page';
