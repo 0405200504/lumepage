@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
  * vêm com a emenda embutida (o fim se funde no começo), então o `loop` nativo
  * não mostra o reinício.
  *
- * Fixo na tela inteira, com o bordô da borda do vídeo por trás: cobre a área
+ * Fixo na tela inteira, com o preto da borda do vídeo por trás: cobre a área
  * da barra de status e da barra do Safari, e o cartão rola por cima dele.
  *
  * Nenhum controle aparece: sem play/pause, PiP ou transmissão, e o botão de
@@ -82,7 +82,7 @@ export function LoginVideoBackground() {
   return (
     // .login-backdrop também pinta o html/body (globals.css): é a cor que o
     // Safari usa nas barras de cima e de baixo e no elástico da rolagem.
-    <div aria-hidden className="login-backdrop pointer-events-none fixed inset-0 overflow-hidden bg-[#2d0c17]">
+    <div aria-hidden className="login-backdrop pointer-events-none fixed inset-0 overflow-hidden bg-black">
       {/* Primeiro quadro, por baixo do vídeo: aparece enquanto ele carrega e com "reduzir movimento" */}
       <div className="absolute inset-0 bg-cover bg-center bg-[url(/videos/login-mobile.jpg)] [@media(min-aspect-ratio:1/1)]:bg-[url(/videos/login-desktop.jpg)]" />
       <video
@@ -115,8 +115,6 @@ export function LoginVideoBackground() {
           />
         </picture>
       )}
-      {/* Escurece levemente para o texto fora do vidro continuar legível */}
-      <div className="absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_45%,rgba(10,4,6,0.15)_0%,rgba(10,4,6,0.55)_100%)]" />
     </div>
   );
 }
