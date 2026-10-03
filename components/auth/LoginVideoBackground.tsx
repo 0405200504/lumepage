@@ -41,8 +41,13 @@ export function LoginVideoBackground() {
       else video.play().catch(() => {});
     };
     // Tela girou (ou a janela passou de deitada para em pé): recarrega para o
-    // navegador escolher o outro arquivo; o autoplay retoma sozinho.
-    const onOrientation = () => video.load();
+    // navegador escolher o outro arquivo; o autoplay retoma sozinho. Só se o
+    // arquivo mudar mesmo: load() à toa (teclado do Android encolhendo a
+    // tela, por exemplo) fazia o vídeo recomeçar do zero.
+    const onOrientation = () => {
+      const want = landscape.matches ? 'login-desktop' : 'login-mobile';
+      if (!video.currentSrc.includes(want)) video.load();
+    };
 
     const probe = () => {
       if (blocked || !video.paused || reduce.matches) return;
