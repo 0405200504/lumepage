@@ -21,6 +21,11 @@ export interface ItemDiagnostico {
   /** Onde o item aparece, para pedir o print certo quando ele não estiver visível. */
   ondeVer: string;
   passos: string[];
+  /**
+   * Item de peso leve: no máximo vira "dica" (nunca tira nota). Ex.: publicações
+   * no Google, que não fazem a cliente desistir de agendar.
+   */
+  soDica?: boolean;
 }
 
 export const ITENS_INSTAGRAM: ItemDiagnostico[] = [
@@ -142,9 +147,10 @@ export const ITENS_GOOGLE: ItemDiagnostico[] = [
   {
     id: 'posts', titulo: 'Atualizações recentes',
     porque: 'Post recente mostra que o negócio está ativo e aparece no seu perfil.',
-    criterio: 'Só avalie se a seção de atualizações aparece no print. Não aparecendo, é NÃO VISTO. OK: há atualização nos últimos 2 meses.',
+    criterio: 'São as PUBLICAÇÕES da empresa, na seção com o título "Atualizações" ou "Novidades da empresa". Atenção: "Atualizado por esta empresa há X semanas", ao lado do horário, fala do HORÁRIO e não conta aqui. Se a seção de publicações não aparece no print, é NÃO VISTO. OK: há publicação nos últimos 2 meses. DICA: a última publicação é mais antiga ou não há nenhuma.',
     ondeVer: 'Mais abaixo no perfil, na seção "Atualizações".',
     passos: ['Toque em "Adicionar atualização".', 'Poste um resultado ou uma oferta, com o link de agendamento.', 'Repita uma vez por semana.'],
+    soDica: true,
   },
 ];
 

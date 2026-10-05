@@ -114,12 +114,14 @@ Seguem ${prints.length} print(s) do ${nomePlataforma}.`,
 
   // Um item por id da lista fixa, na ordem da lista. Sem evidência no print,
   // "ajustar"/"falta" viram "nao_visto": o perfil não perde ponto pelo que não apareceu.
+  // Item de peso leve (soDica) no máximo vira "dica".
   const porId = new Map(object.itens.map(i => [i.id, i]));
   const completos = itens.map(i => {
     const r = porId.get(i.id);
     let status: ItemStatus = r?.status ?? 'nao_visto';
     const semEvidencia = !r || SEM_EVIDENCIA.test(r.evidencia);
     if (semEvidencia && (status === 'ajustar' || status === 'falta')) status = 'nao_visto';
+    if (i.soDica && (status === 'ajustar' || status === 'falta')) status = 'dica';
     return {
       id: i.id,
       titulo: i.titulo,
