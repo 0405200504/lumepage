@@ -49,7 +49,7 @@ function SlotFoto({ professionalId, slot, serviceId, asset, onAsset, onRemover }
 
   const bloqueado = info.exigeAutorizacao && !autorizado;
   return (
-    <div className="rounded-card ring-1 ring-inset ring-line p-3 flex flex-col gap-3">
+    <div data-slot={slot} data-servico={serviceId ?? undefined} className="rounded-card ring-1 ring-inset ring-line p-3 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-body-sm font-semibold text-heading">{info.titulo}</p>
         {asset && (asset.qualidade.ok

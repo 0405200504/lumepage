@@ -159,11 +159,15 @@ export function notaDosItens(itens: Pick<DiagItem, 'status'>[]): { nota: number;
  * Mediana dos preços que aparecem nos anúncios ativos do nicho (coleta da
  * Biblioteca de Anúncios, out/2026, ~3.300 anúncios). Serve de régua: mostra
  * se o preço dela está acima ou abaixo do que o mercado anuncia.
+ *
+ * Só entram serviços com amostra boa (9+ anúncios com preço) e preço
+ * comparável. Ficaram de fora micropigmentação (mistura retoque, promoção e
+ * procedimento completo), criolipólise e maquiagem social (poucos anúncios) e
+ * brow lamination (sem dado): sem régua confiável, a tela diz que não há
+ * referência em vez de assustar com uma comparação torta.
  */
 export const MEDIANAS: { padrao: RegExp; servico: string; mediana: number }[] = [
   { padrao: /lash lifting|lifting de c[íi]lios/i, servico: 'Lash lifting', mediana: 130 },
-  { padrao: /brow lamination|lamina[çc][ãa]o/i, servico: 'Brow lamination', mediana: 130 },
-  { padrao: /nanofio|micropigment|fio a fio|shadow/i, servico: 'Micropigmentação de sobrancelha', mediana: 160 },
   { padrao: /henna|tintura/i, servico: 'Design + henna', mediana: 50 },
   { padrao: /design de sobrancelha|sobrancelha/i, servico: 'Design de sobrancelha', mediana: 70 },
   { padrao: /extens[ãa]o de c[íi]lios|volume|c[íi]lios/i, servico: 'Extensão de cílios', mediana: 110 },
@@ -174,11 +178,9 @@ export const MEDIANAS: { padrao: RegExp; servico: string; mediana: number }[] = 
   { padrao: /mechas|loiro|luzes|morena iluminada|balayage/i, servico: 'Mechas / loiro', mediana: 389 },
   { padrao: /corte/i, servico: 'Corte feminino', mediana: 100 },
   { padrao: /noiva/i, servico: 'Maquiagem de noiva', mediana: 699 },
-  { padrao: /maquiagem|make/i, servico: 'Maquiagem social', mediana: 160 },
   { padrao: /limpeza de pele/i, servico: 'Limpeza de pele', mediana: 100 },
   { padrao: /botox|toxina/i, servico: 'Botox', mediana: 550 },
   { padrao: /drenagem/i, servico: 'Drenagem linfática', mediana: 100 },
-  { padrao: /criolip/i, servico: 'Criolipólise', mediana: 399 },
   { padrao: /laser|depila/i, servico: 'Depilação a laser', mediana: 60 },
 ];
 
@@ -234,9 +236,11 @@ export function sugerirOfertas(
     const mercado = comparacaoMercado(s);
 
     if (aceita('combo')) {
+      // O complemento é o serviço barato que costuma ir junto (design, henna,
+      // esmaltação): o combo soa natural e o desconto pesa pouco na margem.
       const complemento = catalogo
         .filter(c => c.id !== s.id && c.price_cents > 0 && c.price_cents <= p * 0.6)
-        .sort((a, b) => b.price_cents - a.price_cents)[0];
+        .sort((a, b) => a.price_cents - b.price_cents)[0];
       if (complemento) {
         const cheio = p + complemento.price_cents;
         const desconto = Math.min(Math.round(complemento.price_cents * 0.5), Math.round(cheio * DESCONTO_COMBO_MAX));

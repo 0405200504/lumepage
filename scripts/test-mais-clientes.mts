@@ -64,8 +64,12 @@ t('parcelamento não vale para serviço barato', R.sugerirOfertas([design], cata
 const desc = R.sugerirOfertas([lash], catalogo, ['desconto_primeira'])[0];
 t('desconto de 1ª visita = 10%', desc.preco_oferta_cents === 14400, desc);
 t('sem condições: preço atual', R.sugerirOfertas([lash], catalogo, [])[0].tipo === 'preco_atual');
+const comboNano = R.sugerirOfertas([nano], catalogo, ['combo'])[0];
+t('combo de ticket alto usa o complemento mais barato, não outro serviço caro', comboNano.titulo.includes('Design com Henna'), comboNano.titulo);
 t('justificativa compara com a mediana do mercado', /mediana|média do que o mercado/.test(combo.justificativa), combo.justificativa);
 t('mediana encontrada para lash lifting', R.medianaPara('Lash Lifting')?.mediana === 130);
+t('sem régua para nanofios (dado do mercado não é comparável)', R.medianaPara('Nanofios') === null);
+t('sem régua inventada para brow lamination', R.medianaPara('Brow Lamination') === null);
 
 console.log('\nX1 e bot');
 const ofertas = [{ servico: 'Lash Lifting', titulo: 'Combo primeira visita', detalhe: 'De R$ 230 por R$ 195', aprovada: true }, { servico: 'Nanofios', titulo: 'Nanofios em 3x', detalhe: 'x', aprovada: false }];

@@ -76,6 +76,7 @@ export function TabNav({ items, active, basePath, param = 'tab' }: {
 export const CONTAS_NAV: SubNavItem[] = [
   { href: '/admin/professionals', label: 'Todas as contas' },
   { href: '/admin/professionals/acessos', label: 'Acessos' },
+  { href: '/admin/mais-clientes', label: 'Assessoria' },
   { href: '/admin/salons', label: 'Grupos' },
 ];
 

@@ -39,7 +39,7 @@ interface NavItem {
 
 export const ADMIN_NAV: NavItem[] = [
   { href: '/admin', label: 'Início', icon: LayoutDashboard, also: ['/admin/tasks'] },
-  { href: '/admin/professionals', label: 'Contas', icon: Users, also: ['/admin/salons'] },
+  { href: '/admin/professionals', label: 'Contas', icon: Users, also: ['/admin/salons', '/admin/mais-clientes'] },
   { href: '/admin/conversations', label: 'Conversas', icon: MessageCircle },
   { href: '/admin/appointments', label: 'Agendamentos', icon: CalendarDays },
   { href: '/admin/clients', label: 'Clientes', icon: Contact },

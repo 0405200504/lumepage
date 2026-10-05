@@ -68,14 +68,17 @@ export const MOLDES: Molde[] = [
     id: 'dourado-preco', nome: 'Preto e dourado com selo de preço', origem: '9 versões em 100 dias · design de sobrancelha', w: 1080, h: 1350,
     precisa: [['atendendo'], ['ela'], ['resultado']],
     render: d => {
-      const [primeira, ...resto] = d.oferta.servico.split(' ');
+      // Nome de uma palavra só ("Nanofios"): a linha de cima vira a cidade, sem repetir o serviço.
+      const palavras = d.oferta.servico.split(' ');
+      const primeira = palavras.length > 1 ? palavras[0] : d.cidade;
+      const resto = palavras.length > 1 ? palavras.slice(1) : palavras;
       return (
         <div style={{ position: 'relative', width: 1080, height: 1350, background: '#0d0b09', fontFamily: F.sans, color: '#f3e7d3', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', left: 0, top: 0, width: 820, height: 1080, ...capa(d.fotos.atendendo || d.fotos.resultado || d.fotos.ela) }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,rgba(13,11,9,0) 30%,rgba(13,11,9,.85) 62%,#0d0b09 78%),linear-gradient(180deg,rgba(13,11,9,0) 58%,#0d0b09 80%)' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 78% 46%,rgba(214,169,94,.28),transparent 32%)' }} />
           <p style={{ position: 'absolute', right: 70, top: 64, fontFamily: F.serifa, fontWeight: 500, fontSize: 44, letterSpacing: '.2em' }}>{primeira.toUpperCase()}</p>
-          <p style={{ position: 'absolute', right: 50, top: 120, fontFamily: F.script, fontSize: resto.join(' ').length > 12 ? 104 : 140, color: '#d6a95e', lineHeight: 1, textAlign: 'right', maxWidth: 560 }}>{resto.join(' ') || primeira}</p>
+          <p style={{ position: 'absolute', right: 50, top: 120, fontFamily: F.script, fontSize: resto.join(' ').length > 12 ? 104 : 140, color: '#d6a95e', lineHeight: 1, textAlign: 'right', maxWidth: 560 }}>{resto.join(' ')}</p>
           <p style={{ position: 'absolute', right: 70, top: 300, width: 430, textAlign: 'right', fontWeight: 600, fontSize: 22, letterSpacing: '.12em', lineHeight: 1.5 }}>{d.oferta.titulo.toUpperCase()}</p>
           <div style={{ position: 'absolute', right: 70, top: 450, width: 330, height: 330, borderRadius: '50%', background: 'radial-gradient(circle,#1b1611,#0d0b09 70%)', border: '4px solid #d6a95e', boxShadow: '0 0 60px rgba(214,169,94,.35)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
             <span style={{ fontWeight: 700, fontSize: 23, letterSpacing: '.12em', color: '#f3e7d3' }}>{d.oferta.preco_oferta_cents != null ? 'POR APENAS' : 'A PARTIR DE'}</span>

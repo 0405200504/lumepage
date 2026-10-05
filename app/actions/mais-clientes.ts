@@ -394,6 +394,7 @@ export async function enviarParaEquipeAction(professionalId: string): Promise<R<
     await gravarPrograma(professionalId, { plan });
     revalidatePath(ROTA);
     revalidatePath(`/admin/professionals/${professionalId}`);
+    revalidatePath('/admin/mais-clientes');
     return { success: true, plan };
   } catch (e) {
     console.error('[mais-clientes] enviarParaEquipe', e);
@@ -415,6 +416,7 @@ export async function definirStatusMaisClientesAction(professionalId: string, st
       before: { status: antes.status }, after: { status },
     });
     revalidatePath(`/admin/professionals/${professionalId}`);
+    revalidatePath('/admin/mais-clientes');
     revalidatePath(ROTA);
     return { success: true };
   } catch (e) {

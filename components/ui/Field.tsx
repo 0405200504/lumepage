@@ -30,7 +30,14 @@ export const Field: React.FC<{
         {label}
         {required && <span className="text-danger ml-1" aria-hidden>*</span>}
       </label>
-      {children ?? (
+      {children
+        // Campo nativo passado como filho (select, textarea, input): ganha o id do
+        // rótulo, senão o <label> aponta para o nada e o leitor de tela não anuncia.
+        ? (React.isValidElement<{ id?: string; 'aria-describedby'?: string }>(children)
+          && typeof children.type === 'string' && ['input', 'select', 'textarea'].includes(children.type)
+          ? React.cloneElement(children, { id: children.props.id ?? id, 'aria-describedby': children.props['aria-describedby'] ?? describedBy })
+          : children)
+        : (
         <input
           id={id}
           className="field-input"
