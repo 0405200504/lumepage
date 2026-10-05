@@ -17,6 +17,7 @@ export const SCREENS = {
   bloqueios: '/dashboard/blocks',
   fichas: '/dashboard/anamnese',
   minha_pagina: '/dashboard/site',
+  quero_mais_clientes: '/dashboard/mais-clientes',
   configuracoes: '/dashboard/settings',
 } as const;
 

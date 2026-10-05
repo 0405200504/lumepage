@@ -78,6 +78,11 @@ const ROUTE_META: Record<string, { title: string; subtitle?: string; crumb?: str
     crumb: 'Seu negócio',
   },
   '/dashboard/site': { title: 'Minha Página', crumb: 'Seu negócio' },
+  '/dashboard/mais-clientes': {
+    title: 'Quero mais clientes',
+    subtitle: 'A equipe Lume estrutura seu Instagram, seu Google, seus anúncios e seu WhatsApp para encher a sua agenda.',
+    crumb: 'Seu negócio',
+  },
   '/dashboard/settings': {
     title: 'Configurações',
     subtitle: 'Contato, regras comerciais para novos agendamentos e cores de marca.',

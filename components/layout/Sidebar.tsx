@@ -7,7 +7,7 @@ import {
   CalendarDays, CalendarRange, Clock, Settings, Sparkles, Lock,
   LayoutDashboard, LogOut, ExternalLink, Wallet, NotebookPen, Hourglass,
   MessageCircle, Smartphone, Bot, ShoppingBag, Contact, ClipboardList, Globe,
-  X, Mic,
+  X, Mic, Rocket,
 } from 'lucide-react';
 import { AI_ATTENDANCE_ENABLED } from '@/lib/whatsapp/flags';
 import { useToast } from '../ui/Toast';
@@ -71,6 +71,7 @@ const GROUPS: { title: string; links: NavLink[] }[] = [
   {
     title: 'Seu negócio',
     links: [
+      { href: '/dashboard/mais-clientes', label: 'Quero mais clientes', icon: Rocket },
       { href: '/dashboard/site', label: 'Minha Página', icon: Globe },
       { href: '/dashboard/services', label: 'Serviços', icon: Sparkles },
       { href: '/dashboard/availability', label: 'Disponibilidade', icon: Clock },

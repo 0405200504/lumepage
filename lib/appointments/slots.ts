@@ -227,3 +227,55 @@ export async function getDaysAvailability(
     return result;
   }
 }
+
+/**
+ * Quantos atendimentos de `durationMinutes` ainda cabem em cada dia, sem
+ * sobrepor: é a "agenda vaga" que o "Quero mais clientes" mostra e que a
+ * assessoria usa para frear a verba quando a semana enche. Mesma carga única
+ * de dados de getDaysAvailability.
+ */
+export async function getFreeCapacity(
+  professionalId: string,
+  dateStrs: string[],
+  durationMinutes: number
+): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  if (!dateStrs.length) return result;
+  try {
+    const [rules, settings, timeBlocks] = await Promise.all([
+      dbService.getAvailabilityRulesByProfessional(professionalId),
+      dbService.getSettingsByProfessional(professionalId),
+      dbService.getTimeBlocksByProfessional(professionalId),
+    ]);
+    const sorted = [...dateStrs].sort();
+    const appts = await dbService.getAppointmentsByProfessionalInRange(professionalId, sorted[0], sorted[sorted.length - 1]);
+
+    for (const dateStr of dateStrs) {
+      const p = dateStr.split('-');
+      const weekday = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10)).getDay();
+      const rule = rules.find(r => r.weekday === weekday && r.is_active);
+      if (!rule) { result[dateStr] = 0; continue; }
+      const slots = computeDaySlots(
+        dateStr,
+        durationMinutes,
+        rule,
+        settings,
+        timeBlocks.filter(b => b.date === dateStr),
+        appts.filter(a => a.date === dateStr),
+      );
+      // Guloso: pega o primeiro horário livre e pula a duração do atendimento.
+      let livres = 0;
+      let proximo = -1;
+      for (const s of slots) {
+        const t = timeToMinutes(s.time);
+        if (s.isAvailable && t >= proximo) { livres++; proximo = t + durationMinutes; }
+      }
+      result[dateStr] = livres;
+    }
+    return result;
+  } catch (e) {
+    console.error('Erro ao calcular a capacidade livre:', e);
+    for (const d of dateStrs) result[d] = 0;
+    return result;
+  }
+}

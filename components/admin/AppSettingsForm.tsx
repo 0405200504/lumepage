@@ -14,6 +14,7 @@ const FIELDS: { key: string; label: string; hint: string; type: 'number' | 'text
   { key: 'trial_days', label: 'Dias de teste para conta nova', hint: 'Usado no cadastro. Hoje o padrão do banco é 7.', type: 'number' },
   { key: 'ai_monthly_message_limit', label: 'Limite de mensagens de IA por conta/mês', hint: '0 = sem limite. Serve de teto de custo por conta.', type: 'number' },
   { key: 'support_whatsapp', label: 'WhatsApp de suporte', hint: 'Exibido para as profissionais quando precisam de ajuda.', type: 'text' },
+  { key: 'growth_call_url', label: 'Link para agendar a call do "Quero mais clientes"', hint: 'Agenda da equipe (Calendly, Google Agenda ou /agendar da conta da Lume). Vazio = abre o WhatsApp de suporte.', type: 'text' },
   { key: 'signups_open', label: 'Cadastro aberto ao público', hint: 'Desligue para pausar novas contas sem tirar o site do ar.', type: 'boolean' },
   { key: 'notify_on_impersonation', label: 'Avisar a profissional quando o suporte entrar na conta dela', hint: 'Ligado por padrão. É o que torna o "Entrar como" defensável: ela sabe, e fica registrado.', type: 'boolean', fallback: true },
 ];

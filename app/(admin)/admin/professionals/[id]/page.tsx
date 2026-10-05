@@ -21,6 +21,8 @@ import { getAccountMeta, listNotes, getTimeline, listHublaEvents, MIGRATION_CRM,
 import { NotesList, AccountMetaForm } from '@/components/admin/NotesPanel';
 import { ExtendAccessButton } from '@/components/admin/ExtendAccessButton';
 import { getSupabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { MaisClientesPanel } from '@/components/admin/MaisClientesPanel';
+import { lerPrograma } from '@/lib/mais-clientes/store';
 import { brl, formatDateBR, formatDateTimeBR, formatTimeBR, formatDurationBR, pct } from '@/lib/format';
 
 export const metadata = { title: 'Conta | Lume Admin' };
@@ -34,11 +36,12 @@ export const metadata = { title: 'Conta | Lume Admin' };
  * enxerga: números consolidados, assinatura, acesso, atividade recente, dados
  * cadastrais e a trilha do que o suporte fez aqui.
  */
-type Tab = 'overview' | 'subscription' | 'access' | 'activity' | 'notes' | 'data' | 'timeline';
+type Tab = 'overview' | 'subscription' | 'growth' | 'access' | 'activity' | 'notes' | 'data' | 'timeline';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Visão geral' },
   { key: 'subscription', label: 'Assinatura' },
+  { key: 'growth', label: 'Mais clientes' },
   { key: 'access', label: 'Acesso' },
   { key: 'activity', label: 'Atividade' },
   { key: 'notes', label: 'Notas' },
@@ -74,6 +77,7 @@ export default async function ProfessionalDetailPage({
 
   const { professional: p, kpis, monthly, onboarding, alerts, bot, services, topServices, recentAppointments, recentClients } = data;
   const db = () => getSupabaseAdmin() || supabase;
+  const maisClientes = active === 'growth' ? await lerPrograma(id).catch(() => null) : null;
   const [history, audit, accessData, conversations, metaRes, notesRes, timeline, hublaRes, adminsRes] = await Promise.all([
     active === 'subscription' ? getSubscriptionHistory(id) : Promise.resolve([]),
     active === 'access'
@@ -429,6 +433,10 @@ export default async function ProfessionalDetailPage({
         )}
 
         {/* ————— Dados ————— */}
+        {active === 'growth' && maisClientes && (
+          <MaisClientesPanel id={id} programa={maisClientes.programa} disponivel={maisClientes.disponivel} servicos={services.map(s => ({ id: s.id, name: s.name }))} />
+        )}
+
         {active === 'data' && <EditProfessionalPanel professional={p} />}
 
       </div>
