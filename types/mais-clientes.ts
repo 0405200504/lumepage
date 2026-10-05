@@ -55,7 +55,8 @@ export interface GrowthAsset {
   created_at: string;
 }
 
-export type ItemStatus = 'ok' | 'ajustar' | 'falta' | 'nao_visto';
+/** dica = está bom, com uma melhoria opcional (não tira nota). */
+export type ItemStatus = 'ok' | 'dica' | 'ajustar' | 'falta' | 'nao_visto';
 
 export interface DiagItem {
   id: string;
@@ -63,6 +64,8 @@ export interface DiagItem {
   status: ItemStatus;
   /** O que a análise enxergou no print. */
   o_que_vimos: string;
+  /** Trecho do print que embasa a avaliação (texto como aparece). */
+  evidencia?: string;
   /** O que colocar no lugar (texto pronto quando faz sentido, ex.: a bio). */
   sugestao: string;
   /** Ela marcou como feito. */

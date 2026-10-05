@@ -18,13 +18,18 @@ export interface PropsEtapa {
   setPrograma: React.Dispatch<React.SetStateAction<GrowthProgram>>;
   negocio: ResumoNegocio;
   avancar: () => void;
+  acesso: DadosAcesso;
 }
 
-export function Jornada({ professionalId, inicial, negocio }: {
+/** O que a profissional precisa para dar acesso à Lume (vem de Configurações do admin). */
+export interface DadosAcesso { metaBusinessId: string; googleEmail: string; zapSuporte: string }
+
+export function Jornada({ professionalId, inicial, negocio, acesso }: {
   professionalId: string;
   inicial: GrowthProgram;
   negocio: ResumoNegocio;
   roteiroInicial: RoteiroX1;
+  acesso: DadosAcesso;
 }) {
   const [programa, setPrograma] = useState(inicial);
   const feitas = useMemo(() => etapasConcluidas(programa), [programa]);
@@ -34,7 +39,7 @@ export function Jornada({ professionalId, inicial, negocio }: {
     const prox = ETAPAS[indice + 1];
     if (prox) { setAberta(prox.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   };
-  const props: PropsEtapa = { professionalId, programa, setPrograma, negocio, avancar };
+  const props: PropsEtapa = { professionalId, programa, setPrograma, negocio, avancar, acesso };
   const totalFeitas = ETAPAS.filter(e => feitas[e.id]).length;
 
   return (

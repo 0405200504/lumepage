@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Instagram, MapPin, ScanSearch, Loader2, Copy, ChevronDown, CheckCircle2, Trophy, TriangleAlert, KeyRound, RotateCcw } from 'lucide-react';
+import { Instagram, MapPin, ScanSearch, Loader2, Copy, ChevronDown, CheckCircle2, Trophy, TriangleAlert, KeyRound, RotateCcw, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { diagnosticarAction, marcarItemAction, marcarConexaoAction } from '@/app/actions/mais-clientes';
@@ -13,6 +13,7 @@ import { prepararFoto } from './imagem';
 
 const STATUS: Record<ItemStatus, { rotulo: string; classe: string }> = {
   ok: { rotulo: 'Está ótimo', classe: 'bg-success-bg text-success' },
+  dica: { rotulo: 'Está ótimo · dica', classe: 'bg-success-bg text-success' },
   ajustar: { rotulo: 'Ajustar', classe: 'bg-warning-bg text-warning' },
   falta: { rotulo: 'Falta', classe: 'bg-danger-bg text-danger' },
   nao_visto: { rotulo: 'Não deu para ver', classe: 'bg-n-100 text-n-600' },
@@ -25,7 +26,8 @@ const COMO_TIRAR_PRINT = {
 
 function ItemDiag({ item, plataforma, onMarcar }: { item: DiagItem; plataforma: 'instagram' | 'google'; onMarcar: (feito: boolean) => void }) {
   const { success } = useToast();
-  const [aberto, setAberto] = useState(item.status !== 'ok' && !item.feito);
+  const precisa = item.status === 'ajustar' || item.status === 'falta';
+  const [aberto, setAberto] = useState(precisa && !item.feito);
   const tut = itensDe(plataforma).find(i => i.id === item.id);
   const st = STATUS[item.status];
   return (
@@ -41,7 +43,7 @@ function ItemDiag({ item, plataforma, onMarcar }: { item: DiagItem; plataforma: 
           {tut && <p className="text-n-600">{tut.porque}</p>}
           {item.sugestao && (
             <div className="rounded-chip bg-n-50 p-3">
-              <p className="text-caption font-semibold text-n-500">Sugestão</p>
+              <p className="text-caption font-semibold text-n-500">{item.status === 'dica' ? 'Dica (opcional, não tira nota)' : 'Sugestão'}</p>
               <p className="mt-1 text-heading whitespace-pre-line">{item.sugestao}</p>
               <button type="button" className="mt-2 inline-flex items-center gap-1.5 text-caption font-semibold text-wine-700 hover:underline"
                 onClick={() => { navigator.clipboard?.writeText(item.sugestao); success('Copiado', 'Agora é só colar no app.'); }}>
@@ -49,13 +51,13 @@ function ItemDiag({ item, plataforma, onMarcar }: { item: DiagItem; plataforma: 
               </button>
             </div>
           )}
-          {tut && item.status !== 'ok' && (
+          {tut && (precisa || item.status === 'dica') && (
             <div>
               <p className="text-caption font-semibold text-n-500">Como fazer</p>
               <ol className="mt-1.5 space-y-1.5 list-decimal pl-5 text-n-700">{tut.passos.map(p => <li key={p}>{p}</li>)}</ol>
             </div>
           )}
-          {item.status !== 'ok' && (
+          {precisa && (
             <label className="flex items-center gap-2 text-body-sm text-heading">
               <input type="checkbox" className="accent-[var(--color-wine-700)]" checked={item.feito} onChange={e => onMarcar(e.target.checked)} /> Já ajustei
             </label>
@@ -103,7 +105,8 @@ function Painel({ professionalId, plataforma, dados, onDiagnosis }: {
   };
 
   const resumo = dados ? notaDosItens(dados.itens) : null;
-  const pendentes = dados ? dados.itens.filter(i => i.status !== 'ok' && !i.feito).length : 0;
+  const pendentes = dados ? dados.itens.filter(i => (i.status === 'ajustar' || i.status === 'falta') && !i.feito).length : 0;
+  const naoVistos = dados ? dados.itens.filter(i => i.status === 'nao_visto') : [];
 
   return (
     <section className="card p-5 sm:p-6">
@@ -134,12 +137,14 @@ function Painel({ professionalId, plataforma, dados, onDiagnosis }: {
             <p className="text-body-sm text-n-700 max-w-xl">{dados.resumo}</p>
           </div>
           {resumo?.dezDeDez ? (
-            <p className="mt-4 rounded-chip bg-success-bg text-success p-3 text-body-sm font-semibold flex items-center gap-2"><Trophy className="h-4 w-4" /> 10/10: seu {nome} já está alinhado. Pode seguir para a próxima fase.</p>
-          ) : resumo && resumo.naoVistos > 0 ? (
-            <p className="mt-4 text-caption text-n-500">{resumo.naoVistos} item(ns) não apareceram no print e ficaram fora da nota.</p>
+            <p className="mt-4 rounded-chip bg-success-bg text-success p-3 text-body-sm font-semibold flex items-center gap-2"><Trophy className="h-4 w-4 shrink-0" /> 10/10: seu {nome} já está alinhado. Pode seguir para a próxima fase.</p>
+          ) : pendentes === 0 ? (
+            <p className="mt-4 rounded-chip bg-success-bg text-success p-3 text-body-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" /> Você marcou todos os ajustes como feitos. Quando quiser, analise de novo para confirmar.</p>
           ) : null}
-          {!resumo?.dezDeDez && pendentes === 0 && (
-            <p className="mt-4 rounded-chip bg-success-bg text-success p-3 text-body-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Você marcou todos os ajustes como feitos. Quando quiser, analise de novo para confirmar.</p>
+          {naoVistos.length > 0 && (
+            <p className="mt-3 text-caption text-n-500">
+              {naoVistos.length === 1 ? 'Um item não apareceu' : `${naoVistos.length} itens não apareceram`} nos prints e ficou fora da nota ({naoVistos.map(i => i.titulo.toLowerCase()).join(', ')}). Se quiser conferir, mande também um print dessa parte e analise de novo.
+            </p>
           )}
           <ul className="mt-5 space-y-2.5">
             {dados.itens.map(i => <ItemDiag key={i.id} item={i} plataforma={plataforma} onMarcar={f => marcar(i.id, f)} />)}
@@ -150,7 +155,44 @@ function Painel({ professionalId, plataforma, dados, onDiagnosis }: {
   );
 }
 
-export function EtapaDiagnostico({ professionalId, programa, setPrograma, avancar }: PropsEtapa) {
+function PassoAcesso({ titulo, feito, onFeito, valor, rotuloValor, zapSuporte, link, passos }: {
+  titulo: string; feito: boolean; onFeito: (f: boolean) => void; valor: string; rotuloValor: string; zapSuporte: string;
+  link: { href: string; texto: string }; passos: string[];
+}) {
+  const { success } = useToast();
+  return (
+    <div className={`rounded-card ring-1 ring-inset p-4 sm:p-5 flex flex-col gap-3 ${feito ? 'ring-success-border bg-success-bg/40' : 'ring-line'}`}>
+      <p className="text-body-sm font-semibold text-heading">{titulo}</p>
+      <ol className="list-decimal pl-5 space-y-1.5 text-body-sm text-n-700">{passos.map(p => <li key={p}>{p}</li>)}</ol>
+      {valor ? (
+        <div className="rounded-chip bg-n-50 px-3.5 py-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block text-caption text-n-500">{rotuloValor}</span>
+            <span className="block text-body font-semibold text-heading font-mono break-all">{valor}</span>
+          </span>
+          <button type="button" className="inline-flex items-center gap-1.5 rounded-pill bg-surface ring-1 ring-inset ring-line-strong/70 px-3.5 py-2 text-caption font-semibold text-heading hover:bg-n-25"
+            onClick={() => { navigator.clipboard?.writeText(valor); success('Copiado', `${rotuloValor} copiado. Agora é só colar.`); }}>
+            <Copy className="h-3.5 w-3.5" /> Copiar
+          </button>
+        </div>
+      ) : (
+        <p className="rounded-chip bg-warning-bg text-warning px-3.5 py-3 text-body-sm">
+          O {rotuloValor.toLowerCase()} ainda não foi cadastrado pela equipe.{' '}
+          {zapSuporte ? <a href={zapSuporte} target="_blank" rel="noopener noreferrer" className="font-semibold underline">Peça pelo WhatsApp</a> : 'Peça para a equipe Lume.'}
+        </p>
+      )}
+      <a href={link.href} target="_blank" rel="noopener noreferrer"
+        className="inline-flex items-center justify-center gap-2 rounded-pill bg-wine-700 text-white px-4 py-2.5 text-body-sm font-semibold hover:bg-wine-800 transition-ui">
+        <ExternalLink className="h-4 w-4" /> {link.texto}
+      </a>
+      <label className="flex items-center gap-2 text-body-sm text-heading">
+        <input type="checkbox" className="accent-[var(--color-wine-700)]" checked={feito} onChange={e => onFeito(e.target.checked)} /> Já dei o acesso
+      </label>
+    </div>
+  );
+}
+
+export function EtapaDiagnostico({ professionalId, programa, setPrograma, avancar, acesso }: PropsEtapa) {
   const { error } = useToast();
   const d = programa.diagnosis;
   const onDiagnosis = (diagnosis: GrowthDiagnosis) => setPrograma(p => ({ ...p, diagnosis }));
@@ -168,25 +210,40 @@ export function EtapaDiagnostico({ professionalId, programa, setPrograma, avanca
       <section className="card p-5 sm:p-6">
         <h2 className="text-h3 text-heading flex items-center gap-2"><KeyRound className="h-5 w-5 text-wine-700" /> Dar acesso à equipe Lume</h2>
         <p className="mt-1 text-body-sm text-n-600 max-w-3xl">
-          Sem passar senha: você adiciona a Lume como parceira, pelo próprio Instagram e pelo próprio Google, e pode tirar o acesso quando quiser.
-          Em breve isso vira um botão de conectar, assim que a Meta e o Google aprovarem o Lume.
+          Com esse acesso, a equipe ajusta o seu Google e prepara os anúncios. Você não passa senha nenhuma, continua dona das contas
+          e pode tirar a Lume quando quiser, no mesmo lugar onde deu o acesso.
         </p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {[
-            { tipo: 'meta_parceira' as const, titulo: 'Instagram e Facebook', passos: ['Abra o Meta Business Suite (business.facebook.com).', 'Vá em Configurações > Parceiros > Adicionar.', 'Cole o ID de parceiro da Lume que a equipe te passou na call e marque acesso à Página, ao Instagram e à conta de anúncios.'] },
-            { tipo: 'google_gerente' as const, titulo: 'Google', passos: ['Abra o seu Perfil da Empresa no Google Maps.', 'Toque nos três pontinhos > Configurações do perfil > Pessoas e acesso.', 'Toque em Adicionar, cole o e-mail da Lume que a equipe te passou e escolha "Gerente".'] },
-          ].map(c => {
-            const feito = !!d?.conexoes?.[c.tipo];
-            return (
-              <div key={c.tipo} className={`rounded-card ring-1 ring-inset p-4 ${feito ? 'ring-success-border bg-success-bg/40' : 'ring-line'}`}>
-                <p className="text-body-sm font-semibold text-heading">{c.titulo}</p>
-                <ol className="mt-2 list-decimal pl-5 space-y-1 text-caption text-n-700">{c.passos.map(p => <li key={p}>{p}</li>)}</ol>
-                <label className="mt-3 flex items-center gap-2 text-body-sm text-heading">
-                  <input type="checkbox" className="accent-[var(--color-wine-700)]" checked={feito} onChange={e => conexao(c.tipo, e.target.checked)} /> Já dei o acesso
-                </label>
-              </div>
-            );
-          })}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <PassoAcesso
+            titulo="Instagram e Facebook (Meta)"
+            feito={!!d?.conexoes?.meta_parceira}
+            onFeito={f => conexao('meta_parceira', f)}
+            valor={acesso.metaBusinessId}
+            rotuloValor="ID da Lume"
+            zapSuporte={acesso.zapSuporte}
+            link={{ href: 'https://business.facebook.com/settings/partners', texto: 'Abrir Parceiros no Meta Business Suite' }}
+            passos={[
+              'Toque no botão abaixo para abrir a tela de Parceiros (no computador fica mais fácil). Se aparecer mais de uma empresa, escolha a sua.',
+              'Clique em "Adicionar" e escolha "Conceder acesso aos seus ativos a um parceiro".',
+              'Cole o ID da Lume que está aqui embaixo e clique em "Avançar".',
+              'Marque a sua Página do Facebook e o seu Instagram (e a conta de anúncios, se tiver), com acesso total, e confirme.',
+            ]}
+          />
+          <PassoAcesso
+            titulo="Google (Perfil da Empresa)"
+            feito={!!d?.conexoes?.google_gerente}
+            onFeito={f => conexao('google_gerente', f)}
+            valor={acesso.googleEmail}
+            rotuloValor="E-mail da Lume"
+            zapSuporte={acesso.zapSuporte}
+            link={{ href: 'https://business.google.com/', texto: 'Abrir meu Perfil da Empresa' }}
+            passos={[
+              'Toque no botão abaixo, entrando com a conta do Google que cuida do seu perfil. No celular, também dá pelo Google Maps: sua foto → "Seu Perfil da Empresa".',
+              'Toque nos três pontinhos (⋮) e em "Configurações do perfil" → "Pessoas e acesso".',
+              'Toque em "Adicionar" e cole o e-mail da Lume que está aqui embaixo.',
+              'Escolha "Gerente" e toque em "Convidar". A equipe aceita o convite e te avisa.',
+            ]}
+          />
         </div>
       </section>
 

@@ -155,10 +155,18 @@ export async function baixarArquivo(caminho: string): Promise<{ bytes: Uint8Arra
   return { bytes: new Uint8Array(await data.arrayBuffer()), mime: data.type || 'image/jpeg' };
 }
 
-/** Configurações globais usadas pela aba (admin → Configurações). */
-export async function lerConfiguracoes(): Promise<{ linkCall: string; whatsappSuporte: string }> {
-  if (modoLocal()) return { linkCall: '', whatsappSuporte: '' };
-  const { data } = await getSupabaseAdmin()!.from('app_settings').select('key, value').in('key', ['growth_call_url', 'support_whatsapp']);
+/** Configurações globais usadas pela aba (admin → Configurações). Env cobre o que não foi salvo. */
+export interface ConfigMaisClientes { linkCall: string; whatsappSuporte: string; metaBusinessId: string; googleEmail: string }
+export async function lerConfiguracoes(): Promise<ConfigMaisClientes> {
+  const env = { metaBusinessId: process.env.LUME_META_BUSINESS_ID || '', googleEmail: process.env.LUME_GOOGLE_EMAIL || '' };
+  if (modoLocal()) return { linkCall: '', whatsappSuporte: '', ...env };
+  const { data } = await getSupabaseAdmin()!.from('app_settings').select('key, value')
+    .in('key', ['growth_call_url', 'support_whatsapp', 'lume_meta_business_id', 'lume_google_email']);
   const v = (k: string) => String((data || []).find((r: { key: string }) => r.key === k)?.value ?? '').trim();
-  return { linkCall: v('growth_call_url'), whatsappSuporte: v('support_whatsapp') };
+  return {
+    linkCall: v('growth_call_url'),
+    whatsappSuporte: v('support_whatsapp'),
+    metaBusinessId: v('lume_meta_business_id') || env.metaBusinessId,
+    googleEmail: v('lume_google_email') || env.googleEmail,
+  };
 }

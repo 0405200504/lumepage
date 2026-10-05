@@ -43,7 +43,8 @@ t('mínimo de fotos: ok com ela + espaço + depois do principal', R.fotosMinimas
 console.log('\nDiagnóstico');
 t('tudo ok = 10/10', R.notaDosItens([{ status: 'ok' }, { status: 'ok' }]).dezDeDez);
 t('ajustar vale meio ponto', R.notaDosItens([{ status: 'ok' }, { status: 'ajustar' }]).nota === 7.5);
-t('item não visto fica fora da nota mas impede o 10/10', (() => { const n = R.notaDosItens([{ status: 'ok' }, { status: 'nao_visto' }]); return n.nota === 10 && !n.dezDeDez && n.naoVistos === 1; })());
+t('item não visto fica fora da nota e não tira o 10/10', (() => { const n = R.notaDosItens([{ status: 'ok' }, { status: 'nao_visto' }]); return n.nota === 10 && n.dezDeDez && n.naoVistos === 1; })());
+t('dica não tira nota', R.notaDosItens([{ status: 'ok' }, { status: 'dica' }]).dezDeDez);
 t('tutorial: todo item tem passos', [...T.ITENS_INSTAGRAM, ...T.ITENS_GOOGLE].every(i => i.passos.length >= 2 && i.criterio.length > 20));
 t('tutorial: ids únicos por plataforma', new Set(T.ITENS_INSTAGRAM.map(i => i.id)).size === T.ITENS_INSTAGRAM.length && new Set(T.ITENS_GOOGLE.map(i => i.id)).size === T.ITENS_GOOGLE.length);
 

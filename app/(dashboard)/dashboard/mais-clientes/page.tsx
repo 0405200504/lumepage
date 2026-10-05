@@ -36,18 +36,20 @@ export default async function QueroMaisClientesPage() {
   const professionalId = session.professional_id!;
   const [{ programa }, config, base] = await Promise.all([
     lerPrograma(professionalId),
-    lerConfiguracoes().catch(() => ({ linkCall: '', whatsappSuporte: '' })),
+    lerConfiguracoes().catch(() => ({ linkCall: '', whatsappSuporte: '', metaBusinessId: '', googleEmail: '' })),
     appUrl(),
   ]);
 
+  const zap = config.whatsappSuporte.replace(/\D/g, '');
+  const zapSuporte = zap ? `https://wa.me/${zap.startsWith('55') ? zap : `55${zap}`}` : '';
   if (programa.status !== 'liberado') {
-    const zap = config.whatsappSuporte.replace(/\D/g, '');
     const linkCall = config.linkCall
-      || (zap ? `https://wa.me/${zap.startsWith('55') ? zap : `55${zap}`}?text=${encodeURIComponent('Oi! Quero agendar a call do "Quero mais clientes".')}` : '');
+      || (zapSuporte ? `${zapSuporte}?text=${encodeURIComponent('Oi! Quero agendar a call do "Quero mais clientes".')}` : '');
     return <Vitrine linkCall={linkCall} />;
   }
 
   const negocio = await resumoNegocio(professionalId, base);
   const roteiro = montarRoteiroX1({ nome: negocio.nome, linkAgendamento: negocio.linkAgendamento, ofertas: programa.plan?.ofertas ?? [] });
-  return <Jornada professionalId={professionalId} inicial={programa} negocio={negocio} roteiroInicial={roteiro} />;
+  return <Jornada professionalId={professionalId} inicial={programa} negocio={negocio} roteiroInicial={roteiro}
+    acesso={{ metaBusinessId: config.metaBusinessId, googleEmail: config.googleEmail, zapSuporte }} />;
 }

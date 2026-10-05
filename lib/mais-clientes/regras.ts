@@ -141,16 +141,18 @@ export function etapaAtual(p: Pick<GrowthProgram, 'intake' | 'assets' | 'diagnos
 // ───────────────────────────── Diagnóstico ─────────────────────────────
 
 /**
- * Nota de 0 a 10 a partir dos itens. Item "não deu para ver" não entra na
- * conta, mas impede o 10/10: só é 10 quando tudo foi visto e está certo.
+ * Nota de 0 a 10 a partir dos itens. "ok" e "dica" valem 1 (dica é melhoria
+ * opcional, não defeito), "ajustar" vale meio, "falta" vale zero. Item que não
+ * apareceu no print fica fora da conta: o perfil não perde ponto pelo que a
+ * gente não viu. 10/10 = tudo que apareceu está certo.
  */
 export function notaDosItens(itens: Pick<DiagItem, 'status'>[]): { nota: number; dezDeDez: boolean; naoVistos: number } {
   const vistos = itens.filter(i => i.status !== 'nao_visto');
   const naoVistos = itens.length - vistos.length;
   if (!vistos.length) return { nota: 0, dezDeDez: false, naoVistos };
-  const pontos = vistos.reduce((s, i) => s + (i.status === 'ok' ? 1 : i.status === 'ajustar' ? 0.5 : 0), 0);
+  const pontos = vistos.reduce((s, i) => s + (i.status === 'ok' || i.status === 'dica' ? 1 : i.status === 'ajustar' ? 0.5 : 0), 0);
   const nota = Math.round((pontos / vistos.length) * 100) / 10;
-  return { nota, dezDeDez: nota === 10 && naoVistos === 0, naoVistos };
+  return { nota, dezDeDez: nota === 10, naoVistos };
 }
 
 // ───────────────────────────── Ofertas ─────────────────────────────

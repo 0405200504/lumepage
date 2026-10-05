@@ -70,7 +70,8 @@ function CartaoOferta({ oferta, onSalvar }: { oferta: OfertaPlano; onSalvar: (e:
 
 export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio }: PropsEtapa) {
   const { success, error } = useToast();
-  const [pendente, start] = useTransition();
+  // Um "carregando" por ação: só o botão clicado gira, os outros continuam normais.
+  const [carregando, setCarregando] = useState<null | 'ofertas' | 'x1' | 'verba' | 'enviar'>(null);
   const plano = programa.plan;
   const setPlano = (plan: GrowthPlan) => setPrograma(p => ({ ...p, plan }));
   const ofertas = useMemo(() => plano?.ofertas ?? [], [plano]);
@@ -85,12 +86,17 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
 
   const roteiro = useMemo(() => montarRoteiroX1({ nome: negocio.nome, linkAgendamento: negocio.linkAgendamento, ofertas }), [negocio, ofertas]);
 
-  const rodar = (fn: () => Promise<{ success: true; plan: GrowthPlan } | { success: false; error: string }>, ok?: string) => start(async () => {
-    const r = await fn();
-    if (!r.success) { error('Não deu', r.error); return; }
-    setPlano(r.plan);
-    if (ok) success(ok, 'Tudo salvo.');
-  });
+  const rodar = async (qual: NonNullable<typeof carregando>, fn: () => Promise<{ success: true; plan: GrowthPlan } | { success: false; error: string }>, ok?: string) => {
+    setCarregando(qual);
+    try {
+      const r = await fn();
+      if (!r.success) { error('Não deu', r.error); return; }
+      setPlano(r.plan);
+      if (ok) success(ok, 'Tudo salvo.');
+    } finally {
+      setCarregando(null);
+    }
+  };
 
   const cidade = programa.intake.cidade || negocio.cidade;
   const uf = programa.intake.uf || negocio.uf;
@@ -104,7 +110,7 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
             <h2 className="text-h3 text-heading flex items-center gap-2"><BadgePercent className="h-5 w-5 text-wine-700" /> Ofertas para os seus serviços</h2>
             <p className="mt-1 text-body-sm text-n-600 max-w-2xl">Montadas com o que você aceitou oferecer e comparadas com o preço que o mercado anuncia. Nada vai ao ar sem você aprovar.</p>
           </div>
-          <Button variant={ofertas.length ? 'secondary' : 'primary'} loading={pendente} onClick={() => rodar(() => gerarOfertasAction(professionalId), 'Ofertas prontas')} leadingIcon={<Wand2 className="h-4 w-4" />}>
+          <Button variant={ofertas.length ? 'secondary' : 'primary'} loading={carregando === 'ofertas'} onClick={() => rodar('ofertas', () => gerarOfertasAction(professionalId), 'Ofertas prontas')} leadingIcon={<Wand2 className="h-4 w-4" />}>
             {ofertas.length ? 'Sugerir de novo' : 'Montar minhas ofertas'}
           </Button>
         </div>
@@ -151,8 +157,8 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
             <h2 className="text-h3 text-heading flex items-center gap-2"><MessageCircle className="h-5 w-5 text-wine-700" /> Seu funil no WhatsApp</h2>
             <p className="mt-1 text-body-sm text-n-600 max-w-2xl">A cliente toca no anúncio, cai no seu WhatsApp com a mensagem pronta e o atendimento do Lume conduz até o horário marcado.</p>
           </div>
-          <Button variant={plano?.x1_aplicado_em ? 'secondary' : 'primary'} disabled={!aprovadas.length} loading={pendente}
-            onClick={() => rodar(() => aplicarX1Action(professionalId), 'Regras aplicadas no seu atendimento')} leadingIcon={<Bot className="h-4 w-4" />}>
+          <Button variant={plano?.x1_aplicado_em ? 'secondary' : 'primary'} disabled={!aprovadas.length} loading={carregando === 'x1'}
+            onClick={() => rodar('x1', () => aplicarX1Action(professionalId), 'Regras aplicadas no seu atendimento')} leadingIcon={<Bot className="h-4 w-4" />}>
             {plano?.x1_aplicado_em ? 'Aplicar de novo' : 'Aplicar no meu atendimento'}
           </Button>
         </div>
@@ -192,7 +198,7 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
             <Field label="Raio dos anúncios (km)" hint={`Sugestão para ${cidade || 'sua cidade'}: ${raioPadrao(cidade)} km.`}>
               <input className="field-input" inputMode="numeric" value={raio} onChange={e => setRaio(e.target.value.replace(/\D/g, ''))} />
             </Field>
-            <Button variant="secondary" loading={pendente} onClick={() => rodar(() => salvarVerbaAction(professionalId, { verba_semanal: verbaNum, teto_automatico: Number(teto), raio_km: Number(raio) }), 'Verba salva')}>Salvar verba</Button>
+            <Button variant="secondary" loading={carregando === 'verba'} onClick={() => rodar('verba', () => salvarVerbaAction(professionalId, { verba_semanal: verbaNum, teto_automatico: Number(teto), raio_km: Number(raio) }), 'Verba salva')}>Salvar verba</Button>
           </div>
           <div className="rounded-card bg-n-50 p-5 text-body-sm text-n-700 space-y-3">
             <p className="text-heading font-semibold">Com {brl(verbaNum * 100)} por semana</p>
@@ -216,8 +222,8 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
               <p className="text-body font-semibold">Tudo certo? Mande para a equipe colocar no ar.</p>
               <p className="text-body-sm text-white/80">{aprovadas.length} oferta(s) aprovada(s) · {plano?.x1_aplicado_em ? 'WhatsApp pronto' : 'WhatsApp ainda não aplicado'} · {brl(verbaNum * 100)} por semana</p>
             </div>
-            <button type="button" disabled={pendente || !aprovadas.length || !plano?.verba_semanal}
-              onClick={() => rodar(() => enviarParaEquipeAction(professionalId), 'Enviado para a equipe')}
+            <button type="button" disabled={carregando === 'enviar' || !aprovadas.length || !plano?.verba_semanal}
+              onClick={() => rodar('enviar', () => enviarParaEquipeAction(professionalId), 'Enviado para a equipe')}
               className="inline-flex items-center gap-2 rounded-pill bg-white text-wine-800 font-semibold px-6 py-3 disabled:opacity-60 hover:bg-wine-50 transition-ui">
               <Send className="h-4 w-4" /> Enviar para a equipe
             </button>
