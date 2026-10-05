@@ -13,7 +13,7 @@ const ENTREGAS = [
   { icone: MapPin, titulo: 'Google em dia', texto: 'Seu Perfil da Empresa revisado (categoria, serviços, fotos, avaliações) para você aparecer quando procuram o seu serviço na sua cidade.' },
   { icone: BadgePercent, titulo: 'Ofertas que trazem cliente nova', texto: 'Para os seus 3 serviços principais, uma oferta pensada para atrair quem ainda não te conhece, sem baixar seu preço à toa. Nada vai ao ar sem você aprovar.' },
   { icone: Sparkles, titulo: 'Criativos que já funcionam', texto: 'Anúncios montados nos formatos que estão há meses no ar no seu nicho, com as suas fotos reais e os seus preços.' },
-  { icone: Megaphone, titulo: 'Anúncios na Meta e no Google', texto: 'Campanhas para a sua região (até 15 km no interior, até 25 km em cidade grande), com verba que você escolhe.' },
+  { icone: Megaphone, titulo: 'Anúncios na Meta e no Google', texto: 'Campanhas para a sua região (até 15 km no interior, até 25 km em cidade grande), com verba que você escolhe e paga direto à Meta, na sua própria conta de anúncios.' },
   { icone: MessageCircle, titulo: 'WhatsApp que agenda', texto: 'A cliente toca no anúncio, cai no seu WhatsApp e o atendimento do Lume responde na hora, apresenta a oferta e marca o horário.' },
 ];
 
@@ -26,7 +26,7 @@ const PASSOS = [
 
 const PERGUNTAS = [
   { p: 'Preciso entender de marketing?', r: 'Não. Você responde, aprova e acompanha. A estrutura é montada pela equipe Lume.' },
-  { p: 'Quem paga os anúncios?', r: 'A verba de anúncio é separada da assessoria e é você quem escolhe: a partir de R$ 50 por semana, sem máximo. Conforme os agendamentos vão saindo, o orçamento pode subir até o limite que você definir.' },
+  { p: 'Quem paga os anúncios?', r: 'Você, direto para a Meta: os anúncios rodam na sua própria conta de anúncios, no seu cartão ou com saldo por Pix, e a Lume cobra só a assessoria. Você escolhe quanto, a partir de R$ 50 por semana, sem máximo. Conforme os agendamentos vão saindo, o orçamento pode subir até o limite que você definir.' },
   { p: 'Preciso mandar fotos?', r: 'Sim, fotos reais do seu trabalho. É o que mais vende, e a gente não usa resultado inventado: antes e depois só com foto sua, com autorização da cliente.' },
   { p: 'Como vou saber se está dando certo?', r: 'Pela sua agenda: o Lume mostra quantos agendamentos vieram dos anúncios e quanto você faturou com eles.' },
 ];
@@ -94,6 +94,7 @@ export function Vitrine({ linkCall }: { linkCall: string }) {
           <h2 className="mt-4 text-h3 text-heading">Sobre a verba de anúncio</h2>
           <p className="mt-2 text-body-sm text-n-600">
             Você escolhe quanto investir por semana, a partir de <strong className="text-heading">R$ 50</strong>, sem valor máximo.
+            A verba sai da sua conta de anúncios direto para a Meta, sem passar pela Lume.
             Começamos pelo WhatsApp, que traz conversa mais rápido com pouca verba. Quando os agendamentos começam a sair,
             o orçamento pode subir sozinho até o teto que você definir, e a sua agenda manda: semana cheia, o anúncio desacelera.
           </p>

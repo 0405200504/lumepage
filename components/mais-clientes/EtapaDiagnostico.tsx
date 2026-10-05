@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { diagnosticarAction, marcarItemAction, marcarConexaoAction } from '@/app/actions/mais-clientes';
 import { itensDe } from '@/lib/mais-clientes/tutoriais';
 import { notaDosItens } from '@/lib/mais-clientes/regras';
-import type { DiagItem, DiagPlataforma, GrowthDiagnosis, ItemStatus } from '@/types/mais-clientes';
+import type { DiagItem, DiagPlataforma, GrowthDiagnosis, ItemStatus, TipoConexao } from '@/types/mais-clientes';
 import type { PropsEtapa } from './Jornada';
 import { prepararFoto } from './imagem';
 
@@ -155,16 +155,18 @@ function Painel({ professionalId, plataforma, dados, onDiagnosis }: {
   );
 }
 
-function PassoAcesso({ titulo, feito, onFeito, valor, rotuloValor, zapSuporte, link, passos }: {
-  titulo: string; feito: boolean; onFeito: (f: boolean) => void; valor: string; rotuloValor: string; zapSuporte: string;
-  link: { href: string; texto: string }; passos: string[];
+function PassoAcesso({ titulo, feito, onFeito, rotuloFeito = 'Já dei o acesso', valor, rotuloValor, zapSuporte, links, passos }: {
+  titulo: string; feito: boolean; onFeito: (f: boolean) => void; rotuloFeito?: string;
+  /** O que ela cola (ID ou e-mail da Lume). Ausente = passo sem valor para copiar. */
+  valor?: string; rotuloValor?: string; zapSuporte: string;
+  links: { href: string; texto: string }[]; passos: string[];
 }) {
   const { success } = useToast();
   return (
     <div className={`rounded-card ring-1 ring-inset p-4 sm:p-5 flex flex-col gap-3 ${feito ? 'ring-success-border bg-success-bg/40' : 'ring-line'}`}>
       <p className="text-body-sm font-semibold text-heading">{titulo}</p>
       <ol className="list-decimal pl-5 space-y-1.5 text-body-sm text-n-700">{passos.map(p => <li key={p}>{p}</li>)}</ol>
-      {valor ? (
+      {rotuloValor === undefined ? null : valor ? (
         <div className="rounded-chip bg-n-50 px-3.5 py-3 flex flex-wrap items-center justify-between gap-2">
           <span className="min-w-0">
             <span className="block text-caption text-n-500">{rotuloValor}</span>
@@ -181,12 +183,16 @@ function PassoAcesso({ titulo, feito, onFeito, valor, rotuloValor, zapSuporte, l
           {zapSuporte ? <a href={zapSuporte} target="_blank" rel="noopener noreferrer" className="font-semibold underline">Peça pelo WhatsApp</a> : 'Peça para a equipe Lume.'}
         </p>
       )}
-      <a href={link.href} target="_blank" rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-2 rounded-pill bg-wine-700 text-white px-4 py-2.5 text-body-sm font-semibold hover:bg-wine-800 transition-ui">
-        <ExternalLink className="h-4 w-4" /> {link.texto}
-      </a>
+      {links.map((l, i) => (
+        <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
+          className={`inline-flex items-center justify-center gap-2 rounded-pill px-4 py-2.5 text-body-sm font-semibold transition-ui ${i === 0
+            ? 'bg-wine-700 text-white hover:bg-wine-800'
+            : 'bg-surface text-heading ring-1 ring-inset ring-line-strong/70 hover:bg-n-25'}`}>
+          <ExternalLink className="h-4 w-4" /> {l.texto}
+        </a>
+      ))}
       <label className="flex items-center gap-2 text-body-sm text-heading">
-        <input type="checkbox" className="accent-[var(--color-wine-700)]" checked={feito} onChange={e => onFeito(e.target.checked)} /> Já dei o acesso
+        <input type="checkbox" className="accent-[var(--color-wine-700)]" checked={feito} onChange={e => onFeito(e.target.checked)} /> {rotuloFeito}
       </label>
     </div>
   );
@@ -196,7 +202,7 @@ export function EtapaDiagnostico({ professionalId, programa, setPrograma, avanca
   const { error } = useToast();
   const d = programa.diagnosis;
   const onDiagnosis = (diagnosis: GrowthDiagnosis) => setPrograma(p => ({ ...p, diagnosis }));
-  const conexao = async (tipo: 'meta_parceira' | 'google_gerente', feito: boolean) => {
+  const conexao = async (tipo: TipoConexao, feito: boolean) => {
     const r = await marcarConexaoAction(professionalId, tipo, feito);
     if (r.success) onDiagnosis(r.diagnosis); else error('Não deu', r.error);
   };
@@ -210,33 +216,51 @@ export function EtapaDiagnostico({ professionalId, programa, setPrograma, avanca
       <section className="card p-5 sm:p-6">
         <h2 className="text-h3 text-heading flex items-center gap-2"><KeyRound className="h-5 w-5 text-wine-700" /> Dar acesso à equipe Lume</h2>
         <p className="mt-1 text-body-sm text-n-600 max-w-3xl">
-          Com esse acesso, a equipe ajusta o seu Google e prepara os anúncios. Você não passa senha nenhuma, continua dona das contas
-          e pode tirar a Lume quando quiser, no mesmo lugar onde deu o acesso.
+          Os anúncios rodam na sua própria conta de anúncios: a verba vai direto de você para a Meta, no seu cartão ou por Pix,
+          e a Lume cobra só a assessoria. Com o acesso, a equipe coloca os anúncios no ar e ajusta o seu Google. Você não passa
+          senha nenhuma, continua dona das contas e pode tirar a Lume quando quiser, no mesmo lugar onde deu o acesso.
         </p>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <PassoAcesso
-            titulo="Instagram e Facebook (Meta)"
+            titulo="1. Sua conta de anúncios (Meta)"
+            feito={!!d?.conexoes?.conta_anuncios}
+            onFeito={f => conexao('conta_anuncios', f)}
+            rotuloFeito="Tenho conta de anúncios com forma de pagamento"
+            zapSuporte={acesso.zapSuporte}
+            links={[
+              { href: 'https://business.facebook.com/settings/ad-accounts', texto: 'Abrir minhas contas de anúncios' },
+              { href: 'https://business.facebook.com/billing_hub/payment_settings', texto: 'Abrir Cobrança e pagamentos' },
+            ]}
+            passos={[
+              'Toque no primeiro botão abaixo (no computador fica mais fácil). Se aparecer mais de uma empresa, escolha a sua.',
+              'Já tem conta de anúncios? Pule para o passo 4. Se não tiver, clique em "Adicionar" e em "Criar uma nova conta de anúncios".',
+              'Dê o nome do seu negócio, escolha o fuso horário de São Paulo e a moeda Real brasileiro, e conclua.',
+              'No segundo botão, em "Cobrança e pagamentos", coloque o seu cartão ou adicione saldo por Pix. A cobrança sai no seu nome.',
+            ]}
+          />
+          <PassoAcesso
+            titulo="2. Acesso da Lume no Instagram e no Facebook"
             feito={!!d?.conexoes?.meta_parceira}
             onFeito={f => conexao('meta_parceira', f)}
             valor={acesso.metaBusinessId}
             rotuloValor="ID da Lume"
             zapSuporte={acesso.zapSuporte}
-            link={{ href: 'https://business.facebook.com/settings/partners', texto: 'Abrir Parceiros no Meta Business Suite' }}
+            links={[{ href: 'https://business.facebook.com/settings/partners', texto: 'Abrir Parceiros no Meta Business Suite' }]}
             passos={[
               'Toque no botão abaixo para abrir a tela de Parceiros (no computador fica mais fácil). Se aparecer mais de uma empresa, escolha a sua.',
               'Clique em "Adicionar" e escolha "Conceder acesso aos seus ativos a um parceiro".',
               'Cole o ID da Lume que está aqui embaixo e clique em "Avançar".',
-              'Marque a sua Página do Facebook e o seu Instagram (e a conta de anúncios, se tiver), com acesso total, e confirme.',
+              'Marque a sua Página do Facebook e o seu Instagram com acesso total, e a sua conta de anúncios com acesso para gerenciar campanhas e ver o desempenho. Confirme.',
             ]}
           />
           <PassoAcesso
-            titulo="Google (Perfil da Empresa)"
+            titulo="3. Acesso da Lume no Google"
             feito={!!d?.conexoes?.google_gerente}
             onFeito={f => conexao('google_gerente', f)}
             valor={acesso.googleEmail}
             rotuloValor="E-mail da Lume"
             zapSuporte={acesso.zapSuporte}
-            link={{ href: 'https://business.google.com/', texto: 'Abrir meu Perfil da Empresa' }}
+            links={[{ href: 'https://business.google.com/', texto: 'Abrir meu Perfil da Empresa' }]}
             passos={[
               'Toque no botão abaixo, entrando com a conta do Google que cuida do seu perfil. No celular, também dá pelo Google Maps: sua foto → "Seu Perfil da Empresa".',
               'Toque nos três pontinhos (⋮) e em "Configurações do perfil" → "Pessoas e acesso".',

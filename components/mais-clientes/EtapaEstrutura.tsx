@@ -186,13 +186,13 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
         <h2 className="text-h3 text-heading flex items-center gap-2"><Megaphone className="h-5 w-5 text-wine-700" /> Verba e alcance</h2>
         <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
-            <Field label="Quanto quer investir em anúncios por semana? (R$)" hint={`Mínimo R$ ${VERBA_MINIMA}, sem máximo. A verba é paga à parte da assessoria.`}>
+            <Field label="Quanto quer investir em anúncios por semana? (R$)" hint={`Mínimo R$ ${VERBA_MINIMA}, sem máximo. Sai da sua conta de anúncios direto para a Meta, à parte da assessoria.`}>
               <div className="flex items-center gap-3">
                 <input type="range" min={VERBA_MINIMA} max={1000} step={10} value={Math.min(1000, verbaNum)} onChange={e => setVerba(e.target.value)} className="flex-1 accent-[var(--color-wine-700)]" />
                 <input className="field-input w-28" inputMode="numeric" value={verba} onChange={e => setVerba(e.target.value.replace(/\D/g, ''))} />
               </div>
             </Field>
-            <Field label="Até quanto a verba pode subir sozinha? (R$ por semana)" hint="Quando os agendamentos vão saindo e a agenda tem espaço, o orçamento sobe até aqui sem te perguntar. Acima disso, você aprova.">
+            <Field label="Até quanto a verba pode subir sozinha? (R$ por semana)" hint="Quando os agendamentos vão saindo e a agenda tem espaço, o orçamento sobe até aqui sem te perguntar. Acima disso, você aprova. Se você paga por Pix, deixe saldo para isso.">
               <input className="field-input" inputMode="numeric" value={teto} onChange={e => setTeto(e.target.value.replace(/\D/g, ''))} />
             </Field>
             <Field label="Raio dos anúncios (km)" hint={`Sugestão para ${cidade || 'sua cidade'}: ${raioPadrao(cidade)} km.`}>

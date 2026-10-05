@@ -85,9 +85,15 @@ export interface DiagPlataforma {
 export interface GrowthDiagnosis {
   instagram?: DiagPlataforma;
   google?: DiagPlataforma;
-  /** Caminho de hoje para dar acesso, até a conexão automática ser aprovada. */
-  conexoes: { meta_parceira: boolean; google_gerente: boolean };
+  /**
+   * Caminho de hoje para dar acesso, até a conexão automática ser aprovada.
+   * conta_anuncios: a conta de anúncios é DELA (cartão ou Pix dela, pago direto
+   * à Meta); a Lume entra como parceira e cobra só a assessoria.
+   */
+  conexoes: { meta_parceira: boolean; google_gerente: boolean; conta_anuncios?: boolean };
 }
+
+export type TipoConexao = keyof GrowthDiagnosis['conexoes'];
 
 export type TipoOferta = CondicaoOferta | 'preco_atual';
 

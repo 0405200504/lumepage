@@ -32,7 +32,7 @@ import {
 import { diagnosticar, DiagnosticoIndisponivel } from '@/lib/mais-clientes/diagnostico';
 import { montarRoteiroX1, aplicarNaPersona } from '@/lib/mais-clientes/x1';
 import type {
-  AssetSlot, CondicaoOferta, GrowthAsset, GrowthDiagnosis, GrowthIntake, GrowthPlan, GrowthProgram, GrowthStatus, OfertaPlano,
+  AssetSlot, CondicaoOferta, GrowthAsset, GrowthDiagnosis, GrowthIntake, GrowthPlan, GrowthProgram, GrowthStatus, OfertaPlano, TipoConexao,
 } from '@/types/mais-clientes';
 
 type R<T = object> = ({ success: true } & T) | { success: false; error: string };
@@ -268,11 +268,11 @@ export async function marcarItemAction(professionalId: string, plataforma: 'inst
   }
 }
 
-export async function marcarConexaoAction(professionalId: string, tipo: 'meta_parceira' | 'google_gerente', feito: boolean): Promise<R<{ diagnosis: GrowthDiagnosis }>> {
+export async function marcarConexaoAction(professionalId: string, tipo: TipoConexao, feito: boolean): Promise<R<{ diagnosis: GrowthDiagnosis }>> {
   try {
     const a = await abrir(professionalId);
     if (!a.ok) return { success: false, error: a.error };
-    if (tipo !== 'meta_parceira' && tipo !== 'google_gerente') return { success: false, error: 'Inválido.' };
+    if (!['meta_parceira', 'google_gerente', 'conta_anuncios'].includes(tipo)) return { success: false, error: 'Inválido.' };
     const d = diag(a.p);
     const diagnosis: GrowthDiagnosis = { ...d, conexoes: { ...d.conexoes, [tipo]: !!feito } };
     await gravarPrograma(professionalId, { diagnosis });
