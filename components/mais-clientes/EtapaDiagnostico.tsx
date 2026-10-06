@@ -251,6 +251,7 @@ export function EtapaDiagnostico({ professionalId, programa, setPrograma, avanca
               'Clique em "Adicionar" e escolha "Conceder acesso aos seus ativos a um parceiro".',
               'Cole o ID da Lume que está aqui embaixo e clique em "Avançar".',
               'Marque a sua Página do Facebook e o seu Instagram com acesso total, e a sua conta de anúncios com acesso para gerenciar campanhas e ver o desempenho. Confirme.',
+              'Para o anúncio abrir o seu WhatsApp, a sua Página precisa estar ligada ao seu número: nas configurações da Página, procure "WhatsApp" e conecte o número em que você atende.',
             ]}
           />
           <PassoAcesso

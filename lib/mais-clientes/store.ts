@@ -32,6 +32,7 @@ export const programaVazio = (professionalId: string): GrowthProgram => ({
   assets: [],
   diagnosis: null,
   plan: null,
+  meta: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 });
@@ -55,11 +56,12 @@ export async function lerPrograma(professionalId: string, comUrls = true): Promi
   const programa = (data as GrowthProgram | null) ?? programaVazio(professionalId);
   programa.assets = Array.isArray(programa.assets) ? programa.assets : [];
   programa.intake = programa.intake ?? {};
+  programa.meta = programa.meta ?? null;
   if (comUrls) programa.assets = await assinar(programa.assets);
   return { programa, disponivel: true };
 }
 
-type Patch = Partial<Pick<GrowthProgram, 'status' | 'unlocked_at' | 'unlocked_by' | 'intake' | 'assets' | 'diagnosis' | 'plan'>>;
+type Patch = Partial<Pick<GrowthProgram, 'status' | 'unlocked_at' | 'unlocked_by' | 'intake' | 'assets' | 'diagnosis' | 'plan' | 'meta'>>;
 
 /** Grava só as colunas do patch. As URLs assinadas nunca vão para o banco. */
 export async function gravarPrograma(professionalId: string, patch: Patch): Promise<GrowthProgram> {

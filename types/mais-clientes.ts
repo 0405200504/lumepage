@@ -122,6 +122,50 @@ export interface GrowthPlan {
   x1_aplicado_em: string | null;
   /** Quando ela mandou tudo para a equipe colocar no ar. */
   enviado_em: string | null;
+  /** Criativos renderizados e salvos no envio (o robô sobe estes para a Meta). */
+  criativos?: CriativoSalvo[];
+}
+
+/** Um criativo montado na tela, salvo como JPEG no bucket privado. */
+export interface CriativoSalvo {
+  service_id: string;
+  /** id do molde (antes-depois-cidade, dourado-preco, faixa, circulos). */
+  molde: string;
+  w: number;
+  h: number;
+  path: string;
+  criado_em: string;
+}
+
+/** Uma campanha que o robô criou na conta de anúncios dela. */
+export interface CampanhaMeta {
+  /** x1 = conversa no WhatsApp; pagina = página de agendamento. */
+  funil: 'x1' | 'pagina';
+  campaign_id: string;
+  adset_id: string;
+  ad_ids: string[];
+  /** Verba diária da campanha, em centavos. */
+  verba_diaria_cents: number;
+  status: 'pausada' | 'ativa';
+  criada_em: string;
+  criada_por: string;
+  ativada_em: string | null;
+}
+
+/** Ativos da Meta da profissional que o robô da Lume opera (o admin vincula). */
+export interface GrowthMeta {
+  /** act_123… */
+  ad_account_id: string;
+  ad_account_nome: string;
+  page_id: string;
+  page_nome: string;
+  ig_id: string | null;
+  ig_username: string | null;
+  vinculado_em: string;
+  vinculado_por: string;
+  /** Centro do raio dos anúncios (endereço dela, ou o centro da cidade). */
+  local?: { lat: number; lng: number; fonte: 'endereco' | 'cidade' } | null;
+  campanhas?: CampanhaMeta[];
 }
 
 export interface GrowthProgram {
@@ -133,6 +177,7 @@ export interface GrowthProgram {
   assets: GrowthAsset[];
   diagnosis: GrowthDiagnosis | null;
   plan: GrowthPlan | null;
+  meta: GrowthMeta | null;
   created_at: string;
   updated_at: string;
 }

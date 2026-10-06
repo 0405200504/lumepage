@@ -21,6 +21,22 @@ export const VERBA_MINIMA = 50;
  * Abaixo, dividir a verba deixa cada um sem dado: roda só o X1.
  */
 export const VERBA_FUNIL_DUPLO = 150;
+/** Com os dois funis, quanto da verba vai para o WhatsApp (o resto vai para a página). */
+export const PARTE_X1 = 0.6;
+
+/** Moldes de criativo (Criativos.tsx) — o servidor só aceita estes. */
+export const MOLDES_IDS = ['antes-depois-cidade', 'dourado-preco', 'faixa', 'circulos'] as const;
+
+/**
+ * Verba diária de cada campanha, em centavos, a partir da verba semanal que
+ * ela escolheu. Nunca abaixo do mínimo de R$ 50 por semana.
+ */
+export function verbaDiaria(verbaSemanal: number, funil: 'x1' | 'x1_e_pagina'): { x1: number; pagina: number } {
+  const total = Math.round((Math.max(VERBA_MINIMA, verbaSemanal) * 100) / 7);
+  if (funil === 'x1') return { x1: total, pagina: 0 };
+  const x1 = Math.round(total * PARTE_X1);
+  return { x1, pagina: total - x1 };
+}
 
 export function funilPara(verbaSemanal: number): 'x1' | 'x1_e_pagina' {
   return verbaSemanal >= VERBA_FUNIL_DUPLO ? 'x1_e_pagina' : 'x1';

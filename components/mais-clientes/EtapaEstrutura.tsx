@@ -7,12 +7,13 @@ import { Field } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import {
   gerarOfertasAction, salvarOfertaAction, salvarVerbaAction, aplicarX1Action, enviarParaEquipeAction,
+  limparCriativosAction, salvarCriativoAction,
 } from '@/app/actions/mais-clientes';
 import { brl, raioPadrao, VERBA_MINIMA, VERBA_FUNIL_DUPLO, funilPara, normalizarVerba } from '@/lib/mais-clientes/regras';
 import { montarRoteiroX1 } from '@/lib/mais-clientes/x1';
 import type { GrowthPlan, OfertaPlano } from '@/types/mais-clientes';
 import type { PropsEtapa } from './Jornada';
-import { Criativo, fotosDoServico, moldesPossiveis } from './Criativos';
+import { Criativo, criativoEmJpeg, fotosDoServico, moldesPossiveis } from './Criativos';
 
 const dataBR = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
@@ -97,6 +98,30 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
       setCarregando(null);
     }
   };
+
+  /**
+   * Enviar = salvar cada criativo da tela como imagem (o robô sobe estas para a
+   * conta de anúncios dela) e avisar a equipe. Uma action por imagem: cada uma
+   * cabe no limite de 1 MB.
+   */
+  const enviar = () => rodar('enviar', async () => {
+    const nos = [...document.querySelectorAll<HTMLElement>('[data-criativo]')];
+    const limpo = await limparCriativosAction(professionalId);
+    if (!limpo.success) return limpo;
+    for (const no of nos) {
+      const fd = new FormData();
+      const imagem = await criativoEmJpeg(no).catch(() => null);
+      if (!imagem) return { success: false as const, error: 'Não consegui preparar um dos criativos. Tente de novo.' };
+      fd.set('arquivo', imagem, 'criativo.jpg');
+      fd.set('servico', no.dataset.servico ?? '');
+      fd.set('molde', no.dataset.criativo ?? '');
+      fd.set('w', no.dataset.w ?? '');
+      fd.set('h', no.dataset.h ?? '');
+      const r = await salvarCriativoAction(professionalId, fd);
+      if (!r.success) return r;
+    }
+    return enviarParaEquipeAction(professionalId);
+  }, 'Enviado para a equipe');
 
   const cidade = programa.intake.cidade || negocio.cidade;
   const uf = programa.intake.uf || negocio.uf;
@@ -223,7 +248,7 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
               <p className="text-body-sm text-white/80">{aprovadas.length} oferta(s) aprovada(s) · {plano?.x1_aplicado_em ? 'WhatsApp pronto' : 'WhatsApp ainda não aplicado'} · {brl(verbaNum * 100)} por semana</p>
             </div>
             <button type="button" disabled={carregando === 'enviar' || !aprovadas.length || !plano?.verba_semanal}
-              onClick={() => rodar('enviar', () => enviarParaEquipeAction(professionalId), 'Enviado para a equipe')}
+              onClick={enviar}
               className="inline-flex items-center gap-2 rounded-pill bg-white text-wine-800 font-semibold px-6 py-3 disabled:opacity-60 hover:bg-wine-50 transition-ui">
               <Send className="h-4 w-4" /> Enviar para a equipe
             </button>

@@ -27,13 +27,16 @@ import {
   MIMES_FOTO, MIMES_VIDEO,
 } from '@/lib/mais-clientes/store';
 import {
-  SLOTS, slotInfo, avaliarFoto, sugerirOfertas, normalizarVerba, normalizarTeto, funilPara, raioPadrao,
+  SLOTS, slotInfo, avaliarFoto, sugerirOfertas, normalizarVerba, normalizarTeto, funilPara, raioPadrao, MOLDES_IDS,
 } from '@/lib/mais-clientes/regras';
 import { diagnosticar, DiagnosticoIndisponivel } from '@/lib/mais-clientes/diagnostico';
 import { montarRoteiroX1, aplicarNaPersona } from '@/lib/mais-clientes/x1';
 import type {
-  AssetSlot, CondicaoOferta, GrowthAsset, GrowthDiagnosis, GrowthIntake, GrowthPlan, GrowthProgram, GrowthStatus, OfertaPlano, TipoConexao,
+  AssetSlot, CondicaoOferta, CriativoSalvo, GrowthAsset, GrowthDiagnosis, GrowthIntake, GrowthPlan, GrowthMeta, GrowthProgram, GrowthStatus, OfertaPlano, TipoConexao,
 } from '@/types/mais-clientes';
+import { criarCampanhas, ativarCampanhas, pausarCampanhas, apagarCampanhas } from '@/lib/meta/campanha';
+import { listarAtivos, atribuirAoRobo } from '@/lib/meta/ativos';
+import { MetaErro, MetaNaoConfigurada } from '@/lib/meta/graph';
 
 type R<T = object> = ({ success: true } & T) | { success: false; error: string };
 
@@ -382,6 +385,54 @@ export async function aplicarX1Action(professionalId: string): Promise<R<{ plan:
   }
 }
 
+/** Antes de salvar os criativos de novo: apaga os do envio anterior. */
+export async function limparCriativosAction(professionalId: string): Promise<R> {
+  try {
+    const a = await abrir(professionalId);
+    if (!a.ok) return { success: false, error: a.error };
+    const atual = plano(a.p);
+    await Promise.all((atual.criativos ?? []).map(c => apagarArquivo(c.path).catch(() => {})));
+    await gravarPrograma(professionalId, { plan: { ...atual, criativos: [] } });
+    return { success: true };
+  } catch (e) {
+    console.error('[mais-clientes] limparCriativos', e);
+    return { success: false, error: FALHA };
+  }
+}
+
+/**
+ * Um criativo montado na tela, já em JPEG (até 1 MB). É a imagem que o robô
+ * sobe para a conta de anúncios dela: só entra de oferta aprovada e molde conhecido.
+ */
+export async function salvarCriativoAction(professionalId: string, formData: FormData): Promise<R> {
+  try {
+    const a = await abrir(professionalId);
+    if (!a.ok) return { success: false, error: a.error };
+    const atual = plano(a.p);
+    const arquivo = formData.get('arquivo');
+    const servico = String(formData.get('servico') ?? '');
+    const molde = String(formData.get('molde') ?? '');
+    const w = Math.round(Number(formData.get('w'))), h = Math.round(Number(formData.get('h')));
+    if (!(arquivo instanceof File) || !['image/jpeg', 'image/png'].includes(arquivo.type) || !arquivo.size || arquivo.size > MAX_FOTO) {
+      return { success: false, error: 'Criativo inválido.' };
+    }
+    if (!atual.ofertas.some(o => o.service_id === servico && o.aprovada)) return { success: false, error: 'Oferta não aprovada.' };
+    if (!(MOLDES_IDS as readonly string[]).includes(molde) || !(w > 0 && w <= 2000 && h > 0 && h <= 2000)) return { success: false, error: 'Criativo inválido.' };
+
+    const caminho = novoCaminho(professionalId, 'criativo', arquivo.type);
+    const path = await salvarArquivo(professionalId, caminho, await arquivo.arrayBuffer(), arquivo.type);
+    const anteriores = (atual.criativos ?? []).filter(c => c.service_id === servico && c.molde === molde);
+    await Promise.all(anteriores.map(c => apagarArquivo(c.path).catch(() => {})));
+    const novo: CriativoSalvo = { service_id: servico, molde, w, h, path, criado_em: new Date().toISOString() };
+    const criativos = [...(atual.criativos ?? []).filter(c => !anteriores.includes(c)), novo].slice(-12);
+    await gravarPrograma(professionalId, { plan: { ...atual, criativos } });
+    return { success: true };
+  } catch (e) {
+    console.error('[mais-clientes] salvarCriativo', e);
+    return { success: false, error: FALHA };
+  }
+}
+
 /** Fecha a estruturação: a equipe recebe tudo para colocar no ar. */
 export async function enviarParaEquipeAction(professionalId: string): Promise<R<{ plan: GrowthPlan }>> {
   try {
@@ -423,3 +474,102 @@ export async function definirStatusMaisClientesAction(professionalId: string, st
     return adminActionError(e, 'Não foi possível alterar o acesso ao "Quero mais clientes".');
   }
 }
+
+/**
+ * Liga a profissional à conta de anúncios e à Página DELA que ela compartilhou
+ * com o Gerenciador da Lume. Só aceita ativos que o robô de fato enxerga, e já
+ * atribui o robô a eles (sem isso ele não consegue anunciar).
+ */
+export async function vincularMetaAction(professionalId: string, adAccountId: string, pageId: string): Promise<{ success: boolean; error?: string; meta?: GrowthMeta }> {
+  try {
+    const admin = await assertAdmin();
+    const { contas, paginas } = await listarAtivos();
+    const conta = contas.find(c => c.id === adAccountId);
+    const pagina = paginas.find(p => p.id === pageId);
+    if (!conta || !pagina) return { success: false, error: 'Essa conta ou Página não está compartilhada com o Gerenciador da Lume.' };
+    await atribuirAoRobo(conta.id);
+    await atribuirAoRobo(pagina.id);
+    const { programa: antes } = await lerPrograma(professionalId, false);
+    const meta: GrowthMeta = {
+      ad_account_id: conta.id, ad_account_nome: conta.nome,
+      page_id: pagina.id, page_nome: pagina.nome,
+      ig_id: pagina.instagram?.id ?? null, ig_username: pagina.instagram?.username ?? null,
+      vinculado_em: new Date().toISOString(), vinculado_por: admin.email,
+    };
+    await gravarPrograma(professionalId, { meta });
+    await logAdminAction({
+      action: 'mais_clientes.meta_vincular', entityType: 'professional', entityId: professionalId,
+      before: { meta: antes.meta }, after: { meta },
+    });
+    revalidatePath('/admin/mais-clientes');
+    revalidatePath(`/admin/professionals/${professionalId}`);
+    return { success: true, meta };
+  } catch (e) {
+    if (e instanceof MetaNaoConfigurada) return { success: false, error: e.message };
+    if (e instanceof MetaErro) return { success: false, error: `A Meta recusou: ${e.paraUsuario || e.message}` };
+    return adminActionError(e, 'Não foi possível vincular a conta da Meta.');
+  }
+}
+
+export async function desvincularMetaAction(professionalId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await assertAdmin();
+    const { programa: antes } = await lerPrograma(professionalId, false);
+    await gravarPrograma(professionalId, { meta: null });
+    await logAdminAction({
+      action: 'mais_clientes.meta_desvincular', entityType: 'professional', entityId: professionalId,
+      before: { meta: antes.meta }, after: { meta: null },
+    });
+    revalidatePath('/admin/mais-clientes');
+    revalidatePath(`/admin/professionals/${professionalId}`);
+    return { success: true };
+  } catch (e) {
+    return adminActionError(e, 'Não foi possível desvincular a conta da Meta.');
+  }
+}
+
+// ───────────────────────────── Admin · campanhas do robô ─────────────────────────────
+
+type Operacao = 'montar' | 'ativar' | 'pausar' | 'apagar';
+
+/** Monta (pausada), ativa, pausa ou apaga as campanhas do robô na conta dela. */
+export async function campanhaMetaAction(professionalId: string, operacao: Operacao): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = await assertAdmin();
+    if (!['montar', 'ativar', 'pausar', 'apagar'].includes(operacao)) return { success: false, error: 'Operação inválida.' };
+    const { programa } = await lerPrograma(professionalId, false);
+    if (!programa.meta) return { success: false, error: 'Vincule a conta de anúncios e a Página dela primeiro.' };
+
+    let meta: GrowthMeta;
+    if (operacao === 'montar') {
+      const pro = await dbService.getProfessionalById(professionalId);
+      const base = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
+      meta = await criarCampanhas(programa, {
+        nome: pro?.brand_name || pro?.name || 'Profissional',
+        endereco: pro?.address || '',
+        cidade: programa.intake.cidade || pro?.city || '',
+        uf: programa.intake.uf || pro?.state || '',
+        linkAgendamento: pro?.slug && base ? `${base}/${pro.slug}` : '',
+      }, admin.email);
+    } else if (operacao === 'ativar') {
+      meta = await ativarCampanhas(programa.meta);
+    } else if (operacao === 'pausar') {
+      meta = await pausarCampanhas(programa.meta);
+    } else {
+      meta = await apagarCampanhas(programa.meta);
+    }
+    await gravarPrograma(professionalId, { meta });
+    await logAdminAction({
+      action: `mais_clientes.campanha_${operacao}`, entityType: 'professional', entityId: professionalId,
+      before: { campanhas: programa.meta.campanhas ?? [] }, after: { campanhas: meta.campanhas ?? [] },
+    });
+    revalidatePath('/admin/mais-clientes');
+    revalidatePath(`/admin/professionals/${professionalId}`);
+    return { success: true };
+  } catch (e) {
+    if (e instanceof MetaNaoConfigurada) return { success: false, error: e.message };
+    if (e instanceof MetaErro) return { success: false, error: `A Meta recusou: ${e.paraUsuario || e.message}` };
+    return adminActionError(e, 'Não foi possível mexer na campanha.');
+  }
+}
+

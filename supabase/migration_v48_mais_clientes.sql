@@ -8,6 +8,9 @@
 --   assets     fotos e vídeos enviados (caminho no bucket privado + autorização)
 --   diagnosis  diagnóstico do Instagram e do Google (nota por item + tutorial)
 --   plan       estruturação: 3 serviços, ofertas aprovadas, verba, raio, X1
+--   meta       conta de anúncios, Página e Instagram DELA que o robô da Lume
+--              opera (ela compartilha com o Gerenciador da Lume como parceira;
+--              o admin vincula)
 --
 -- Segurança (regra do projeto desde a v46): RLS ligada e NENHUMA policy. Todo
 -- acesso passa pelo servidor com service-role, depois de authorizeProfessional.
@@ -24,9 +27,13 @@ create table if not exists public.growth_programs (
   assets          jsonb not null default '[]'::jsonb,
   diagnosis       jsonb,
   plan            jsonb,
+  meta            jsonb,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
+-- Quem rodou uma versão anterior desta migração ganha a coluna nova aqui.
+alter table public.growth_programs add column if not exists meta jsonb;
 
 alter table public.growth_programs enable row level security;
 

@@ -12,7 +12,7 @@
 import React, { useRef, useState } from 'react';
 import { Playfair_Display, Great_Vibes, Montserrat } from 'next/font/google';
 import { Download } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import { toPng, toJpeg } from 'html-to-image';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { precoDoAnuncio } from '@/lib/mais-clientes/regras';
@@ -127,6 +127,20 @@ export const MOLDES: Molde[] = [
   },
 ];
 
+/**
+ * Transforma um criativo da tela em JPEG de até ~950 KB (cabe numa server
+ * action). Baixa a qualidade aos poucos até caber.
+ */
+export async function criativoEmJpeg(el: HTMLElement): Promise<Blob> {
+  const w = Number(el.dataset.w), h = Number(el.dataset.h);
+  for (const qualidade of [0.9, 0.8, 0.7, 0.6]) {
+    const url = await toJpeg(el, { width: w, height: h, pixelRatio: 1, quality: qualidade, cacheBust: true, backgroundColor: '#ffffff', style: { transform: 'none' } });
+    const blob = await (await fetch(url)).blob();
+    if (blob.size <= 950 * 1024) return blob;
+  }
+  throw new Error('Criativo pesado demais.');
+}
+
 /** Os moldes que dá para montar com as fotos que ela mandou para esse serviço. */
 export function moldesPossiveis(d: DadosCriativo): Molde[] {
   return MOLDES.filter(m => m.precisa.some(conj => conj.every(k => !!d.fotos[k])));
@@ -165,7 +179,8 @@ export function Criativo({ molde, dados, largura = 260 }: { molde: Molde; dados:
   return (
     <figure className="flex flex-col gap-2">
       <div className="rounded-chip overflow-hidden shadow-[var(--shadow-sm)] bg-n-100" style={{ width: largura, height: molde.h * escala }}>
-        <div ref={ref} className={FONTES} style={{ width: molde.w, height: molde.h, transform: `scale(${escala})`, transformOrigin: 'top left' }}>
+        <div ref={ref} className={FONTES} style={{ width: molde.w, height: molde.h, transform: `scale(${escala})`, transformOrigin: 'top left' }}
+          data-criativo={molde.id} data-servico={dados.oferta.service_id} data-w={molde.w} data-h={molde.h}>
           {molde.render(dados)}
         </div>
       </div>

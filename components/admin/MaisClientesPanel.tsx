@@ -67,6 +67,7 @@ export function MaisClientesPanel({ id, programa, disponivel, servicos }: {
               <KeyValue label="Google">{d?.google ? `${d.google.nota.toLocaleString('pt-BR')}/10 · ${d.google.itens.filter(x => x.feito).length} ajustes feitos` : 'sem diagnóstico'}</KeyValue>
               <KeyValue label="Conta de anúncios dela">{d?.conexoes?.conta_anuncios ? <Badge tone="ok">ela confirmou</Badge> : <Badge tone="warn">pendente</Badge>}</KeyValue>
               <KeyValue label="Parceira na Meta">{d?.conexoes?.meta_parceira ? <Badge tone="ok">ela confirmou</Badge> : <Badge tone="warn">pendente</Badge>}</KeyValue>
+              <KeyValue label="Robô da Meta">{programa.meta ? `${programa.meta.ad_account_nome} · ${programa.meta.page_nome}${programa.meta.ig_username ? ` · @${programa.meta.ig_username}` : ''}` : <Badge tone="warn">sem vínculo (Assessoria → Meta)</Badge>}</KeyValue>
               <KeyValue label="Gerente no Google">{d?.conexoes?.google_gerente ? <Badge tone="ok">ela confirmou</Badge> : <Badge tone="warn">pendente</Badge>}</KeyValue>
             </dl>
             {programa.assets.some(a => a.url && a.slot !== 'video') && (
