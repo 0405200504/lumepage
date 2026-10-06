@@ -24,7 +24,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { isDemo } from '@/lib/demo';
 import { rateLimit } from '@/lib/rate-limit';
 import {
-  lerPrograma, gravarPrograma, definirStatus, salvarArquivo, apagarArquivo, novoCaminho, linkDeEnvio, assinar,
+  lerPrograma, gravarPrograma, definirStatus, salvarArquivo, apagarArquivo, novoCaminho, linkDeEnvio, assinar, lerConfiguracoes,
   MIMES_FOTO, MIMES_VIDEO,
 } from '@/lib/mais-clientes/store';
 import {
@@ -37,6 +37,7 @@ import type {
 } from '@/types/mais-clientes';
 import { criarCampanhas, ativarCampanhas, pausarCampanhas, apagarCampanhas } from '@/lib/meta/campanha';
 import { passoDoRobo, contextoDe } from '@/lib/meta/robo';
+import { conectarWhatsApp, desconectarWhatsApp, statusWhatsApp, registrarWebhook, type StatusWhatsApp } from '@/lib/whatsapp/conexao';
 import { listarAtivos, atribuirAoRobo } from '@/lib/meta/ativos';
 import { MetaErro, MetaNaoConfigurada } from '@/lib/meta/graph';
 
@@ -592,6 +593,55 @@ export async function retomarRoboAction(professionalId: string): Promise<{ succe
     return { success: true };
   } catch (e) {
     return adminActionError(e, 'Não foi possível retomar o robô.');
+  }
+}
+
+// ───────────────────────────── Admin · WhatsApp da Lume (calls) ─────────────────────────────
+
+/** Mensagens das calls: confirmação na hora e lembrete no dia (ligadas na primeira conexão). */
+const AUTOMACOES_CALL = {
+  automation_booking_enabled: true,
+  automation_booking_message: 'Oi, {nome}! Sua call com a equipe Lume está marcada para {data} às {horario}. Até lá!',
+  automation_day_of_enabled: true,
+  automation_day_of_time: '08:00:00',
+  automation_day_of_message: 'Bom dia, {nome}! Hoje às {horario} é a nossa call sobre o Quero mais clientes. Até daqui a pouco!',
+};
+
+type RespostaWhatsLume =
+  | { success: true; status: StatusWhatsApp; qrcode?: string | null; paircode?: string | null }
+  | { success: false; error: string };
+
+/**
+ * O número da Lume fica na conta interna das calls (Configurações → agenda das
+ * calls): é por ele que saem a confirmação e o lembrete das calls de venda.
+ */
+export async function whatsappLumeAction(operacao: 'status' | 'conectar' | 'desconectar'): Promise<RespostaWhatsLume> {
+  try {
+    await assertAdmin();
+    const { callSlug } = await lerConfiguracoes();
+    const conta = callSlug ? await dbService.getProfessionalBySlug(callSlug).catch(() => null) : null;
+    if (!conta) return { success: false, error: 'Configure a conta da agenda das calls primeiro (Configurações).' };
+
+    if (operacao === 'status') {
+      const status = await statusWhatsApp(conta.id);
+      if (status === 'open') await registrarWebhook(conta.id).catch(() => false);
+      return { success: true, status };
+    }
+    if (operacao === 'desconectar') {
+      const r = await desconectarWhatsApp(conta.id);
+      if (!r.success) return r;
+      await logAdminAction({ action: 'mais_clientes.whatsapp_lume_desconectar', entityType: 'professional', entityId: conta.id });
+      return { success: true, status: 'close' };
+    }
+    const r = await conectarWhatsApp(conta.id);
+    if (!r.success) return { success: false, error: r.limitReached ? 'O servidor do WhatsApp chegou no limite de instâncias. Fale com o suporte da uazapi.' : r.error };
+    if (r.criada) {
+      await dbService.upsertWhatsAppSettings(conta.id, AUTOMACOES_CALL).catch(e => console.error('[whatsapp-lume] automações', e));
+      await logAdminAction({ action: 'mais_clientes.whatsapp_lume_conectar', entityType: 'professional', entityId: conta.id });
+    }
+    return { success: true, status: r.alreadyConnected ? 'open' : 'qr', qrcode: r.qrcode, paircode: r.paircode };
+  } catch (e) {
+    return adminActionError(e, 'Não foi possível falar com o WhatsApp agora.');
   }
 }
 

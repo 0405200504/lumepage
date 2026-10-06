@@ -9,6 +9,7 @@ import { Badge } from '@/components/admin/badges';
 import { MaisClientesToggle } from '@/components/admin/MaisClientesToggle';
 import { MetaVinculo, type OpcaoMeta } from '@/components/admin/MetaVinculo';
 import { ImpersonateRowButton } from '@/components/admin/ImpersonateRowButton';
+import { WhatsAppLume } from '@/components/admin/WhatsAppLume';
 import { textLink } from '@/components/admin/ui';
 import { dbService } from '@/lib/supabase/db';
 import { listarProgramas, programaVazio, lerConfiguracoes, MIGRACAO } from '@/lib/mais-clientes/store';
@@ -121,19 +122,24 @@ export default async function AdminMaisClientesPage() {
             <p className="text-body-sm text-n-600">Falta configurar: crie a conta da Lume que recebe as calls (com o serviço &quot;Call Quero mais clientes&quot; e os seus horários) e coloque o endereço dela em <Link href="/admin/settings" className={textLink}>Configurações → Agenda das calls de venda</Link>.</p>
           ) : !calls.conta ? (
             <Notice tone="warn" icon={<AlertTriangle />}>Não achei a conta &quot;{calls.slug}&quot;. Confira o endereço em Configurações.</Notice>
-          ) : !calls.proximas.length ? (
-            <p className="text-body-sm text-n-500">Nenhuma call marcada nos próximos 30 dias.</p>
           ) : (
-            <ul className="divide-y divide-line">
-              {calls.proximas.map(a => (
-                <li key={a.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-body-sm">
-                  <span className="font-semibold text-heading">{new Date(`${a.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} · {a.start_time.slice(0, 5)}</span>
-                  <span className="text-n-700">{a.client_name}</span>
-                  <a href={`https://wa.me/${a.client_whatsapp.replace(/\D/g, '').replace(/^(?!55)/, '55')}`} target="_blank" rel="noopener noreferrer" className={textLink}>{a.client_whatsapp}</a>
-                  <Badge tone={a.status === 'confirmed' ? 'ok' : 'neutral'}>{a.status === 'confirmed' ? 'confirmada' : a.status === 'completed' ? 'feita' : 'marcada'}</Badge>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-4">
+              {!calls.proximas.length ? (
+                <p className="text-body-sm text-n-500">Nenhuma call marcada nos próximos 30 dias.</p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {calls.proximas.map(a => (
+                    <li key={a.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-body-sm">
+                      <span className="font-semibold text-heading">{new Date(`${a.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} · {a.start_time.slice(0, 5)}</span>
+                      <span className="text-n-700">{a.client_name}</span>
+                      <a href={`https://wa.me/${a.client_whatsapp.replace(/\D/g, '').replace(/^(?!55)/, '55')}`} target="_blank" rel="noopener noreferrer" className={textLink}>{a.client_whatsapp}</a>
+                      <Badge tone={a.status === 'confirmed' ? 'ok' : 'neutral'}>{a.status === 'confirmed' ? 'confirmada' : a.status === 'completed' ? 'feita' : 'marcada'}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <WhatsAppLume />
+            </div>
           )}
         </Panel>
 
