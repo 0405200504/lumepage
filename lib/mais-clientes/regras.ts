@@ -9,7 +9,7 @@
  */
 
 import type {
-  AssetSlot, CondicaoOferta, DiagItem, EtapaId, GrowthAsset, GrowthIntake, GrowthProgram, OfertaPlano,
+  AssetSlot, CondicaoOferta, DiagItem, EtapaId, GrowthAsset, GrowthIntake, GrowthProgram, OfertaPlano, TipoOferta,
 } from '@/types/mais-clientes';
 
 // ───────────────────────────── Verba e funil ─────────────────────────────
@@ -217,10 +217,21 @@ const reais = (cents: number) => Math.round(cents / 100);
 export const brl = (cents: number) =>
   `R$ ${(cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
-/** Desconto de primeira visita: 10%, arredondado para baixo em reais. */
-const DESCONTO_PRIMEIRA = 0.1;
-/** Combo: o serviço adicional sai com 50% de desconto, e o desconto total nunca passa de 15%. */
-const DESCONTO_COMBO_MAX = 0.15;
+/** Desconto de primeira visita na oferta avulsa (o alvo; o preço final termina em 9). */
+const DESCONTO_PRIMEIRA = 0.15;
+/** Combo: o serviço adicional sai pela metade, e o desconto total nunca passa de 20%. */
+const DESCONTO_COMBO_MAX = 0.2;
+
+/**
+ * Preço de anúncio: desce para o "9" mais próximo (R$ 195 → R$ 189,
+ * R$ 136 → R$ 129) desde que o desconto total não passe do teto. Se passar,
+ * fica no real inteiro.
+ */
+export function precoCharmoso(cents: number, cheioCents: number, tetoDesconto: number): number {
+  const inteiro = Math.floor(cents / 100);
+  const charme = (Math.floor((inteiro + 1) / 10) * 10 - 1) * 100;
+  return charme > 0 && charme >= cheioCents * (1 - tetoDesconto) ? charme : inteiro * 100;
+}
 
 function comparacaoMercado(s: ServicoBase): string {
   const m = medianaPara(s.name);
@@ -234,90 +245,123 @@ function comparacaoMercado(s: ServicoBase): string {
 }
 
 /**
- * Uma oferta melhorada por serviço em foco, só com as condições que ELA
- * marcou como aceitáveis. Nada vai ao ar sem ela aprovar.
+ * As ofertas das primeiras semanas de teste, só com as condições que ELA
+ * marcou como aceitáveis (nada vai ao ar sem ela aprovar):
  *
- * Ordem de preferência (a que menos mexe na margem primeiro):
- *   combo com serviço complementar barato > brinde > avaliação gratuita
- *   > parcelamento (ticket alto) > desconto de primeira visita > preço atual.
+ *   - UM combo bem atrativo, no serviço que ela mais quer encher (se ela
+ *     aceita combo e há um serviço complementar barato);
+ *   - os outros serviços com oferta AVULSA, de tipos diferentes entre si
+ *     sempre que dá — cada uma testa um ângulo (preço, brinde, avaliação...).
+ *
+ * Depois das primeiras semanas, a equipe troca o que não trouxe conversa.
  */
 export function sugerirOfertas(
   foco: ServicoBase[],
   catalogo: ServicoBase[],
   condicoes: CondicaoOferta[] = [],
   brinde = '',
+  prioritario: string | null = null,
 ): OfertaPlano[] {
   const aceita = (c: CondicaoOferta) => condicoes.includes(c);
-  return foco.map(s => {
-    const p = s.price_cents;
-    const base = { service_id: s.id, servico: s.name, preco_atual_cents: p, aprovada: false };
-    const mercado = comparacaoMercado(s);
+  const base = (s: ServicoBase) => ({ service_id: s.id, servico: s.name, preco_atual_cents: s.price_cents, aprovada: false });
 
-    if (aceita('combo')) {
-      // O complemento é o serviço barato que costuma ir junto (design, henna,
-      // esmaltação): o combo soa natural e o desconto pesa pouco na margem.
-      const complemento = catalogo
-        .filter(c => c.id !== s.id && c.price_cents > 0 && c.price_cents <= p * 0.6)
-        .sort((a, b) => a.price_cents - b.price_cents)[0];
-      if (complemento) {
-        const cheio = p + complemento.price_cents;
-        const desconto = Math.min(Math.round(complemento.price_cents * 0.5), Math.round(cheio * DESCONTO_COMBO_MAX));
-        const preco = Math.floor((cheio - desconto) / 100) * 100;
-        return {
-          ...base, tipo: 'combo' as const,
-          titulo: `Combo primeira visita: ${s.name} + ${complemento.name}`,
-          detalhe: `De ${brl(cheio)} por ${brl(preco)}`,
-          preco_oferta_cents: preco,
-          justificativa: `Combo com um serviço seu que custa menos: a cliente sente vantagem e você ganha um atendimento mais longo. ${mercado}`,
-        };
-      }
+  // 1. O combo: no prioritário; se ele não tiver complemento, no próximo que tiver.
+  const ordem = [...foco].sort((a, b) => Number(b.id === prioritario) - Number(a.id === prioritario));
+  const complementoDe = (s: ServicoBase) => catalogo
+    .filter(c => c.id !== s.id && c.price_cents > 0 && c.price_cents <= s.price_cents * 0.6)
+    .sort((a, b) => a.price_cents - b.price_cents)[0];
+  const doCombo = aceita('combo') ? ordem.find(s => complementoDe(s)) ?? null : null;
+
+  // 2. As avulsas: cada serviço tenta primeiro um tipo que outra avulsa ainda não usou.
+  const usados = new Set<TipoOferta>();
+  const ofertas = new Map<string, OfertaPlano>();
+  for (const s of ordem) {
+    if (s.id === doCombo?.id) {
+      ofertas.set(s.id, combo(s, complementoDe(s)!));
+      continue;
     }
-    if (aceita('brinde') && brinde.trim()) {
+    // Variar o tipo só entre ofertas de verdade: repetir um desconto é melhor que cair no preço cheio.
+    const possiveis = avulsasPossiveis(s, aceita, brinde);
+    const reais = possiveis.filter(o => o.tipo !== 'preco_atual');
+    const escolhida = reais.find(o => !usados.has(o.tipo)) ?? reais[0] ?? possiveis[0];
+    usados.add(escolhida.tipo);
+    ofertas.set(s.id, escolhida);
+  }
+  return foco.map(s => ofertas.get(s.id)!);
+
+  function combo(s: ServicoBase, complemento: ServicoBase): OfertaPlano {
+    const cheio = s.price_cents + complemento.price_cents;
+    const desconto = Math.min(Math.round(complemento.price_cents * 0.5), Math.round(cheio * DESCONTO_COMBO_MAX));
+    const preco = precoCharmoso(cheio - desconto, cheio, DESCONTO_COMBO_MAX);
+    return {
+      ...base(s), tipo: 'combo',
+      titulo: `Combo primeira visita: ${s.name} + ${complemento.name}`,
+      detalhe: `De ${brl(cheio)} por ${brl(preco)}`,
+      preco_oferta_cents: preco,
+      justificativa: `A oferta carro-chefe: combo com um serviço seu que custa menos, então a cliente sente vantagem e você ganha um atendimento mais longo. ${comparacaoMercado(s)}`,
+    };
+  }
+
+  /** Avulsas que ela aceita para esse serviço, da que mais converte em anúncio para a que menos. */
+  function avulsasPossiveis(s: ServicoBase, ok: (c: CondicaoOferta) => boolean, mimo: string): OfertaPlano[] {
+    const p = s.price_cents;
+    const mercado = comparacaoMercado(s);
+    const caro = p >= 30000;
+    const lista: OfertaPlano[] = [];
+    const desconto = (): OfertaPlano => {
+      const preco = precoCharmoso(Math.round(p * (1 - DESCONTO_PRIMEIRA)), p, 0.2);
       return {
-        ...base, tipo: 'brinde' as const,
-        titulo: `${s.name} + ${brinde.trim()} de brinde`,
-        detalhe: `${brl(p)}, com ${brinde.trim()} de presente na primeira visita`,
-        preco_oferta_cents: null,
-        justificativa: `Brinde de custo baixo mantém o preço cheio e ainda dá motivo para agendar agora. ${mercado}`,
+        ...base(s), tipo: 'desconto_primeira',
+        titulo: `${s.name} por ${brl(preco)} na primeira visita`,
+        detalhe: `De ${brl(p)} por ${brl(preco)} na primeira visita`,
+        preco_oferta_cents: preco,
+        justificativa: `Preço de primeira visita é o que mais faz a cliente nova mandar mensagem, e quem já é sua cliente continua no preço normal. ${mercado}`,
       };
-    }
-    if (aceita('avaliacao_gratis')) {
-      return {
-        ...base, tipo: 'avaliacao_gratis' as const,
-        titulo: `Avaliação gratuita de ${s.name}`,
-        detalhe: `Avaliação sem custo; o procedimento sai por ${brl(p)}`,
-        preco_oferta_cents: null,
-        justificativa: `Avaliação gratuita é a porta de entrada que mais aparece nos anúncios de procedimento: tira o medo de comprar sem conhecer. ${mercado}`,
-      };
-    }
-    if (aceita('parcelamento') && p >= 30000) {
+    };
+    const comBrinde = (): OfertaPlano => ({
+      ...base(s), tipo: 'brinde',
+      titulo: `${s.name} + ${mimo.trim()} de brinde`,
+      detalhe: `${brl(p)}, com ${mimo.trim()} de presente na primeira visita`,
+      preco_oferta_cents: null,
+      justificativa: `Brinde de custo baixo mantém o preço cheio e ainda dá motivo para agendar agora. ${mercado}`,
+    });
+    const avaliacao = (): OfertaPlano => ({
+      ...base(s), tipo: 'avaliacao_gratis',
+      titulo: `Avaliação gratuita de ${s.name}`,
+      detalhe: `Avaliação sem custo; o procedimento sai por ${brl(p)}`,
+      preco_oferta_cents: null,
+      justificativa: `Avaliação gratuita tira o medo de comprar sem conhecer: é a porta de entrada que mais aparece nos anúncios de procedimento. ${mercado}`,
+    });
+    const parcelas = (): OfertaPlano => {
       const parcela = Math.ceil(p / 3 / 100) * 100;
       return {
-        ...base, tipo: 'parcelamento' as const,
-        titulo: `${s.name} em até 3x`,
+        ...base(s), tipo: 'parcelamento',
+        titulo: `${s.name} em até 3x de ${brl(parcela)}`,
         detalhe: `${brl(p)} ou 3x de ${brl(parcela)} no cartão`,
         preco_oferta_cents: null,
         justificativa: `Em serviço de ticket alto, mostrar a parcela no anúncio derruba a objeção de preço. ${mercado}`,
       };
+    };
+    // Ticket alto: avaliação e parcela primeiro (o desconto pesa mais). Ticket baixo: preço primeiro.
+    const ordemTipos: CondicaoOferta[] = caro
+      ? ['avaliacao_gratis', 'parcelamento', 'desconto_primeira', 'brinde']
+      : ['desconto_primeira', 'brinde', 'avaliacao_gratis'];
+    for (const tipo of ordemTipos) {
+      if (!ok(tipo)) continue;
+      if (tipo === 'desconto_primeira') lista.push(desconto());
+      if (tipo === 'brinde' && mimo.trim()) lista.push(comBrinde());
+      if (tipo === 'avaliacao_gratis') lista.push(avaliacao());
+      if (tipo === 'parcelamento' && caro) lista.push(parcelas());
     }
-    if (aceita('desconto_primeira')) {
-      const preco = Math.floor((p * (1 - DESCONTO_PRIMEIRA)) / 100) * 100;
-      return {
-        ...base, tipo: 'desconto_primeira' as const,
-        titulo: `${s.name} com 10% na primeira visita`,
-        detalhe: `De ${brl(p)} por ${brl(preco)} na primeira visita`,
-        preco_oferta_cents: preco,
-        justificativa: `Desconto só na primeira visita traz cliente nova sem baixar o preço de quem já é sua cliente. ${mercado}`,
-      };
-    }
-    return {
-      ...base, tipo: 'preco_atual' as const,
+    lista.push({
+      ...base(s), tipo: 'preco_atual',
       titulo: `${s.name} por ${brl(p)}`,
       detalhe: 'Sem desconto: o anúncio destaca o resultado e o que já está incluso',
       preco_oferta_cents: null,
-      justificativa: `Você não marcou nenhuma condição especial. Se aceitar um combo ou brinde, a oferta fica mais forte. ${mercado}`,
-    };
-  });
+      justificativa: `Você não marcou uma condição que sirva para este serviço. Se aceitar desconto na primeira visita ou um brinde, a oferta fica mais forte. ${mercado}`,
+    });
+    return lista;
+  }
 }
 
 /** Serviço com o texto de preço que vai no criativo. */

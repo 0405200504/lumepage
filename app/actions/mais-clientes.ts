@@ -299,7 +299,7 @@ export async function gerarOfertasAction(professionalId: string): Promise<R<{ pl
     const servicos = (await dbService.getServicesByProfessional(professionalId)).filter(s => s.is_active);
     const foco = (a.p.intake.servicos_foco ?? []).map(id => servicos.find(s => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s);
     if (!foco.length) return { success: false, error: 'Escolha os serviços em "Seu negócio" primeiro.' };
-    const ofertas = sugerirOfertas(foco, servicos, a.p.intake.condicoes ?? [], a.p.intake.brinde ?? '');
+    const ofertas = sugerirOfertas(foco, servicos, a.p.intake.condicoes ?? [], a.p.intake.brinde ?? '', a.p.intake.servico_prioritario ?? null);
     const plan: GrowthPlan = { ...plano(a.p), ofertas, x1_aplicado_em: null, enviado_em: null };
     await gravarPrograma(professionalId, { plan });
     revalidatePath(ROTA);
