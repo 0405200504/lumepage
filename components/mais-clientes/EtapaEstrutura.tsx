@@ -251,7 +251,7 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
         </div>
       </section>
 
-      <section className="surface-wine rounded-hero text-white p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+      <section className="surface-wine surface-satin rounded-hero text-white shadow-[var(--shadow-md)] relative overflow-hidden p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
         {plano?.enviado_em ? (
           <p className="text-body font-semibold flex items-center gap-2"><CheckCircle2 className="h-5 w-5 shrink-0" /> {situacaoDoCanal(programa, plano.enviado_em)}</p>
         ) : (

@@ -50,7 +50,7 @@ export function Vitrine({ linkCall, agendaCall = '' }: { linkCall: string; agend
   const destino = interno ? '#agendar-call' : linkCall;
   return (
     <div className="space-y-6 lg:space-y-8 pb-16">
-      <section className="surface-wine rounded-hero text-white px-6 py-10 sm:px-10 sm:py-14 relative overflow-hidden">
+      <section className="surface-wine surface-satin rounded-hero text-white shadow-[var(--shadow-md)] px-6 py-10 sm:px-10 sm:py-14 relative overflow-hidden">
         <div className="max-w-2xl relative">
           <p className="inline-flex items-center gap-2 text-caption font-semibold uppercase tracking-wider text-white/70">
             <Lock className="h-3.5 w-3.5" /> Assessoria Lume
@@ -114,7 +114,7 @@ export function Vitrine({ linkCall, agendaCall = '' }: { linkCall: string; agend
         </div>
       </section>
 
-      <section className="surface-wine rounded-hero text-white px-6 py-8 sm:px-10 flex flex-wrap items-center justify-between gap-4">
+      <section className="surface-wine surface-satin rounded-hero text-white shadow-[var(--shadow-md)] relative overflow-hidden px-6 py-8 sm:px-10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <CalendarCheck className="h-6 w-6 text-white/80" />
           <p className="text-body font-semibold">Bora encher sua agenda? A conversa é rápida e sem compromisso.</p>
