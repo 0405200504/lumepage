@@ -142,12 +142,11 @@ export default function PrivacidadePage() {
           <div>
             <h2>9. Contato e Encarregado (DPO)</h2>
             <p>
-              Para dúvidas ou solicitações sobre privacidade, escreva para <strong>contato@lumepremium.com</strong>.
+              Para dúvidas ou solicitações sobre privacidade, escreva para <strong>contato@lumepage.com.br</strong>.
             </p>
             <p className="mt-2 text-xs text-n-400">
-              Operado por [RAZÃO SOCIAL / NOME], CNPJ/CPF [CNPJ ou CPF], [CIDADE/UF].
-              {' '}Encarregado pelo tratamento de dados (DPO): [NOME / E-MAIL].
-              {' '}(Preencha com os dados reais antes de cobrar de clientes.)
+              Lume é operada por 53.934.429 LUIS EDUARDO FARIA FILHO, CNPJ 53.934.429/0001-12, Cerquilho/SP.
+              {' '}Encarregado pelo tratamento de dados (DPO): Luis Eduardo Faria Filho, contato@lumepage.com.br.
             </p>
           </div>
         </div>

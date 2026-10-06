@@ -104,11 +104,10 @@ export default function TermosPage() {
           <div>
             <h2>9. Contato</h2>
             <p>
-              Dúvidas sobre estes Termos podem ser enviadas para <strong>contato@lumepremium.com</strong>.
+              Dúvidas sobre estes Termos podem ser enviadas para <strong>contato@lumepage.com.br</strong>.
             </p>
             <p className="mt-2 text-xs text-n-400">
-              Operado por [RAZÃO SOCIAL / NOME], inscrito no CNPJ/CPF [CNPJ ou CPF], [CIDADE/UF].
-              {' '}(Preencha estes dados com as informações reais da empresa antes de cobrar de clientes.)
+              Lume é operada por 53.934.429 LUIS EDUARDO FARIA FILHO, inscrito no CNPJ 53.934.429/0001-12, Cerquilho/SP.
             </p>
           </div>
         </div>
