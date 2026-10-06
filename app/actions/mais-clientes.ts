@@ -13,6 +13,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { randomBytes } from 'crypto';
 import { authorizeProfessional } from '@/lib/auth/authorize-professional';
@@ -35,6 +36,7 @@ import type {
   AssetSlot, CondicaoOferta, CriativoSalvo, GrowthAsset, GrowthDiagnosis, GrowthIntake, GrowthPlan, GrowthMeta, GrowthProgram, GrowthStatus, OfertaPlano, TipoConexao,
 } from '@/types/mais-clientes';
 import { criarCampanhas, ativarCampanhas, pausarCampanhas, apagarCampanhas } from '@/lib/meta/campanha';
+import { passoDoRobo, contextoDe } from '@/lib/meta/robo';
 import { listarAtivos, atribuirAoRobo } from '@/lib/meta/ativos';
 import { MetaErro, MetaNaoConfigurada } from '@/lib/meta/graph';
 
@@ -279,6 +281,7 @@ export async function marcarConexaoAction(professionalId: string, tipo: TipoCone
     const d = diag(a.p);
     const diagnosis: GrowthDiagnosis = { ...d, conexoes: { ...d.conexoes, [tipo]: !!feito } };
     await gravarPrograma(professionalId, { diagnosis });
+    if (feito && a.p.plan?.enviado_em) after(() => passoDoRobo(professionalId).catch(e => console.error('[robo-meta] after conexão', e)));
     revalidatePath(ROTA);
     return { success: true, diagnosis };
   } catch (e) {
@@ -443,6 +446,8 @@ export async function enviarParaEquipeAction(professionalId: string): Promise<R<
     if (!a.p.plan?.verba_semanal) return { success: false, error: 'Escolha a verba semanal.' };
     const plan: GrowthPlan = { ...atual, enviado_em: new Date().toISOString() };
     await gravarPrograma(professionalId, { plan });
+    // O robô começa já: vincula, monta e ativa sozinho (e tenta de novo no cron).
+    after(() => passoDoRobo(professionalId).catch(e => console.error('[robo-meta] after enviar', e)));
     revalidatePath(ROTA);
     revalidatePath(`/admin/professionals/${professionalId}`);
     revalidatePath('/admin/mais-clientes');
@@ -496,7 +501,8 @@ export async function vincularMetaAction(professionalId: string, adAccountId: st
       ig_id: pagina.instagram?.id ?? null, ig_username: pagina.instagram?.username ?? null,
       vinculado_em: new Date().toISOString(), vinculado_por: admin.email,
     };
-    await gravarPrograma(professionalId, { meta });
+    await gravarPrograma(professionalId, { meta, robo: antes.robo ? { ...antes.robo, pausado: false } : null });
+    after(() => passoDoRobo(professionalId).catch(e => console.error('[robo-meta] after vincular', e)));
     await logAdminAction({
       action: 'mais_clientes.meta_vincular', entityType: 'professional', entityId: professionalId,
       before: { meta: antes.meta }, after: { meta },
@@ -515,7 +521,8 @@ export async function desvincularMetaAction(professionalId: string): Promise<{ s
   try {
     await assertAdmin();
     const { programa: antes } = await lerPrograma(professionalId, false);
-    await gravarPrograma(professionalId, { meta: null });
+    const robo = { ...(antes.robo ?? { etapa: 'aguardando_acesso' as const, mensagem: '' }), pausado: true, mensagem: 'Desvinculada pelo admin: o robô espera você vincular de novo.', atualizado_em: new Date().toISOString() };
+    await gravarPrograma(professionalId, { meta: null, robo });
     await logAdminAction({
       action: 'mais_clientes.meta_desvincular', entityType: 'professional', entityId: professionalId,
       before: { meta: antes.meta }, after: { meta: null },
@@ -542,15 +549,7 @@ export async function campanhaMetaAction(professionalId: string, operacao: Opera
 
     let meta: GrowthMeta;
     if (operacao === 'montar') {
-      const pro = await dbService.getProfessionalById(professionalId);
-      const base = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
-      meta = await criarCampanhas(programa, {
-        nome: pro?.brand_name || pro?.name || 'Profissional',
-        endereco: pro?.address || '',
-        cidade: programa.intake.cidade || pro?.city || '',
-        uf: programa.intake.uf || pro?.state || '',
-        linkAgendamento: pro?.slug && base ? `${base}/${pro.slug}` : '',
-      }, admin.email);
+      meta = await criarCampanhas(programa, await contextoDe(professionalId, programa), admin.email);
     } else if (operacao === 'ativar') {
       meta = await ativarCampanhas(programa.meta);
     } else if (operacao === 'pausar') {
@@ -558,7 +557,14 @@ export async function campanhaMetaAction(professionalId: string, operacao: Opera
     } else {
       meta = await apagarCampanhas(programa.meta);
     }
-    await gravarPrograma(professionalId, { meta });
+    // Pausar ou apagar à mão: o robô não reativa nem remonta sozinho. Ativar devolve o controle a ele.
+    const agora = new Date().toISOString();
+    const robo = operacao === 'pausar' || operacao === 'apagar'
+      ? { ...(programa.robo ?? { etapa: 'aguardando_acesso' as const, mensagem: '' }), pausado: true, mensagem: operacao === 'pausar' ? 'Pausada pelo admin.' : 'Campanha apagada pelo admin.', atualizado_em: agora }
+      : operacao === 'ativar'
+        ? { ...(programa.robo ?? {}), etapa: 'no_ar' as const, mensagem: 'Ativada pelo admin.', pausado: false, atualizado_em: agora }
+        : programa.robo;
+    await gravarPrograma(professionalId, { meta, robo });
     await logAdminAction({
       action: `mais_clientes.campanha_${operacao}`, entityType: 'professional', entityId: professionalId,
       before: { campanhas: programa.meta.campanhas ?? [] }, after: { campanhas: meta.campanhas ?? [] },
@@ -570,6 +576,22 @@ export async function campanhaMetaAction(professionalId: string, operacao: Opera
     if (e instanceof MetaNaoConfigurada) return { success: false, error: e.message };
     if (e instanceof MetaErro) return { success: false, error: `A Meta recusou: ${e.paraUsuario || e.message}` };
     return adminActionError(e, 'Não foi possível mexer na campanha.');
+  }
+}
+
+/** Devolve a conta ao robô depois de uma pausa do admin; ele segue de onde parou. */
+export async function retomarRoboAction(professionalId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await assertAdmin();
+    const { programa } = await lerPrograma(professionalId, false);
+    const robo = { ...(programa.robo ?? { etapa: 'aguardando_acesso' as const, mensagem: '' }), pausado: false, mensagem: 'Retomado pelo admin.', atualizado_em: new Date().toISOString() };
+    await gravarPrograma(professionalId, { robo });
+    after(() => passoDoRobo(professionalId).catch(e => console.error('[robo-meta] after retomar', e)));
+    await logAdminAction({ action: 'mais_clientes.robo_retomar', entityType: 'professional', entityId: professionalId, before: { pausado: true }, after: { pausado: false } });
+    revalidatePath('/admin/mais-clientes');
+    return { success: true };
+  } catch (e) {
+    return adminActionError(e, 'Não foi possível retomar o robô.');
   }
 }
 

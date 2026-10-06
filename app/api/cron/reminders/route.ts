@@ -6,6 +6,7 @@ import { runWhatsAppHealthCheck } from '@/lib/whatsapp/health';
 import { resolveAppointmentServices, formatServiceNames, sumPriceCents } from '@/lib/appointments/services';
 import { sendRevenueDigests } from '@/lib/push/digest';
 import { safeEqual } from '@/lib/auth/safe-equal';
+import { rodarRobo } from '@/lib/meta/robo';
 
 export const maxDuration = 60;
 
@@ -274,5 +275,12 @@ export async function GET(req: NextRequest) {
   }
 
   console.log(`[cron/reminders] enviados: ${sent}, erros: ${errors}`);
-  return NextResponse.json({ ok: true, sent, errors, digests: digests.sent, health });
+  // Robô de anúncios: avança quem já enviou a estruturação (acesso pode ter
+  // chegado agora). Falha aqui nunca derruba os lembretes.
+  const robo = await rodarRobo(20_000).catch((e) => {
+    console.error('[cron/reminders] robô da Meta falhou:', e);
+    return { vistas: 0, no_ar: 0 };
+  });
+
+  return NextResponse.json({ ok: true, sent, errors, digests: digests.sent, health, robo });
 }

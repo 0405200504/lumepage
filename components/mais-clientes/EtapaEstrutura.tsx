@@ -69,6 +69,19 @@ function CartaoOferta({ oferta, onSalvar }: { oferta: OfertaPlano; onSalvar: (e:
   );
 }
 
+/** O que ela vê depois de enviar: acompanha o robô (vincula, monta, ativa). */
+function situacaoDoCanal(p: PropsEtapa['programa'], enviadoEm: string): string {
+  const robo = p.robo;
+  const campanhas = p.meta?.campanhas ?? [];
+  const semana = brl(Math.round(campanhas.reduce((s, c) => s + c.verba_diaria_cents, 0) * 7));
+  const desde = campanhas.map(c => c.ativada_em).filter((d): d is string => !!d).sort()[0];
+  if (robo?.pausado && campanhas.some(c => c.ativada_em)) return 'Seus anúncios estão pausados pela equipe Lume. A gente te avisa quando voltarem.';
+  if (campanhas.some(c => c.status === 'ativa')) return `Seus anúncios estão no ar${desde ? ` desde ${dataBR(desde)}` : ''} (${semana} por semana). As clientes chegam pelo seu WhatsApp.`;
+  if (robo?.etapa === 'aguardando_pagamento') return 'Seus anúncios estão prontos. Falta só colocar cartão ou Pix na sua conta de anúncios da Meta (Etapa 3, cartão 1) para eles entrarem no ar.';
+  if (!robo || robo.etapa === 'aguardando_acesso') return `Recebemos tudo em ${dataBR(enviadoEm)}. Assim que o acesso da sua conta de anúncios e da sua Página chegar para a Lume (Etapa 3), os anúncios entram no ar sozinhos e você recebe um aviso.`;
+  return `Recebemos tudo em ${dataBR(enviadoEm)}. A equipe Lume está finalizando os seus anúncios e você recebe um aviso quando entrarem no ar.`;
+}
+
 export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio }: PropsEtapa) {
   const { success, error } = useToast();
   // Um "carregando" por ação: só o botão clicado gira, os outros continuam normais.
@@ -240,7 +253,7 @@ export function EtapaEstrutura({ professionalId, programa, setPrograma, negocio 
 
       <section className="surface-wine rounded-hero text-white p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
         {plano?.enviado_em ? (
-          <p className="text-body font-semibold flex items-center gap-2"><CheckCircle2 className="h-5 w-5" /> Recebemos tudo em {dataBR(plano.enviado_em)}. A equipe Lume coloca no ar e te avisa por aqui.</p>
+          <p className="text-body font-semibold flex items-center gap-2"><CheckCircle2 className="h-5 w-5 shrink-0" /> {situacaoDoCanal(programa, plano.enviado_em)}</p>
         ) : (
           <>
             <div>

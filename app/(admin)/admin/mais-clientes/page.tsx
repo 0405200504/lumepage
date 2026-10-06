@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Bot, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Bot, ShieldCheck, CalendarCheck, ExternalLink } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth/session';
 import { LayoutAdmin } from '@/components/layout/LayoutAdmin';
 import { SubNav, CONTAS_NAV } from '@/components/admin/SubNav';
@@ -8,9 +8,10 @@ import { StatStrip, Panel, Notice } from '@/components/admin/primitives';
 import { Badge } from '@/components/admin/badges';
 import { MaisClientesToggle } from '@/components/admin/MaisClientesToggle';
 import { MetaVinculo, type OpcaoMeta } from '@/components/admin/MetaVinculo';
+import { ImpersonateRowButton } from '@/components/admin/ImpersonateRowButton';
 import { textLink } from '@/components/admin/ui';
 import { dbService } from '@/lib/supabase/db';
-import { listarProgramas, programaVazio, MIGRACAO } from '@/lib/mais-clientes/store';
+import { listarProgramas, programaVazio, lerConfiguracoes, MIGRACAO } from '@/lib/mais-clientes/store';
 import { ETAPAS, etapasConcluidas, brl } from '@/lib/mais-clientes/regras';
 import { metaConfigurada } from '@/lib/meta/graph';
 import { statusRobo, listarAtivos, type StatusRobo, type ContaAnuncio, type PaginaMeta } from '@/lib/meta/ativos';
@@ -19,6 +20,20 @@ type Meta =
   | { estado: 'desligada' }
   | { estado: 'erro'; mensagem: string }
   | { estado: 'ok'; status: StatusRobo; contas: ContaAnuncio[]; paginas: PaginaMeta[] };
+
+/** As próximas calls de venda: agendamentos da conta interna da Lume (Configurações → agenda das calls). */
+async function lerCalls() {
+  const { callSlug } = await lerConfiguracoes().catch(() => ({ callSlug: '' }));
+  if (!callSlug) return { slug: '', conta: null, proximas: [] };
+  const conta = await dbService.getProfessionalBySlug(callSlug).catch(() => null);
+  if (!conta) return { slug: callSlug, conta: null, proximas: [] };
+  const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const ate = new Date(Date.now() + 30 * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const ags = await dbService.getAppointmentsByProfessionalInRange(conta.id, hoje, ate).catch(() => []);
+  const proximas = ags.filter(a => a.status !== 'cancelled' && !a.deleted_at)
+    .sort((a, b) => `${a.date}${a.start_time}`.localeCompare(`${b.date}${b.start_time}`)).slice(0, 8);
+  return { slug: callSlug, conta, proximas };
+}
 
 /** O robô e o que as profissionais já compartilharam com o Gerenciador da Lume. */
 async function lerMeta(): Promise<Meta> {
@@ -39,10 +54,11 @@ export const metadata = { title: 'Assessoria | Lume Admin' };
  */
 export default async function AdminMaisClientesPage() {
   const session = await requireAdmin();
-  const [contas, { programas, disponivel }, meta] = await Promise.all([
+  const [contas, { programas, disponivel }, meta, calls] = await Promise.all([
     dbService.getProfessionals().catch(() => []),
     listarProgramas(),
     lerMeta(),
+    lerCalls(),
   ]);
   // Ativos já ligados a alguém vão para o fim da lista; os de profissionais, antes dos da Lume.
   const ligados = new Set(programas.flatMap(p => p.meta ? [p.meta.ad_account_id, p.meta.page_id] : []));
@@ -90,6 +106,36 @@ export default async function AdminMaisClientesPage() {
           { label: 'Contas ativas', value: String(contas.length) },
         ]} />
 
+        <Panel
+          title={<span className="flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-wine-700" /> Calls de venda</span>}
+          note={calls.conta ? `Agenda da conta ${calls.conta.brand_name || calls.conta.name} · próximos 30 dias` : 'A profissional agenda pela vitrine do "Quero mais clientes", igual a uma cliente.'}
+          action={calls.conta ? (
+            <>
+              <a href={`/agendar/${calls.slug}`} target="_blank" rel="noopener noreferrer" className={`${textLink} inline-flex items-center gap-1`}>Página de agendamento <ExternalLink className="h-3 w-3" /></a>
+              <ImpersonateRowButton id={calls.conta.id} brandName={calls.conta.brand_name || calls.conta.name} />
+            </>
+          ) : undefined}
+        >
+          {!calls.slug ? (
+            <p className="text-body-sm text-n-600">Falta configurar: crie a conta da Lume que recebe as calls (com o serviço &quot;Call Quero mais clientes&quot; e os seus horários) e coloque o endereço dela em <Link href="/admin/settings" className={textLink}>Configurações → Agenda das calls de venda</Link>.</p>
+          ) : !calls.conta ? (
+            <Notice tone="warn" icon={<AlertTriangle />}>Não achei a conta &quot;{calls.slug}&quot;. Confira o endereço em Configurações.</Notice>
+          ) : !calls.proximas.length ? (
+            <p className="text-body-sm text-n-500">Nenhuma call marcada nos próximos 30 dias.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {calls.proximas.map(a => (
+                <li key={a.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-body-sm">
+                  <span className="font-semibold text-heading">{new Date(`${a.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} · {a.start_time.slice(0, 5)}</span>
+                  <span className="text-n-700">{a.client_name}</span>
+                  <a href={`https://wa.me/${a.client_whatsapp.replace(/\D/g, '').replace(/^(?!55)/, '55')}`} target="_blank" rel="noopener noreferrer" className={textLink}>{a.client_whatsapp}</a>
+                  <Badge tone={a.status === 'confirmed' ? 'ok' : 'neutral'}>{a.status === 'confirmed' ? 'confirmada' : a.status === 'completed' ? 'feita' : 'marcada'}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
         <Panel flush title="Contas" note="Prontas para ir ao ar primeiro, depois as liberadas">
           <div className="border-t border-line overflow-x-auto">
             <table className="w-full text-body-sm">
@@ -121,7 +167,7 @@ export default async function AdminMaisClientesPage() {
                       <td className="px-3 py-3">
                         {liberada && meta.estado === 'ok'
                           ? <MetaVinculo id={conta.id} meta={programa.meta} contas={opcoesConta} paginas={opcoesPagina}
-                              criativos={programa.plan?.criativos?.length ?? 0} enviado={!!programa.plan?.enviado_em} />
+                              criativos={programa.plan?.criativos?.length ?? 0} enviado={!!programa.plan?.enviado_em} robo={programa.robo} />
                           : <span className="text-n-500">{programa.meta ? programa.meta.ad_account_nome : '—'}</span>}
                       </td>
                       <td className="px-5 py-3 text-right"><MaisClientesToggle id={conta.id} liberado={liberada} /></td>

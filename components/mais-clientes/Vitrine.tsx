@@ -31,13 +31,13 @@ const PERGUNTAS = [
   { p: 'Como vou saber se está dando certo?', r: 'Pela sua agenda: o Lume mostra quantos agendamentos vieram dos anúncios e quanto você faturou com eles.' },
 ];
 
-function Cta({ linkCall, grande = false }: { linkCall: string; grande?: boolean }) {
+/** Com a agenda da Lume, o botão desce até o agendamento na própria tela; sem ela, abre o link externo. */
+function Cta({ linkCall, interno = false, grande = false }: { linkCall: string; interno?: boolean; grande?: boolean }) {
   if (!linkCall) return <p className="text-body-sm text-white/80">Fale com o suporte do Lume para agendar a sua call.</p>;
   return (
     <a
       href={linkCall}
-      target="_blank"
-      rel="noopener noreferrer"
+      {...(interno ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
       className={`inline-flex items-center justify-center gap-2 rounded-pill bg-white text-wine-800 font-semibold shadow-[var(--shadow-sm)] hover:bg-wine-50 transition-ui ${grande ? 'px-7 py-3.5 text-body' : 'px-5 py-3 text-body-sm'}`}
     >
       <Phone className="h-4 w-4" /> Agendar call com a equipe
@@ -45,7 +45,9 @@ function Cta({ linkCall, grande = false }: { linkCall: string; grande?: boolean 
   );
 }
 
-export function Vitrine({ linkCall }: { linkCall: string }) {
+export function Vitrine({ linkCall, agendaCall = '' }: { linkCall: string; agendaCall?: string }) {
+  const interno = !!agendaCall;
+  const destino = interno ? '#agendar-call' : linkCall;
   return (
     <div className="space-y-6 lg:space-y-8 pb-16">
       <section className="surface-wine rounded-hero text-white px-6 py-10 sm:px-10 sm:py-14 relative overflow-hidden">
@@ -58,7 +60,7 @@ export function Vitrine({ linkCall }: { linkCall: string }) {
             A equipe Lume estrutura seu Instagram, seu Google, seus anúncios e seu WhatsApp para transformar visita em horário marcado.
             Você aprova as ofertas e acompanha tudo pela sua agenda.
           </p>
-          <div className="mt-7"><Cta linkCall={linkCall} grande /></div>
+          <div className="mt-7"><Cta linkCall={destino} interno={interno} grande /></div>
         </div>
       </section>
 
@@ -117,8 +119,18 @@ export function Vitrine({ linkCall }: { linkCall: string }) {
           <CalendarCheck className="h-6 w-6 text-white/80" />
           <p className="text-body font-semibold">Bora encher sua agenda? A conversa é rápida e sem compromisso.</p>
         </div>
-        <Cta linkCall={linkCall} />
+        <Cta linkCall={destino} interno={interno} />
       </section>
+
+      {interno && (
+        <section id="agendar-call" className="card overflow-hidden scroll-mt-24">
+          <div className="px-6 pt-6 sm:px-8 sm:pt-8">
+            <h2 className="text-h2 text-heading">Escolha o melhor horário para a sua call</h2>
+            <p className="mt-1 text-body-sm text-n-600">É uma conversa rápida com a equipe Lume, por vídeo ou WhatsApp. Você recebe a confirmação e o lembrete no seu WhatsApp.</p>
+          </div>
+          <iframe src={`${agendaCall}?embed=true`} title="Agendar call com a equipe Lume" className="mt-4 w-full border-0 h-[860px]" loading="lazy" />
+        </section>
+      )}
     </div>
   );
 }

@@ -168,6 +168,26 @@ export interface GrowthMeta {
   campanhas?: CampanhaMeta[];
 }
 
+/** Onde o robô está com essa conta (mostrado no admin e, traduzido, para ela). */
+export type EtapaRobo =
+  | 'aguardando_envio'      // ela ainda não enviou a estruturação
+  | 'aguardando_acesso'     // a conta/Página dela ainda não apareceu para a Lume
+  | 'vinculo_manual'        // apareceu mais de uma opção: o admin escolhe
+  | 'aguardando_pagamento'  // campanha montada; falta cartão ou Pix na conta dela
+  | 'no_ar'
+  | 'erro';
+
+export interface EstadoRobo {
+  etapa: EtapaRobo;
+  /** Para o admin: o que aconteceu, em uma frase. */
+  mensagem: string;
+  atualizado_em: string;
+  /** O admin pausou, trocou ou desvinculou: o robô não mexe mais sozinho. */
+  pausado?: boolean;
+  /** Avisos já mandados para ela (não repetir). */
+  avisos?: string[];
+}
+
 export interface GrowthProgram {
   professional_id: string;
   status: GrowthStatus;
@@ -178,6 +198,7 @@ export interface GrowthProgram {
   diagnosis: GrowthDiagnosis | null;
   plan: GrowthPlan | null;
   meta: GrowthMeta | null;
+  robo: EstadoRobo | null;
   created_at: string;
   updated_at: string;
 }

@@ -33,6 +33,7 @@ export const programaVazio = (professionalId: string): GrowthProgram => ({
   diagnosis: null,
   plan: null,
   meta: null,
+  robo: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 });
@@ -57,11 +58,12 @@ export async function lerPrograma(professionalId: string, comUrls = true): Promi
   programa.assets = Array.isArray(programa.assets) ? programa.assets : [];
   programa.intake = programa.intake ?? {};
   programa.meta = programa.meta ?? null;
+  programa.robo = programa.robo ?? null;
   if (comUrls) programa.assets = await assinar(programa.assets);
   return { programa, disponivel: true };
 }
 
-type Patch = Partial<Pick<GrowthProgram, 'status' | 'unlocked_at' | 'unlocked_by' | 'intake' | 'assets' | 'diagnosis' | 'plan' | 'meta'>>;
+type Patch = Partial<Pick<GrowthProgram, 'status' | 'unlocked_at' | 'unlocked_by' | 'intake' | 'assets' | 'diagnosis' | 'plan' | 'meta' | 'robo'>>;
 
 /** Grava só as colunas do patch. As URLs assinadas nunca vão para o banco. */
 export async function gravarPrograma(professionalId: string, patch: Patch): Promise<GrowthProgram> {
@@ -158,14 +160,23 @@ export async function baixarArquivo(caminho: string): Promise<{ bytes: Uint8Arra
 }
 
 /** Configurações globais usadas pela aba (admin → Configurações). Env cobre o que não foi salvo. */
-export interface ConfigMaisClientes { linkCall: string; whatsappSuporte: string; metaBusinessId: string; googleEmail: string }
+export interface ConfigMaisClientes {
+  /** Endereço (slug) da conta interna da Lume que recebe as calls de venda. */
+  callSlug: string;
+  linkCall: string;
+  whatsappSuporte: string;
+  metaBusinessId: string;
+  googleEmail: string;
+}
 export async function lerConfiguracoes(): Promise<ConfigMaisClientes> {
   const env = { metaBusinessId: process.env.LUME_META_BUSINESS_ID || '', googleEmail: process.env.LUME_GOOGLE_EMAIL || '' };
-  if (modoLocal()) return { linkCall: '', whatsappSuporte: '', ...env };
+  const slugEnv = (process.env.LUME_CALL_SLUG || '').trim();
+  if (modoLocal()) return { callSlug: slugEnv, linkCall: '', whatsappSuporte: '', ...env };
   const { data } = await getSupabaseAdmin()!.from('app_settings').select('key, value')
-    .in('key', ['growth_call_url', 'support_whatsapp', 'lume_meta_business_id', 'lume_google_email']);
+    .in('key', ['growth_call_slug', 'growth_call_url', 'support_whatsapp', 'lume_meta_business_id', 'lume_google_email']);
   const v = (k: string) => String((data || []).find((r: { key: string }) => r.key === k)?.value ?? '').trim();
   return {
+    callSlug: v('growth_call_slug').replace(/^.*\//, '') || slugEnv,
     linkCall: v('growth_call_url'),
     whatsappSuporte: v('support_whatsapp'),
     metaBusinessId: v('lume_meta_business_id') || env.metaBusinessId,

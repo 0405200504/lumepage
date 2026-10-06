@@ -31,6 +31,7 @@ export interface ContaAnuncio {
   /** De quem é: da Lume (owned) ou de uma profissional que compartilhou (client). */
   dono: 'lume' | 'profissional';
   empresa: string | null;
+  empresa_id: string | null;
 }
 
 export interface PaginaMeta {
@@ -38,6 +39,8 @@ export interface PaginaMeta {
   nome: string;
   instagram: { id: string; username: string } | null;
   dono: 'lume' | 'profissional';
+  /** Empresa (portfólio) dona da Página: casa com a conta de anúncios da mesma dona. */
+  empresa_id: string | null;
 }
 
 export interface StatusRobo {
@@ -48,11 +51,11 @@ export interface StatusRobo {
 
 type ContaApi = {
   id: string; name: string; account_status: number; currency: string; amount_spent?: string;
-  funding_source?: string; funding_source_details?: { display_string?: string }; business?: { name?: string };
+  funding_source?: string; funding_source_details?: { display_string?: string }; business?: { id?: string; name?: string };
 };
-type PaginaApi = { id: string; name: string; instagram_business_account?: { id: string; username?: string } };
+type PaginaApi = { id: string; name: string; instagram_business_account?: { id: string; username?: string }; business?: { id?: string } };
 
-const CAMPOS_CONTA = 'name,account_status,currency,amount_spent,funding_source,funding_source_details,business{name}';
+const CAMPOS_CONTA = 'name,account_status,currency,amount_spent,funding_source,funding_source_details,business{id,name}';
 
 function conta(c: ContaApi, dono: ContaAnuncio['dono']): ContaAnuncio {
   return {
@@ -65,6 +68,7 @@ function conta(c: ContaApi, dono: ContaAnuncio['dono']): ContaAnuncio {
     pagamento: c.funding_source ? (c.funding_source_details?.display_string || 'cadastrada') : null,
     dono,
     empresa: c.business?.name ?? null,
+    empresa_id: c.business?.id ?? null,
   };
 }
 
@@ -73,6 +77,7 @@ const pagina = (p: PaginaApi, dono: PaginaMeta['dono']): PaginaMeta => ({
   nome: p.name,
   instagram: p.instagram_business_account ? { id: p.instagram_business_account.id, username: p.instagram_business_account.username || '' } : null,
   dono,
+  empresa_id: p.business?.id ?? null,
 });
 
 export async function statusRobo(): Promise<StatusRobo> {
@@ -92,7 +97,7 @@ export async function statusRobo(): Promise<StatusRobo> {
 /** Contas de anúncios e Páginas que o Gerenciador da Lume acessa (dela e das profissionais). */
 export async function listarAtivos(): Promise<{ contas: ContaAnuncio[]; paginas: PaginaMeta[] }> {
   const id = BUSINESS_ID();
-  const camposPagina = 'name,instagram_business_account{id,username}';
+  const camposPagina = 'name,instagram_business_account{id,username},business{id}';
   const [proprias, clientes, paginasProprias, paginasClientes] = await Promise.all([
     todas<ContaApi>(`${id}/owned_ad_accounts`, { fields: CAMPOS_CONTA }),
     todas<ContaApi>(`${id}/client_ad_accounts`, { fields: CAMPOS_CONTA }),

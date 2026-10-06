@@ -36,7 +36,7 @@ export default async function QueroMaisClientesPage() {
   const professionalId = session.professional_id!;
   const [{ programa }, config, base] = await Promise.all([
     lerPrograma(professionalId),
-    lerConfiguracoes().catch(() => ({ linkCall: '', whatsappSuporte: '', metaBusinessId: '', googleEmail: '' })),
+    lerConfiguracoes().catch(() => ({ callSlug: '', linkCall: '', whatsappSuporte: '', metaBusinessId: '', googleEmail: '' })),
     appUrl(),
   ]);
 
@@ -45,7 +45,8 @@ export default async function QueroMaisClientesPage() {
   if (programa.status !== 'liberado') {
     const linkCall = config.linkCall
       || (zapSuporte ? `${zapSuporte}?text=${encodeURIComponent('Oi! Quero agendar a call do "Quero mais clientes".')}` : '');
-    return <Vitrine linkCall={linkCall} />;
+    // Com a agenda da Lume configurada, ela marca a call ali mesmo, igual a uma cliente.
+    return <Vitrine linkCall={linkCall} agendaCall={config.callSlug ? `/agendar/${encodeURIComponent(config.callSlug)}` : ''} />;
   }
 
   const negocio = await resumoNegocio(professionalId, base);

@@ -10,6 +10,7 @@ const ROOT = process.cwd();
 const jiti = createJiti(ROOT + '/', { alias: { '@': ROOT } });
 const R = await jiti.import<typeof import('../lib/mais-clientes/regras')>('./lib/mais-clientes/regras.ts');
 const C = await jiti.import<typeof import('../lib/meta/specs')>('./lib/meta/specs.ts');
+const K = await jiti.import<typeof import('../lib/meta/casar')>('./lib/meta/casar.ts');
 
 let ok = 0, falhas = 0;
 function t(nome: string, cond: unknown, detalhe?: unknown) {
@@ -51,6 +52,26 @@ t('criativo leva o Instagram dela quando existe', cri.object_story_spec.instagra
 const criP = C.specCriativo('x', 'pagina', { pageId: 'p', igId: null, imageHash: 'h', mensagem: 'm', titulo: 'T', link: 'https://a.b/c' });
 t('criativo da página usa "Reservar" com o link dela', criP.object_story_spec.link_data.call_to_action.type === 'BOOK_NOW' && criP.object_story_spec.link_data.link === 'https://a.b/c');
 t('sem Instagram, não manda instagram_user_id', !('instagram_user_id' in criP.object_story_spec));
+
+console.log('\nRobô acha a conta e a Página dela');
+const conta = (id: string, nome: string, empresa_id: string | null, dono: 'lume' | 'profissional' = 'profissional') =>
+  ({ id, nome, ativa: true, status: 'ativa', moeda: 'BRL', gasto_cents: 0, pagamento: 'cartão', dono, empresa: nome, empresa_id });
+const pag = (id: string, nome: string, ig: string | null, empresa_id: string | null) =>
+  ({ id, nome, instagram: ig ? { id: 'ig' + id, username: ig } : null, dono: 'profissional' as const, empresa_id });
+const contas = [conta('act_1', 'Julia Roberta Beauty', 'b1'), conta('act_2', 'Studio Ana', 'b2'), conta('act_9', 'Lume', 'lume', 'lume')];
+const paginas = [pag('p1', 'Julia Roberta', 'juliarobertabeauty', 'b1'), pag('p2', 'Studio Ana Cílios', 'studioana', 'b2')];
+const j = K.casarAtivos({ instagram: '@JuliaRobertaBeauty', nomes: ['Júlia Roberta'] }, contas, paginas, new Set());
+t('pelo @ do Instagram (sem diferença de maiúscula/@)', j.pagina?.id === 'p1' && j.conta?.id === 'act_1' && !j.ambiguo, j);
+const semIg = K.casarAtivos({ instagram: '', nomes: ['Studio Ana'] }, contas, paginas, new Set());
+t('sem @, pelo nome — e a conta da mesma empresa dona da Página', semIg.pagina?.id === 'p2' && semIg.conta?.id === 'act_2', semIg);
+const ocup = K.casarAtivos({ instagram: '@juliarobertabeauty', nomes: [] }, contas, paginas, new Set(['p1']));
+t('não pega Página que já é de outra conta', !ocup.pagina, ocup);
+const nada = K.casarAtivos({ instagram: '@outra', nomes: ['Fulana'] }, contas, paginas, new Set());
+t('não chuta quando nada bate', !nada.pagina && !nada.conta && !nada.ambiguo, nada);
+const duas = K.casarAtivos({ instagram: '', nomes: ['Studio'] }, contas, [...paginas, pag('p3', 'Studio Bia', null, 'b3')], new Set());
+t('nome que bate em duas Páginas vira escolha manual', !duas.pagina && duas.ambiguo, duas);
+const contaLume = K.casarAtivos({ instagram: '@juliarobertabeauty', nomes: [] }, [conta('act_9', 'Julia', 'b1', 'lume')], paginas, new Set());
+t('nunca usa a conta da própria Lume como se fosse dela', !contaLume.conta, contaLume);
 
 console.log(`\n${ok} ok, ${falhas} falha(s)\n`);
 process.exit(falhas ? 1 : 0);

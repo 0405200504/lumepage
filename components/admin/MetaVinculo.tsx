@@ -2,11 +2,11 @@
 
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Link2, Unlink, Rocket, Play, Pause, Trash2, ExternalLink } from 'lucide-react';
+import { Link2, Unlink, Rocket, Play, Pause, Trash2, ExternalLink, Bot } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { vincularMetaAction, desvincularMetaAction, campanhaMetaAction } from '@/app/actions/mais-clientes';
+import { vincularMetaAction, desvincularMetaAction, campanhaMetaAction, retomarRoboAction } from '@/app/actions/mais-clientes';
 import { button, fieldSm } from './ui';
-import type { GrowthMeta } from '@/types/mais-clientes';
+import type { EstadoRobo, GrowthMeta } from '@/types/mais-clientes';
 
 export type OpcaoMeta = { id: string; nome: string; detalhe?: string };
 
@@ -14,9 +14,44 @@ export type OpcaoMeta = { id: string; nome: string; detalhe?: string };
  * Liga a conta à conta de anúncios e à Página que ela compartilhou com a Lume.
  * Mostra primeiro os ativos de profissionais ainda sem dona no Lume.
  */
-export function MetaVinculo({ id, meta, contas, paginas, criativos = 0, enviado = false }: {
+const ETAPA: Record<EstadoRobo['etapa'], { texto: string; cor: string }> = {
+  aguardando_envio: { texto: 'esperando ela enviar', cor: 'bg-n-300' },
+  aguardando_acesso: { texto: 'esperando o acesso dela', cor: 'bg-warning' },
+  vinculo_manual: { texto: 'escolha a conta abaixo', cor: 'bg-warning' },
+  aguardando_pagamento: { texto: 'falta cartão ou Pix', cor: 'bg-warning' },
+  no_ar: { texto: 'no ar', cor: 'bg-success' },
+  erro: { texto: 'erro', cor: 'bg-danger' },
+};
+
+/** Onde o robô está com a conta, e o botão para devolver o controle a ele. */
+function SituacaoRobo({ id, robo }: { id: string; robo: EstadoRobo | null }) {
+  const router = useRouter();
+  const { success, error } = useToast();
+  const [pendente, start] = useTransition();
+  if (!robo) return null;
+  const e = ETAPA[robo.etapa];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-caption">
+      <Bot className="h-3.5 w-3.5 text-n-500" />
+      <span className={`h-2 w-2 rounded-full ${robo.pausado ? 'bg-n-300' : e.cor}`} />
+      <span className="font-semibold text-heading" title={robo.mensagem}>Robô: {robo.pausado ? 'pausado por você' : e.texto}</span>
+      {robo.mensagem && <span className="text-n-500 basis-full">{robo.mensagem}</span>}
+      {robo.pausado && (
+        <button type="button" disabled={pendente} className={button('ghost', 'sm')} onClick={() => start(async () => {
+          const r = await retomarRoboAction(id);
+          if (!r.success) { error('Não deu', r.error ?? 'Tente de novo.'); return; }
+          success('Robô retomado', 'Ele segue de onde parou.');
+          router.refresh();
+        })}>Retomar robô</button>
+      )}
+    </div>
+  );
+}
+
+export function MetaVinculo({ id, meta, contas, paginas, criativos = 0, enviado = false, robo = null }: {
   id: string;
   meta: GrowthMeta | null;
+  robo?: EstadoRobo | null;
   contas: OpcaoMeta[];
   paginas: OpcaoMeta[];
   /** Criativos salvos no envio (o robô sobe estes). */
@@ -34,6 +69,7 @@ export function MetaVinculo({ id, meta, contas, paginas, criativos = 0, enviado 
   if (meta && !editando) {
     return (
       <div className="space-y-2 min-w-[14rem]">
+        <SituacaoRobo id={id} robo={robo} />
         <div className="flex items-start justify-between gap-2">
           <div className="text-caption leading-snug">
             <p className="font-semibold text-heading">{meta.ad_account_nome}</p>
@@ -58,30 +94,38 @@ export function MetaVinculo({ id, meta, contas, paginas, criativos = 0, enviado 
   }
 
   if (!contas.length || !paginas.length) {
-    return <p className="text-caption text-n-500 min-w-[14rem]">Nada compartilhado com a Lume ainda. Ela faz o passo &quot;Acesso da Lume&quot; da aba.</p>;
+    return (
+      <div className="space-y-1.5 min-w-[14rem]">
+        <SituacaoRobo id={id} robo={robo} />
+        <p className="text-caption text-n-500">Nada compartilhado com a Lume ainda. Ela faz o passo &quot;Acesso da Lume&quot; da aba.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 min-w-[14rem]">
-      <select aria-label="Conta de anúncios" className={`${fieldSm} max-w-[12rem]`} value={conta} onChange={e => setConta(e.target.value)}>
-        <option value="">Conta de anúncios…</option>
-        {contas.map(c => <option key={c.id} value={c.id}>{c.nome}{c.detalhe ? ` (${c.detalhe})` : ''}</option>)}
-      </select>
-      <select aria-label="Página" className={`${fieldSm} max-w-[12rem]`} value={pagina} onChange={e => setPagina(e.target.value)}>
-        <option value="">Página…</option>
-        {paginas.map(p => <option key={p.id} value={p.id}>{p.nome}{p.detalhe ? ` (${p.detalhe})` : ''}</option>)}
-      </select>
-      <button type="button" disabled={pendente || !conta || !pagina} className={button('primary', 'sm')}
-        onClick={() => start(async () => {
-          const r = await vincularMetaAction(id, conta, pagina);
-          if (!r.success) { error('Não deu', r.error ?? 'Tente de novo.'); return; }
-          success('Vinculada', 'O robô já pode anunciar com essa conta e essa Página.');
-          setEditando(false);
-          router.refresh();
-        })}>
-        <Link2 className="h-3.5 w-3.5" /> Vincular
-      </button>
-      {meta && <button type="button" className={button('ghost', 'sm')} onClick={() => setEditando(false)}>Cancelar</button>}
+    <div className="space-y-1.5 min-w-[14rem]">
+      <SituacaoRobo id={id} robo={robo} />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <select aria-label="Conta de anúncios" className={`${fieldSm} max-w-[12rem]`} value={conta} onChange={e => setConta(e.target.value)}>
+          <option value="">Conta de anúncios…</option>
+          {contas.map(c => <option key={c.id} value={c.id}>{c.nome}{c.detalhe ? ` (${c.detalhe})` : ''}</option>)}
+        </select>
+        <select aria-label="Página" className={`${fieldSm} max-w-[12rem]`} value={pagina} onChange={e => setPagina(e.target.value)}>
+          <option value="">Página…</option>
+          {paginas.map(p => <option key={p.id} value={p.id}>{p.nome}{p.detalhe ? ` (${p.detalhe})` : ''}</option>)}
+        </select>
+        <button type="button" disabled={pendente || !conta || !pagina} className={button('primary', 'sm')}
+          onClick={() => start(async () => {
+            const r = await vincularMetaAction(id, conta, pagina);
+            if (!r.success) { error('Não deu', r.error ?? 'Tente de novo.'); return; }
+            success('Vinculada', 'O robô já pode anunciar com essa conta e essa Página.');
+            setEditando(false);
+            router.refresh();
+          })}>
+          <Link2 className="h-3.5 w-3.5" /> Vincular
+        </button>
+        {meta && <button type="button" className={button('ghost', 'sm')} onClick={() => setEditando(false)}>Cancelar</button>}
+      </div>
     </div>
   );
 }
