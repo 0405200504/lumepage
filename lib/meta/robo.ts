@@ -119,7 +119,7 @@ export async function passoDoRobo(
     }
 
     // 4. No ar: avisa uma vez.
-    const semana = brl(Math.round((meta.campanhas ?? []).reduce((s, c) => s + c.verba_diaria_cents, 0) * 7));
+    const semana = brl(Math.round((programa.plan?.verba_semanal ?? 0) * 100));
     robo = estado('no_ar', `No ar: ${meta.campanhas!.length} campanha(s), ${semana}/semana.`, robo);
     robo = await avisar(professionalId, robo, 'no_ar', 'Seus anúncios estão no ar!', 'A partir de agora as clientes chegam pelo seu WhatsApp. Acompanhe na sua agenda.');
     await gravarPrograma(professionalId, { robo });

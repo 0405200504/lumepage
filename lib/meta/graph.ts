@@ -12,6 +12,7 @@
  */
 
 import { createHmac } from 'crypto';
+import { simulando, respostaSimulada } from './simulador';
 
 export const META_VERSAO = process.env.META_API_VERSION || 'v25.0';
 const BASE = `https://graph.facebook.com/${META_VERSAO}`;
@@ -39,7 +40,7 @@ export class MetaNaoConfigurada extends Error {
   }
 }
 
-export const metaConfigurada = () => !!process.env.META_SYSTEM_USER_TOKEN;
+export const metaConfigurada = () => !!process.env.META_SYSTEM_USER_TOKEN || simulando();
 
 type Valor = string | number | boolean | null | undefined | object;
 type Opcoes = { metodo?: 'GET' | 'POST' | 'DELETE'; params?: Record<string, Valor>; token?: string };
@@ -57,6 +58,8 @@ function serializar(params: Record<string, Valor>): URLSearchParams {
 const esperar = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export async function graph<T = Record<string, unknown>>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
+  // Demonstração local: responde como a Meta, sem rede (simulador.ts).
+  if (simulando()) return respostaSimulada(caminho, opcoes.metodo ?? 'GET', opcoes.params ?? {}) as T;
   const token = opcoes.token ?? process.env.META_SYSTEM_USER_TOKEN;
   if (!token) throw new MetaNaoConfigurada();
   const metodo = opcoes.metodo ?? 'GET';

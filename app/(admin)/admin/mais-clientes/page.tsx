@@ -78,7 +78,8 @@ export default async function AdminMaisClientesPage() {
       return peso(a) - peso(b) || (a.conta.brand_name || a.conta.name).localeCompare(b.conta.brand_name || b.conta.name);
     });
   const liberadas = linhas.filter(l => l.programa.status === 'liberado');
-  const prontas = liberadas.filter(l => l.programa.plan?.enviado_em);
+  const noAr = liberadas.filter(l => l.programa.robo?.etapa === 'no_ar' && !l.programa.robo.pausado);
+  const prontas = liberadas.filter(l => l.programa.plan?.enviado_em && !noAr.includes(l));
 
   return (
     <LayoutAdmin session={session} title="Assessoria" subtitle="Quem contratou o “Quero mais clientes”, em que etapa está e quem está pronta para ir ao ar.">
@@ -101,9 +102,9 @@ export default async function AdminMaisClientesPage() {
 
         <StatStrip items={[
           { label: 'Liberadas', value: String(liberadas.length) },
-          { label: 'Em andamento', value: String(liberadas.length - prontas.length), tone: liberadas.length - prontas.length ? 'accent' : 'default' },
-          { label: 'Prontas para ir ao ar', value: String(prontas.length), tone: prontas.length ? 'warn' : 'default' },
-          { label: 'Contas ativas', value: String(contas.length) },
+          { label: 'Em andamento', value: String(liberadas.length - prontas.length - noAr.length), tone: liberadas.length - prontas.length - noAr.length ? 'accent' : 'default' },
+          { label: 'Esperando ir ao ar', value: String(prontas.length), tone: prontas.length ? 'warn' : 'default' },
+          { label: 'No ar', value: String(noAr.length), tone: noAr.length ? 'accent' : 'default' },
         ]} />
 
         <Panel
@@ -160,7 +161,8 @@ export default async function AdminMaisClientesPage() {
                         <p className="text-caption text-n-500">{[conta.city, conta.state].filter(Boolean).join(' - ') || '—'}</p>
                       </td>
                       <td className="px-3 py-3">
-                        {programa.plan?.enviado_em ? <Badge tone="warn">pronta para ir ao ar</Badge> : liberada ? <Badge tone="ok">liberada</Badge> : <Badge tone="neutral" dot={false}>bloqueada</Badge>}
+                        {programa.robo?.etapa === 'no_ar' && !programa.robo.pausado ? <Badge tone="ok">no ar</Badge>
+                          : programa.plan?.enviado_em ? <Badge tone="warn">pronta para ir ao ar</Badge> : liberada ? <Badge tone="ok">liberada</Badge> : <Badge tone="neutral" dot={false}>bloqueada</Badge>}
                       </td>
                       <td className="px-3 py-3 text-n-700">{liberada ? `${n} de ${ETAPAS.length}` : '—'}</td>
                       <td className="px-3 py-3 text-n-700">{programa.plan ? `${brl(programa.plan.verba_semanal * 100)}/sem.` : '—'}</td>

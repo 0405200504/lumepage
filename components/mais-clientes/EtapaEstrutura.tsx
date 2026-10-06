@@ -73,7 +73,7 @@ function CartaoOferta({ oferta, onSalvar }: { oferta: OfertaPlano; onSalvar: (e:
 function situacaoDoCanal(p: PropsEtapa['programa'], enviadoEm: string): string {
   const robo = p.robo;
   const campanhas = p.meta?.campanhas ?? [];
-  const semana = brl(Math.round(campanhas.reduce((s, c) => s + c.verba_diaria_cents, 0) * 7));
+  const semana = brl(Math.round((p.plan?.verba_semanal ?? 0) * 100));
   const desde = campanhas.map(c => c.ativada_em).filter((d): d is string => !!d).sort()[0];
   if (robo?.pausado && campanhas.some(c => c.ativada_em)) return 'Seus anúncios estão pausados pela equipe Lume. A gente te avisa quando voltarem.';
   if (campanhas.some(c => c.status === 'ativa')) return `Seus anúncios estão no ar${desde ? ` desde ${dataBR(desde)}` : ''} (${semana} por semana). As clientes chegam pelo seu WhatsApp.`;
