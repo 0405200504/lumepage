@@ -177,17 +177,44 @@ export async function configureUazapiWebhook(
   return { success: false, error: 'uazapi não aceitou configuração de webhook via API. Configure manualmente no painel da uazapi.', debug: logs.join(' | ') };
 }
 
+const pickQr = (...v: unknown[]) => v.find(x => typeof x === 'string' && x.length > 20) as string | undefined;
+const pickPaircode = (...v: unknown[]) => v.find(x => typeof x === 'string' && x.length > 0) as string | undefined;
+
+export interface UazapiQrResult {
+  success: boolean;
+  qrcode?: string | null;
+  paircode?: string | null;
+  alreadyConnected?: boolean;
+  /**
+   * A conexão está em andamento e não há código para mostrar: ou a sessão
+   * guardada está voltando sozinha (instância hibernada), ou o QR ainda não
+   * ficou pronto. Quem chama acompanha por `checkUazapiStatus`.
+   */
+  pending?: boolean;
+  /** O servidor recusou porque o plano não tem vaga para mais um número (HTTP 429). */
+  limitReached?: boolean;
+  error?: string;
+  debug?: string;
+}
+
 /**
- * Busca o QR code (ou pair code) para conectar/reconectar a instância.
- * Confirmado por inspeção direta: o endpoint real é POST /instance/connect
- * (não GET) e a resposta tem o formato:
+ * Inicia a conexão da instância e devolve o QR code (ou pair code).
+ * Endpoint: POST /instance/connect, com a resposta no formato
  *   { connected: boolean, instance: { status, qrcode, paircode, ... } }
  * Quando já conectado, `qrcode`/`paircode` vêm vazios — não é erro.
+ *
+ * Desde a uazapi 3.x (conferido no servidor em 26/11/2026):
+ *  - 429 "Maximum number of instances connected reached": o plano do servidor
+ *    não tem vaga. Não é culpa da profissional e repetir não resolve;
+ *  - 409: já existe uma conexão em andamento — o código atual está em
+ *    GET /instance/status, não se pede outro;
+ *  - instância hibernada reconecta com o pareamento guardado, sem QR: a
+ *    resposta vem em `connecting` e sem código.
  */
 export async function getUazapiQRCode(
   baseUrl: string,
   token: string
-): Promise<{ success: boolean; qrcode?: string | null; paircode?: string | null; alreadyConnected?: boolean; error?: string; debug?: string }> {
+): Promise<UazapiQrResult> {
   try {
     const res = await fetch(`${baseUrl}/instance/connect`, {
       method: 'POST',
@@ -196,16 +223,27 @@ export async function getUazapiQRCode(
       signal: AbortSignal.timeout(15000),
     });
     const text = await res.text();
-    if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}`, debug: text.slice(0, 300) };
+    const debug = text.slice(0, 300);
+
+    if (res.status === 409) return qrFromStatus(baseUrl, token, debug);
+    if (res.status === 429) {
+      // O mesmo 429 serve para o limite por instância (10 chamadas/s) — esse passa sozinho.
+      const noRoom = /instance/i.test(text) && /max|limit/i.test(text);
+      return noRoom
+        ? { success: false, limitReached: true, error: 'O servidor de WhatsApp está sem vaga para conectar números.', debug }
+        : { success: false, error: 'Muitas tentativas seguidas. Aguarde alguns segundos e tente de novo.', debug };
+    }
+    if (res.status === 503) return { success: false, error: 'O servidor de WhatsApp está ocupado agora. Tente de novo em instantes.', debug };
+    if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}`, debug };
 
     let data: Record<string, unknown> = {};
     try { data = JSON.parse(text); } catch {
-      return { success: false, error: 'Resposta inválida da uazapi.', debug: text.slice(0, 300) };
+      return { success: false, error: 'Resposta inválida da uazapi.', debug };
     }
 
     const instance = data.instance as Record<string, unknown> | undefined;
-    const qrcode = [data.qrcode, instance?.qrcode].find(v => typeof v === 'string' && v.length > 20) as string | undefined;
-    const paircode = [data.paircode, instance?.paircode].find(v => typeof v === 'string' && v.length > 0) as string | undefined;
+    const qrcode = pickQr(data.qrcode, instance?.qrcode);
+    const paircode = pickPaircode(data.paircode, instance?.paircode);
 
     if (qrcode) return { success: true, qrcode, debug: text.slice(0, 200) };
     if (paircode) return { success: true, paircode, debug: text.slice(0, 200) };
@@ -214,17 +252,43 @@ export async function getUazapiQRCode(
     const connected = data.connected === true || ['connected', 'open'].includes(instanceStatus);
     if (connected) return { success: true, alreadyConnected: true, debug: text.slice(0, 200) };
 
-    return { success: false, error: 'uazapi não retornou QR code nem código de pareamento.', debug: text.slice(0, 300) };
+    // Conectando sem código: confere o status uma vez antes de devolver "em andamento".
+    if (instanceStatus.includes('connecting') || data.loggedIn === true) return qrFromStatus(baseUrl, token, debug);
+
+    return { success: false, error: 'uazapi não retornou QR code nem código de pareamento.', debug };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro de rede.' };
   }
+}
+
+/** Código da conexão que já está em andamento — ou a notícia de que ela terminou. */
+async function qrFromStatus(baseUrl: string, token: string, debug: string): Promise<UazapiQrResult> {
+  const s = await checkUazapiStatus(baseUrl, token);
+  if (s.status === 'open') return { success: true, alreadyConnected: true, debug };
+  if (s.qrcode) return { success: true, qrcode: s.qrcode, debug };
+  if (s.paircode) return { success: true, paircode: s.paircode, debug };
+  return { success: true, pending: true, debug };
+}
+
+/**
+ * `hibernated`: o servidor pausou a sessão e guardou o pareamento (uazapi 3.x).
+ * Volta com POST /instance/connect, sem QR Code.
+ */
+export type UazapiStatus = 'open' | 'connecting' | 'close' | 'qr' | 'hibernated' | 'error';
+
+export interface UazapiStatusResult {
+  status: UazapiStatus;
+  /** Código atual da conexão em andamento — é por aqui que ele se renova. */
+  qrcode?: string | null;
+  paircode?: string | null;
+  rawJson?: string;
 }
 
 /** Verifica o status da conexão da instância WhatsApp. */
 export async function checkUazapiStatus(
   baseUrl: string,
   token: string
-): Promise<{ status: 'open' | 'connecting' | 'close' | 'qr' | 'error'; rawJson?: string }> {
+): Promise<UazapiStatusResult> {
   try {
     const res = await fetch(`${baseUrl}/instance/status`, {
       headers: { token },
@@ -247,8 +311,11 @@ export async function checkUazapiStatus(
 
     const instanceStatus = ((instance?.status as string | undefined) ?? '').toLowerCase();
     if (['connected', 'open', 'online'].includes(instanceStatus)) return { status: 'open', rawJson: text.slice(0, 300) };
-    if (instanceStatus.includes('connecting')) return { status: 'connecting', rawJson: text.slice(0, 300) };
-    if (instanceStatus.includes('qr')) return { status: 'qr', rawJson: text.slice(0, 300) };
+
+    const codes = { qrcode: pickQr(instance?.qrcode) ?? null, paircode: pickPaircode(instance?.paircode) ?? null };
+    if (instanceStatus.includes('hibernat')) return { status: 'hibernated', rawJson: text.slice(0, 300) };
+    if (instanceStatus.includes('connecting')) return { status: 'connecting', ...codes, rawJson: text.slice(0, 300) };
+    if (instanceStatus.includes('qr')) return { status: 'qr', ...codes, rawJson: text.slice(0, 300) };
     if (['close', 'closed', 'disconnected', 'logout', 'logged_out'].some(v => instanceStatus.includes(v))) {
       return { status: 'close', rawJson: text.slice(0, 300) };
     }

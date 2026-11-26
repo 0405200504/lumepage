@@ -4,6 +4,7 @@ import { daysAgoISO } from './queries';
 import { accountState } from './account-state';
 import { getSnoozes, isMissingTable } from './crm';
 import { orphanKeyOf } from '@/lib/subscription/orphans';
+import { HEALTH_KEY, parseHealthState } from '@/lib/whatsapp/health-state';
 
 /**
  * ALERTAS PROATIVOS
@@ -33,7 +34,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
   const in7 = new Date(); in7.setDate(in7.getDate() + 7);
   const since30 = daysAgoISO(30);
 
-  const [profsRes, apptsRes, convRes, settingsRes, snoozes, unmatchedRes, tasksRes, followRes] = await Promise.all([
+  const [profsRes, apptsRes, convRes, settingsRes, snoozes, unmatchedRes, tasksRes, followRes, healthRes] = await Promise.all([
     db().from('professionals')
       .select('id, brand_name, name, status, created_at, subscription_status, subscription_plan, subscription_ends_at, trial_ends_at')
       .is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID),
@@ -45,6 +46,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     db().from('hubla_webhook_events').select('idempotency_key, email, subscription_id').eq('result', 'unmatched').limit(200),
     db().from('admin_tasks').select('id, title, due_date').is('done_at', null).lte('due_date', toISO(new Date())).limit(50),
     db().from('admin_account_meta').select('professional_id, next_follow_up').lte('next_follow_up', toISO(new Date())).limit(50),
+    db().from('whatsapp_conversations').select('professional_id, messages').eq('client_phone', HEALTH_KEY).limit(1000),
   ]);
 
   type P = { id: string; brand_name: string; name: string; status: string; created_at: string | null; subscription_status: string | null; subscription_plan: string | null; subscription_ends_at: string | null; trial_ends_at: string | null };
@@ -65,6 +67,36 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
       title: `${unmatched.length} compra(s) paga(s) sem conta na Lume`,
       detail: unmatched.slice(0, 4).map(u => u.email ?? 'sem e-mail').join(', '),
       href: '/admin/subscriptions/orphans',
+    });
+  }
+
+  // WhatsApp fora do ar. O monitor (lib/whatsapp/health.ts) grava o estado de
+  // cada conta a cada 5 min; aqui ele chega a quem pode resolver. `server_limit`
+  // é a uazapi recusando conexões por falta de vaga no plano do servidor: para
+  // todas as contas de uma vez e nenhuma profissional consegue resolver sozinha.
+  const brand = new Map(profs.map(p => [p.id, p.brand_name || p.name]));
+  const whatsHealth = ((healthRes.data || []) as { professional_id: string; messages: unknown }[])
+    .filter(h => withBot.has(h.professional_id) && brand.has(h.professional_id))
+    .map(h => ({ id: h.professional_id, status: parseHealthState(h.messages).status }));
+  const whatsNames = (list: { id: string }[]) => list.slice(0, 4).map(h => brand.get(h.id)).join(', ');
+
+  const serverFull = whatsHealth.filter(h => h.status === 'server_limit');
+  if (serverFull.length) {
+    alerts.push({
+      id: 'whatsapp-server-full', level: 'bad', count: serverFull.length,
+      title: `Servidor de WhatsApp sem vaga: ${serverFull.length} conta(s) com as mensagens paradas`,
+      detail: `A uazapi está recusando conexões por limite de números do plano. Confira a assinatura do servidor. ${whatsNames(serverFull)}`,
+      href: '/admin/system',
+    });
+  }
+
+  const whatsDown = whatsHealth.filter(h => h.status === 'disconnected' || h.status === 'webhook_failed');
+  if (whatsDown.length) {
+    alerts.push({
+      id: 'whatsapp-down', level: 'warn', count: whatsDown.length,
+      title: `${whatsDown.length} conta(s) com o WhatsApp desconectado`,
+      detail: whatsNames(whatsDown),
+      href: '/admin/system',
     });
   }
 
@@ -176,15 +208,18 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     .sort((a, b) => order[a.level] - order[b.level] || b.count - a.count);
 }
 
-/** Contagem barata para o sino da topbar (2 consultas com head:true). */
+/** Contagem barata para o sino da topbar (3 consultas com head:true). */
 export async function getAlertCount(): Promise<number> {
   if (!isSupabaseConfigured) return 0;
   const in7 = new Date(); in7.setDate(in7.getDate() + 7);
-  const [conv, expiring] = await Promise.all([
+  const [conv, expiring, whatsFull] = await Promise.all([
     db().from('whatsapp_conversations').select('id', { count: 'exact', head: true })
       .eq('bot_paused', true).not('client_phone', 'like', '_debug_%'),
     db().from('professionals').select('id', { count: 'exact', head: true })
       .is('deleted_at', null).lte('subscription_ends_at', in7.toISOString()),
+    // Servidor de WhatsApp sem vaga: derruba todas as contas, tem de acender o sino.
+    db().from('whatsapp_conversations').select('id', { count: 'exact', head: true })
+      .eq('client_phone', HEALTH_KEY).like('messages->0->>content', '%"server_limit"%'),
   ]);
-  return (conv.count || 0) + (expiring.count || 0);
+  return (conv.count || 0) + (expiring.count || 0) + (whatsFull.count || 0);
 }

@@ -23,24 +23,46 @@ interface WhatsAppPanelProps {
   canAutoProvision: boolean;
 }
 
-type ConnectionStatus = 'open' | 'connecting' | 'close' | 'qr' | 'error' | 'not_configured' | 'loading';
+type ConnectionStatus = 'open' | 'connecting' | 'close' | 'qr' | 'hibernated' | 'error' | 'not_configured' | 'loading';
 
 const statusLabel: Record<ConnectionStatus, string> = {
   open:           'Conectado',
   connecting:     'Conectando…',
   close:          'Desconectado',
   qr:             'Aguardando leitura do QR Code',
+  // O servidor pausou a sessão e guardou o pareamento: volta sem QR Code.
+  hibernated:     'Reconectando…',
   error:          'Sem conexão',
   not_configured: 'Não conectado',
   loading:        'Verificando…',
 };
 
-/** Com o QR na tela, confere a cada 3 s se o celular já leu. */
+/** Com o QR na tela, confere a cada 3 s se o celular já leu (e pega o código novo). */
 const SCAN_POLL_MS = 3_000;
-/** O código do WhatsApp expira rápido; pede outro antes disso, sem piscar. */
+/**
+ * O código do WhatsApp expira rápido. O status já traz o atual; se ele parar
+ * de mudar por este tempo (a conexão expirou sem ninguém ler, ou o servidor
+ * não entrega o código pelo status), a tela pede a conexão de novo.
+ */
 const QR_REFRESH_MS = 20_000;
+/** De quanto em quanto tempo a tela confere se já passou do prazo acima. */
+const QR_REFRESH_TICK_MS = 5_000;
 /** Conectado: confere de vez em quando para, se cair, já mostrar o QR. */
 const CONNECTED_POLL_MS = 30_000;
+/** Servidor sem vaga: tenta de novo sozinho, devagar, enquanto a aba está aberta. */
+const SERVER_FULL_RETRY_MS = 60_000;
+/** Reconexão sem QR que não termina: para de girar e oferece tentar de novo. */
+const PENDING_TIMEOUT_MS = 90_000;
+
+/**
+ * Recado do servidor de WhatsApp só vai para a tela se for conversa de gente:
+ * "uazapi retornou 500" ou "fetch failed" não dizem nada para a profissional.
+ */
+function friendlyQrError(message?: string | null): string {
+  const fallback = 'Não foi possível gerar o QR Code agora. Tente de novo em instantes.';
+  if (!message || /uazapi|fetch|abort|timeout|network|ECONN|HTTP|JSON/i.test(message)) return fallback;
+  return message;
+}
 
 /**
  * Painel do WhatsApp: conectar o número e configurar as mensagens automáticas.
@@ -107,8 +129,18 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
   const [qrRaw, setQrRaw] = useState<string | null>(null);
   const [qrPaircode, setQrPaircode] = useState<string | null>(null);
   const [qrAsyncImgSrc, setQrAsyncImgSrc] = useState<string | null>(null);
+  // Conexão em andamento sem código para mostrar: a sessão que o servidor
+  // tinha pausado está voltando sozinha (ou o QR ainda não ficou pronto).
+  const [qrPending, setQrPending] = useState(false);
+  // O servidor de WhatsApp recusou por falta de vaga — nada que ela possa resolver.
+  const [serverFull, setServerFull] = useState(false);
   // Um pedido de QR por "queda": evita pedir dois ao mesmo tempo.
   const qrRequested = useRef(false);
+  // Renovações seguidas que falharam: uma falha passageira não tira o QR da tela.
+  const renewFails = useRef(0);
+  // Última vez que a conexão foi pedida ou que o código da tela mudou: é daí
+  // que se conta o prazo para pedir de novo.
+  const qrFreshAt = useRef(0);
 
   const loadStatus = useCallback(() => {
     checkWhatsAppStatusAction()
@@ -137,38 +169,58 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
     setQrPaircode(null);
     setQrAsyncImgSrc(null);
     setQrError(null);
+    setQrPending(false);
+    setServerFull(false);
+    renewFails.current = 0;
   }, []);
 
-  /** Pede (ou renova) o QR Code. `silent` troca o código sem piscar a tela. */
+  /**
+   * Inicia a conexão e mostra o QR Code. `silent` é a renovação: troca o código
+   * sem piscar a tela e, se falhar uma vez, deixa o que está nela.
+   */
   const fetchQr = useCallback(async (silent = false) => {
     if (!silent) { setQrLoading(true); setQrError(null); }
-    const res = await connectWhatsAppAction().catch(() => null);
+    qrFreshAt.current = Date.now();
+    const res = await connectWhatsAppAction({ renovar: silent }).catch(() => null);
     setQrLoading(false);
 
     if (!res || !res.success) {
+      const full = !!res && 'limitReached' in res && !!res.limitReached;
+      // O status traz o código atual a cada 3 s; uma renovação que falhou
+      // sozinha não é motivo para trocar o QR por um erro.
+      if (silent && !full && ++renewFails.current < 2) return;
       setQrRaw(null);
       setQrPaircode(null);
       setQrAsyncImgSrc(null);
-      setQrError(!res
-        ? 'Não conseguimos falar com o servidor do WhatsApp. Tente de novo em instantes.'
-        : 'limitReached' in res && res.limitReached
-          ? 'Não conseguimos preparar seu WhatsApp agora. Já avisamos a equipe — tente de novo em alguns minutos.'
-          : res.error || 'Não foi possível gerar o QR Code.');
+      setQrPending(false);
+      setServerFull(full);
+      setQrError(full ? null
+        : !res ? 'Não conseguimos falar com o servidor do WhatsApp. Tente de novo em instantes.'
+        : friendlyQrError(res.error));
       return;
     }
 
+    renewFails.current = 0;
+    setServerFull(false);
     setHasInstance(true);
     if (res.alreadyConnected) { setStatus('open'); clearQr(); return; }
     setQrError(null);
-    if (res.qrcode) { setQrPaircode(null); setQrRaw(res.qrcode); return; }
-    if (res.paircode) { setQrRaw(null); setQrAsyncImgSrc(null); setQrPaircode(res.paircode); return; }
+    if (res.qrcode) { setQrPending(false); setQrPaircode(null); setQrRaw(res.qrcode); return; }
+    if (res.paircode) { setQrPending(false); setQrRaw(null); setQrAsyncImgSrc(null); setQrPaircode(res.paircode); return; }
+    if (res.pending) {
+      // Conexão em andamento sem código. Na renovação, o código que já está na tela fica.
+      if (!silent) { setQrRaw(null); setQrPaircode(null); setQrAsyncImgSrc(null); }
+      setQrPending(true);
+      return;
+    }
     setQrRaw(null);
     setQrPaircode(null);
     setQrAsyncImgSrc(null);
+    setQrPending(false);
     setQrError('O servidor não devolveu um QR Code. Tente de novo.');
   }, [clearQr]);
 
-  // Caiu (ou nunca conectou)? Pede o QR na hora — a profissional não clica em nada.
+  // Caiu (ou nunca conectou)? Inicia a conexão na hora — a profissional não clica em nada.
   useEffect(() => {
     if (!waitingScan) { qrRequested.current = false; return; }
     if (qrRequested.current) return;
@@ -176,28 +228,75 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
     void fetchQr();
   }, [waitingScan, fetchQr]);
 
-  // Renova o código antes de expirar. Código de pareamento não precisa.
+  // Código novo na tela: a conexão segue viva, o prazo recomeça.
+  useEffect(() => { qrFreshAt.current = Date.now(); }, [qrRaw]);
+
+  // Pede a conexão de novo quando o código para de mudar: se a anterior
+  // expirou sem leitura, nasce um QR novo; se ainda está em andamento, nada
+  // muda na tela. Código de pareamento não precisa.
+  const awaitingCode = !!qrRaw || qrPending;
   useEffect(() => {
-    if (!waitingScan || !qrRaw) return;
+    if (!waitingScan || !awaitingCode) return;
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      if (Date.now() - qrFreshAt.current < QR_REFRESH_MS) return;
+      void fetchQr(true);
+    }, QR_REFRESH_TICK_MS);
+    return () => clearInterval(timer);
+  }, [waitingScan, awaitingCode, fetchQr]);
+
+  // Servidor sem vaga: tenta de novo sozinho, devagar. Quando voltar, a
+  // reconexão (ou o QR) aparece sem ela precisar recarregar a página.
+  useEffect(() => {
+    if (!waitingScan || !serverFull) return;
     const timer = setInterval(() => {
       if (document.hidden) return;
       void fetchQr(true);
-    }, QR_REFRESH_MS);
+    }, SERVER_FULL_RETRY_MS);
     return () => clearInterval(timer);
-  }, [waitingScan, qrRaw, fetchQr]);
+  }, [waitingScan, serverFull, fetchQr]);
 
-  // Com o QR na tela, confere se o celular já leu. Ao conectar, registra o
-  // webhook sozinho: a profissional não precisa saber que isso existe.
+  // Reconexão sem QR que não termina: para de girar e oferece tentar de novo.
+  const pendingAlone = qrPending && !qrRaw && !qrPaircode;
+  useEffect(() => {
+    if (!pendingAlone) return;
+    const timer = setTimeout(() => {
+      setQrPending(false);
+      setQrError('A reconexão está demorando mais que o normal. Tente de novo; se continuar, fale com o suporte do Lume.');
+    }, PENDING_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [pendingAlone]);
+
+  // Enquanto não conecta, confere o servidor: se o celular já leu, se a sessão
+  // voltou sozinha e qual é o código atual (ele muda a cada poucos segundos).
+  // Ao conectar, registra o webhook: a profissional não precisa saber que isso existe.
   useEffect(() => {
     if (!waitingScan) return;
     const timer = setInterval(async () => {
       if (document.hidden) return;
       const r = await checkWhatsAppStatusAction().catch(() => null);
-      if (r?.status !== 'open') return;
-      setStatus('open');
-      clearQr();
-      success('Conectado!', 'Seu WhatsApp está pronto para enviar as mensagens.');
-      setupWebhookAction().catch(() => {});
+      if (!r) return;
+      if (r.status === 'open') {
+        setStatus('open');
+        clearQr();
+        success('Conectado!', 'Seu WhatsApp está pronto para enviar as mensagens.');
+        setupWebhookAction().catch(() => {});
+        return;
+      }
+      if (r.qrcode) {
+        renewFails.current = 0;
+        setQrPending(false);
+        setQrError(null);
+        setQrPaircode(null);
+        setQrRaw(r.qrcode);
+      } else if (r.paircode) {
+        renewFails.current = 0;
+        setQrPending(false);
+        setQrError(null);
+        setQrRaw(null);
+        setQrAsyncImgSrc(null);
+        setQrPaircode(r.paircode);
+      }
     }, SCAN_POLL_MS);
     return () => clearInterval(timer);
   }, [waitingScan, success, clearQr]);
@@ -311,13 +410,16 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
 
   // O que o cartão de conexão mostra. "scan" é o estado normal de desconectado:
   // o QR já na tela. Com um código na tela, "verificando" não o esconde.
-  const hasQrOnScreen = !!(qrImgSrc || qrPaircode || qrLoading || qrError);
-  const view: 'checking' | 'connected' | 'support' | 'scan' =
+  const hasQrOnScreen = !!(qrImgSrc || qrPaircode || qrLoading || qrError || qrPending || serverFull);
+  const view: 'checking' | 'connected' | 'support' | 'unavailable' | 'scan' =
     isConnected ? 'connected'
     : status === 'loading' && !hasQrOnScreen ? 'checking'
     : !canConnect ? 'support'
+    : serverFull ? 'unavailable'
     : 'scan';
   const everHadInstance = !!(initialSettings?.uazapi_url && initialSettings?.uazapi_token);
+  // Sem código na tela e com a conexão em andamento: a sessão está voltando sozinha.
+  const reconnecting = qrPending && !qrImgSrc && !qrPaircode && !qrLoading && !qrError;
 
   return (
     <div className="space-y-5">
@@ -346,14 +448,19 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               style={{
                 color: isConnected
                   ? 'var(--color-signal)'
-                  : status === 'loading'
+                  : status === 'loading' || (reconnecting && !serverFull)
                     ? 'var(--color-n-400)'
                     : status === 'not_configured'
                       ? 'var(--color-n-300)'
                       : 'var(--color-danger)',
               }}
             />
-            <span className="mono-micro text-n-600">{statusLabel[status] ?? statusLabel.error}</span>
+            <span className="mono-micro text-n-600">
+              {serverFull ? 'Indisponível'
+                : reconnecting ? statusLabel.hibernated
+                : status === 'hibernated' ? statusLabel.close
+                : statusLabel[status] ?? statusLabel.error}
+            </span>
             <RefreshCw className={`h-3 w-3 text-n-500 ${status === 'loading' ? 'animate-spin' : ''}`} aria-hidden />
           </button>
         </div>
@@ -434,18 +541,47 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           </div>
         )}
 
+        {view === 'unavailable' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              <AlertCircle className="h-5 w-5 text-warn shrink-0 mt-0.5" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-label font-bold text-heading">WhatsApp temporariamente indisponível</p>
+                <p className="text-caption text-n-600">
+                  O serviço que envia as mensagens do Lume está fora do ar neste momento. Não é nada com o seu número
+                  nem com o seu celular.{' '}
+                  {everHadInstance
+                    ? 'Assim que ele voltar, o Lume reconecta o seu número sozinho — se for preciso ler o QR Code de novo, ele aparece aqui.'
+                    : 'Assim que ele voltar, o QR Code aparece aqui para você conectar.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void fetchQr()}
+              disabled={qrLoading}
+              className="shrink-0 self-start rounded-chip border border-line bg-surface px-3 py-2 text-caption font-semibold text-n-600 transition-colors hover:border-line-strong disabled:opacity-60 sm:self-center"
+            >
+              {qrLoading ? 'Tentando…' : 'Tentar agora'}
+            </button>
+          </div>
+        )}
+
         {view === 'scan' && (
           <div className="rounded-xl border border-line bg-surface-2 p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <Smartphone className="h-5 w-5 text-n-600 shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <p className="text-label font-bold text-heading">
-                  {everHadInstance ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
+                  {reconnecting ? 'Reconectando seu WhatsApp'
+                    : everHadInstance ? 'Seu WhatsApp está desconectado' : 'Conecte seu WhatsApp'}
                 </p>
                 <p className="text-caption text-n-600">
-                  {everHadInstance
-                    ? 'Leia o QR Code abaixo para reconectar. Nenhuma mensagem é enviada enquanto isso.'
-                    : 'Leia o QR Code abaixo com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
+                  {reconnecting
+                    ? 'O Lume está retomando a conexão do seu número. Nenhuma mensagem é enviada enquanto isso.'
+                    : everHadInstance
+                      ? 'Leia o QR Code abaixo para reconectar. Nenhuma mensagem é enviada enquanto isso.'
+                      : 'Leia o QR Code abaixo com o celular, como no WhatsApp Web. Leva menos de um minuto.'}
                 </p>
               </div>
             </div>
@@ -454,7 +590,16 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
               {qrLoading && (
                 <div className="flex h-64 w-64 flex-col items-center justify-center gap-2 rounded-xl border border-line bg-surface">
                   <Loader2 className="h-6 w-6 animate-spin text-faint" aria-hidden />
-                  <p className="text-caption text-n-600">Preparando seu QR Code…</p>
+                  <p className="text-caption text-n-600">Preparando sua conexão…</p>
+                </div>
+              )}
+
+              {reconnecting && (
+                <div className="flex w-full max-w-sm flex-col items-center gap-2 py-6 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-faint" aria-hidden />
+                  <p className="text-caption text-n-600">
+                    Isso leva alguns segundos. Se for preciso ler o QR Code de novo, ele aparece aqui.
+                  </p>
                 </div>
               )}
 
@@ -527,7 +672,9 @@ export function WhatsAppPanel({ initialSettings, canAutoProvision }: WhatsAppPan
           <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--color-warn)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-warn)_8%,transparent)] px-4 py-3">
             <AlertCircle className="h-4 w-4 text-warn shrink-0 mt-0.5" />
             <p className="text-caption text-warn">
-              Seu WhatsApp está desconectado — as mensagens abaixo só voltam a ser enviadas depois de reconectar.
+              {serverFull
+                ? 'As mensagens abaixo estão em pausa e voltam a ser enviadas assim que o serviço de WhatsApp normalizar.'
+                : 'Seu WhatsApp está desconectado — as mensagens abaixo só voltam a ser enviadas depois de reconectar.'}
             </p>
           </div>
         )}

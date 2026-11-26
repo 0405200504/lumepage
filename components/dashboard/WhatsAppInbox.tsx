@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   Search, Send, Paperclip, ArrowLeft, Check, CheckCheck, Clock, Loader2, MessageCircle, Users,
   FileText, Mic, RefreshCw, AlertCircle, AlertTriangle, Camera, Video, MapPin, Contact, BarChart3,
@@ -364,6 +365,12 @@ export function WhatsAppInbox({ connected }: { connected: boolean }) {
           <p className="text-body-sm font-semibold text-heading">WhatsApp desconectado</p>
           <p className="mt-1 text-caption text-n-600">Conecte seu número na aba Mensagens automáticas para ver as conversas aqui.</p>
         </div>
+        <Link
+          href="/dashboard/whatsapp"
+          className="rounded-xl bg-wine-700 px-4 py-2 text-caption font-bold text-white shadow-soft transition-colors hover:bg-wine-800"
+        >
+          Conectar meu WhatsApp
+        </Link>
       </div>
     );
   }

@@ -10,10 +10,15 @@ import { dbService } from '@/lib/supabase/db';
 import {
   configureUazapiWebhook, checkUazapiStatus, getUazapiQRCode,
   createUazapiInstance, uazapiAdminConfigured, disconnectUazapiInstance,
+  type UazapiStatus, type UazapiStatusResult,
 } from '@/lib/uazapi';
 
 export type ResultadoConexao =
-  | { success: true; qrcode: string | null; paircode: string | null; alreadyConnected: boolean; criada: boolean }
+  | {
+      success: true; qrcode: string | null; paircode: string | null; alreadyConnected: boolean; criada: boolean;
+      /** Conexão em andamento sem código: a sessão guardada está voltando sozinha ou o QR ainda não ficou pronto. */
+      pending: boolean;
+    }
   | { success: false; error: string; limitReached?: boolean; debug?: string };
 
 /**
@@ -23,8 +28,11 @@ export type ResultadoConexao =
  * Se o servidor tem admintoken (UAZAPI_SERVER_URL + UAZAPI_ADMIN_TOKEN), a
  * instância é criada na hora — ninguém vê URL nem token. Sem admintoken, cai
  * no fluxo antigo: alguém precisa ter salvo as credenciais.
+ *
+ * `renovar`: a tela já tem um código e só quer o próximo — pula o webhook, que
+ * já foi registrado na primeira chamada.
  */
-export async function conectarWhatsApp(professionalId: string): Promise<ResultadoConexao> {
+export async function conectarWhatsApp(professionalId: string, opts: { renovar?: boolean } = {}): Promise<ResultadoConexao> {
   let waSettings = await dbService.getWhatsAppSettings(professionalId).catch(() => null);
   let criada = false;
 
@@ -60,17 +68,27 @@ export async function conectarWhatsApp(professionalId: string): Promise<Resultad
   }
 
   // 2. Webhook: best-effort, não impede a conexão se falhar.
-  await registrarWebhook(professionalId, waSettings).catch(() => null);
+  if (!opts.renovar) await registrarWebhook(professionalId, waSettings).catch(() => null);
 
-  // 3. QR Code para ler no celular.
+  // 3. QR Code para ler no celular — ou, se a sessão estava só pausada no
+  //    servidor (hibernada), a reconexão sem código nenhum.
   const result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
-  if (!result.success) return { success: false, error: result.error ?? 'Não foi possível gerar o QR Code.', debug: result.debug };
+  if (!result.success) {
+    if (result.limitReached) console.error('[conectarWhatsApp] servidor uazapi sem vaga:', result.debug ?? '');
+    return {
+      success: false,
+      error: result.error ?? 'Não foi possível gerar o QR Code.',
+      limitReached: result.limitReached ?? false,
+      debug: result.debug,
+    };
+  }
 
   return {
     success: true,
     qrcode: result.qrcode ?? null,
     paircode: result.paircode ?? null,
     alreadyConnected: result.alreadyConnected ?? false,
+    pending: result.pending ?? false,
     criada,
   };
 }
@@ -99,11 +117,24 @@ export async function desconectarWhatsApp(professionalId: string): Promise<{ suc
   return ok ? { success: true } : { success: false, error: 'Não foi possível desconectar agora. Tente de novo.' };
 }
 
-export type StatusWhatsApp = 'open' | 'connecting' | 'close' | 'qr' | 'error' | 'not_configured';
+export type StatusWhatsApp = UazapiStatus | 'not_configured';
+
+export interface SituacaoWhatsApp {
+  status: StatusWhatsApp;
+  /** Código atual quando há uma conexão esperando a leitura — a tela troca o QR por ele. */
+  qrcode: string | null;
+  paircode: string | null;
+}
+
+/** Estado da conexão e, se houver uma em andamento, o código para ler agora. */
+export async function situacaoWhatsApp(professionalId: string): Promise<SituacaoWhatsApp> {
+  const waSettings = await dbService.getWhatsAppSettings(professionalId).catch(() => null);
+  if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) return { status: 'not_configured', qrcode: null, paircode: null };
+  const result: UazapiStatusResult = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token)
+    .catch(() => ({ status: 'error' as const }));
+  return { status: result.status, qrcode: result.qrcode ?? null, paircode: result.paircode ?? null };
+}
 
 export async function statusWhatsApp(professionalId: string): Promise<StatusWhatsApp> {
-  const waSettings = await dbService.getWhatsAppSettings(professionalId).catch(() => null);
-  if (!waSettings?.uazapi_url || !waSettings?.uazapi_token) return 'not_configured';
-  const result = await checkUazapiStatus(waSettings.uazapi_url, waSettings.uazapi_token).catch(() => ({ status: 'error' as const }));
-  return result.status;
+  return (await situacaoWhatsApp(professionalId)).status;
 }

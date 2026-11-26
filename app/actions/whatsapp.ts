@@ -3,7 +3,7 @@
 import { authService } from '@/lib/auth/auth';
 import { dbService } from '@/lib/supabase/db';
 import { configureUazapiWebhook, checkUazapiStatus, sendWhatsAppText, getUazapiQRCode } from '@/lib/uazapi';
-import { conectarWhatsApp, desconectarWhatsApp, statusWhatsApp } from '@/lib/whatsapp/conexao';
+import { conectarWhatsApp, desconectarWhatsApp, situacaoWhatsApp } from '@/lib/whatsapp/conexao';
 import { normalizeWhatsapp } from '@/lib/whatsapp';
 
 /**
@@ -149,12 +149,14 @@ export async function getQRCodeAction() {
  * Um clique só: garante que a profissional tem uma instância no servidor uazapi,
  * registra o webhook e devolve o QR Code para ela ler no celular
  * (lib/whatsapp/conexao.ts — o mesmo que o admin usa para o número da Lume).
+ *
+ * `renovar`: a tela já tem um código e só pede o próximo.
  */
-export async function connectWhatsAppAction() {
+export async function connectWhatsAppAction(opts: { renovar?: boolean } = {}) {
   try {
     const professionalId = await getProfessionalId();
     if (!professionalId) return { success: false as const, error: 'Sessão inválida. Faça login novamente.' };
-    return await conectarWhatsApp(professionalId);
+    return await conectarWhatsApp(professionalId, { renovar: opts?.renovar === true });
   } catch (e: unknown) {
     return { success: false as const, error: e instanceof Error ? e.message : 'Erro ao conectar o WhatsApp.' };
   }
@@ -174,13 +176,17 @@ export async function disconnectWhatsAppAction() {
   }
 }
 
+/**
+ * Estado da conexão. Com uma conexão esperando a leitura, vem junto o código
+ * atual — é assim que o QR da tela se renova, sem pedir outra conexão.
+ */
 export async function checkWhatsAppStatusAction() {
   try {
     const professionalId = await getProfessionalId();
-    if (!professionalId) return { success: true, status: 'not_configured' as const };
-    return { success: true, status: await statusWhatsApp(professionalId) };
+    if (!professionalId) return { success: true, status: 'not_configured' as const, qrcode: null, paircode: null };
+    return { success: true, ...(await situacaoWhatsApp(professionalId)) };
   } catch {
-    return { success: true, status: 'error' as const };
+    return { success: true, status: 'error' as const, qrcode: null, paircode: null };
   }
 }
 
