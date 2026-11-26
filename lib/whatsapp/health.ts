@@ -1,6 +1,7 @@
 import { dbService } from '@/lib/supabase/db';
-import { checkUazapiStatus, configureUazapiWebhook } from '@/lib/uazapi';
+import { checkUazapiStatus, configureUazapiWebhook, getUazapiQRCode, type UazapiStatusResult } from '@/lib/uazapi';
 import { purgeOldInboxMessages } from '@/lib/whatsapp/inbox-store';
+import { HEALTH_KEY, parseHealthState, decideHealthAlert, type HealthState } from '@/lib/whatsapp/health-state';
 import type { WhatsAppSettings } from '@/types/database';
 import webpush from 'web-push';
 
@@ -13,24 +14,24 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   );
 }
 
-// Estado guardado na própria whatsapp_conversations (sem migração), com prefixo
-// _debug_ para ser filtrado da lista de conversas do painel
-// (getAllWhatsAppConversations exclui client_phone like '_debug_%').
-const HEALTH_KEY = '_debug_health_state';
-const REALERT_MS = 6 * 60 * 60 * 1000;   // re-alerta o mesmo problema a cada 6h
+// O estado fica na própria whatsapp_conversations (lib/whatsapp/health-state.ts).
 const REASSERT_MS = 60 * 60 * 1000;       // re-registra o webhook a cada ~60min (reseta circuit-breaker da uazapi)
+const ERROR_GRACE = 3;                    // rodadas seguidas sem resposta do servidor antes de tratar como queda
 
-type HealthState = { status: string; alertedAt: number; reassertAt: number };
 export type HealthResult = Record<string, unknown>;
 
 /**
  * Monitor de saúde do bot. Para cada profissional com bot ativo:
- *  1. confere se a instância uazapi está conectada;
+ *  1. confere se a instância uazapi está conectada — e, se o servidor só pausou a
+ *     sessão (`hibernated`, uazapi 3.x), pede a reconexão: o pareamento está
+ *     guardado e ela volta sem QR Code, sem ninguém abrir o painel;
  *  2. confere a config do webhook e RE-REGISTRA sozinho se errada/ausente, além de
  *     re-afirmar a cada ~60min para resetar circuit-breaker de entrega da uazapi
  *     (causa de o webhook parar de ser chamado mesmo com config aparentemente ok);
  *  3. envia push à profissional quando há algo que exige ação humana (instância
- *     desconectada), com dedupe; e avisa quando normaliza.
+ *     desconectada), com dedupe; e avisa quando normaliza. Quando quem recusa é
+ *     o servidor (sem vaga no plano), o aviso é outro e sai uma vez só: não
+ *     adianta pedir para ela ler um QR Code que o servidor não vai entregar.
  *
  * Best-effort: nunca lança — pode ser chamado de dentro de outro cron sem risco.
  */
@@ -60,8 +61,29 @@ export async function runWhatsAppHealthCheck(): Promise<HealthResult[]> {
       const state = await loadState(pid);
       const now = Date.now();
 
-      const status = await checkUazapiStatus(s.uazapi_url, s.uazapi_token).catch(() => ({ status: 'error' as const }));
+      let status: UazapiStatusResult = await checkUazapiStatus(s.uazapi_url, s.uazapi_token).catch(() => ({ status: 'error' as const }));
+      const hibernated = status.status === 'hibernated';
+      let serverFull = false;
+      if (hibernated) {
+        const wake = await getUazapiQRCode(s.uazapi_url, s.uazapi_token).catch(() => null);
+        if (wake?.success && wake.alreadyConnected) status = { status: 'open' };
+        else if (wake?.limitReached) serverFull = true;
+      }
       const connected = status.status === 'open';
+
+      // Servidor não respondeu (ou respondeu algo que não dá para ler): pode ser
+      // passageiro. Sem informação, não muda o estado nem avisa ninguém — só
+      // depois de algumas rodadas seguidas isso conta como queda.
+      if (status.status === 'error') {
+        state.errors = (state.errors || 0) + 1;
+        if (state.errors < ERROR_GRACE) {
+          await saveState(pid, state);
+          results.push({ pid, connected: false, skipped: 'sem resposta do servidor', errors: state.errors });
+          continue;
+        }
+      } else {
+        state.errors = 0;
+      }
 
       const webhookOk = connected ? await isWebhookHealthy(s) : false;
 
@@ -74,25 +96,14 @@ export async function runWhatsAppHealthCheck(): Promise<HealthResult[]> {
         if (healed) state.reassertAt = now;
       }
 
-      const problem = !connected
-        ? 'disconnected'
-        : (!webhookOk && !healed)
-          ? 'webhook_failed'
-          : null;
+      const { problem, push, alertedAt } = decideHealthAlert(
+        { connected, hibernated, serverFull, webhookOk: webhookOk || healed },
+        state,
+        now,
+      );
+      const pushed = push ? await sendHealthPush(pid, push) : false;
 
-      let pushed = false;
-      if (problem) {
-        const changed = state.status !== problem;
-        const stale = now - (state.alertedAt || 0) > REALERT_MS;
-        if (changed || stale) {
-          pushed = await sendHealthPush(pid, problem);
-          state.alertedAt = now;
-        }
-      } else if (state.status && state.status !== 'ok') {
-        pushed = await sendHealthPush(pid, 'recovered');
-        state.alertedAt = 0;
-      }
-
+      state.alertedAt = alertedAt;
       state.status = problem || 'ok';
       await saveState(pid, state);
       results.push({ pid, connected, webhookOk, healed, problem, pushed });
@@ -133,11 +144,7 @@ async function isWebhookHealthy(s: WhatsAppSettings): Promise<boolean> {
 async function loadState(pid: string): Promise<HealthState> {
   try {
     const conv = await dbService.getWhatsAppConversation(pid, HEALTH_KEY);
-    const raw = conv?.messages?.slice(-1)[0]?.content;
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<HealthState>;
-      return { status: parsed.status || 'ok', alertedAt: parsed.alertedAt || 0, reassertAt: parsed.reassertAt || 0 };
-    }
+    return parseHealthState(conv?.messages);
   } catch { /* estado novo */ }
   return { status: 'ok', alertedAt: 0, reassertAt: 0 };
 }
@@ -150,16 +157,20 @@ async function saveState(pid: string, state: HealthState): Promise<void> {
 
 const ALERTS: Record<string, { title: string; body: string }> = {
   disconnected: {
-    title: '⚠️ WhatsApp do bot desconectou',
-    body: 'O bot parou de responder porque a conexão caiu. Abra Configurações → WhatsApp e reconecte escaneando o QR.',
+    title: '⚠️ Seu WhatsApp desconectou',
+    body: 'As mensagens automáticas pararam de sair. Abra Mensagens automáticas e leia o QR Code para reconectar.',
   },
   webhook_failed: {
-    title: '⚠️ Bot não está recebendo mensagens',
-    body: 'O webhook do WhatsApp falhou e não consegui recadastrar sozinho. Abra Configurações → WhatsApp e reconecte.',
+    title: '⚠️ WhatsApp sem receber mensagens',
+    body: 'Não consegui religar o recebimento sozinho. Abra Mensagens automáticas e reconecte seu número.',
+  },
+  server_limit: {
+    title: '⚠️ Mensagens automáticas em pausa',
+    body: 'O serviço de WhatsApp do Lume está fora do ar e suas mensagens não estão saindo. Não é nada com o seu número. Avisamos aqui quando voltar.',
   },
   recovered: {
-    title: '✅ WhatsApp do bot normalizado',
-    body: 'A conexão e o recebimento de mensagens voltaram ao normal.',
+    title: '✅ WhatsApp normalizado',
+    body: 'A conexão voltou e as mensagens automáticas estão saindo de novo.',
   },
 };
 
@@ -171,7 +182,7 @@ async function sendHealthPush(pid: string, kind: string): Promise<boolean> {
   try {
     const subs = await dbService.getPushSubscriptionsByProfessional(pid);
     if (!subs || !subs.length) return false;
-    const payload = JSON.stringify({ title: alert.title, body: alert.body, url: '/dashboard/settings' });
+    const payload = JSON.stringify({ title: alert.title, body: alert.body, url: '/dashboard/whatsapp' });
     let any = false;
     await Promise.allSettled(subs.map(async (sub) => {
       try {
