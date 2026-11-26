@@ -10,7 +10,10 @@
  * abas do WhatsApp mostrando erro.
  */
 
-import { checkUazapiStatus, getUazapiQRCode } from '../lib/uazapi.ts';
+// lib/uazapi lê o servidor e o admintoken ao ser carregado: definir antes de importar.
+process.env.UAZAPI_SERVER_URL = 'https://uazapi.teste/';
+process.env.UAZAPI_ADMIN_TOKEN = 'admintoken-de-teste';
+const { checkUazapiStatus, getUazapiQRCode, locateUazapiInstance, isUazapiAdminServer } = await import('../lib/uazapi.ts');
 import { parseHealthState, decideHealthAlert, REALERT_MS, type HealthReading } from '../lib/whatsapp/health-state.ts';
 
 let passed = 0;
@@ -121,6 +124,35 @@ console.log('\npedido de conexão');
   mock({ 'POST /instance/connect': { status: 503, body: { error: 'capacity unavailable' } } });
   const cap = await getUazapiQRCode(BASE, 't');
   check('503 → erro passageiro, não falta de vaga', !cap.success && !cap.limitReached);
+}
+
+console.log('\ninstância apagada no servidor');
+{
+  // Corpo real do servidor para um token que não existe mais (26/11/2026).
+  mock({ 'POST /instance/connect': { status: 401, body: { code: 401, message: 'Invalid token.', data: {} } } });
+  const dead = await getUazapiQRCode(BASE, 'token-apagado');
+  check('401 no pedido de conexão → instanceMissing', !dead.success && dead.instanceMissing === true && !dead.limitReached, JSON.stringify(dead));
+
+  const list = [
+    { token: 'tok-julia', name: 'kdp8dA', adminField01: '' },
+    { token: 'tok-ana', name: 'ana-1234', adminField01: 'pid-ana' },
+  ];
+  mock({ 'GET /instance/all': { status: 200, body: list } });
+  check('token ainda está no servidor → exists', (await locateUazapiInstance('tok-julia', 'pid-julia')).state === 'exists');
+  const moved = await locateUazapiInstance('tok-velho', 'pid-ana');
+  check('instância da conta com outro token → moved, com o token atual', moved.state === 'moved' && moved.token === 'tok-ana', JSON.stringify(moved));
+  check('nem o token nem a conta estão na lista → gone', (await locateUazapiInstance('tok-velho', 'pid-outra')).state === 'gone');
+  check('conta sem id não "adota" instância de adminField01 vazio', (await locateUazapiInstance('tok-velho', '')).state === 'gone');
+
+  mock({ 'GET /instance/all': { status: 200, body: { instances: list } } });
+  check('lista embrulhada em { instances } também serve', (await locateUazapiInstance('tok-ana', 'x')).state === 'exists');
+  mock({ 'GET /instance/all': { status: 500, body: { error: 'x' } } });
+  check('lista fora do ar → unknown (não cria nada no escuro)', (await locateUazapiInstance('tok-velho', 'pid-ana')).state === 'unknown');
+  mock({ 'GET /instance/all': { status: 200, body: { error: 'formato inesperado' } } });
+  check('resposta que não é lista → unknown', (await locateUazapiInstance('tok-velho', 'pid-ana')).state === 'unknown');
+
+  check('reconhece o próprio servidor, com ou sem barra no fim',
+    isUazapiAdminServer('https://uazapi.teste') && isUazapiAdminServer('https://uazapi.teste/') && !isUazapiAdminServer('https://outro.uazapi.com'));
 }
 
 console.log('\nestado do monitor');

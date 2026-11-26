@@ -193,6 +193,11 @@ export interface UazapiQrResult {
   pending?: boolean;
   /** O servidor recusou porque o plano não tem vaga para mais um número (HTTP 429). */
   limitReached?: boolean;
+  /**
+   * O servidor não reconhece o token (HTTP 401/404): a instância foi apagada
+   * ou o token dela mudou. Repetir não adianta — ver `locateUazapiInstance`.
+   */
+  instanceMissing?: boolean;
   error?: string;
   debug?: string;
 }
@@ -209,7 +214,8 @@ export interface UazapiQrResult {
  *  - 409: já existe uma conexão em andamento — o código atual está em
  *    GET /instance/status, não se pede outro;
  *  - instância hibernada reconecta com o pareamento guardado, sem QR: a
- *    resposta vem em `connecting` e sem código.
+ *    resposta vem em `connecting` e sem código;
+ *  - 401 "Invalid token.": a instância desse token não existe mais no servidor.
  */
 export async function getUazapiQRCode(
   baseUrl: string,
@@ -234,6 +240,7 @@ export async function getUazapiQRCode(
         : { success: false, error: 'Muitas tentativas seguidas. Aguarde alguns segundos e tente de novo.', debug };
     }
     if (res.status === 503) return { success: false, error: 'O servidor de WhatsApp está ocupado agora. Tente de novo em instantes.', debug };
+    if (res.status === 401 || res.status === 404) return { success: false, instanceMissing: true, error: `uazapi retornou ${res.status}`, debug };
     if (!res.ok) return { success: false, error: `uazapi retornou ${res.status}`, debug };
 
     let data: Record<string, unknown> = {};
@@ -343,6 +350,49 @@ const ADMIN_TOKEN = (process.env.UAZAPI_ADMIN_TOKEN || '').trim();
 /** true quando o servidor pode criar instâncias sozinho (sem a profissional colar nada). */
 export function uazapiAdminConfigured(): boolean {
   return !!(ADMIN_URL && ADMIN_TOKEN);
+}
+
+/** A URL gravada é a do servidor que o Lume administra (onde ele pode criar instância)? */
+export function isUazapiAdminServer(baseUrl: string): boolean {
+  return uazapiAdminConfigured() && (baseUrl || '').trim().replace(/\/$/, '') === ADMIN_URL;
+}
+
+export type UazapiInstanceLookup =
+  /** O token gravado continua valendo. */
+  | { state: 'exists' }
+  /** A instância da conta está no servidor, mas com outro token (foi rotacionado). */
+  | { state: 'moved'; token: string }
+  /** Não há instância com esse token nem desta conta: foi apagada. */
+  | { state: 'gone' }
+  /** Não deu para conferir (sem admintoken, servidor fora do ar). Não mexer. */
+  | { state: 'unknown' };
+
+/**
+ * Onde foi parar a instância de uma conta, conferido na lista do servidor
+ * (GET /instance/all, admintoken). Serve para decidir, depois de um 401, se é
+ * o caso de criar outra: só quando a lista veio e a instância não está nela.
+ * `ownerId` é o id da profissional, que o Lume grava em adminField01 ao criar.
+ */
+export async function locateUazapiInstance(token: string, ownerId: string): Promise<UazapiInstanceLookup> {
+  if (!uazapiAdminConfigured()) return { state: 'unknown' };
+  try {
+    const res = await fetch(`${ADMIN_URL}/instance/all`, {
+      headers: { admintoken: ADMIN_TOKEN },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return { state: 'unknown' };
+    const data = await res.json() as unknown;
+    const list = Array.isArray(data) ? data : (data as { instances?: unknown })?.instances;
+    if (!Array.isArray(list)) return { state: 'unknown' };
+
+    const instances = list as Array<Record<string, unknown>>;
+    if (instances.some(i => i.token === token)) return { state: 'exists' };
+    const own = instances.find(i => !!ownerId && i.adminField01 === ownerId && typeof i.token === 'string' && i.token.length > 0);
+    if (own) return { state: 'moved', token: own.token as string };
+    return { state: 'gone' };
+  } catch {
+    return { state: 'unknown' };
+  }
 }
 
 export type CreateInstanceResult =

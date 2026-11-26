@@ -10,8 +10,10 @@ import { dbService } from '@/lib/supabase/db';
 import {
   configureUazapiWebhook, checkUazapiStatus, getUazapiQRCode,
   createUazapiInstance, uazapiAdminConfigured, disconnectUazapiInstance,
+  isUazapiAdminServer, locateUazapiInstance,
   type UazapiStatus, type UazapiStatusResult,
 } from '@/lib/uazapi';
+import type { WhatsAppSettings } from '@/types/database';
 
 export type ResultadoConexao =
   | {
@@ -41,30 +43,10 @@ export async function conectarWhatsApp(professionalId: string, opts: { renovar?:
     if (!uazapiAdminConfigured()) {
       return { success: false, error: 'Configure e salve a URL e o token da uazapi primeiro.' };
     }
-
-    const professional = await dbService.getProfessionalById(professionalId).catch(() => null);
-    // Nome único no servidor: slug ajuda a reconhecer no painel da uazapi, e o
-    // sufixo evita colisão com uma instância antiga de mesmo nome.
-    const base = (professional?.slug || professional?.brand_name || 'lume')
-      .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lume';
-    const instanceName = `${base}-${professionalId.slice(0, 8)}`;
-
-    const created = await createUazapiInstance(instanceName, {
-      adminField01: professionalId,
-      adminField02: professional?.email || '',
-    });
-    if (!created.success) {
-      console.error('[conectarWhatsApp] falha ao criar instância:', created.error, created.debug ?? '');
-      return { success: false, error: created.error ?? 'Não foi possível preparar o WhatsApp.', limitReached: created.limitReached ?? false };
-    }
-
-    waSettings = await dbService.upsertWhatsAppSettings(professionalId, {
-      uazapi_url: created.url,
-      uazapi_token: created.token,
-    });
+    const nova = await criarInstancia(professionalId);
+    if (!nova.ok) return { success: false, error: nova.error, limitReached: nova.limitReached };
+    waSettings = nova.settings;
     criada = true;
-    console.log('[conectarWhatsApp] instância criada:', instanceName);
   }
 
   // 2. Webhook: best-effort, não impede a conexão se falhar.
@@ -72,7 +54,28 @@ export async function conectarWhatsApp(professionalId: string, opts: { renovar?:
 
   // 3. QR Code para ler no celular — ou, se a sessão estava só pausada no
   //    servidor (hibernada), a reconexão sem código nenhum.
-  const result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
+  let result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
+
+  // O servidor não conhece mais o token gravado (alguém apagou a instância no
+  // painel da uazapi, por exemplo). Sem isto a conta ficava presa num erro
+  // para sempre. A lista do servidor diz se sumiu mesmo: só então nasce outra.
+  if (!result.success && result.instanceMissing && isUazapiAdminServer(waSettings.uazapi_url)) {
+    const onde = await locateUazapiInstance(waSettings.uazapi_token, professionalId);
+    if (onde.state === 'moved') {
+      waSettings = await dbService.upsertWhatsAppSettings(professionalId, { uazapi_token: onde.token });
+      console.log('[conectarWhatsApp] token da instância atualizado:', professionalId);
+    } else if (onde.state === 'gone') {
+      const nova = await criarInstancia(professionalId);
+      if (!nova.ok) return { success: false, error: nova.error, limitReached: nova.limitReached };
+      waSettings = nova.settings;
+      criada = true;
+    }
+    if (onde.state === 'moved' || onde.state === 'gone') {
+      await registrarWebhook(professionalId, waSettings).catch(() => null);
+      result = await getUazapiQRCode(waSettings.uazapi_url, waSettings.uazapi_token);
+    }
+  }
+
   if (!result.success) {
     if (result.limitReached) console.error('[conectarWhatsApp] servidor uazapi sem vaga:', result.debug ?? '');
     return {
@@ -91,6 +94,36 @@ export async function conectarWhatsApp(professionalId: string, opts: { renovar?:
     pending: result.pending ?? false,
     criada,
   };
+}
+
+/** Cria a instância desta conta no servidor uazapi e grava as credenciais dela. */
+async function criarInstancia(professionalId: string): Promise<
+  | { ok: true; settings: WhatsAppSettings }
+  | { ok: false; error: string; limitReached: boolean }
+> {
+  const professional = await dbService.getProfessionalById(professionalId).catch(() => null);
+  // Nome único no servidor: slug ajuda a reconhecer no painel da uazapi, e o
+  // sufixo evita colisão com uma instância antiga de mesmo nome.
+  const base = (professional?.slug || professional?.brand_name || 'lume')
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lume';
+  const instanceName = `${base}-${professionalId.slice(0, 8)}`;
+
+  const created = await createUazapiInstance(instanceName, {
+    adminField01: professionalId,
+    adminField02: professional?.email || '',
+  });
+  if (!created.success) {
+    console.error('[conectarWhatsApp] falha ao criar instância:', created.error, created.debug ?? '');
+    return { ok: false, error: created.error ?? 'Não foi possível preparar o WhatsApp.', limitReached: created.limitReached ?? false };
+  }
+
+  const settings = await dbService.upsertWhatsAppSettings(professionalId, {
+    uazapi_url: created.url,
+    uazapi_token: created.token,
+  });
+  console.log('[conectarWhatsApp] instância criada:', instanceName);
+  return { ok: true, settings };
 }
 
 /** Aponta o webhook da instância para o Lume (mensagens recebidas, status). */
