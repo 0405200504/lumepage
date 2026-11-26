@@ -5,6 +5,7 @@ import { accountState } from './account-state';
 import { getSnoozes, isMissingTable } from './crm';
 import { orphanKeyOf } from '@/lib/subscription/orphans';
 import { HEALTH_KEY, parseHealthState } from '@/lib/whatsapp/health-state';
+import { CRON_STALE_MS, CRON_TABLE, REMINDERS_JOB, cronSilenceMs } from '@/lib/cron/scheduler';
 
 /**
  * ALERTAS PROATIVOS
@@ -34,7 +35,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
   const in7 = new Date(); in7.setDate(in7.getDate() + 7);
   const since30 = daysAgoISO(30);
 
-  const [profsRes, apptsRes, convRes, settingsRes, snoozes, unmatchedRes, tasksRes, followRes, healthRes] = await Promise.all([
+  const [profsRes, apptsRes, convRes, settingsRes, snoozes, unmatchedRes, tasksRes, followRes, healthRes, cronSilence] = await Promise.all([
     db().from('professionals')
       .select('id, brand_name, name, status, created_at, subscription_status, subscription_plan, subscription_ends_at, trial_ends_at')
       .is('deleted_at', null).neq('id', DEMO_PROFESSIONAL_ID),
@@ -47,6 +48,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     db().from('admin_tasks').select('id, title, due_date').is('done_at', null).lte('due_date', toISO(new Date())).limit(50),
     db().from('admin_account_meta').select('professional_id, next_follow_up').lte('next_follow_up', toISO(new Date())).limit(50),
     db().from('whatsapp_conversations').select('professional_id, messages').eq('client_phone', HEALTH_KEY).limit(1000),
+    cronSilenceMs(REMINDERS_JOB).catch(() => null),
   ]);
 
   type P = { id: string; brand_name: string; name: string; status: string; created_at: string | null; subscription_status: string | null; subscription_plan: string | null; subscription_ends_at: string | null; trial_ends_at: string | null };
@@ -67,6 +69,19 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
       title: `${unmatched.length} compra(s) paga(s) sem conta na Lume`,
       detail: unmatched.slice(0, 4).map(u => u.email ?? 'sem e-mail').join(', '),
       href: '/admin/subscriptions/orphans',
+    });
+  }
+
+  // Agendador parado: lembretes e confirmações só saem quando ele chama o Lume
+  // (a cada 5 min, migração v49). Sem a v49 não há como medir — fica calado.
+  if (cronSilence !== null && cronSilence > CRON_STALE_MS) {
+    const minutes = Math.round(cronSilence / 60_000);
+    const since = minutes >= 120 ? `${Math.round(minutes / 60)} horas` : `${minutes} minutos`;
+    alerts.push({
+      id: 'cron-stale', level: 'bad', count: 1,
+      title: `Mensagens automáticas paradas: o agendador não roda há ${since}`,
+      detail: 'Lembretes e confirmações do WhatsApp de todas as contas dependem dele. Confira o job lume-reminders no Supabase (cron.job).',
+      href: '/admin/system',
     });
   }
 
@@ -208,11 +223,12 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     .sort((a, b) => order[a.level] - order[b.level] || b.count - a.count);
 }
 
-/** Contagem barata para o sino da topbar (3 consultas com head:true). */
+/** Contagem barata para o sino da topbar (4 consultas com head:true). */
 export async function getAlertCount(): Promise<number> {
   if (!isSupabaseConfigured) return 0;
   const in7 = new Date(); in7.setDate(in7.getDate() + 7);
-  const [conv, expiring, whatsFull] = await Promise.all([
+  const staleBefore = new Date(Date.now() - CRON_STALE_MS).toISOString();
+  const [conv, expiring, whatsFull, cronStale] = await Promise.all([
     db().from('whatsapp_conversations').select('id', { count: 'exact', head: true })
       .eq('bot_paused', true).not('client_phone', 'like', '_debug_%'),
     db().from('professionals').select('id', { count: 'exact', head: true })
@@ -220,6 +236,9 @@ export async function getAlertCount(): Promise<number> {
     // Servidor de WhatsApp sem vaga: derruba todas as contas, tem de acender o sino.
     db().from('whatsapp_conversations').select('id', { count: 'exact', head: true })
       .eq('client_phone', HEALTH_KEY).like('messages->0->>content', '%"server_limit"%'),
+    // Agendador das mensagens automáticas parado (sem a v49 a consulta falha e conta 0).
+    db().from(CRON_TABLE).select('name', { count: 'exact', head: true })
+      .eq('name', REMINDERS_JOB).lt('last_run_at', staleBefore),
   ]);
-  return (conv.count || 0) + (expiring.count || 0) + (whatsFull.count || 0);
+  return (conv.count || 0) + (expiring.count || 0) + (whatsFull.count || 0) + (cronStale.count || 0);
 }
