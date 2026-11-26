@@ -7,24 +7,37 @@ import { resolveAppointmentServices, formatServiceNames, sumPriceCents } from '@
 import { sendRevenueDigests } from '@/lib/push/digest';
 import { safeEqual } from '@/lib/auth/safe-equal';
 import { rodarRobo } from '@/lib/meta/robo';
+import { claimCronRun, getCronToken, REMINDERS_JOB } from '@/lib/cron/scheduler';
 
 export const maxDuration = 60;
 
-// Chamado pelo Vercel Cron a cada 5 minutos (ver vercel.json)
-// Também pode ser acionado manualmente via GET /api/cron/reminders
-// com header Authorization: Bearer <CRON_SECRET>
+// Chamado a cada 5 minutos pelo pg_cron do Supabase (migração v49), com o
+// segredo que a própria migração gerou no banco. O agendamento do GitHub
+// Actions (CRON_SECRET) continua valendo como reserva e para acionar à mão:
+// GET /api/cron/reminders com header Authorization: Bearer <segredo>.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  // Fail-closed: sem CRON_SECRET configurado, o endpoint é recusado. Antes, a
-  // ausência da env deixava o endpoint PÚBLICO — qualquer um disparava o envio
-  // em massa de WhatsApp (e custo). Agora exige o segredo sempre.
-  if (!secret) {
-    console.error('[cron/reminders] CRON_SECRET não configurado — endpoint desabilitado.');
-    return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
-  }
   const auth = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (!safeEqual(auth, secret)) {
+  // Fail-closed: sem um segredo válido o endpoint é recusado. Antes, a ausência
+  // da env deixava o endpoint PÚBLICO — qualquer um disparava o envio em massa
+  // de WhatsApp (e custo).
+  let allowed = safeEqual(auth, secret);
+  if (!allowed) {
+    const dbToken = await getCronToken(REMINDERS_JOB).catch(() => null);
+    allowed = safeEqual(auth, dbToken);
+    if (!allowed && !secret && !dbToken) {
+      console.error('[cron/reminders] nenhum segredo configurado (CRON_SECRET ou migração v49) — endpoint desabilitado.');
+      return NextResponse.json({ error: 'Cron disabled (missing secret)' }, { status: 503 });
+    }
+  }
+  if (!allowed) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Uma rodada por vez: se o pg_cron e o GitHub chamam juntos, a segunda sai
+  // sem fazer nada — senão as duas mandariam a mesma mensagem.
+  if (await claimCronRun(REMINDERS_JOB).catch(() => 'unavailable') === 'busy') {
+    return NextResponse.json({ ok: true, skipped: 'outra rodada em andamento' });
   }
 
   // Hora atual no fuso de Brasília
